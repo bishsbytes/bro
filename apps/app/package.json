@@ -30,7 +30,7 @@
 		"expo-system-ui": "*",
 		"expo-web-browser": "*",
 		"jest-expo": "*",
-		"react": "*",
+		"react": "19.2.3",
 		"react-native": "*",
 		"react-native-svg": "*",
 		"react-native-svg-transformer": "*",

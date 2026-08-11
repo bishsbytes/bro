@@ -1,8 +1,8 @@
 {
-  "updatedAt": "2026-08-11T21:59:23.116Z",
-  "command": "init",
-  "gitHead": "01ecbfa888c366760befeb6818e8001da6093e08",
-  "model": "gpt-5.6-luna",
-  "status": "complete",
-  "language": "en"
+	"updatedAt": "2026-08-11T21:59:23.116Z",
+	"command": "init",
+	"gitHead": "01ecbfa888c366760befeb6818e8001da6093e08",
+	"model": "gpt-5.6-luna",
+	"status": "complete",
+	"language": "en"
 }

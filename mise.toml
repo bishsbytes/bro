@@ -1,0 +1,5 @@
+[tools]
+# Android Gradle Plugin does not support JDK 26 (jlink fails on
+# core-for-system-modules.jar, and JDK 24+ restricts System.load for the
+# expo-modules-core CMake tasks). Expo/React Native target JDK 17-21.
+java = "21"
