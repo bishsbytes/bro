@@ -1,109 +1,117 @@
 # Bro
 
-<a alt="Nx logo" href="https://nx.dev" target="_blank" rel="noreferrer"><img src="https://raw.githubusercontent.com/nrwl/nx/master/images/nx-logo.png" width="45"></a>
+A men's wellbeing app: an Expo mobile client backed by a Hono API, in an Nx + pnpm monorepo.
 
-✨ Your new, shiny [Nx workspace](https://nx.dev) is ready ✨.
+The app is **offline-first** — it reads and writes its own embedded database on the device, so the UI never waits on the network. The API owns the authoritative Postgres database and authentication. Remote database sync is planned but is not enabled by the app yet.
 
-[Learn more about this workspace setup and its capabilities](https://nx.dev/nx-api/js?utm_source=nx_project&amp;utm_medium=readme&amp;utm_campaign=nx_projects) or run `npx nx graph` to visually explore what was created. Now, let's get you up to speed!
+## Layout
 
-## Generate a library
+```
+apps/
+  app/                     @bro/app           Expo (SDK 56) mobile client
+  api/                     @bro/api           Hono API server (Node)
+packages/
+  database/
+    api/                   @bro/database-api  Postgres schema, migrations, Drizzle client
+    app/                   @bro/database-app  Embedded Turso/libSQL access + repositories
+  auth/
+    api/                   @bro/auth-api      Better Auth server configuration
+    app/                   @bro/auth-app      Better Auth Expo client, provider, hooks
+```
+
+`database` and `auth` are each split into an `api` and an `app` half. The two halves never import each other, so server-only code (Postgres driver, Drizzle, auth secret) can't be pulled into the React Native bundle.
+
+```mermaid
+graph TD
+  APP["apps/app<br/>Expo"] --> DBAPP["database/app<br/>embedded Turso"]
+  APP --> AUTHAPP["auth/app<br/>Better Auth client"]
+  API["apps/api<br/>Hono"] --> DBAPI["database/api<br/>Postgres"]
+  API --> AUTHAPI["auth/api<br/>Better Auth server"]
+  AUTHAPI --> DBAPI
+  AUTHAPP -. HTTP .-> API
+```
+
+Directories nest but package names flatten (`packages/database/api` → `@bro/database-api`), because npm names can't contain a slash past the scope. Nested packages are picked up by the `packages/*/*` glob in `pnpm-workspace.yaml` — without it, pnpm never creates the `@bro/*` symlinks and nothing resolves.
+
+## Two databases, two access patterns
+
+| | App (`@bro/database-app`) | API (`@bro/database-api`) |
+|---|---|---|
+| Store | Embedded libSQL/Turso on device | Postgres |
+| Runtime queries | Hand-written SQL via repositories | Drizzle query client |
+| Role of Drizzle | Schema authoring + migration codegen only | Schema *and* runtime client |
+| Migrations run | At app startup, on device | Via `db:migrate` against a server |
+
+On the app side the Drizzle client is deliberately kept out of the runtime path. `src/schema.ts` exists purely to drive `drizzle-kit generate`; queries go through one repository class per data domain, each issuing parameterised SQL over `expo-sqlite`'s raw API. See [the repository recipe](packages/database/app/src/repositories/README.md) for how to add one.
+
+Migration SQL is compiled into `src/migrations/manifest.ts` as plain strings by a [small script](packages/database/app/scripts/generate-migrations-manifest.ts), because Metro can't read files off disk at runtime. This avoids needing `babel-plugin-inline-import` and Metro `sourceExts` changes across the package boundary.
+
+### Local storage and future Turso sync
+
+[`connection.ts`](packages/database/app/src/connection.ts) uses a purely local SQLite file by default. It can open a libSQL embedded replica when `EXPO_PUBLIC_TURSO_SYNC_URL` **and** `EXPO_PUBLIC_TURSO_AUTH_TOKEN` are both set, but the app does not schedule synchronization yet. Until foreground, connectivity, retry, and conflict behaviour are implemented, leave both values blank.
+
+## Auth
+
+Better Auth, with the server half in `@bro/auth-api` and the client half in `@bro/auth-app`. These are necessarily separate — `createAuthClient` infers its types from the options you pass it, not from the server instance, and the server config carries the database and secret.
+
+Each server plugin needs its client counterpart, and three values are paired by hand across the boundary:
+
+| Concern | Server (`auth/api`) | Client (`auth/app`) |
+|---|---|---|
+| Plugin | `expo()` | `expoClient()` |
+| App scheme | `defaultTrustedOrigins` | `expoClient({ scheme })` |
+| Address | `baseURL` | `baseURL` from `EXPO_PUBLIC_API_URL` |
+
+Within the server side, every option that affects the database schema lives in [`options.ts`](packages/auth/api/src/options.ts), shared by the runtime factory and by [`better-auth.config.ts`](packages/auth/api/better-auth.config.ts), which exists only so the CLI can generate the schema. That's what stops the generated tables from drifting from the runtime config.
+
+The auth tables in [`database/api/src/schema/auth.ts`](packages/database/api/src/schema/auth.ts) are **generated** — regenerate with `nx run @bro/auth-api:auth:generate-schema` after changing auth plugins or options, then generate and apply a migration. Note the CLI is published as `auth`, not `@better-auth/cli` (which is stranded on an old version).
+
+When custom `user`/`session` fields are added, the client will need `inferAdditionalFields<typeof auth>()` to know about them — a type-only generic, so it doesn't bundle server code.
+
+## Getting started
+
+Requires Node 20+, pnpm, and Docker.
 
 ```sh
-npx nx g @nx/js:lib packages/pkg1 --publishable --importPath=@my-org/pkg1
+pnpm install
+cp .env.example .env                  # then set BETTER_AUTH_SECRET
+cp apps/app/.env.example apps/app/.env
+
+docker compose up -d                  # Postgres on :5432
+pnpm exec nx run @bro/database-api:db:migrate
+
+pnpm exec nx run @bro/api:serve       # API on :3000
+pnpm exec nx run app:start            # Expo dev server
 ```
 
-## Run tasks
+Generate a secret with `openssl rand -base64 32`. On a physical device, `EXPO_PUBLIC_API_URL` must be your machine's LAN IP rather than `localhost`.
 
-To build the library use:
+## Common tasks
 
-```sh
-npx nx build pkg1
-```
+| Command | Purpose |
+|---|---|
+| `nx run @bro/api:serve` | Run the API from source, watching for changes |
+| `nx run @bro/api:build` | Production bundle (esbuild) |
+| `nx run app:start` | Expo dev server |
+| `nx run @bro/database-api:db:generate` | Generate a Postgres migration from schema changes |
+| `nx run @bro/database-api:db:migrate` | Apply pending Postgres migrations |
+| `nx run @bro/database-app:db:generate` | Generate an app migration and rebuild the manifest |
+| `nx run @bro/auth-api:auth:generate-schema` | Regenerate the Better Auth tables |
+| `nx run-many -t typecheck` | Typecheck every project |
+| `pnpm biome check --write` | Format and lint |
 
-To run any task with Nx use:
+## Conventions
 
-```sh
-npx nx <target> <project-name>
-```
+- **No `project.json`.** Nx config is inferred, with custom targets in each `package.json` under `nx.targets`.
+- **Biome** owns formatting and general linting (tabs, double quotes). ESLint is intentionally limited to Nx module-boundary enforcement; run both with `pnpm lint`.
+- **Module resolution differs by side.** The API-side packages use `nodenext`, so their relative imports carry `.js` suffixes. The app-side packages (`database/app`, `auth/app`) use `bundler` resolution with no suffixes, because Metro does not remap `.js` to `.ts`. Match the package you're editing.
+- **TypeScript project references** are managed by `nx sync`; run it after adding a cross-package import.
+- Dependencies shared with Expo must match the SDK. Check `node_modules/expo/bundledNativeModules.json` for the correct version rather than taking `latest`.
 
-These targets are either [inferred automatically](https://nx.dev/concepts/inferred-tasks?utm_source=nx_project&utm_medium=readme&utm_campaign=nx_projects) or defined in the `project.json` or `package.json` files.
+## Known rough edges
 
-[More about running tasks in the docs &raquo;](https://nx.dev/features/run-tasks?utm_source=nx_project&utm_medium=readme&utm_campaign=nx_projects)
-
-## Versioning and releasing
-
-To version and release the library use
-
-```
-npx nx release
-```
-
-Pass `--dry-run` to see what would happen without actually releasing the library.
-
-[Learn more about Nx release &raquo;](https://nx.dev/features/manage-releases?utm_source=nx_project&utm_medium=readme&utm_campaign=nx_projects)
-
-## Keep TypeScript project references up to date
-
-Nx automatically updates TypeScript [project references](https://www.typescriptlang.org/docs/handbook/project-references.html) in `tsconfig.json` files to ensure they remain accurate based on your project dependencies (`import` or `require` statements). This sync is automatically done when running tasks such as `build` or `typecheck`, which require updated references to function correctly.
-
-To manually trigger the process to sync the project graph dependencies information to the TypeScript project references, run the following command:
-
-```sh
-npx nx sync
-```
-
-You can enforce that the TypeScript project references are always in the correct state when running in CI by adding a step to your CI job configuration that runs the following command:
-
-```sh
-npx nx sync:check
-```
-
-[Learn more about nx sync](https://nx.dev/reference/nx-commands#sync)
-
-## Set up CI!
-
-### Step 1
-
-To connect to Nx Cloud, run the following command:
-
-```sh
-npx nx connect
-```
-
-Connecting to Nx Cloud ensures a [fast and scalable CI](https://nx.dev/ci/intro/why-nx-cloud?utm_source=nx_project&utm_medium=readme&utm_campaign=nx_projects) pipeline. It includes features such as:
-
-- [Remote caching](https://nx.dev/ci/features/remote-cache?utm_source=nx_project&utm_medium=readme&utm_campaign=nx_projects)
-- [Task distribution across multiple machines](https://nx.dev/ci/features/distribute-task-execution?utm_source=nx_project&utm_medium=readme&utm_campaign=nx_projects)
-- [Automated e2e test splitting](https://nx.dev/ci/features/split-e2e-tasks?utm_source=nx_project&utm_medium=readme&utm_campaign=nx_projects)
-- [Task flakiness detection and rerunning](https://nx.dev/ci/features/flaky-tasks?utm_source=nx_project&utm_medium=readme&utm_campaign=nx_projects)
-
-### Step 2
-
-Use the following command to configure a CI workflow for your workspace:
-
-```sh
-npx nx g ci-workflow
-```
-
-[Learn more about Nx on CI](https://nx.dev/ci/intro/ci-with-nx#ready-get-started-with-your-provider?utm_source=nx_project&utm_medium=readme&utm_campaign=nx_projects)
-
-## Install Nx Console
-
-Nx Console is an editor extension that enriches your developer experience. It lets you run tasks, generate code, and improves code autocompletion in your IDE. It is available for VSCode and IntelliJ.
-
-[Install Nx Console &raquo;](https://nx.dev/getting-started/editor-setup?utm_source=nx_project&utm_medium=readme&utm_campaign=nx_projects)
-
-## Useful links
-
-Learn more:
-
-- [Learn more about this workspace setup](https://nx.dev/nx-api/js?utm_source=nx_project&amp;utm_medium=readme&amp;utm_campaign=nx_projects)
-- [Learn about Nx on CI](https://nx.dev/ci/intro/ci-with-nx?utm_source=nx_project&utm_medium=readme&utm_campaign=nx_projects)
-- [Releasing Packages with Nx release](https://nx.dev/features/manage-releases?utm_source=nx_project&utm_medium=readme&utm_campaign=nx_projects)
-- [What are Nx plugins?](https://nx.dev/concepts/nx-plugins?utm_source=nx_project&utm_medium=readme&utm_campaign=nx_projects)
-
-And join the Nx community:
-- [Discord](https://go.nx.dev/community)
-- [Follow us on X](https://twitter.com/nxdevtools) or [LinkedIn](https://www.linkedin.com/company/nrwl)
-- [Our Youtube channel](https://www.youtube.com/@nxdevtools)
-- [Our blog](https://nx.dev/blog?utm_source=nx_project&utm_medium=readme&utm_campaign=nx_projects)
+- [`auth/app/src/client.ts`](packages/auth/app/src/client.ts) carries a `@ts-expect-error` on the Expo plugin: `@better-auth/expo@1.6.27` types `getActions` incompatibly with `BetterAuthClientPlugin` even on matched dependency versions. It is suppressed rather than cast, because casting collapses session type inference. Remove it once upstream fixes the declaration.
+- The app scheme `"app"` is repeated in `apps/app/app.json`, `auth/api/src/options.ts`, and `auth/app/src/client.ts`. Changing one alone breaks auth redirects silently.
+- Turso sync is not wired into the app lifecycle yet. A future implementation also needs short-lived, device-scoped tokens minted by the API; a long-lived `EXPO_PUBLIC_TURSO_AUTH_TOKEN` would ship inside the app bundle and could be extracted.
+- No navigation library yet — the app conditionally renders sign-in, sign-up, and a placeholder home screen. Adopting `expo-router` or React Navigation is still an open decision.
+- Only local embedded storage is currently supported as an application workflow. The low-level replica connection and manual sync helper are scaffolding for later work.

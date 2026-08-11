@@ -6,16 +6,30 @@
 		"eas-build-post-install": "cd ../../ && node tools/scripts/eas-build-post-install.mjs . apps/app"
 	},
 	"nx": {
-		"name": "app"
+		"name": "app",
+		"tags": [
+			"scope:app",
+			"type:app"
+		]
 	},
 	"dependencies": {
-		"@expo/vector-icons": "*",
+		"@better-auth/expo": "^1.6.27",
+		"@bro/auth-app": "workspace:*",
+		"@bro/database-app": "workspace:*",
 		"@expo/metro": "*",
+		"@expo/vector-icons": "*",
 		"@testing-library/react-native": "*",
+		"better-auth": "^1.6.27",
 		"expo": "*",
+		"expo-constants": "*",
+		"expo-linking": "*",
+		"expo-network": "*",
+		"expo-secure-store": "*",
 		"expo-splash-screen": "*",
+		"expo-sqlite": "*",
 		"expo-status-bar": "*",
 		"expo-system-ui": "*",
+		"expo-web-browser": "*",
 		"jest-expo": "*",
 		"react": "*",
 		"react-native": "*",

@@ -5,6 +5,21 @@
 	"references": [
 		{
 			"path": "./apps/app"
+		},
+		{
+			"path": "./packages/database/api"
+		},
+		{
+			"path": "./packages/database/app"
+		},
+		{
+			"path": "./packages/auth/api"
+		},
+		{
+			"path": "./packages/auth/app"
+		},
+		{
+			"path": "./apps/api"
 		}
 	]
 }

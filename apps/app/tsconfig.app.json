@@ -31,5 +31,13 @@
 		"**/*.jsx",
 		".expo/types/**/*.ts",
 		"expo-env.d.ts"
+	],
+	"references": [
+		{
+			"path": "../../packages/database/app/tsconfig.lib.json"
+		},
+		{
+			"path": "../../packages/auth/app/tsconfig.lib.json"
+		}
 	]
 }

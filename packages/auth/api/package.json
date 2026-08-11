@@ -1,0 +1,44 @@
+{
+	"name": "@bro/auth-api",
+	"version": "0.0.1",
+	"private": true,
+	"type": "module",
+	"main": "./src/index.ts",
+	"types": "./src/index.ts",
+	"exports": {
+		".": {
+			"types": "./src/index.ts",
+			"import": "./src/index.ts",
+			"default": "./src/index.ts"
+		},
+		"./package.json": "./package.json"
+	},
+	"nx": {
+		"tags": [
+			"scope:api",
+			"type:lib"
+		],
+		"targets": {
+			"auth:generate-schema": {
+				"executor": "nx:run-commands",
+				"options": {
+					"cwd": "packages/auth/api",
+					"commands": [
+						"auth generate --config better-auth.config.ts --output ../../database/api/src/schema/auth.ts --yes",
+						"biome check --write ../../database/api/src/schema/auth.ts"
+					],
+					"parallel": false
+				}
+			}
+		}
+	},
+	"dependencies": {
+		"@better-auth/expo": "^1.6.27",
+		"@bro/database-api": "workspace:*",
+		"better-auth": "^1.6.27",
+		"zod": "^4.4.3"
+	},
+	"devDependencies": {
+		"auth": "^1.6.27"
+	}
+}
