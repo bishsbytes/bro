@@ -1,35 +1,44 @@
 {
-  "name": "@bro/source",
-  "version": "0.0.0",
-  "license": "MIT",
-  "scripts": {},
-  "private": true,
-  "devDependencies": {
-    "@babel/runtime": "~7.27.6",
-    "@expo/cli": "~56.1.14",
-    "@nx/expo": "23.1.1",
-    "@nx/js": "23.1.1",
-    "@nx/node": "23.1.1",
-    "@swc/helpers": "~0.5.18",
-    "@types/react": "^19.2.0",
-    "babel-preset-expo": "~56.0.14",
-    "nx": "23.1.1",
-    "tslib": "^2.3.0",
-    "typescript": "~6.0.3"
-  },
-  "dependencies": {
-    "@expo/metro": "~56.0.0",
-    "@expo/metro-runtime": "~56.0.14",
-    "@expo/vector-icons": "~15.1.0",
-    "expo": "~56.0.0",
-    "expo-splash-screen": "~56.0.10",
-    "expo-status-bar": "~56.0.4",
-    "expo-system-ui": "~56.0.5",
-    "react": "^19.2.0",
-    "react-dom": "^19.2.0",
-    "react-native": "0.85.3",
-    "react-native-svg": "15.12.1",
-    "react-native-svg-transformer": "~1.5.1",
-    "react-native-web": "~0.21.0"
-  }
+	"name": "@bro/source",
+	"version": "0.0.0",
+	"license": "MIT",
+	"scripts": {
+		"lint": "biome check && pnpm exec nx run-many -t lint",
+		"lint:fix": "biome check --write && pnpm exec nx run-many -t lint --fix",
+		"biome:format": "biome format",
+		"biome:lint": "biome lint",
+		"biome:check": "biome check"
+	},
+	"private": true,
+	"devDependencies": {
+		"@babel/runtime": "~7.27.6",
+		"@biomejs/biome": "^2.5.7",
+		"@expo/cli": "~56.1.14",
+		"@nx/eslint": "23.1.1",
+		"@nx/expo": "23.1.1",
+		"@nx/js": "23.1.1",
+		"@nx/node": "23.1.1",
+		"@swc/helpers": "~0.5.18",
+		"@types/react": "^19.2.0",
+		"babel-preset-expo": "~56.0.14",
+		"eslint": "^9.8.0",
+		"nx": "23.1.1",
+		"tslib": "^2.3.0",
+		"typescript": "~6.0.3"
+	},
+	"dependencies": {
+		"@expo/metro": "~56.0.0",
+		"@expo/metro-runtime": "~56.0.14",
+		"@expo/vector-icons": "~15.1.0",
+		"expo": "~56.0.0",
+		"expo-splash-screen": "~56.0.10",
+		"expo-status-bar": "~56.0.4",
+		"expo-system-ui": "~56.0.5",
+		"react": "^19.2.0",
+		"react-dom": "^19.2.0",
+		"react-native": "0.85.3",
+		"react-native-svg": "15.12.1",
+		"react-native-svg-transformer": "~1.5.1",
+		"react-native-web": "~0.21.0"
+	}
 }
