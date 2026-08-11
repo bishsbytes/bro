@@ -6,7 +6,6 @@
 		"eas-build-post-install": "cd ../../ && node tools/scripts/eas-build-post-install.mjs . apps/app"
 	},
 	"nx": {
-		"name": "app",
 		"tags": [
 			"scope:app",
 			"type:app"
