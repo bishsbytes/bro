@@ -4,3 +4,4 @@ packages:
 autoInstallPeers: true
 allowBuilds:
   nx: true
+  unrs-resolver: set this to true or false
