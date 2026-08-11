@@ -33,7 +33,9 @@
 					}
 				},
 				"configurations": {
-					"development": {},
+					"development": {
+						"thirdParty": true
+					},
 					"production": {
 						"esbuildOptions": {
 							"sourcemap": false,
@@ -80,10 +82,25 @@
 			},
 			"serve": {
 				"continuous": true,
-				"executor": "nx:run-commands",
+				"executor": "@nx/js:node",
+				"defaultConfiguration": "development",
 				"options": {
-					"command": "tsx watch --env-file-if-exists=../../.env src/main.ts",
-					"cwd": "apps/api"
+					"buildTarget": "@bro/api:build",
+					"inspect": false,
+					"runBuildTargetDependencies": false,
+					"watch": true,
+					"runtimeArgs": [
+						"--env-file=.env"
+					]
+				},
+				"configurations": {
+					"development": {
+						"buildTarget": "@bro/api:build:development"
+					},
+					"production": {
+						"buildTarget": "@bro/api:build:production",
+						"watch": false
+					}
 				}
 			}
 		}
@@ -96,8 +113,5 @@
 		"drizzle-orm": "^0.45.2",
 		"hono": "^4.13.1",
 		"postgres": "^3.4.9"
-	},
-	"devDependencies": {
-		"tsx": "^4.23.12"
 	}
 }

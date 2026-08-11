@@ -90,7 +90,7 @@ Generate a secret with `openssl rand -base64 32`. On a physical device, `EXPO_PU
 
 | Command | Purpose |
 |---|---|
-| `nx run @bro/api:serve` | Run the API from source, watching for changes |
+| `nx run @bro/api:serve` | Run the development esbuild bundle with watch and automatic restart |
 | `nx run @bro/api:build` | Production bundle (esbuild) |
 | `nx run app:start` | Expo dev server |
 | `nx run @bro/database-api:db:generate` | Generate a Postgres migration from schema changes |

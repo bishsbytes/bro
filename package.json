@@ -3,12 +3,12 @@
 	"version": "0.0.0",
 	"license": "MIT",
 	"scripts": {
-		"lint": "biome lint . && pnpm exec nx run-many -t lint",
-		"lint:fix": "biome lint --write . && pnpm exec nx run-many -t lint",
+		"lint": "biome lint . && nx run-many -t lint",
+		"lint:fix": "biome lint --write . && nx run-many -t lint",
+		"lint:affected": "biome lint . && nx affected -t lint",
 		"format": "biome format --write .",
 		"format:check": "biome format .",
-		"check": "biome check . && pnpm exec nx run-many -t lint",
-		"biome:check": "biome check ."
+		"check": "biome check . && nx run-many -t lint"
 	},
 	"private": true,
 	"devDependencies": {
