@@ -1,15 +1,13 @@
 import { AuthProvider, useAuth } from "@bro/auth-app";
 import { initDb, runMigrations } from "@bro/database-app";
+import { Stack } from "expo-router";
 import * as SplashScreen from "expo-splash-screen";
 import { StatusBar } from "expo-status-bar";
 import { useEffect, useState } from "react";
 import { ActivityIndicator, StyleSheet, Text, View } from "react-native";
-import { HomeScreen } from "../screens/home-screen";
-import { SignInScreen } from "../screens/sign-in-screen";
-import { SignUpScreen } from "../screens/sign-up-screen";
 
-// Held until the database is open and migrated.
-SplashScreen.preventAutoHideAsync();
+// Keep the native splash visible while the local database is initialized.
+void SplashScreen.preventAutoHideAsync();
 
 function Loading() {
 	return (
@@ -28,14 +26,8 @@ function StartupError({ error }: { error: Error }) {
 	);
 }
 
-/**
- * Chooses between the signed-in and signed-out experience. No navigation
- * library is installed yet, so this is a deliberate conditional render rather
- * than a route stack.
- */
-function Root() {
+function RootNavigator() {
 	const { error, isPending, isSignedIn } = useAuth();
-	const [showSignUp, setShowSignUp] = useState(false);
 
 	if (isPending) {
 		return <Loading />;
@@ -49,18 +41,21 @@ function Root() {
 		);
 	}
 
-	if (isSignedIn) {
-		return <HomeScreen />;
-	}
+	return (
+		<Stack screenOptions={{ headerShown: false }}>
+			<Stack.Protected guard={isSignedIn}>
+				<Stack.Screen name="index" />
+			</Stack.Protected>
 
-	return showSignUp ? (
-		<SignUpScreen onShowSignIn={() => setShowSignUp(false)} />
-	) : (
-		<SignInScreen onShowSignUp={() => setShowSignUp(true)} />
+			<Stack.Protected guard={!isSignedIn}>
+				<Stack.Screen name="sign-in" />
+				<Stack.Screen name="sign-up" />
+			</Stack.Protected>
+		</Stack>
 	);
 }
 
-export const App = () => {
+export default function RootLayout() {
 	const [ready, setReady] = useState(false);
 	const [error, setError] = useState<Error | null>(null);
 
@@ -87,12 +82,12 @@ export const App = () => {
 			{!error && !ready ? <Loading /> : null}
 			{!error && ready ? (
 				<AuthProvider>
-					<Root />
+					<RootNavigator />
 				</AuthProvider>
 			) : null}
 		</View>
 	);
-};
+}
 
 const styles = StyleSheet.create({
 	container: {
@@ -116,5 +111,3 @@ const styles = StyleSheet.create({
 		textAlign: "center",
 	},
 });
-
-export default App;

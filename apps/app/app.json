@@ -32,7 +32,11 @@
 					"resizeMode": "contain",
 					"backgroundColor": "#ffffff"
 				}
-			]
-		]
+			],
+			"expo-router"
+		],
+		"experiments": {
+			"typedRoutes": true
+		}
 	}
 }
