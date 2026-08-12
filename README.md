@@ -48,7 +48,7 @@ Migration SQL is compiled into `src/migrations/manifest.ts` as plain strings by 
 
 ### Local storage and future Turso sync
 
-[`connection.ts`](packages/database/app/src/connection.ts) uses a purely local SQLite file by default. It can open a libSQL embedded replica when `EXPO_PUBLIC_TURSO_SYNC_URL` **and** `EXPO_PUBLIC_TURSO_AUTH_TOKEN` are both set, but the app does not schedule synchronization yet. Until foreground, connectivity, retry, and conflict behaviour are implemented, leave both values blank.
+[`connection.ts`](packages/database/app/src/connection.ts) opens a purely local SQLite product database. Device-only metadata lives separately in `bro-device.db`, so onboarding, app-lock preferences, installation identity, session hints, and workspace ownership can never replicate. Phase 5 will reintroduce embedded replicas with short-lived, database-scoped credentials minted by the API; no Turso credential is accepted from an Expo build-time environment variable.
 
 ## Auth
 
@@ -112,6 +112,6 @@ Generate a secret with `openssl rand -base64 32`. On a physical device, `EXPO_PU
 
 - [`auth/app/src/client.ts`](packages/auth/app/src/client.ts) carries a `@ts-expect-error` on the Expo plugin: `@better-auth/expo@1.6.27` types `getActions` incompatibly with `BetterAuthClientPlugin` even on matched dependency versions. It is suppressed rather than cast, because casting collapses session type inference. Remove it once upstream fixes the declaration.
 - The app scheme `"app"` is repeated in `apps/app/app.json`, `auth/api/src/options.ts`, and `auth/app/src/client.ts`. Changing one alone breaks auth redirects silently.
-- Turso sync is not wired into the app lifecycle yet. A future implementation also needs short-lived, device-scoped tokens minted by the API; a long-lived `EXPO_PUBLIC_TURSO_AUTH_TOKEN` would ship inside the app bundle and could be extracted.
-- No navigation library yet — the app conditionally renders sign-in, sign-up, and a placeholder home screen. Adopting `expo-router` or React Navigation is still an open decision.
-- Only local embedded storage is currently supported as an application workflow. The low-level replica connection and manual sync helper are scaffolding for later work.
+- Turso sync is not wired into the app lifecycle yet. Phase 5 will add short-lived, database-scoped tokens minted by the API and a supported connection-reopen path.
+- Expo Router now keeps onboarding and the local app independent of remote authentication; sign-in and sign-up are optional account routes.
+- Only local embedded storage is currently supported. Replica connection and synchronization return in Phase 5 with API-minted credentials.

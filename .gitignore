@@ -63,3 +63,7 @@ cache/
 # Local environment
 .env
 .env.local
+
+test-output
+
+*.tsbuildinfo

@@ -4,10 +4,11 @@ import { Text, TextInput, TouchableOpacity, View } from "react-native";
 import { authStyles } from "./auth-styles";
 
 export type SignInScreenProps = {
-	onShowSignUp: () => void;
+	onShowSignUp?: () => void;
+	onSuccess?: () => Promise<void> | void;
 };
 
-export function SignInScreen({ onShowSignUp }: SignInScreenProps) {
+export function SignInScreen({ onShowSignUp, onSuccess }: SignInScreenProps) {
 	const { signIn } = useAuth();
 	const [email, setEmail] = useState("");
 	const [password, setPassword] = useState("");
@@ -20,6 +21,7 @@ export function SignInScreen({ onShowSignUp }: SignInScreenProps) {
 
 		try {
 			await signIn(email.trim(), password);
+			await onSuccess?.();
 		} catch (caught) {
 			setError(caught instanceof Error ? caught.message : "Could not sign in.");
 		} finally {
@@ -65,13 +67,15 @@ export function SignInScreen({ onShowSignUp }: SignInScreenProps) {
 				</Text>
 			</TouchableOpacity>
 
-			<TouchableOpacity
-				style={authStyles.link}
-				onPress={onShowSignUp}
-				disabled={submitting}
-			>
-				<Text style={authStyles.linkText}>Need an account? Sign up</Text>
-			</TouchableOpacity>
+			{onShowSignUp ? (
+				<TouchableOpacity
+					style={authStyles.link}
+					onPress={onShowSignUp}
+					disabled={submitting}
+				>
+					<Text style={authStyles.linkText}>Need an account? Sign up</Text>
+				</TouchableOpacity>
+			) : null}
 		</View>
 	);
 }

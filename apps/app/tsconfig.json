@@ -1,13 +1,19 @@
 {
-  "extends": "../../tsconfig.base.json",
-  "files": [],
-  "include": [
-    ".expo/types/**/*.ts",
-    "expo-env.d.ts"
-  ],
-  "references": [
-    {
-      "path": "./tsconfig.app.json"
-    }
-  ]
+	"extends": "../../tsconfig.base.json",
+	"files": [],
+	"include": [".expo/types/**/*.ts", "expo-env.d.ts"],
+	"references": [
+		{
+			"path": "../../packages/database/app"
+		},
+		{
+			"path": "../../packages/auth/app"
+		},
+		{
+			"path": "./tsconfig.app.json"
+		},
+		{
+			"path": "./tsconfig.spec.json"
+		}
+	]
 }

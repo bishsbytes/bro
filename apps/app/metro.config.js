@@ -1,8 +1,10 @@
 const { withNxMetro } = require("@nx/expo");
+const { dirname } = require("node:path");
 // Expo SDK 55+ ships Metro via `@expo/metro`. `getDefaultConfig` and
 // `mergeConfig` must come from the Expo-provided Metro instance.
 const { getDefaultConfig } = require("expo/metro-config");
 const { mergeConfig } = require("@expo/metro/metro-config");
+const expoSqliteRoot = dirname(require.resolve("expo-sqlite/package.json"));
 
 const defaultConfig = getDefaultConfig(__dirname);
 const { assetExts, sourceExts } = defaultConfig.resolver;
@@ -19,7 +21,7 @@ const customConfig = {
 		babelTransformerPath: require.resolve("react-native-svg-transformer"),
 	},
 	resolver: {
-		assetExts: assetExts.filter((ext) => ext !== "svg"),
+		assetExts: [...assetExts.filter((ext) => ext !== "svg"), "wasm"],
 		sourceExts: [...sourceExts, "cjs", "mjs", "svg"],
 	},
 };
@@ -31,5 +33,6 @@ module.exports = withNxMetro(mergeConfig(defaultConfig, customConfig), {
 	// all the file extensions used for imports other than 'ts', 'tsx', 'js', 'jsx', 'json'
 	extensions: [],
 	// Specify folders to watch, in addition to Nx defaults (workspace libraries and node_modules)
-	watchFolders: [],
+	// Metro resolves Expo SQLite's web WASM through pnpm's real package path.
+	watchFolders: [expoSqliteRoot],
 });

@@ -1,3 +1,7 @@
 {
-	"recommendations": ["nrwl.angular-console", "dbaeumer.vscode-eslint"]
+	"recommendations": [
+		"nrwl.angular-console",
+		"dbaeumer.vscode-eslint",
+		"firsttris.vscode-jest-runner"
+	]
 }

@@ -2,7 +2,7 @@
 
 ## Status
 
-Proposed implementation plan, revised after review against the current codebase. Sync architecture, anonymous identity, and the consent model are settled — see [Decisions taken](#decisions-taken). One question still blocks Phase 1: which features are core, account-backed, and premium.
+Active implementation plan, revised after review against the current codebase. Phase 1 is implemented in code, with its native-device acceptance pass still pending. Sync architecture, anonymous identity, and the consent model are settled — see [Decisions taken](#decisions-taken).
 
 ## Goals
 
@@ -45,7 +45,7 @@ Server-backed capabilities need a further condition beyond these four: **consent
 
 **Decided.** Sync is libSQL's, not the application's. Each syncing user owns one remote Turso database, and the local `bro.db` is an embedded replica of it. The app never holds a long-lived Turso credential: the API mints a database-scoped token after validating the Better Auth session *and* the user's entitlement.
 
-This replaces the current scaffolding in `connection.ts`, which reads `EXPO_PUBLIC_TURSO_SYNC_URL` and `EXPO_PUBLIC_TURSO_AUTH_TOKEN`. Those are bundled at build time and identical across every install, so every device would replicate into one shared database. They must be removed, not merely left unset.
+Phase 1 removed the earlier `connection.ts` scaffolding that read `EXPO_PUBLIC_TURSO_SYNC_URL` and `EXPO_PUBLIC_TURSO_AUTH_TOKEN`. Those values would have been bundled at build time and identical across every install, causing every device to replicate into one shared database.
 
 **What this buys.** Writes on a replica forward to the primary and are serialized there, so conflict resolution is last-writer-wins at the write level and is not the application's problem. Tombstones, per-domain conflict policy, idempotency rules, and an upload queue all cease to exist as work items. This is the main reason to prefer native sync over an application-level protocol.
 
@@ -130,10 +130,14 @@ A local database records which account it belongs to, so that a different accoun
 type WorkspaceIdentity = {
 	/** Stable per local database file. Created with the database. */
 	workspaceId: string;
+	/** The on-device SQLite file represented by this registry entry. */
+	databaseFileName: string;
 	/** null for a local-only workspace that no account has claimed. */
 	ownerUserId: string | null;
 };
 ```
+
+Device settings also record `activeWorkspaceId`. The filename and active pointer are necessary once a retained account-owned file and the current unowned file coexist; `workspaceId` and `ownerUserId` alone cannot locate or select them.
 
 - A workspace with a non-null `ownerUserId` may only be opened while signed in as that user. Signing in as anyone else must not open it, sync it, or read from it — that account gets a fresh workspace instead.
 - Signing out closes the owned workspace and opens an unowned one. It does not carry the previous account's data forward into the next session.
@@ -183,13 +187,15 @@ type RemoteIdentity =
 There is deliberately no third state. An earlier draft of this plan gave unregistered users a Better Auth anonymous session; it was removed because nothing needed it. Local features require no server identity, sync requires a registered one, and telemetry uses `installationId` — which is better suited to the job anyway, since it survives session expiry. Adding the anonymous plugin later costs roughly what adding it now would, so nothing is foreclosed. See [If server features for unregistered users appear](#if-server-features-for-unregistered-users-appear).
 
 - `unavailable` includes offline startup, server errors, and no established session. It is the normal, expected state for most users, not a degraded one.
-- Startup performs no session work for a user who has never registered. This needs a durable local marker to implement, because `unavailable` alone cannot distinguish "never had a session" from "session expired" — and the provider currently calls `useSession()` unconditionally on mount ([auth-provider.tsx:25](../../packages/auth/app/src/hooks/auth-provider.tsx#L25)), which issues a request either way.
+- Startup performs no session work for a user who has never registered. This needs a durable local marker to implement, because `unavailable` alone cannot distinguish "never had a session" from "session expired": a provider that calls `useSession()` unconditionally on mount issues a request either way.
   - Set `hasStoredRemoteSession` on successful sign-in or sign-up; clear it on sign-out and account deletion.
-  - Mount the session hook only when the marker is set.
+  - Mount the session hook only when the marker is set. **The marker must gate a child that owns the hook, not the provider's own component type.** Swapping the provider between two component types remounts the entire tree beneath it on every sign-in and sign-out, discarding navigation state and any screen state mid-flow — including the sign-out result the user is meant to read.
+  - Record the user id returned by sign-in and sign-up directly, rather than waiting for the session hook to report it. Phase 2 keys workspace ownership off `lastRemoteUserId`, so it must not lag a render behind or fall back to the previously recorded account.
   - The marker is a hint, not a source of truth. If it disagrees with SecureStore — after a keychain wipe, a restore onto a new device, or an interrupted sign-out — the cost is one wasted request, after which the marker is corrected. Do not build reconciliation machinery for it.
+  - Clear it when the server answers with no session or an explicit 401, and only then. Any other error is a failed request — offline startup above all — and must leave the marker alone.
 - Signing out returns to a usable local workspace; it does not route to a mandatory sign-in screen or erase local data.
-- Signing out must succeed offline. Clear the local session unconditionally and treat server-side revocation as best-effort; a user in airplane mode currently cannot sign out at all, because the provider's `signOut` throws whenever the network call fails ([auth-provider.tsx:56](../../packages/auth/app/src/hooks/auth-provider.tsx#L56)).
-- **How** to clear it locally is an open implementation question, not a detail. Better Auth's expo client clears its SecureStore cookies in `signOut`'s success path, so a failed network call leaves the session in place — exactly the case that must work. Clearing both the SecureStore entries written under the `storagePrefix` in [client.ts:29](../../packages/auth/app/src/client.ts#L29) *and* the client's in-memory session state may have no supported API. Reaching into internal storage keys works but is brittle across upgrades. Resolve this with a spike in Phase 1, and define what happens when remote revocation never succeeds — the server-side session outlives the device's copy, and that has to be acceptable or explicitly handled.
+- Signing out must succeed offline. Clear the local session unconditionally and treat server-side revocation as best-effort.
+- **Spike resolved in Phase 1.** In the installed `@better-auth/expo@1.6.27`, `signOut()` clears the SecureStore cookie, cached session, and in-memory session atom from the request-initialization hook, before the network request runs. Phase 1 pins that dependency behavior with a contract test and clears `hasStoredRemoteSession` before calling it. No internal storage keys or client atoms are touched by application code. If revocation cannot reach the server, the discarded device credential remains signed out while the server-side session expires naturally.
 
 #### If server features for unregistered users appear
 
@@ -490,17 +496,17 @@ Three pieces of work are assumed by later phases and exist in neither the worksp
 
 **Designs to settle before the phase that needs them.** Three, each of which shapes a schema or an API that is expensive to change afterwards:
 
-1. [Local workspace ownership](#local-workspace-ownership) — before Phase 1, because the device-local settings schema built in Phase 1 must hold `workspaceId` and `ownerUserId`. The *implementation* lands in Phase 2, but the two fields have to be there first. [Sync generations](#sync-generations) add one more field in Phase 5 and need no decision now.
+1. [Local workspace ownership](#local-workspace-ownership) — settled and represented in Phase 1 by a workspace registry containing `workspaceId`, `databaseFileName`, and `ownerUserId`, plus the `activeWorkspaceId` device setting. Enforcement lands in Phase 2. [Sync generations](#sync-generations) add one more field in Phase 5 and need no decision now.
 2. [Entitlement before registration](#entitlement-before-registration) — before Phase 4.
 3. Sync opt-in, generation, and provisioning records on the server — before Phase 5.
 
-**Test harness.** Every exit criterion below is a testable assertion, and the recommended first slice ends with "tests proving first launch and relaunch work in airplane mode". The workspace currently has no test target, no Jest configuration, and no spec files, although `apps/app` already declares `jest-expo` and `@testing-library/react-native`. Standing the harness up belongs in Phase 1; otherwise every exit criterion below is manual-only.
+**Test harness.** Phase 1 adds the `@bro/app:test` Nx target using `jest-expo` and Testing Library. It includes dependency-contract coverage for Better Auth's pre-request sign-out clearing, local-only session-hook gating, database-open retry, and onboarding entry without a network request.
 
 **Native build.** `expo-local-authentication` (Phase 3) and the purchase SDK (Phase 4) both require a custom development client, and `apps/app/android/` is a committed prebuild that must be regenerated when either is added. That is one infrastructure task arriving twice, in consecutive phases. Doing it once, when the first of the two lands, is cheaper than doing it twice — and note that neither phase can be verified in Expo Go.
 
 ### Phase 1: Local-first app entry
 
-- **Spike: offline sign-out.** Establish how to clear Better Auth's SecureStore cookies and in-memory session state when the network call fails, and whether a supported API exists. Everything else in this phase's sign-out work depends on the answer, so run it first.
+- **Spike: offline sign-out — resolved.** Better Auth clears its SecureStore cookies, cached session, and in-memory session atom before the request; retain a contract test around that behavior and treat server revocation failure as informational.
 - Remove `EXPO_PUBLIC_TURSO_SYNC_URL` / `EXPO_PUBLIC_TURSO_AUTH_TOKEN` from `connection.ts`. The replica is reintroduced in Phase 5 with API-minted tokens; leaving a build-time credential path in place until then is an accident waiting to be shipped.
 - Add the device-local settings store and its repository APIs, separate from `bro.db`, with the workspace-ownership fields in the schema from the start.
 - Add welcome/onboarding routes and persistence.
@@ -512,6 +518,8 @@ Three pieces of work are assumed by later phases and exist in neither the worksp
 - Stand up the test harness described above.
 
 **Exit criteria:** A clean install in airplane mode can complete onboarding, relaunch, and use the core app without seeing an account requirement, and issues no request to our backend while doing so. Sign-out succeeds with no network. Auth failure never reaches a startup screen; storage failure always does, with a retry path. Covered by automated tests, not only by hand.
+
+**Implementation status:** The Phase 1 code and automated harness are complete. The remaining release gate is the native Android/iOS acceptance pass covering fresh install, cold relaunch, airplane-mode sign-out, and storage retry on a real SQLite handle.
 
 ### Phase 2: Optional accounts
 
@@ -624,10 +632,10 @@ At minimum, cover:
 
 ## Open decisions
 
-### Blocking — resolve before Phase 1 starts
+### Phase 1 decisions — resolved
 
 1. **Which exact features are core, account-backed, and premium?** Everything downstream — what onboarding promises, what registration is worth at the free tier, what premium gates — depends on this. Sharpened by the sync and AI decisions: registration now buys the user access to server features rather than safety for their data, so the free tier needs a defensible answer that stands on local value alone. **Provisionally unblocked** by the assumptions in [Onboarding copy](#onboarding-copy-placeholder); confirm or correct them before the onboarding screens ship.
-2. **Workspace ownership schema.** Not the behaviour, which lands in Phase 2, but the two fields — Phase 1 builds the settings store that has to hold them, and migrating that schema afterwards is avoidable work.
+2. **Workspace ownership schema.** Resolved as a device-local workspace registry with `workspaceId`, `databaseFileName`, and nullable `ownerUserId`, selected by `activeWorkspaceId`. Ownership enforcement still lands in Phase 2.
 
 ### Resolve before Phase 3
 
@@ -658,25 +666,33 @@ At minimum, cover:
 18. Can encryption at rest and embedded replicas coexist on this stack at all? If not, is encryption worth giving up sync?
 19. If yes: is SQLite encryption required, and what recovery guarantee is acceptable for offline-only users?
 
-## Recommended immediate slice
+## Phase 1 delivered slice
 
-Both Phase 1 blockers are provisionally resolved — the tier assumptions are recorded in [Onboarding copy](#onboarding-copy-placeholder) and the workspace schema is two fields — so Phase 1 can start:
+Phase 1 now contains:
 
-1. Spike: offline sign-out (see below).
-2. Test harness for `apps/app`, since step 8 depends on it.
-3. Remove the build-time Turso credentials from `connection.ts`.
-4. Device-local settings store, separate from `bro.db`, holding `installationId`, onboarding state, workspace ownership fields, and the session marker.
+1. A resolved offline sign-out spike and retained Better Auth dependency-contract test.
+2. An `@bro/app:test` Nx target using `jest-expo` and Testing Library.
+3. A local-only product database connection with no build-time Turso credential path.
+4. `bro-device.db`, separate from `bro.db`, holding installation, onboarding, app-lock, workspace-registry, active-workspace, and remote-session-hint state.
 5. Onboarding routes with **Start using the app** and **I already have an account**.
-6. Navigation independent of auth-server state, with local storage failure as the only fatal branch.
-7. Offline-capable sign-out, per the spike's finding.
-8. Tests proving first launch and relaunch work in airplane mode, and that neither touches our backend.
+6. Navigation independent of auth-server state, with a retryable local-storage failure as the only fatal branch.
+7. Offline-capable sign-out that clears the app-owned marker first, treats remote revocation as best-effort, and reports the outcome on a screen the marker flip does not remount.
+8. Automated coverage of the startup and identity paths:
+   - Root-layout routing — onboarding versus main app, the workspace file that gets opened and migrated, the storage-failure screen, and a retry that releases both handles before reopening. Migration failure lands on the same recoverable screen.
+   - Local-only startup mounts no session hook and issues no request; a stored marker mounts it.
+   - The app tree survives the marker flipping in both directions, and sign-out's result reaches the user whether or not revocation succeeded.
+   - Sign-in records the returned user id on the device.
+   - Onboarding persists completion, offers sign-in but not sign-up, makes no backend request, and never claims an account backs the user's data up.
+   - Device settings run against a real SQLite engine and real files, covering the single-row constraint, the first-run transaction, forward-version refusal, and identity surviving a cold relaunch.
+   - Database opening can retry after failure and refuses a concurrent open of a different workspace.
+   - Better Auth's pre-request sign-out clearing, pinned as a dependency contract.
 
-This slice is smaller than the original plan's first slice, because dropping anonymous identity removed a whole phase from in front of it. It establishes the boundary that accounts, app protection, premium, and sync all build on.
+Before calling the phase release-ready, complete the native Android/iOS acceptance pass for fresh install, cold relaunch, airplane-mode sign-out, and storage retry.
 
 ### Two spikes before committing
 
 Both are places where the plan assumes library behaviour rather than proving it. Neither is large; both are expensive to discover late.
 
-**Offline sign-out**, in Phase 1. Better Auth clears its SecureStore cookies in `signOut`'s success path, so the failure case — the one that must work offline — leaves the session behind. Establish whether clearing both the stored cookies and the in-memory session state is possible through supported API, or only by touching internal keys. The answer determines how sign-out is built, so run it before writing that code, not after.
+**Offline sign-out — resolved in Phase 1.** Better Auth's Expo client clears the stored cookie, cached session, and in-memory atom during request initialization, before it attempts server revocation. The application uses that supported `signOut()` action, clears its own session marker first, and preserves a dependency-contract test so an upstream behavior change fails visibly.
 
 **Adoption**, ahead of Phase 5 and out of phase order. It is the only step whose feasibility rests on libSQL replica semantics rather than on application code: an embedded replica bootstraps from the remote's replication log, so promoting a populated local-only file is not obviously supported. A throwaway spike — open a replica, copy rows from a local-only file, confirm they reach the primary — de-risks the entire premium proposition for a day's work. Finding out in Phase 5 would be expensive.

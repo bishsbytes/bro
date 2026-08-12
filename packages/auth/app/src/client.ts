@@ -9,12 +9,18 @@ import * as SecureStore from "expo-secure-store";
  */
 const APP_SCHEME = "app";
 
-const baseURL = process.env.EXPO_PUBLIC_API_URL;
+const configuredBaseURL = process.env.EXPO_PUBLIC_API_URL;
 
-if (!baseURL) {
-	throw new Error(
-		"EXPO_PUBLIC_API_URL is not set. Copy apps/app/.env.example to apps/app/.env.",
-	);
+// Constructing the client must never make local-only app startup depend on
+// remote configuration. Account actions report the missing setting when used.
+const baseURL = configuredBaseURL ?? "http://127.0.0.1";
+
+export function assertRemoteAuthConfigured(): void {
+	if (!configuredBaseURL) {
+		throw new Error(
+			"Account access is unavailable because EXPO_PUBLIC_API_URL is not set.",
+		);
+	}
 }
 
 export const authClient = createAuthClient({

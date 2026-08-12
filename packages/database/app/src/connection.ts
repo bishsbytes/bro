@@ -1,67 +1,49 @@
-import {
-	openDatabaseAsync,
-	type SQLiteDatabase,
-	type SQLiteOpenOptions,
-} from "expo-sqlite";
+import { openDatabaseAsync, type SQLiteDatabase } from "expo-sqlite";
 
 export const DATABASE_NAME = "bro.db";
 
 let database: SQLiteDatabase | undefined;
 let opening: Promise<SQLiteDatabase> | undefined;
-let syncEnabled = false;
+let openDatabaseName: string | undefined;
 
-function readSyncCredentials(): { url: string; authToken: string } | undefined {
-	const url = process.env.EXPO_PUBLIC_TURSO_SYNC_URL;
-	const authToken = process.env.EXPO_PUBLIC_TURSO_AUTH_TOKEN;
-
-	if ((url && !authToken) || (!url && authToken)) {
+/**
+ * Opens the active workspace's local product database once per process.
+ * Phase 5 will reintroduce embedded replicas with API-minted credentials; the
+ * Phase 1 connection is intentionally local-only.
+ */
+export async function initDb(
+	databaseName = DATABASE_NAME,
+): Promise<SQLiteDatabase> {
+	// Claimed when the open starts rather than when it resolves, so a concurrent
+	// caller asking for a different workspace is rejected instead of being handed
+	// the first caller's handle.
+	if (openDatabaseName !== undefined && openDatabaseName !== databaseName) {
 		throw new Error(
-			"Turso requires both EXPO_PUBLIC_TURSO_SYNC_URL and EXPO_PUBLIC_TURSO_AUTH_TOKEN. Leave both blank for local-only storage.",
+			`Database "${openDatabaseName}" is already open. Close it before opening "${databaseName}".`,
 		);
 	}
 
-	if (!url || !authToken) {
-		return undefined;
-	}
-
-	return { url, authToken };
-}
-
-async function open(): Promise<SQLiteDatabase> {
-	const credentials = readSyncCredentials();
-	const options: SQLiteOpenOptions = credentials
-		? {
-				libSQLOptions: {
-					url: credentials.url,
-					authToken: credentials.authToken,
-				},
-			}
-		: {};
-
-	syncEnabled = credentials !== undefined;
-
-	return await openDatabaseAsync(DATABASE_NAME, options);
-}
-
-/**
- * Opens the embedded database once per process.
- *
- * With `EXPO_PUBLIC_TURSO_SYNC_URL` and `EXPO_PUBLIC_TURSO_AUTH_TOKEN` set, this
- * is a libSQL embedded replica that syncs with the remote Turso database.
- * Without them it falls back to a purely local on-device SQLite file, which is
- * fully functional apart from sync.
- */
-export async function initDb(): Promise<SQLiteDatabase> {
 	if (database) {
 		return database;
 	}
 
+	openDatabaseName = databaseName;
+
 	// Cache the in-flight promise so concurrent callers share one open.
-	opening ??= open().then((db) => {
-		database = db;
-		opening = undefined;
-		return db;
-	});
+	opening ??= openDatabaseAsync(databaseName)
+		.then((db) => {
+			database = db;
+			return db;
+		})
+		.catch((error: unknown) => {
+			// A rejected open must leave no claim behind, so the startup error
+			// screen can retry — possibly against a different workspace.
+			openDatabaseName = undefined;
+			throw error;
+		})
+		.finally(() => {
+			opening = undefined;
+		});
 
 	return await opening;
 }
@@ -80,24 +62,7 @@ export function getDb(): SQLiteDatabase {
 	return database;
 }
 
-/** True when the database was opened as a syncing embedded replica. */
-export function isSyncEnabled(): boolean {
-	return syncEnabled;
-}
-
-/**
- * Pushes local writes to, and pulls remote changes from, the Turso database.
- * No-ops in local-only mode.
- */
-export async function triggerSync(): Promise<void> {
-	if (!syncEnabled) {
-		return;
-	}
-
-	await getDb().syncLibSQL();
-}
-
-/** Closes the handle and resets module state. Intended for tests. */
+/** Closes the active handle so startup can retry or another workspace can open. */
 export async function closeDb(): Promise<void> {
 	if (!database) {
 		return;
@@ -105,5 +70,5 @@ export async function closeDb(): Promise<void> {
 
 	await database.closeAsync();
 	database = undefined;
-	syncEnabled = false;
+	openDatabaseName = undefined;
 }

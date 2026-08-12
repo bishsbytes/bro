@@ -5,9 +5,10 @@ import { authStyles } from "./auth-styles";
 
 export type SignUpScreenProps = {
 	onShowSignIn: () => void;
+	onSuccess?: () => Promise<void> | void;
 };
 
-export function SignUpScreen({ onShowSignIn }: SignUpScreenProps) {
+export function SignUpScreen({ onShowSignIn, onSuccess }: SignUpScreenProps) {
 	const { signUp } = useAuth();
 	const [name, setName] = useState("");
 	const [email, setEmail] = useState("");
@@ -21,6 +22,7 @@ export function SignUpScreen({ onShowSignIn }: SignUpScreenProps) {
 
 		try {
 			await signUp(name.trim(), email.trim(), password);
+			await onSuccess?.();
 		} catch (caught) {
 			setError(caught instanceof Error ? caught.message : "Could not sign up.");
 		} finally {

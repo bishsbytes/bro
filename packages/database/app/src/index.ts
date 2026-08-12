@@ -3,9 +3,17 @@ export {
 	DATABASE_NAME,
 	getDb,
 	initDb,
-	isSyncEnabled,
-	triggerSync,
 } from "./connection";
+export {
+	closeDeviceSettingsDb,
+	DEVICE_SETTINGS_DATABASE_NAME,
+	type DeviceSettingsSnapshot,
+	getDeviceSettings,
+	initDeviceSettings,
+	setOnboardingComplete,
+	setRemoteSessionMarker,
+	type WorkspaceIdentity,
+} from "./device-settings";
 export { type MigrationResult, runMigrations } from "./migrator";
 export {
 	BaseRepository,
