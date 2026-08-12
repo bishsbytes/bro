@@ -2,7 +2,7 @@
 
 ## Status
 
-Active implementation plan, revised after review against the current codebase. Phase 1 is implemented in code, with its native-device acceptance pass still pending. Sync architecture, anonymous identity, and the consent model are settled — see [Decisions taken](#decisions-taken).
+Active implementation plan, revised after review against the current codebase. Phase 1 is implemented in code, with its native-device acceptance pass still pending. Sync architecture, anonymous identity, local data ownership, and the consent model are settled — see [Decisions taken](#decisions-taken). [Platform backup](#platform-backup) is the one storage decision still open, and it is not yet implemented.
 
 ## Goals
 
@@ -18,7 +18,7 @@ Active implementation plan, revised after review against the current codebase. P
 ## Non-goals
 
 - Requiring an account to launch or use the core app.
-- Treating a Better Auth session as the local workspace identity.
+- Treating a Better Auth session as the identity of the local database.
 - Treating premium status as an authentication role.
 - Storing biometric data in the app.
 - Adding SQLCipher in the first delivery unless the product's data sensitivity requires encryption at rest immediately.
@@ -32,7 +32,7 @@ Active implementation plan, revised after review against the current codebase. P
 
 The app must model these independently:
 
-1. **Local workspace:** whether onboarding is complete and which on-device workspace is open.
+1. **Local state:** whether onboarding is complete and the local database is open.
 2. **Remote identity:** unavailable or registered.
 3. **App protection:** disabled, locked, or unlocked.
 4. **Entitlements:** unknown, or the set of currently active capabilities.
@@ -93,8 +93,8 @@ Two stores, distinguished by whether their contents may ever leave the device.
 | `installationId` | Device-local settings store | Random UUID identifying this install; meaningless if copied to another device. Not a credential. |
 | Onboarding completion | Device-local settings store | Must be readable offline before any other decision. |
 | `appLockEnabled`, lock timeout | Device-local settings store | A lock preference is a property of the device, not the user. |
-| `workspaceId`, `ownerUserId` per workspace | Device-local settings store | Which account a local database belongs to. See [Local workspace ownership](#local-workspace-ownership). |
-| `syncGenerationId` per workspace | Device-local settings store | Added in Phase 5. See [Sync generations](#sync-generations). |
+| `ownerUserId` | Device-local settings store | Which account, if any, has claimed this device's local data. Read at adoption, never at database open. See [Local data ownership](#local-data-ownership). |
+| `syncGenerationId` | Device-local settings store | Added in Phase 5. See [Sync generations](#sync-generations). |
 | `hasStoredRemoteSession`, `lastRemoteUserId` | Device-local settings store | Lets startup skip all session work for a user who has never registered. |
 | Better Auth cookies/session cache | Expo SecureStore | Already provided by the Better Auth Expo client. |
 | Optional SQLCipher key | Expo SecureStore | Only if database encryption is introduced. |
@@ -115,38 +115,58 @@ The device-local settings store must be a distinct store from product data — a
 
 The app never receives or stores raw fingerprint or facial data. The operating system returns only an authentication result.
 
+### Platform backup
+
+**Open, and not yet implemented.** Both databases currently sit inside the platform's default backup scope, which no one chose:
+
+- Android — `context.filesDir/SQLite/`, inside Auto Backup's `file` domain, with `android:allowBackup="true"` in the committed prebuild manifest.
+- iOS — `documentDirectory/SQLite/`, inside the iCloud-backed app container.
+
+So both files are backed up today and restored onto a new device.
+
+**`bro-device.db` must be excluded.** This is not a judgement call:
+
+- `installationId` is defined to identify *this install*. Restore it and it identifies two.
+- In Phase 5, a restored `syncGenerationId` on a device that never adopted is exactly the stale-generation state [Sync generations](#sync-generations) exists to detect. Platform backup would manufacture it.
+- Nothing in the file is worth preserving — onboarding completion and a lock preference cost seconds to redo.
+
+**`bro.db` is a product decision.** Excluding it makes the privacy copy literally true, since Apple can read a standard iCloud Backup without Advanced Data Protection enabled; Android encrypts client-side with the device PIN, so Google cannot. Keeping it is the free tier's only protection against a lost phone, because sync is premium — and withholding that to drive upgrades is its own kind of dark pattern. **Current lean: keep `bro.db` backed up and amend the copy.** [Screen 2](#screen-2--where-your-data-lives) must then stop saying "and nowhere else" and name platform backup explicitly; "we never have it" stays true either way, since the claim is scoped to our servers.
+
+Implementation notes for whoever picks this up:
+
+- Android is min SDK 24 / target 36, so the install base straddles API 31 and needs **both** `dataExtractionRules` (31+) and `fullBackupContent` (24–30).
+- iOS has no Info.plist switch for a subdirectory. `openDatabaseAsync` accepts a directory argument, so the file can be relocated, but setting `NSURLIsExcludedFromBackupKey` needs native code.
+- WAL leaves `-wal` and `-shm` sidecars. Exclusion rules must name them, or a partial database is backed up.
+- Both platforms need a native rebuild, so fold this into the prebuild regeneration [Phase 3](#phase-3-optional-app-protection) already requires.
+
 ### Local identity lifecycle
 
 - Create `installationId` in the device-local settings store during first startup, before or alongside product-database initialization.
 - Keep it stable across sign-in, sign-up, and sign-out.
-- Treat uninstall/reinstall as a new local workspace unless restored by an explicitly supported platform backup mechanism.
+- Treat uninstall/reinstall as a new install unless restored by an explicitly supported platform backup mechanism. See [Platform backup](#platform-backup), which decides what may be restored at all.
 - Never use an email address or a fixed string as an installation, purchase, or sync identifier.
 
-### Local workspace ownership
+### Local data ownership
 
-A local database records which account it belongs to, so that a different account cannot open it:
+**One product database per device.** A single `ownerUserId` in device settings records which account, if any, has claimed this device's local data:
 
 ```ts
-type WorkspaceIdentity = {
-	/** Stable per local database file. Created with the database. */
-	workspaceId: string;
-	/** The on-device SQLite file represented by this registry entry. */
-	databaseFileName: string;
-	/** null for a local-only workspace that no account has claimed. */
-	ownerUserId: string | null;
-};
+/** null while no account has claimed this device's local data. */
+ownerUserId: string | null;
 ```
 
-Device settings also record `activeWorkspaceId`. The filename and active pointer are necessary once a retained account-owned file and the current unowned file coexist; `workspaceId` and `ownerUserId` alone cannot locate or select them.
+- **The check lives at the sync boundary, not at database open.** Before adoption uploads anything, a non-null `ownerUserId` that differs from the signed-in account must stop the upload and say whose data it is. That is the harm worth preventing: one account's records reaching another's remote database.
+- **Sign-out does not close, switch, or hide local data.** The account is optional and buys nothing at the free tier, so a user signing out — often just to fix a login problem — must not watch their notes disappear. Signing out ends a session; it is not a data operation.
+- **There is no workspace registry, no second database file, and no user-facing concept of workspaces.** `installationId` identifies the install; the product database is simply `bro.db`.
 
-- A workspace with a non-null `ownerUserId` may only be opened while signed in as that user. Signing in as anyone else must not open it, sync it, or read from it — that account gets a fresh workspace instead.
-- Signing out closes the owned workspace and opens an unowned one. It does not carry the previous account's data forward into the next session.
-- Selection is automatic, by owner. There is no workspace picker and no user-facing concept of "workspaces"; a device that only ever hosts one account never sees any of this.
-- `installationId` identifies the install; `workspaceId` identifies one database within it.
+**An earlier revision of this plan specified per-account workspace files** — a registry of `workspaceId`, `databaseFileName`, and `ownerUserId` selected by an `activeWorkspaceId`, with sign-out closing the owned file and opening an unowned one. It was removed, because the risk it addressed is already covered and the mechanism cost more than the risk:
 
-**This is deliberately small.** It is one nullable column and one comparison on open — not a multi-tenant device model. The scenario it guards is not really shared phones, which are rare for this product. It is the ordinary case of one person with two accounts: a signup with the wrong email, or a forgotten existing account. There the risk is not a privacy breach but silent data merging — the old workspace's records replicating into the new account, which is confusing and hard to undo once synced. Development and QA will also switch accounts on one device constantly, so the guard earns its keep long before any user meets it.
+- **Nothing merges silently.** Adoption is explicit and confirmed per device — "copy this device's data into your synced account?" ([Sync is opt-in](#sync-is-opt-in)). The registry was a second lock on a door that already has one.
+- **The population is thin.** Shared phones are rare for this product, which leaves one person with two accounts — the same person, so their notes reaching their own second account is not a breach.
+- **The cost was concentrated in one rule.** Requiring sign-out to close the owned file is what forced retained-plus-current files, which forced `databaseFileName`, which forced `activeWorkspaceId` and a multi-row registry. Drop that rule and the whole structure collapses to one nullable value.
+- **It interacted badly with platform backup.** A restore that brings back an account-owned database file without the device settings that catalogue it leaves an orphaned file the app can neither open nor delete. See [Platform backup](#platform-backup).
 
-Deleting a retained workspace belonging to another account is offered at the point of collision — when a different user signs in — rather than through any ongoing management UI.
+What this gives up, stated plainly: two people genuinely sharing one device will see each other's notes. That is the same trade every note-taking app with an optional account makes, and the [app lock](#optional-biometricdevice-credential-app-lock) addresses it better than a data model can. Revisit only if a real shared-device use case appears.
 
 ### Sync generations
 
@@ -169,7 +189,7 @@ These are routinely conflated and have different semantics:
 
 | Operation | Local data | Remote database | Account |
 | --- | --- | --- | --- |
-| Sign out | Retained, but the workspace is closed and not carried into the next session | Untouched | Untouched |
+| Sign out | Untouched and still open — signing out is not a data operation | Untouched | Untouched |
 | Turn sync off | Untouched | **Deleted**, generation retired | Untouched |
 | Delete local data | **Deleted** on this device | Untouched | Untouched |
 | Delete account | Untouched on device | **Deleted** | **Deleted** |
@@ -190,10 +210,10 @@ There is deliberately no third state. An earlier draft of this plan gave unregis
 - Startup performs no session work for a user who has never registered. This needs a durable local marker to implement, because `unavailable` alone cannot distinguish "never had a session" from "session expired": a provider that calls `useSession()` unconditionally on mount issues a request either way.
   - Set `hasStoredRemoteSession` on successful sign-in or sign-up; clear it on sign-out and account deletion.
   - Mount the session hook only when the marker is set. **The marker must gate a child that owns the hook, not the provider's own component type.** Swapping the provider between two component types remounts the entire tree beneath it on every sign-in and sign-out, discarding navigation state and any screen state mid-flow — including the sign-out result the user is meant to read.
-  - Record the user id returned by sign-in and sign-up directly, rather than waiting for the session hook to report it. Phase 2 keys workspace ownership off `lastRemoteUserId`, so it must not lag a render behind or fall back to the previously recorded account.
+  - Record the user id returned by sign-in and sign-up directly, rather than waiting for the session hook to report it. Phase 5 adoption compares the signed-in account against `ownerUserId`, so the recorded account must not lag a render behind or fall back to a previous one.
   - The marker is a hint, not a source of truth. If it disagrees with SecureStore — after a keychain wipe, a restore onto a new device, or an interrupted sign-out — the cost is one wasted request, after which the marker is corrected. Do not build reconciliation machinery for it.
   - Clear it when the server answers with no session or an explicit 401, and only then. Any other error is a failed request — offline startup above all — and must leave the marker alone.
-- Signing out returns to a usable local workspace; it does not route to a mandatory sign-in screen or erase local data.
+- Signing out leaves the user in the app with their local data open; it does not route to a mandatory sign-in screen, erase local data, or hide it.
 - Signing out must succeed offline. Clear the local session unconditionally and treat server-side revocation as best-effort.
 - **Spike resolved in Phase 1.** In the installed `@better-auth/expo@1.6.27`, `signOut()` clears the SecureStore cookie, cached session, and in-memory session atom from the request-initialization hook, before the network request runs. Phase 1 pins that dependency behavior with a contract test and clears `hasStoredRemoteSession` before calling it. No internal storage keys or client atoms are touched by application code. If revocation cannot reach the server, the discarded device credential remains signed out while the server-side session expires naturally.
 
@@ -208,7 +228,7 @@ Revisit this only if a server-backed capability is genuinely to be offered to un
 ### First launch
 
 1. Initialize and migrate the local database.
-2. Create or load the local workspace metadata.
+2. Read device-local settings, creating this install's identity on first launch.
 3. Show the welcome/onboarding screens if onboarding is incomplete.
 4. On the final screen offer:
    - **Start using the app** as the primary action.
@@ -286,8 +306,7 @@ Assumed tiers, to be confirmed:
 - End the registered Better Auth session.
 - Switch purchase identity according to the selected purchase provider's documented identity rules.
 - Stop sync and close the replica. Retain the file; do not delete it.
-- **Close the owned workspace and open an unowned one.** The signed-out device does not carry the previous account's data forward, because whoever signs in next may not be the same account — including the same person's second account.
-- The closed workspace stays on disk, keyed to `ownerUserId`, and reopens automatically when that user signs back in. Sync then resumes against the same generation rather than re-adopting. No prompt, no picker; the user simply finds their data where they left it.
+- **Leave local data open and untouched.** The user keeps working exactly as before, minus the account. `ownerUserId` stays recorded, so a later adoption by a different account is caught at the point it would upload.
 - Deletion of local data remains a separate destructive action with its own confirmation.
 
 ### Turn sync on, and off again
@@ -346,7 +365,10 @@ Add a device-local settings domain, in its own never-synchronised store, with at
 - `onboardingComplete`
 - `appLockEnabled`
 - app-lock timeout preference
-- schema/version fields needed for future metadata migrations
+- `ownerUserId`
+- a stored version, so values can be reshaped later
+
+Key-value, not relational: these are flat scalars, and a schema with DDL and migrations would be ceremony without a table to justify it. Reads are synchronous so that app entry does not gate on I/O.
 
 This separation is load-bearing under native sync, not merely tidy: everything in `bro.db` replicates, so onboarding state and lock preferences placed there would propagate to the user's other devices and `installationId` would stop identifying an install.
 
@@ -496,7 +518,7 @@ Three pieces of work are assumed by later phases and exist in neither the worksp
 
 **Designs to settle before the phase that needs them.** Three, each of which shapes a schema or an API that is expensive to change afterwards:
 
-1. [Local workspace ownership](#local-workspace-ownership) — settled and represented in Phase 1 by a workspace registry containing `workspaceId`, `databaseFileName`, and `ownerUserId`, plus the `activeWorkspaceId` device setting. Enforcement lands in Phase 2. [Sync generations](#sync-generations) add one more field in Phase 5 and need no decision now.
+1. [Local data ownership](#local-data-ownership) — settled as a single nullable `ownerUserId` in device settings, present from Phase 1. Enforcement is a Phase 5 adoption check, not a Phase 2 open-time one. [Sync generations](#sync-generations) add one more key in Phase 5 and need no decision now.
 2. [Entitlement before registration](#entitlement-before-registration) — before Phase 4.
 3. Sync opt-in, generation, and provisioning records on the server — before Phase 5.
 
@@ -508,7 +530,7 @@ Three pieces of work are assumed by later phases and exist in neither the worksp
 
 - **Spike: offline sign-out — resolved.** Better Auth clears its SecureStore cookies, cached session, and in-memory session atom before the request; retain a contract test around that behavior and treat server revocation failure as informational.
 - Remove `EXPO_PUBLIC_TURSO_SYNC_URL` / `EXPO_PUBLIC_TURSO_AUTH_TOKEN` from `connection.ts`. The replica is reintroduced in Phase 5 with API-minted tokens; leaving a build-time credential path in place until then is an accident waiting to be shipped.
-- Add the device-local settings store and its repository APIs, separate from `bro.db`, with the workspace-ownership fields in the schema from the start.
+- Add the device-local settings store and its APIs, in a separate file from `bro.db`, with `ownerUserId` present from the start.
 - Add welcome/onboarding routes and persistence.
 - Refactor root navigation so local onboarding—not authentication—controls app entry.
 - Move sign-in/sign-up into optional account flows.
@@ -523,14 +545,13 @@ Three pieces of work are assumed by later phases and exist in neither the worksp
 
 ### Phase 2: Optional accounts
 
-- Implement workspace ownership: `ownerUserId` enforcement on open, unowned workspace on sign-out, closed workspaces reopened automatically by their owner, and the delete-or-keep prompt when a different account signs in.
 - Implement in-app Account settings, with sign-in, sign-up, and sign-out as optional flows reachable from the main app.
 - Implement account deletion, including everything the server holds.
 - Implement the four destructive operations as distinct actions with distinct confirmation copy.
 
 Reconciliation of *product* data is not in this phase. Under native sync it happens at adoption, which cannot occur before a user is entitled and opted in — see Phase 5.
 
-**Exit criteria:** Account B signing in on a device where account A was signed in cannot see, open, or later upload A's data. Registering, signing in, signing out, and switching accounts never destroy local product data implicitly, and none of them is required to use the app.
+**Exit criteria:** Registering, signing in, signing out, and switching accounts never destroy, hide, or implicitly re-scope local product data, and none of them is required to use the app. Account switching records the new `ownerUserId`; refusing to upload one account's data into another's is a Phase 5 adoption check.
 
 ### Phase 3: Optional app protection
 
@@ -557,11 +578,11 @@ Reconciliation of *product* data is not in this phase. Under native sync it happ
 - Implement opt-out and account deletion as genuine remote deletion, not revocation.
 - Mint, refresh, and revoke database-scoped tokens; implement lapse revocation and post-grace reaping.
 - Rebuild `connection.ts` around a token-bearing open, a supported reopen path, and degradation to local-only when a token is expired or refused.
-- Implement adoption: new replica file, copy, verify, retire, record — interruptible, restartable, and explicitly confirmed per device.
+- Implement adoption: new replica file, copy, verify, retire, record — interruptible, restartable, and explicitly confirmed per device. Refuse, with an explanation naming the other account, when `ownerUserId` is set and differs from the signed-in user.
 - Schedule `syncLibSQL()` on foreground, post-write debounce, and connectivity regained.
 - Add the minimum-schema check and forced-update path before multi-device sync is enabled for anyone.
 
-**Exit criteria:** An entitled user who has not opted in has no remote database and no server-side product data. A user who opts in sees their data on a second device. Opting out removes the remote database and leaves local data intact. A device offline across an entire opt-out/re-opt-in cycle cannot repopulate the new database. A lapsed user keeps working locally with sync stopped; adoption interrupted mid-copy resumes without duplication or loss; an expired token never produces a startup error or a blocked write.
+**Exit criteria:** Adoption refuses to upload local data claimed by a different account. An entitled user who has not opted in has no remote database and no server-side product data. A user who opts in sees their data on a second device. Opting out removes the remote database and leaves local data intact. A device offline across an entire opt-out/re-opt-in cycle cannot repopulate the new database. A lapsed user keeps working locally with sync stopped; adoption interrupted mid-copy resumes without duplication or loss; an expired token never produces a startup error or a blocked write.
 
 ### Phase 6: Optional encryption at rest
 
@@ -582,8 +603,8 @@ At minimum, cover:
 - Auth API unavailable, slow, or returning an error — including at startup, where it must be invisible.
 - A local-only user causes no auth, API, sync, or product-data request to our backend at any point. Purchase-provider and consented-telemetry traffic are out of scope for this assertion and are documented separately.
 - Local-only user signs into an existing account with data on both sides.
-- **Account A signs out, account B signs in on the same device.** B cannot read A's records, and nothing of A's reaches B's remote database when B opts into sync. Covers one person's second account as much as a second person.
-- A signs back in on that device and finds their data intact, with no prompt.
+- **Account A signs out, account B signs in on the same device.** B sees the device's local data — that is the accepted trade — but nothing of A's reaches B's remote database: adoption detects the `ownerUserId` mismatch and says whose data it is before uploading.
+- A signs out and back in, and finds their data untouched and still open throughout.
 - Sign-out with no network available, including when remote revocation never succeeds.
 - Each of the four destructive operations affects only its own column of the table above.
 - Account deletion removes the Turso database and provisioning record, not only the Postgres rows.
@@ -627,7 +648,7 @@ At minimum, cover:
 - **Sync is off by default and provisions nothing until opted in.** Opting out deletes the remote database.
 - **On lapse:** revoke the token, keep working locally, retain the remote database through a grace window, then reap.
 - **No anonymous identity.** Unregistered users have no server-side presence at all. AI features sit behind an account-gated trial, so nothing needs one.
-- **A local database records which account owns it,** and refuses to open for a different one. Sign-out closes it rather than carrying it forward. One column and one check — not a multi-tenant device model.
+- **One product database per device,** with a single `ownerUserId` recording which account claimed it. The check runs at adoption, where data would leave the device — not at database open. Sign-out changes no data and hides nothing.
 - **Every opt-in mints a new sync generation.** Retired generations are never reused, so a device holding stale data is always detectable. This is about one user with several devices, not about several users.
 
 ## Open decisions
@@ -635,7 +656,7 @@ At minimum, cover:
 ### Phase 1 decisions — resolved
 
 1. **Which exact features are core, account-backed, and premium?** Everything downstream — what onboarding promises, what registration is worth at the free tier, what premium gates — depends on this. Sharpened by the sync and AI decisions: registration now buys the user access to server features rather than safety for their data, so the free tier needs a defensible answer that stands on local value alone. **Provisionally unblocked** by the assumptions in [Onboarding copy](#onboarding-copy-placeholder); confirm or correct them before the onboarding screens ship.
-2. **Workspace ownership schema.** Resolved as a device-local workspace registry with `workspaceId`, `databaseFileName`, and nullable `ownerUserId`, selected by `activeWorkspaceId`. Ownership enforcement still lands in Phase 2.
+2. **Local data ownership.** Resolved as a single nullable `ownerUserId` device setting, checked at Phase 5 adoption rather than at database open. Per-account workspace files were considered and rejected — see [Local data ownership](#local-data-ownership).
 
 ### Resolve before Phase 3
 
@@ -673,18 +694,18 @@ Phase 1 now contains:
 1. A resolved offline sign-out spike and retained Better Auth dependency-contract test.
 2. An `@bro/app:test` Nx target using `jest-expo` and Testing Library.
 3. A local-only product database connection with no build-time Turso credential path.
-4. `bro-device.db`, separate from `bro.db`, holding installation, onboarding, app-lock, workspace-registry, active-workspace, and remote-session-hint state.
+4. `bro-device.db`, separate from `bro.db`, holding installation, onboarding, app-lock, data-ownership, and remote-session-hint state as key-value pairs read synchronously.
 5. Onboarding routes with **Start using the app** and **I already have an account**.
 6. Navigation independent of auth-server state, with a retryable local-storage failure as the only fatal branch.
 7. Offline-capable sign-out that clears the app-owned marker first, treats remote revocation as best-effort, and reports the outcome on a screen the marker flip does not remount.
 8. Automated coverage of the startup and identity paths:
-   - Root-layout routing — onboarding versus main app, the workspace file that gets opened and migrated, the storage-failure screen, and a retry that releases both handles before reopening. Migration failure lands on the same recoverable screen.
+   - Root-layout routing — onboarding versus main app, the product database being opened and migrated, the storage-failure screen, and a retry that releases both handles before reopening. Migration failure lands on the same recoverable screen.
    - Local-only startup mounts no session hook and issues no request; a stored marker mounts it.
    - The app tree survives the marker flipping in both directions, and sign-out's result reaches the user whether or not revocation succeeded.
    - Sign-in records the returned user id on the device.
    - Onboarding persists completion, offers sign-in but not sign-up, makes no backend request, and never claims an account backs the user's data up.
-   - Device settings run against a real SQLite engine and real files, covering the single-row constraint, the first-run transaction, forward-version refusal, and identity surviving a cold relaunch.
-   - Database opening can retry after failure and refuses a concurrent open of a different workspace.
+   - Device settings run against a real SQLite engine and real files, covering first-run identity minting exactly once, every setting round-tripping through storage, cleared values being removed rather than stringified, forward-version refusal, and identity surviving a cold relaunch.
+   - Database opening can retry after failure and refuses a concurrent open of a different database file.
    - Better Auth's pre-request sign-out clearing, pinned as a dependency contract.
 
 Before calling the phase release-ready, complete the native Android/iOS acceptance pass for fresh install, cold relaunch, airplane-mode sign-out, and storage retry.

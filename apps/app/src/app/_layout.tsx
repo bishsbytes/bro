@@ -1,10 +1,10 @@
 import { AuthProvider } from "@bro/auth-app";
 import {
 	closeDb,
-	closeDeviceSettingsDb,
+	closeDeviceSettings,
 	type DeviceSettingsSnapshot,
 	initDb,
-	initDeviceSettings,
+	readDeviceSettings,
 	runMigrations,
 } from "@bro/database-app";
 import { Stack } from "expo-router";
@@ -95,8 +95,10 @@ export default function RootLayout() {
 		setStartup({ kind: "loading" });
 
 		try {
-			const settings = await initDeviceSettings();
-			const db = await initDb(settings.activeWorkspace.databaseFileName);
+			// Device settings read synchronously; only the product database and its
+			// migrations are I/O the startup screen has to wait on.
+			const settings = readDeviceSettings();
+			const db = await initDb();
 			await runMigrations(db);
 			setStartup({ kind: "ready", settings });
 		} catch (caught) {
@@ -115,7 +117,15 @@ export default function RootLayout() {
 
 	const retry = useCallback(() => {
 		void (async () => {
-			await Promise.allSettled([closeDb(), closeDeviceSettingsDb()]);
+			// Release both handles first: runMigrations throws without closing, so a
+			// retry would otherwise reopen against a half-known schema. Failures
+			// closing are irrelevant here — reopening is what has to work.
+			await closeDb().catch(() => undefined);
+			try {
+				closeDeviceSettings();
+			} catch {
+				// Already unusable; the reopen below reports the real problem.
+			}
 			await start();
 		})();
 	}, [start]);

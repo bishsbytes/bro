@@ -1,224 +1,179 @@
-import { openDatabaseAsync, type SQLiteDatabase } from "expo-sqlite";
-import { DATABASE_NAME } from "./connection";
+import { openDatabaseSync } from "expo-sqlite";
+import { SQLiteStorage } from "expo-sqlite/kv-store";
 
 export const DEVICE_SETTINGS_DATABASE_NAME = "bro-device.db";
 
-export type WorkspaceIdentity = {
-	workspaceId: string;
-	databaseFileName: string;
-	ownerUserId: string | null;
-};
-
+/**
+ * Device-local settings. Never replicated: everything in the product database
+ * (`bro.db`) syncs once a user opts in, so onboarding state and lock
+ * preferences kept there would propagate to their other devices and
+ * `installationId` would stop identifying an install.
+ *
+ * Stored as key-value rather than as a schema, because it is seven flat scalars
+ * — a relational shape would be ceremony without a table to justify it.
+ */
 export type DeviceSettingsSnapshot = {
+	/** Random UUID for this install. Meaningless elsewhere; not a credential. */
 	installationId: string;
 	onboardingComplete: boolean;
 	appLockEnabled: boolean;
 	appLockTimeoutSeconds: number | null;
+	/** Lets startup skip all session work for a user who has never registered. */
 	hasStoredRemoteSession: boolean;
 	lastRemoteUserId: string | null;
-	activeWorkspace: WorkspaceIdentity;
+	/**
+	 * The account this device's local data belongs to, or null while unclaimed.
+	 * Read at Phase 5 adoption to refuse uploading one account's data into
+	 * another's remote database. It never gates opening the database: local data
+	 * stays readable after sign-out, because the account is optional.
+	 */
+	ownerUserId: string | null;
 };
 
-type SettingsRow = {
-	installation_id: string;
-	onboarding_complete: number;
-	app_lock_enabled: number;
-	app_lock_timeout_seconds: number | null;
-	has_stored_remote_session: number;
-	last_remote_user_id: string | null;
-	active_workspace_id: string;
-};
+const KEYS = {
+	schemaVersion: "schemaVersion",
+	installationId: "installationId",
+	onboardingComplete: "onboardingComplete",
+	appLockEnabled: "appLockEnabled",
+	appLockTimeoutSeconds: "appLockTimeoutSeconds",
+	hasStoredRemoteSession: "hasStoredRemoteSession",
+	lastRemoteUserId: "lastRemoteUserId",
+	ownerUserId: "ownerUserId",
+} as const;
 
-type WorkspaceRow = {
-	workspace_id: string;
-	database_file_name: string;
-	owner_user_id: string | null;
-};
+/** Bumped only when stored values need reshaping, which nothing yet does. */
+const SCHEMA_VERSION = 1;
 
-let database: SQLiteDatabase | undefined;
-let opening: Promise<SQLiteDatabase> | undefined;
+let store: SQLiteStorage | undefined;
 
-async function createUuid(db: SQLiteDatabase): Promise<string> {
-	const row = await db.getFirstAsync<{ value: string }>(`
-		SELECT
-			lower(hex(randomblob(4))) || '-' ||
-			lower(hex(randomblob(2))) || '-4' ||
-			substr(lower(hex(randomblob(2))), 2) || '-8' ||
-			substr(lower(hex(randomblob(2))), 2) || '-' ||
-			lower(hex(randomblob(6))) AS value
-	`);
-
-	if (!row) {
-		throw new Error("Could not generate device identity.");
-	}
-
-	return row.value;
+function getStore(): SQLiteStorage {
+	store ??= new SQLiteStorage(DEVICE_SETTINGS_DATABASE_NAME);
+	return store;
 }
 
-async function migrate(db: SQLiteDatabase): Promise<void> {
-	const version = await db.getFirstAsync<{ user_version: number }>(
-		"PRAGMA user_version",
-	);
+/**
+ * Uses SQLite's own RNG through an in-memory handle, so installation identity
+ * needs no crypto dependency and no native module beyond the one already here.
+ */
+function createUuid(): string {
+	const db = openDatabaseSync(":memory:");
 
-	if ((version?.user_version ?? 0) > 1) {
+	try {
+		const row = db.getFirstSync<{ value: string }>(`
+			SELECT
+				lower(hex(randomblob(4))) || '-' ||
+				lower(hex(randomblob(2))) || '-4' ||
+				substr(lower(hex(randomblob(2))), 2) || '-8' ||
+				substr(lower(hex(randomblob(2))), 2) || '-' ||
+				lower(hex(randomblob(6))) AS value
+		`);
+
+		if (!row) {
+			throw new Error("Could not generate device identity.");
+		}
+
+		return row.value;
+	} finally {
+		db.closeSync();
+	}
+}
+
+function readBoolean(key: string): boolean {
+	return getStore().getItemSync(key) === "true";
+}
+
+function readInteger(key: string): number | null {
+	const raw = getStore().getItemSync(key);
+	if (raw === null) {
+		return null;
+	}
+
+	const parsed = Number.parseInt(raw, 10);
+	return Number.isNaN(parsed) ? null : parsed;
+}
+
+/**
+ * Reads device settings, creating this install's identity on first call.
+ * Synchronous: the caller decides app entry from `onboardingComplete`, and that
+ * decision should not wait on I/O.
+ */
+export function readDeviceSettings(): DeviceSettingsSnapshot {
+	const kv = getStore();
+	const storedVersion = readInteger(KEYS.schemaVersion);
+
+	if (storedVersion !== null && storedVersion > SCHEMA_VERSION) {
 		throw new Error(
 			"Device settings were created by a newer version of the app.",
 		);
 	}
 
-	if ((version?.user_version ?? 0) < 1) {
-		await db.execAsync(`
-		PRAGMA journal_mode = WAL;
-		CREATE TABLE IF NOT EXISTS device_settings (
-			id INTEGER PRIMARY KEY NOT NULL CHECK (id = 1),
-			installation_id TEXT NOT NULL,
-			onboarding_complete INTEGER NOT NULL DEFAULT 0,
-			app_lock_enabled INTEGER NOT NULL DEFAULT 0,
-			app_lock_timeout_seconds INTEGER,
-			has_stored_remote_session INTEGER NOT NULL DEFAULT 0,
-			last_remote_user_id TEXT,
-			active_workspace_id TEXT NOT NULL
-		);
-		CREATE TABLE IF NOT EXISTS local_workspaces (
-			workspace_id TEXT PRIMARY KEY NOT NULL,
-			database_file_name TEXT NOT NULL UNIQUE,
-			owner_user_id TEXT
-		);
-		PRAGMA user_version = 1;
-	`);
-	}
+	let installationId = kv.getItemSync(KEYS.installationId);
 
-	const existing = await db.getFirstAsync<{ id: number }>(
-		"SELECT id FROM device_settings WHERE id = 1",
-	);
-
-	if (existing) {
-		return;
-	}
-
-	const installationId = await createUuid(db);
-	const workspaceId = await createUuid(db);
-
-	await db.withTransactionAsync(async () => {
-		await db.runAsync(
-			`INSERT INTO local_workspaces (
-				workspace_id,
-				database_file_name,
-				owner_user_id
-			) VALUES (?, ?, NULL)`,
-			[workspaceId, DATABASE_NAME],
-		);
-		await db.runAsync(
-			`INSERT INTO device_settings (
-				id,
-				installation_id,
-				active_workspace_id
-			) VALUES (1, ?, ?)`,
-			[installationId, workspaceId],
-		);
-	});
-}
-
-async function open(): Promise<SQLiteDatabase> {
-	const db = await openDatabaseAsync(DEVICE_SETTINGS_DATABASE_NAME);
-
-	try {
-		await migrate(db);
-		return db;
-	} catch (error) {
-		await db.closeAsync();
-		throw error;
-	}
-}
-
-export async function initDeviceSettings(): Promise<DeviceSettingsSnapshot> {
-	if (!database) {
-		opening ??= open()
-			.then((db) => {
-				database = db;
-				return db;
-			})
-			.finally(() => {
-				opening = undefined;
-			});
-
-		await opening;
-	}
-
-	return await getDeviceSettings();
-}
-
-export async function getDeviceSettings(): Promise<DeviceSettingsSnapshot> {
-	if (!database) {
-		throw new Error(
-			"Device settings are not open. Await initDeviceSettings() during startup.",
-		);
-	}
-
-	const row = await database.getFirstAsync<SettingsRow>(
-		"SELECT * FROM device_settings WHERE id = 1",
-	);
-
-	if (!row) {
-		throw new Error("Device settings are unavailable.");
-	}
-
-	const workspace = await database.getFirstAsync<WorkspaceRow>(
-		"SELECT * FROM local_workspaces WHERE workspace_id = ?",
-		[row.active_workspace_id],
-	);
-
-	if (!workspace) {
-		throw new Error("The active local workspace is unavailable.");
+	if (installationId === null) {
+		installationId = createUuid();
+		kv.setItemSync(KEYS.installationId, installationId);
+		kv.setItemSync(KEYS.schemaVersion, String(SCHEMA_VERSION));
 	}
 
 	return {
-		installationId: row.installation_id,
-		onboardingComplete: row.onboarding_complete === 1,
-		appLockEnabled: row.app_lock_enabled === 1,
-		appLockTimeoutSeconds: row.app_lock_timeout_seconds,
-		hasStoredRemoteSession: row.has_stored_remote_session === 1,
-		lastRemoteUserId: row.last_remote_user_id,
-		activeWorkspace: {
-			workspaceId: workspace.workspace_id,
-			databaseFileName: workspace.database_file_name,
-			ownerUserId: workspace.owner_user_id,
-		},
+		installationId,
+		onboardingComplete: readBoolean(KEYS.onboardingComplete),
+		appLockEnabled: readBoolean(KEYS.appLockEnabled),
+		appLockTimeoutSeconds: readInteger(KEYS.appLockTimeoutSeconds),
+		hasStoredRemoteSession: readBoolean(KEYS.hasStoredRemoteSession),
+		lastRemoteUserId: kv.getItemSync(KEYS.lastRemoteUserId),
+		ownerUserId: kv.getItemSync(KEYS.ownerUserId),
 	};
 }
 
-export async function setOnboardingComplete(complete: boolean): Promise<void> {
-	if (!database) {
-		throw new Error("Device settings are not open.");
-	}
-
-	await database.runAsync(
-		"UPDATE device_settings SET onboarding_complete = ? WHERE id = 1",
-		[complete ? 1 : 0],
-	);
+export function setOnboardingComplete(complete: boolean): void {
+	getStore().setItemSync(KEYS.onboardingComplete, String(complete));
 }
 
-export async function setRemoteSessionMarker(
-	hasStoredRemoteSession: boolean,
-	lastRemoteUserId: string | null,
-): Promise<void> {
-	if (!database) {
-		throw new Error("Device settings are not open.");
-	}
+export function setAppLock(
+	enabled: boolean,
+	timeoutSeconds: number | null,
+): void {
+	const kv = getStore();
+	kv.setItemSync(KEYS.appLockEnabled, String(enabled));
 
-	await database.runAsync(
-		`UPDATE device_settings
-		 SET has_stored_remote_session = ?, last_remote_user_id = ?
-		 WHERE id = 1`,
-		[hasStoredRemoteSession ? 1 : 0, lastRemoteUserId],
-	);
-}
-
-export async function closeDeviceSettingsDb(): Promise<void> {
-	if (!database) {
+	if (timeoutSeconds === null) {
+		kv.removeItemSync(KEYS.appLockTimeoutSeconds);
 		return;
 	}
 
-	await database.closeAsync();
-	database = undefined;
+	kv.setItemSync(KEYS.appLockTimeoutSeconds, String(timeoutSeconds));
+}
+
+export function setRemoteSessionMarker(
+	hasStoredRemoteSession: boolean,
+	lastRemoteUserId: string | null,
+): void {
+	const kv = getStore();
+	kv.setItemSync(KEYS.hasStoredRemoteSession, String(hasStoredRemoteSession));
+
+	if (lastRemoteUserId === null) {
+		kv.removeItemSync(KEYS.lastRemoteUserId);
+		return;
+	}
+
+	kv.setItemSync(KEYS.lastRemoteUserId, lastRemoteUserId);
+}
+
+/** Records which account claimed this device's local data. Set at Phase 5 adoption. */
+export function setWorkspaceOwner(ownerUserId: string | null): void {
+	const kv = getStore();
+
+	if (ownerUserId === null) {
+		kv.removeItemSync(KEYS.ownerUserId);
+		return;
+	}
+
+	kv.setItemSync(KEYS.ownerUserId, ownerUserId);
+}
+
+/** Closes the handle so startup can retry after a storage failure. */
+export function closeDeviceSettings(): void {
+	store?.closeSync();
+	store = undefined;
 }

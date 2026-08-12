@@ -5,9 +5,9 @@ import { SignInScreen } from "../screens/sign-in-screen";
 export default function SignInRoute() {
 	const { settings, completeOnboarding } = useDeviceSettings();
 
-	const onSuccess = async () => {
+	const onSuccess = () => {
 		if (!settings.onboardingComplete) {
-			await completeOnboarding();
+			completeOnboarding();
 		}
 		router.replace("/");
 	};

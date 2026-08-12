@@ -48,7 +48,7 @@ Migration SQL is compiled into `src/migrations/manifest.ts` as plain strings by 
 
 ### Local storage and future Turso sync
 
-[`connection.ts`](packages/database/app/src/connection.ts) opens a purely local SQLite product database. Device-only metadata lives separately in `bro-device.db`, so onboarding, app-lock preferences, installation identity, session hints, and workspace ownership can never replicate. Phase 5 will reintroduce embedded replicas with short-lived, database-scoped credentials minted by the API; no Turso credential is accepted from an Expo build-time environment variable.
+[`connection.ts`](packages/database/app/src/connection.ts) opens a purely local SQLite product database, one per device. Device-only metadata lives separately in `bro-device.db` as key-value pairs read synchronously, so onboarding, app-lock preferences, installation identity, session hints, and local data ownership can never replicate. Phase 5 will reintroduce embedded replicas with short-lived, database-scoped credentials minted by the API; no Turso credential is accepted from an Expo build-time environment variable.
 
 ## Auth
 

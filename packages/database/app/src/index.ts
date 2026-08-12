@@ -5,14 +5,14 @@ export {
 	initDb,
 } from "./connection";
 export {
-	closeDeviceSettingsDb,
+	closeDeviceSettings,
 	DEVICE_SETTINGS_DATABASE_NAME,
 	type DeviceSettingsSnapshot,
-	getDeviceSettings,
-	initDeviceSettings,
+	readDeviceSettings,
+	setAppLock,
 	setOnboardingComplete,
 	setRemoteSessionMarker,
-	type WorkspaceIdentity,
+	setWorkspaceOwner,
 } from "./device-settings";
 export { type MigrationResult, runMigrations } from "./migrator";
 export {

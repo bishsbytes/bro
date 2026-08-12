@@ -2,18 +2,18 @@ import { authClient } from "@bro/auth-app";
 import type { DeviceSettingsSnapshot } from "@bro/database-app";
 import { act, fireEvent, render } from "@testing-library/react-native";
 
-const mockInitDeviceSettings = jest.fn();
+const mockReadDeviceSettings = jest.fn();
 const mockInitDb = jest.fn();
 const mockRunMigrations = jest.fn();
 const mockCloseDb = jest.fn();
-const mockCloseDeviceSettingsDb = jest.fn();
+const mockCloseDeviceSettings = jest.fn();
 
 jest.mock("@bro/database-app", () => ({
-	initDeviceSettings: mockInitDeviceSettings,
+	readDeviceSettings: mockReadDeviceSettings,
 	initDb: mockInitDb,
 	runMigrations: mockRunMigrations,
 	closeDb: mockCloseDb,
-	closeDeviceSettingsDb: mockCloseDeviceSettingsDb,
+	closeDeviceSettings: mockCloseDeviceSettings,
 	setOnboardingComplete: jest.fn(),
 	setRemoteSessionMarker: jest.fn(),
 }));
@@ -71,11 +71,7 @@ function settings(
 		appLockTimeoutSeconds: null,
 		hasStoredRemoteSession: false,
 		lastRemoteUserId: null,
-		activeWorkspace: {
-			workspaceId: "workspace-1",
-			databaseFileName: "bro.db",
-			ownerUserId: null,
-		},
+		ownerUserId: null,
 		...overrides,
 	};
 }
@@ -93,11 +89,10 @@ describe("local-first app entry", () => {
 		mockInitDb.mockResolvedValue({ handle: true });
 		mockRunMigrations.mockResolvedValue({ applied: [] });
 		mockCloseDb.mockResolvedValue(undefined);
-		mockCloseDeviceSettingsDb.mockResolvedValue(undefined);
 	});
 
 	it("routes an incomplete install to onboarding, not to the app", async () => {
-		mockInitDeviceSettings.mockResolvedValue(settings());
+		mockReadDeviceSettings.mockReturnValue(settings());
 
 		const screen = await startApp();
 
@@ -106,7 +101,7 @@ describe("local-first app entry", () => {
 	});
 
 	it("routes a completed install straight into the app", async () => {
-		mockInitDeviceSettings.mockResolvedValue(
+		mockReadDeviceSettings.mockReturnValue(
 			settings({ onboardingComplete: true }),
 		);
 
@@ -116,26 +111,20 @@ describe("local-first app entry", () => {
 		expect(screen.queryByText("route:onboarding")).toBeNull();
 	});
 
-	it("opens and migrates the active workspace's database file", async () => {
-		mockInitDeviceSettings.mockResolvedValue(
-			settings({
-				activeWorkspace: {
-					workspaceId: "workspace-2",
-					databaseFileName: "bro-2.db",
-					ownerUserId: "user-a",
-				},
-			}),
-		);
+	it("opens and migrates the product database", async () => {
+		mockReadDeviceSettings.mockReturnValue(settings({ ownerUserId: "user-a" }));
 
 		const screen = await startApp();
 		await screen.findByText("route:onboarding");
 
-		expect(mockInitDb).toHaveBeenCalledWith("bro-2.db");
+		// One product database per device: ownership is a field on it, not a
+		// selector between files.
+		expect(mockInitDb).toHaveBeenCalledWith();
 		expect(mockRunMigrations).toHaveBeenCalledWith({ handle: true });
 	});
 
 	it("issues no session request and no network call for a local-only start", async () => {
-		mockInitDeviceSettings.mockResolvedValue(
+		mockReadDeviceSettings.mockReturnValue(
 			settings({ onboardingComplete: true }),
 		);
 
@@ -147,7 +136,7 @@ describe("local-first app entry", () => {
 	});
 
 	it("mounts the session hook only once a session has been stored", async () => {
-		mockInitDeviceSettings.mockResolvedValue(
+		mockReadDeviceSettings.mockReturnValue(
 			settings({
 				onboardingComplete: true,
 				hasStoredRemoteSession: true,
@@ -162,9 +151,11 @@ describe("local-first app entry", () => {
 	});
 
 	it("makes storage failure fatal but recoverable, and reopens cleanly on retry", async () => {
-		mockInitDeviceSettings
-			.mockRejectedValueOnce(new Error("disk unavailable"))
-			.mockResolvedValueOnce(settings({ onboardingComplete: true }));
+		mockReadDeviceSettings
+			.mockImplementationOnce(() => {
+				throw new Error("disk unavailable");
+			})
+			.mockReturnValueOnce(settings({ onboardingComplete: true }));
 
 		const screen = await startApp();
 
@@ -182,11 +173,11 @@ describe("local-first app entry", () => {
 		// Both handles must be released, or the retry reopens against a half-known
 		// schema rather than a clean one.
 		expect(mockCloseDb).toHaveBeenCalledTimes(1);
-		expect(mockCloseDeviceSettingsDb).toHaveBeenCalledTimes(1);
+		expect(mockCloseDeviceSettings).toHaveBeenCalledTimes(1);
 	});
 
 	it("treats a failed migration as the same recoverable storage failure", async () => {
-		mockInitDeviceSettings.mockResolvedValue(
+		mockReadDeviceSettings.mockReturnValue(
 			settings({ onboardingComplete: true }),
 		);
 		mockRunMigrations

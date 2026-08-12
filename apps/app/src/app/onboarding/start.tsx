@@ -1,21 +1,14 @@
 import { router } from "expo-router";
-import { useState } from "react";
 import { Text, TouchableOpacity, View } from "react-native";
 import { useDeviceSettings } from "../../providers/device-settings-provider";
 import { onboardingStyles as styles } from "../../screens/onboarding-styles";
 
 export default function StartRoute() {
 	const { completeOnboarding } = useDeviceSettings();
-	const [submitting, setSubmitting] = useState(false);
 
-	const start = async () => {
-		setSubmitting(true);
-		try {
-			await completeOnboarding();
-			router.replace("/");
-		} finally {
-			setSubmitting(false);
-		}
+	const start = () => {
+		completeOnboarding();
+		router.replace("/");
 	};
 
 	return (
@@ -28,19 +21,12 @@ export default function StartRoute() {
 				Later, if you want your notes on more than one device, you can add an
 				account and upgrade. Up to you — the app works fully without either.
 			</Text>
-			<TouchableOpacity
-				style={styles.primaryButton}
-				onPress={() => void start()}
-				disabled={submitting}
-			>
-				<Text style={styles.primaryButtonText}>
-					{submitting ? "Starting…" : "Start using the app"}
-				</Text>
+			<TouchableOpacity style={styles.primaryButton} onPress={start}>
+				<Text style={styles.primaryButtonText}>Start using the app</Text>
 			</TouchableOpacity>
 			<TouchableOpacity
 				style={styles.secondaryButton}
 				onPress={() => router.push("/sign-in")}
-				disabled={submitting}
 			>
 				<Text style={styles.secondaryButtonText}>
 					I already have an account

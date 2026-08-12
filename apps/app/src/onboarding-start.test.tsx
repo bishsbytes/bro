@@ -1,5 +1,5 @@
 import type { DeviceSettingsSnapshot } from "@bro/database-app";
-import { act, fireEvent, render, waitFor } from "@testing-library/react-native";
+import { act, fireEvent, render } from "@testing-library/react-native";
 
 const mockSetOnboardingComplete = jest.fn();
 const mockReplace = jest.fn();
@@ -28,17 +28,12 @@ const initialSettings: DeviceSettingsSnapshot = {
 	appLockTimeoutSeconds: null,
 	hasStoredRemoteSession: false,
 	lastRemoteUserId: null,
-	activeWorkspace: {
-		workspaceId: "workspace-1",
-		databaseFileName: "bro.db",
-		ownerUserId: null,
-	},
+	ownerUserId: null,
 };
 
 describe("local-only onboarding", () => {
 	beforeEach(() => {
 		jest.clearAllMocks();
-		mockSetOnboardingComplete.mockResolvedValue(undefined);
 	});
 
 	it("persists completion and enters the app with no network request", async () => {
@@ -52,9 +47,7 @@ describe("local-only onboarding", () => {
 			fireEvent.press(screen.getByText("Start using the app"));
 		});
 
-		await waitFor(() =>
-			expect(mockSetOnboardingComplete).toHaveBeenCalledWith(true),
-		);
+		expect(mockSetOnboardingComplete).toHaveBeenCalledWith(true);
 		expect(mockReplace).toHaveBeenCalledWith("/");
 		expect(globalThis.fetch).not.toHaveBeenCalled();
 	});

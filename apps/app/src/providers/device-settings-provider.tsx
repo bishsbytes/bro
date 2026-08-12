@@ -14,7 +14,7 @@ import {
 
 type DeviceSettingsContextValue = {
 	settings: DeviceSettingsSnapshot;
-	completeOnboarding: () => Promise<void>;
+	completeOnboarding: () => void;
 	markRemoteSessionStored: (userId: string | null) => Promise<void>;
 	clearRemoteSession: () => Promise<void>;
 };
@@ -32,11 +32,13 @@ export function DeviceSettingsProvider({
 }) {
 	const [settings, setSettings] = useState(initialSettings);
 
-	const completeOnboarding = useCallback(async () => {
-		await setOnboardingComplete(true);
+	const completeOnboarding = useCallback(() => {
+		setOnboardingComplete(true);
 		setSettings((current) => ({ ...current, onboardingComplete: true }));
 	}, []);
 
+	// The auth provider owns the marker's lifecycle and awaits these, so they
+	// stay promise-returning even though the write beneath them is synchronous.
 	const markRemoteSessionStored = useCallback(
 		async (userId: string | null) => {
 			if (
@@ -47,7 +49,7 @@ export function DeviceSettingsProvider({
 			}
 
 			const nextUserId = userId ?? settings.lastRemoteUserId;
-			await setRemoteSessionMarker(true, nextUserId);
+			setRemoteSessionMarker(true, nextUserId);
 			setSettings((current) => ({
 				...current,
 				hasStoredRemoteSession: true,
@@ -65,7 +67,7 @@ export function DeviceSettingsProvider({
 			return;
 		}
 
-		await setRemoteSessionMarker(false, null);
+		setRemoteSessionMarker(false, null);
 		setSettings((current) => ({
 			...current,
 			hasStoredRemoteSession: false,

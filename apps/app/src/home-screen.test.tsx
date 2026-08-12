@@ -73,7 +73,7 @@ describe("home screen sign-out", () => {
 				"Signed out on this device. The server could not be reached.",
 			),
 		).toBeTruthy();
-		// Signed out lands on a usable local workspace, not a sign-in requirement.
+		// Signing out leaves the user in the app, not at a sign-in requirement.
 		expect(screen.getByText("Using bro without an account")).toBeTruthy();
 		expect(screen.getByText("Sign in")).toBeTruthy();
 	});
