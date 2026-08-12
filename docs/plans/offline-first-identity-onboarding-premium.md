@@ -697,7 +697,7 @@ At minimum, cover:
 
 ### Phase 1 decisions — resolved
 
-1. **Which exact features are core, account-backed, and premium?** Everything downstream — what onboarding promises, what registration is worth at the free tier, what premium gates — depends on this. Sharpened by the sync and AI decisions: registration now buys the user access to server features rather than safety for their data, so the free tier needs a defensible answer that stands on local value alone. **Provisionally unblocked** by the assumptions in [Onboarding copy](#onboarding-copy-placeholder); confirm or correct them before the onboarding screens ship.
+1. **Which exact features are core, account-backed, and premium?** Everything downstream — what onboarding promises, what registration is worth at the free tier, what premium gates — depends on this. Sharpened by the sync and AI decisions: registration now buys the user access to server features rather than safety for their data, so the free tier needs a defensible answer that stands on local value alone. **Provisionally unblocked** by the assumptions in [Onboarding copy](#onboarding-copy-placeholder); confirm or correct them before the onboarding screens ship. Now being answered properly in [Product domains, journeys, and data stores](product-domains-and-data.md), which also places each domain in a store and records what the answer unblocks in Phases 3 to 6.
 2. **Local data and multiple accounts.** Resolved: no per-account ownership is tracked at all. Per-account workspace files and a single `ownerUserId` were both considered and rejected — see [Why no per-account ownership](#why-no-per-account-ownership). The adoption confirmation, describing the data by count, is what protects the user.
 
 ### Resolve before Phase 3
