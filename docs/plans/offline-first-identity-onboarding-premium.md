@@ -529,7 +529,7 @@ Three pieces of work are assumed by later phases and exist in neither the worksp
 2. [Entitlement before registration](#entitlement-before-registration) — before Phase 4.
 3. Sync opt-in, generation, and provisioning records on the server — before Phase 5.
 
-**Test harness.** Phase 1 adds the `@bro/app:test` Nx target using `jest-expo` and Testing Library. It includes dependency-contract coverage for Better Auth's pre-request sign-out clearing, local-only session-hook gating, database-open retry, and onboarding entry without a network request.
+**Test harness.** Phase 1 adds the `@bro/app:test` Nx target using `jest-expo`, Testing Library, and `expo-router/testing-library`. Navigation is exercised through the real router over the real `src/app` directory — no stand-in for `Stack.Protected` — so app entry is asserted by resolved pathname rather than by which mock rendered. End-to-end runners were considered and deferred; see [End-to-end testing](#end-to-end-testing).
 
 **Native build.** `expo-local-authentication` (Phase 3) and the purchase SDK (Phase 4) both require a custom development client, and `apps/app/android/` is a committed prebuild that must be regenerated when either is added. That is one infrastructure task arriving twice, in consecutive phases. Doing it once, when the first of the two lands, is cheaper than doing it twice — and note that neither phase can be verified in Expo Go.
 
@@ -599,6 +599,19 @@ Reconciliation of *product* data is not in this phase. Under native sync it happ
 - Validate native builds, backups, biometric changes, and failure recovery.
 
 **Exit criteria:** The database cannot be read at rest without the protected key, and documented recovery/failure paths have been tested.
+
+## End-to-end testing
+
+**Deferred, deliberately.** `@nx/detox` is version-matched to this workspace and available, but an on-device runner is not the next thing worth adding:
+
+- **The gap it was wanted for is closed.** `expo-router/testing-library` runs the real router over the real route directory in Jest, so `Stack.Protected` behaviour is asserted directly rather than through a mocked navigator.
+- **It cannot test the thing that matters most here.** The iOS Simulator has no airplane mode, and toggling Android radios sits outside Detox's API. Offline behaviour is better exercised by pointing `EXPO_PUBLIC_API_URL` at a dead port or a mock server that can be killed — which works in any runner, including the current one.
+- **There is no product to test yet.** `schema.ts` has no domains, so end-to-end flows would be written against placeholder screens and rewritten when real ones land.
+- **It is a third native-infrastructure item,** alongside `expo-local-authentication` in Phase 3 and the purchase SDK in Phase 4.
+
+Revisit once a product domain exists. At that point prefer Maestro unless Detox's determinism is specifically wanted — Maestro needs no native test target — and confirm New Architecture support against a real build first, since this app runs RN 0.85 with `newArchEnabled`.
+
+Storage-failure injection needs an app-side test hook whichever runner is chosen.
 
 ## Acceptance test matrix
 
@@ -706,11 +719,12 @@ Phase 1 now contains:
 6. Navigation independent of auth-server state, with a retryable local-storage failure as the only fatal branch.
 7. Offline-capable sign-out that clears the app-owned marker first, treats remote revocation as best-effort, and reports the outcome on a screen the marker flip does not remount.
 8. Automated coverage of the startup and identity paths:
-   - Root-layout routing — onboarding versus main app, the product database being opened and migrated, the storage-failure screen, and a retry that releases both handles before reopening. Migration failure lands on the same recoverable screen.
+   - App entry through the real router: an unonboarded install resolves to `/onboarding`, an onboarded one to `/`, the full welcome → privacy → start walkthrough reaches `/` having persisted completion and issued no backend request, and a signed-out user is never routed back through onboarding.
+   - Startup mechanics — the product database opened and migrated, the storage-failure screen, a retry releasing both handles before reopening, migration failure landing on the same recoverable screen, and an auth failure never reaching it.
    - Local-only startup mounts no session hook and issues no request; a stored marker mounts it.
    - The app tree survives the marker flipping in both directions, and sign-out's result reaches the user whether or not revocation succeeded.
    - Sign-in records the returned user id on the device.
-   - Onboarding persists completion, offers sign-in but not sign-up, makes no backend request, and never claims an account backs the user's data up.
+   - Onboarding offers sign-in but never sign-up, while the main app offers both, and no onboarding screen claims an account backs the user's data up.
    - Device settings run against a real SQLite engine and real files, covering first-run identity minting exactly once, every setting round-tripping through storage, cleared values being removed rather than stringified, forward-version refusal, and identity surviving a cold relaunch.
    - Database opening can retry after failure and refuses a concurrent open of a different database file.
    - Better Auth's pre-request sign-out clearing, pinned as a dependency contract.

@@ -1,6 +1,6 @@
 import { authClient } from "@bro/auth-app";
 import type { DeviceSettingsSnapshot } from "@bro/database-app";
-import { act, fireEvent, render } from "@testing-library/react-native";
+import { act, fireEvent, renderRouter } from "expo-router/testing-library";
 
 const mockReadDeviceSettings = jest.fn();
 const mockInitDb = jest.fn();
@@ -9,11 +9,11 @@ const mockCloseDb = jest.fn();
 const mockCloseDeviceSettings = jest.fn();
 
 jest.mock("@bro/database-app", () => ({
-	readDeviceSettings: mockReadDeviceSettings,
-	initDb: mockInitDb,
-	runMigrations: mockRunMigrations,
-	closeDb: mockCloseDb,
-	closeDeviceSettings: mockCloseDeviceSettings,
+	readDeviceSettings: () => mockReadDeviceSettings(),
+	initDb: (...args: unknown[]) => mockInitDb(...args),
+	runMigrations: (...args: unknown[]) => mockRunMigrations(...args),
+	closeDb: () => mockCloseDb(),
+	closeDeviceSettings: () => mockCloseDeviceSettings(),
 	setOnboardingComplete: jest.fn(),
 	setRemoteSessionMarker: jest.fn(),
 }));
@@ -23,11 +23,7 @@ jest.mock("@bro/database-app", () => ({
 jest.mock("../../../packages/auth/app/src/client", () => ({
 	assertRemoteAuthConfigured: jest.fn(),
 	authClient: {
-		useSession: jest.fn(() => ({
-			data: null,
-			isPending: false,
-			error: null,
-		})),
+		useSession: jest.fn(() => ({ data: null, isPending: false, error: null })),
 		signIn: { email: jest.fn() },
 		signUp: { email: jest.fn() },
 		signOut: jest.fn(),
@@ -39,112 +35,59 @@ jest.mock("expo-splash-screen", () => ({
 	hideAsync: jest.fn(async () => true),
 }));
 
-// Stands in for the navigator so the guards themselves are observable: a screen
-// renders only when the branch it sits under is permitted.
-jest.mock("expo-router", () => {
-	const { Text } = require("react-native");
-	const Stack = ({ children }: { children?: React.ReactNode }) => children;
-	Stack.Protected = ({
-		guard,
-		children,
-	}: {
-		guard: boolean;
-		children?: React.ReactNode;
-	}) => (guard ? children : null);
-	Stack.Screen = ({ name }: { name: string }) => <Text>{`route:${name}`}</Text>;
-	return { Stack, router: { push: jest.fn(), replace: jest.fn() } };
-});
-
-const RootLayout = require("./app/_layout")
-	.default as typeof import("./app/_layout").default;
-
 const mockedUseSession = (authClient as unknown as { useSession: jest.Mock })
 	.useSession;
 
-function settings(
-	overrides: Partial<DeviceSettingsSnapshot> = {},
-): DeviceSettingsSnapshot {
-	return {
-		installationId: "install-1",
-		onboardingComplete: false,
-		appLockEnabled: false,
-		appLockTimeoutSeconds: null,
-		hasStoredRemoteSession: false,
-		lastRemoteUserId: null,
-		...overrides,
-	};
-}
+const baseSettings: DeviceSettingsSnapshot = {
+	installationId: "install-1",
+	onboardingComplete: true,
+	appLockEnabled: false,
+	appLockTimeoutSeconds: null,
+	hasStoredRemoteSession: false,
+	lastRemoteUserId: null,
+};
 
-/** Renders the root layout and lets its async startup chain settle inside act. */
-async function startApp() {
-	const view = await render(<RootLayout />);
+/** Boots the real app tree, then lets the async startup chain settle. */
+async function startApp(overrides: Partial<DeviceSettingsSnapshot> = {}) {
+	mockReadDeviceSettings.mockReturnValue({ ...baseSettings, ...overrides });
+	const view = await renderRouter("src/app", { initialUrl: "/" });
 	await act(async () => undefined);
 	return view;
 }
 
-describe("local-first app entry", () => {
+describe("startup", () => {
 	beforeEach(() => {
 		jest.clearAllMocks();
+		mockedUseSession.mockReturnValue({
+			data: null,
+			isPending: false,
+			error: null,
+		});
 		mockInitDb.mockResolvedValue({ handle: true });
 		mockRunMigrations.mockResolvedValue({ applied: [] });
 		mockCloseDb.mockResolvedValue(undefined);
 	});
 
-	it("routes an incomplete install to onboarding, not to the app", async () => {
-		mockReadDeviceSettings.mockReturnValue(settings());
+	it("opens and migrates the product database before showing the app", async () => {
+		const view = await startApp();
 
-		const screen = await startApp();
-
-		expect(await screen.findByText("route:onboarding")).toBeTruthy();
-		expect(screen.queryByText("route:index")).toBeNull();
-	});
-
-	it("routes a completed install straight into the app", async () => {
-		mockReadDeviceSettings.mockReturnValue(
-			settings({ onboardingComplete: true }),
-		);
-
-		const screen = await startApp();
-
-		expect(await screen.findByText("route:index")).toBeTruthy();
-		expect(screen.queryByText("route:onboarding")).toBeNull();
-	});
-
-	it("opens and migrates the product database", async () => {
-		mockReadDeviceSettings.mockReturnValue(settings());
-
-		const screen = await startApp();
-		await screen.findByText("route:onboarding");
-
-		// One product database per device, chosen by nothing — there is no
-		// per-account file selection.
 		expect(mockInitDb).toHaveBeenCalledWith();
 		expect(mockRunMigrations).toHaveBeenCalledWith({ handle: true });
+		expect(view.getByText("Local database ready")).toBeTruthy();
 	});
 
 	it("issues no session request and no network call for a local-only start", async () => {
-		mockReadDeviceSettings.mockReturnValue(
-			settings({ onboardingComplete: true }),
-		);
-
-		const screen = await startApp();
-		await screen.findByText("route:index");
+		await startApp();
 
 		expect(mockedUseSession).not.toHaveBeenCalled();
 		expect(globalThis.fetch).not.toHaveBeenCalled();
 	});
 
 	it("mounts the session hook only once a session has been stored", async () => {
-		mockReadDeviceSettings.mockReturnValue(
-			settings({
-				onboardingComplete: true,
-				hasStoredRemoteSession: true,
-				lastRemoteUserId: "user-a",
-			}),
-		);
-
-		const screen = await startApp();
-		await screen.findByText("route:index");
+		await startApp({
+			hasStoredRemoteSession: true,
+			lastRemoteUserId: "user-a",
+		});
 
 		expect(mockedUseSession).toHaveBeenCalled();
 	});
@@ -154,21 +97,19 @@ describe("local-first app entry", () => {
 			.mockImplementationOnce(() => {
 				throw new Error("disk unavailable");
 			})
-			.mockReturnValueOnce(settings({ onboardingComplete: true }));
+			.mockReturnValue(baseSettings);
+		const view = await renderRouter("src/app", { initialUrl: "/" });
+		await act(async () => undefined);
 
-		const screen = await startApp();
-
-		expect(
-			await screen.findByText("Local storage is unavailable"),
-		).toBeTruthy();
-		expect(screen.getByText("disk unavailable")).toBeTruthy();
-		expect(screen.queryByText("route:index")).toBeNull();
+		expect(view.getByText("Local storage is unavailable")).toBeTruthy();
+		expect(view.getByText("disk unavailable")).toBeTruthy();
+		expect(view.queryByText("Local database ready")).toBeNull();
 
 		await act(async () => {
-			fireEvent.press(screen.getByText("Try again"));
+			fireEvent.press(view.getByText("Try again"));
 		});
 
-		expect(await screen.findByText("route:index")).toBeTruthy();
+		expect(view.getByText("Local database ready")).toBeTruthy();
 		// Both handles must be released, or the retry reopens against a half-known
 		// schema rather than a clean one.
 		expect(mockCloseDb).toHaveBeenCalledTimes(1);
@@ -176,21 +117,34 @@ describe("local-first app entry", () => {
 	});
 
 	it("treats a failed migration as the same recoverable storage failure", async () => {
-		mockReadDeviceSettings.mockReturnValue(
-			settings({ onboardingComplete: true }),
-		);
 		mockRunMigrations
 			.mockRejectedValueOnce(new Error("migration 003 failed"))
-			.mockResolvedValueOnce({ applied: [] });
+			.mockResolvedValue({ applied: [] });
 
-		const screen = await startApp();
+		const view = await startApp();
 
-		expect(await screen.findByText("migration 003 failed")).toBeTruthy();
+		expect(view.getByText("migration 003 failed")).toBeTruthy();
 
 		await act(async () => {
-			fireEvent.press(screen.getByText("Try again"));
+			fireEvent.press(view.getByText("Try again"));
 		});
 
-		expect(await screen.findByText("route:index")).toBeTruthy();
+		expect(view.getByText("Local database ready")).toBeTruthy();
+	});
+
+	it("never lets an auth failure reach the startup screen", async () => {
+		mockedUseSession.mockReturnValue({
+			data: null,
+			isPending: false,
+			error: { status: 500, message: "auth is down" },
+		});
+
+		const view = await startApp({
+			hasStoredRemoteSession: true,
+			lastRemoteUserId: "user-a",
+		});
+
+		expect(view.queryByText("Local storage is unavailable")).toBeNull();
+		expect(view.getByText("Local database ready")).toBeTruthy();
 	});
 });
