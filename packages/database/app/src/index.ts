@@ -12,7 +12,6 @@ export {
 	setAppLock,
 	setOnboardingComplete,
 	setRemoteSessionMarker,
-	setWorkspaceOwner,
 } from "./device-settings";
 export { type MigrationResult, runMigrations } from "./migrator";
 export {

@@ -168,8 +168,8 @@ describe("AuthProvider local-first behavior", () => {
 			await value?.signIn("b@example.com", "password");
 		});
 
-		// Phase 5 adoption compares this id against the recorded data owner, so it
-		// must not lag a render behind or fall back to the previous account.
+		// The device records which account is signed in, so it must not lag a
+		// render behind or fall back to whichever account was recorded last.
 		expect(onRemoteSessionStored).toHaveBeenCalledWith("user-b");
 	});
 

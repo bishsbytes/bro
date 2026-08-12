@@ -43,7 +43,6 @@ describe("device-local settings", () => {
 			appLockTimeoutSeconds: null,
 			hasStoredRemoteSession: false,
 			lastRemoteUserId: null,
-			ownerUserId: null,
 		});
 		// Reading twice in one session must not mint a second identity.
 		expect(deviceSettings.readDeviceSettings().installationId).toBe(
@@ -83,7 +82,6 @@ describe("device-local settings", () => {
 		deviceSettings.setOnboardingComplete(true);
 		deviceSettings.setAppLock(true, 120);
 		deviceSettings.setRemoteSessionMarker(true, "user-a");
-		deviceSettings.setWorkspaceOwner("user-a");
 		deviceSettings.closeDeviceSettings();
 
 		deviceSettings = relaunch();
@@ -93,13 +91,11 @@ describe("device-local settings", () => {
 			appLockTimeoutSeconds: 120,
 			hasStoredRemoteSession: true,
 			lastRemoteUserId: "user-a",
-			ownerUserId: "user-a",
 		});
 
 		// Clearing must remove the value, not store the string "null".
 		deviceSettings.setRemoteSessionMarker(false, null);
 		deviceSettings.setAppLock(false, null);
-		deviceSettings.setWorkspaceOwner(null);
 		deviceSettings.closeDeviceSettings();
 
 		deviceSettings = relaunch();
@@ -108,7 +104,6 @@ describe("device-local settings", () => {
 			appLockTimeoutSeconds: null,
 			hasStoredRemoteSession: false,
 			lastRemoteUserId: null,
-			ownerUserId: null,
 		});
 	});
 

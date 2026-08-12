@@ -20,14 +20,8 @@ export type DeviceSettingsSnapshot = {
 	appLockTimeoutSeconds: number | null;
 	/** Lets startup skip all session work for a user who has never registered. */
 	hasStoredRemoteSession: boolean;
+	/** The account currently signed in on this device, or null. Not a claim on the data. */
 	lastRemoteUserId: string | null;
-	/**
-	 * The account this device's local data belongs to, or null while unclaimed.
-	 * Read at Phase 5 adoption to refuse uploading one account's data into
-	 * another's remote database. It never gates opening the database: local data
-	 * stays readable after sign-out, because the account is optional.
-	 */
-	ownerUserId: string | null;
 };
 
 const KEYS = {
@@ -38,7 +32,6 @@ const KEYS = {
 	appLockTimeoutSeconds: "appLockTimeoutSeconds",
 	hasStoredRemoteSession: "hasStoredRemoteSession",
 	lastRemoteUserId: "lastRemoteUserId",
-	ownerUserId: "ownerUserId",
 } as const;
 
 /** Bumped only when stored values need reshaping, which nothing yet does. */
@@ -122,7 +115,6 @@ export function readDeviceSettings(): DeviceSettingsSnapshot {
 		appLockTimeoutSeconds: readInteger(KEYS.appLockTimeoutSeconds),
 		hasStoredRemoteSession: readBoolean(KEYS.hasStoredRemoteSession),
 		lastRemoteUserId: kv.getItemSync(KEYS.lastRemoteUserId),
-		ownerUserId: kv.getItemSync(KEYS.ownerUserId),
 	};
 }
 
@@ -158,18 +150,6 @@ export function setRemoteSessionMarker(
 	}
 
 	kv.setItemSync(KEYS.lastRemoteUserId, lastRemoteUserId);
-}
-
-/** Records which account claimed this device's local data. Set at Phase 5 adoption. */
-export function setWorkspaceOwner(ownerUserId: string | null): void {
-	const kv = getStore();
-
-	if (ownerUserId === null) {
-		kv.removeItemSync(KEYS.ownerUserId);
-		return;
-	}
-
-	kv.setItemSync(KEYS.ownerUserId, ownerUserId);
 }
 
 /** Closes the handle so startup can retry after a storage failure. */

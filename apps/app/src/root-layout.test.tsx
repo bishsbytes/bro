@@ -71,7 +71,6 @@ function settings(
 		appLockTimeoutSeconds: null,
 		hasStoredRemoteSession: false,
 		lastRemoteUserId: null,
-		ownerUserId: null,
 		...overrides,
 	};
 }
@@ -112,13 +111,13 @@ describe("local-first app entry", () => {
 	});
 
 	it("opens and migrates the product database", async () => {
-		mockReadDeviceSettings.mockReturnValue(settings({ ownerUserId: "user-a" }));
+		mockReadDeviceSettings.mockReturnValue(settings());
 
 		const screen = await startApp();
 		await screen.findByText("route:onboarding");
 
-		// One product database per device: ownership is a field on it, not a
-		// selector between files.
+		// One product database per device, chosen by nothing — there is no
+		// per-account file selection.
 		expect(mockInitDb).toHaveBeenCalledWith();
 		expect(mockRunMigrations).toHaveBeenCalledWith({ handle: true });
 	});

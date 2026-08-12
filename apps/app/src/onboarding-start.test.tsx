@@ -28,7 +28,6 @@ const initialSettings: DeviceSettingsSnapshot = {
 	appLockTimeoutSeconds: null,
 	hasStoredRemoteSession: false,
 	lastRemoteUserId: null,
-	ownerUserId: null,
 };
 
 describe("local-only onboarding", () => {
