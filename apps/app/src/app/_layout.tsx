@@ -1,3 +1,5 @@
+// Registers themes before any screen renders.
+import "../theme/unistyles";
 import { AuthProvider } from "@bro/auth-app";
 import {
 	closeDb,
@@ -11,13 +13,8 @@ import { Stack } from "expo-router";
 import * as SplashScreen from "expo-splash-screen";
 import { StatusBar } from "expo-status-bar";
 import { useCallback, useEffect, useState } from "react";
-import {
-	ActivityIndicator,
-	StyleSheet,
-	Text,
-	TouchableOpacity,
-	View,
-} from "react-native";
+import { ActivityIndicator, Text, TouchableOpacity, View } from "react-native";
+import { StyleSheet } from "react-native-unistyles";
 import {
 	DeviceSettingsProvider,
 	useDeviceSettings,
@@ -132,7 +129,7 @@ export default function RootLayout() {
 
 	return (
 		<View style={styles.container}>
-			<StatusBar style="dark" />
+			<StatusBar style="auto" />
 			{startup.kind === "loading" ? <Loading /> : null}
 			{startup.kind === "error" ? (
 				<StorageError error={startup.error} onRetry={retry} />
@@ -146,37 +143,38 @@ export default function RootLayout() {
 	);
 }
 
-const styles = StyleSheet.create({
+const styles = StyleSheet.create((theme) => ({
 	container: {
 		flex: 1,
-		backgroundColor: "#ffffff",
+		backgroundColor: theme.colors.background,
 	},
 	centered: {
 		flex: 1,
 		justifyContent: "center",
 		alignItems: "center",
-		paddingHorizontal: 24,
+		paddingHorizontal: theme.spacing.xl,
 	},
 	errorTitle: {
 		fontSize: 20,
 		fontWeight: "600",
-		marginBottom: 8,
+		color: theme.colors.text,
+		marginBottom: theme.spacing.sm,
 	},
 	errorDetail: {
 		fontSize: 15,
-		color: "#6b7280",
+		color: theme.colors.textSubtle,
 		textAlign: "center",
 	},
 	retryButton: {
-		marginTop: 24,
-		backgroundColor: "#143055",
-		borderRadius: 8,
-		paddingHorizontal: 24,
-		paddingVertical: 12,
+		marginTop: theme.spacing.xl,
+		backgroundColor: theme.colors.brand,
+		borderRadius: theme.radius.sm,
+		paddingHorizontal: theme.spacing.xl,
+		paddingVertical: theme.spacing.md,
 	},
 	retryButtonText: {
-		color: "#ffffff",
-		fontSize: 16,
+		color: theme.colors.onBrand,
+		fontSize: theme.typography.label.fontSize,
 		fontWeight: "500",
 	},
-});
+}));

@@ -1,51 +1,51 @@
-import { StyleSheet } from "react-native";
+import { StyleSheet } from "react-native-unistyles";
 
-export const onboardingStyles = StyleSheet.create({
+export const onboardingStyles = StyleSheet.create((theme) => ({
 	container: {
 		flex: 1,
 		justifyContent: "center",
-		paddingHorizontal: 28,
-		backgroundColor: "#ffffff",
+		paddingHorizontal: theme.spacing.xxl,
+		backgroundColor: theme.colors.background,
 	},
 	eyebrow: {
-		fontSize: 16,
+		fontSize: theme.typography.label.fontSize,
 		fontWeight: "600",
-		color: "#143055",
-		marginBottom: 12,
+		color: theme.colors.brand,
+		marginBottom: theme.spacing.md,
 	},
 	title: {
-		fontSize: 36,
-		lineHeight: 42,
-		fontWeight: "700",
-		color: "#111827",
-		marginBottom: 16,
+		fontSize: theme.typography.display.fontSize,
+		lineHeight: theme.typography.display.lineHeight,
+		fontWeight: theme.typography.display.fontWeight,
+		color: theme.colors.text,
+		marginBottom: theme.spacing.lg,
 	},
 	body: {
-		fontSize: 17,
-		lineHeight: 26,
-		color: "#4b5563",
-		marginBottom: 12,
+		fontSize: theme.typography.body.fontSize,
+		lineHeight: theme.typography.body.lineHeight,
+		color: theme.colors.textMuted,
+		marginBottom: theme.spacing.md,
 	},
 	primaryButton: {
-		backgroundColor: "#143055",
-		borderRadius: 10,
-		paddingVertical: 15,
+		backgroundColor: theme.colors.brand,
+		borderRadius: theme.radius.md,
+		paddingVertical: theme.spacing.lg,
 		alignItems: "center",
-		marginTop: 28,
+		marginTop: theme.spacing.xxl,
 	},
 	primaryButtonText: {
-		color: "#ffffff",
-		fontSize: 16,
+		color: theme.colors.onBrand,
+		fontSize: theme.typography.label.fontSize,
 		fontWeight: "600",
 	},
 	secondaryButton: {
-		paddingVertical: 15,
+		paddingVertical: theme.spacing.lg,
 		alignItems: "center",
-		marginTop: 8,
+		marginTop: theme.spacing.sm,
 	},
 	secondaryButtonText: {
-		color: "#143055",
-		fontSize: 16,
+		color: theme.colors.brand,
+		fontSize: theme.typography.label.fontSize,
 		fontWeight: "500",
 	},
-});
+}));

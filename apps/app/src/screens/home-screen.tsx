@@ -1,7 +1,8 @@
 import { useAuth } from "@bro/auth-app";
 import { router } from "expo-router";
 import { useState } from "react";
-import { StyleSheet, Text, TouchableOpacity, View } from "react-native";
+import { Text, TouchableOpacity, View } from "react-native";
+import { StyleSheet } from "react-native-unistyles";
 
 /** Placeholder local-first home pending the first product domain. */
 export function HomeScreen() {
@@ -66,48 +67,49 @@ export function HomeScreen() {
 	);
 }
 
-const styles = StyleSheet.create({
+const styles = StyleSheet.create((theme) => ({
 	container: {
 		flex: 1,
 		justifyContent: "center",
 		alignItems: "center",
-		paddingHorizontal: 24,
-		backgroundColor: "#ffffff",
+		paddingHorizontal: theme.spacing.xl,
+		backgroundColor: theme.colors.background,
 	},
 	greeting: {
-		fontSize: 28,
-		fontWeight: "600",
-		marginBottom: 8,
+		fontSize: theme.typography.title.fontSize,
+		fontWeight: theme.typography.title.fontWeight,
+		color: theme.colors.text,
+		marginBottom: theme.spacing.sm,
 	},
 	detail: {
-		fontSize: 15,
-		color: "#6b7280",
-		marginBottom: 4,
+		fontSize: theme.typography.label.fontSize,
+		color: theme.colors.textSubtle,
+		marginBottom: theme.spacing.xs,
 	},
 	button: {
-		marginTop: 32,
+		marginTop: theme.spacing.xl + theme.spacing.sm,
 		borderWidth: 1,
-		borderColor: "#d1d5db",
-		borderRadius: 8,
-		paddingVertical: 12,
-		paddingHorizontal: 24,
+		borderColor: theme.colors.border,
+		borderRadius: theme.radius.sm,
+		paddingVertical: theme.spacing.md,
+		paddingHorizontal: theme.spacing.xl,
 	},
 	secondaryButton: {
-		marginTop: 12,
-		paddingVertical: 12,
-		paddingHorizontal: 24,
+		marginTop: theme.spacing.md,
+		paddingVertical: theme.spacing.md,
+		paddingHorizontal: theme.spacing.xl,
 	},
 	buttonText: {
-		fontSize: 16,
-		color: "#143055",
+		fontSize: theme.typography.label.fontSize,
+		color: theme.colors.brand,
 	},
 	buttonDisabled: {
 		opacity: 0.6,
 	},
 	notice: {
-		color: "#4b5563",
-		fontSize: 14,
-		marginTop: 12,
+		color: theme.colors.textMuted,
+		fontSize: theme.typography.caption.fontSize,
+		marginTop: theme.spacing.md,
 		textAlign: "center",
 	},
-});
+}));

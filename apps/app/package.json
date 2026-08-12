@@ -46,11 +46,17 @@
 		"jest-expo": "~56.0.5",
 		"react": "19.2.3",
 		"react-native": "*",
+		"react-native-edge-to-edge": "^1.8.1",
+		"react-native-gesture-handler": "~2.31.2",
+		"react-native-nitro-modules": "^0.36.5",
+		"react-native-reanimated": "4.3.1",
 		"react-native-safe-area-context": "~5.7.0",
 		"react-native-screens": "~4.26.2",
 		"react-native-svg": "*",
 		"react-native-svg-transformer": "*",
-		"react-native-web": "*"
+		"react-native-unistyles": "^3.3.0",
+		"react-native-web": "*",
+		"react-native-worklets": "0.8.3"
 	},
 	"devDependencies": {
 		"@react-native/jest-preset": "0.85.3",

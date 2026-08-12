@@ -114,6 +114,23 @@ The device-local settings store must be a distinct store from product data — a
 
 The app never receives or stores raw fingerprint or facial data. The operating system returns only an authentication result.
 
+### UI styling
+
+**Decided: Unistyles v3,** with no component library. Styling and component choice are separate decisions, and the second depends on product domains that do not exist yet — committing to a component set now would fix a look for an app that has not been designed.
+
+- **All colour lives in `apps/app/src/theme/unistyles.ts`.** A hardcoded hex in a screen is a bug, because it cannot follow the device's colour scheme.
+- **`adaptiveThemes` is on,** which makes `app.json`'s `userInterfaceStyle: "automatic"` true. Before this the app declared support for both schemes and rendered a hardcoded light UI with a pinned dark status bar.
+- Themes carry `colors`, `spacing`, `radius`, and `typography`. Spacing, radius, and typography are shared; only colour differs between light and dark.
+
+Why Unistyles over the alternatives:
+
+- **Theming is its purpose.** Theme changes propagate through the shadow tree without re-rendering React, which a hand-rolled context cannot do.
+- **The migration was mechanical** — `StyleSheet.create({...})` became `StyleSheet.create((theme) => ({...}))`, keeping the idiom already in the codebase.
+- **NativeWind was the runner-up,** and its one real advantage is that the copy-paste component ecosystem (React Native Reusables, gluestack) is built on it. That advantage only pays out when a component library is wanted, which is deferred. Revisit if that changes, since running both is not sensible.
+- It costs `react-native-nitro-modules`, `react-native-reanimated`, and `react-native-edge-to-edge` as native peers, so it joins the prebuild regeneration [Phase 3](#phase-3-optional-app-protection) already requires. Reanimated is pinned by Expo to the SDK-compatible release.
+
+**Testing.** Unistyles ships a Jest mock which stands in for the native module and resolves theme callbacks against the registered themes. It always returns the *first* registered theme, so **dark mode cannot be verified in Jest** — token parity between themes is unit-tested instead, and the rendering itself belongs to the device pass.
+
 ### Platform backup
 
 **Open, and not yet implemented.** Both databases currently sit inside the platform's default backup scope, which no one chose:
@@ -628,6 +645,7 @@ At minimum, cover:
 - Sign-out with no network available, including when remote revocation never succeeds.
 - Each of the four destructive operations affects only its own column of the table above.
 - Account deletion removes the Turso database and provisioning record, not only the Postgres rows.
+- Light and dark colour schemes, including switching while the app is running. Jest cannot cover this; it is device-pass only.
 - App is backgrounded briefly and beyond the lock timeout.
 - No biometric hardware, no enrollment, changed enrollment, cancellation, failure, and OS lockout.
 - Premium purchase while unregistered, and while registered.
@@ -728,8 +746,9 @@ Phase 1 now contains:
    - Device settings run against a real SQLite engine and real files, covering first-run identity minting exactly once, every setting round-tripping through storage, cleared values being removed rather than stringified, forward-version refusal, and identity surviving a cold relaunch.
    - Database opening can retry after failure and refuses a concurrent open of a different database file.
    - Better Auth's pre-request sign-out clearing, pinned as a dependency contract.
+   - Design-token parity between the light and dark themes, since a token missing from one resolves to `undefined` rather than failing loudly.
 
-Before calling the phase release-ready, complete the native Android/iOS acceptance pass for fresh install, cold relaunch, airplane-mode sign-out, and storage retry.
+Before calling the phase release-ready, complete the native Android/iOS acceptance pass for fresh install, cold relaunch, airplane-mode sign-out, storage retry, and both colour schemes. The pass also covers `expo-sqlite/kv-store` and Unistyles themselves, since both are stood in for by mocks under Jest.
 
 ### Two spikes before committing
 
