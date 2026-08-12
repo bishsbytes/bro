@@ -84,7 +84,10 @@ pnpm exec nx run @bro/api:serve       # API on :3000
 pnpm exec nx run app:start            # Expo dev server
 ```
 
-Generate a secret with `openssl rand -base64 32`. On a physical device, `EXPO_PUBLIC_API_URL` must be your machine's LAN IP rather than `localhost`.
+Generate a secret with `openssl rand -base64 32`. For the Android emulator, set
+`EXPO_PUBLIC_API_URL=http://10.0.2.2:3000`; Android reserves `10.0.2.2` as an
+alias to the development machine. The iOS simulator and web can use
+`http://localhost:3000`. On a physical device, use your machine's LAN IP.
 
 ## Common tasks
 
