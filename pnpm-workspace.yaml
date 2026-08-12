@@ -7,8 +7,12 @@ allowBuilds:
   # Optional drizzle-kit drivers we do not use (we use postgres.js and expo-sqlite).
   '@prisma/client': false
   better-sqlite3: false
+  # Testcontainers' local Docker path does not need these transitive build scripts.
+  cpu-features: false
   esbuild: true
   nx: true
+  protobufjs: false
+  ssh2: false
   unrs-resolver: true
 minimumReleaseAgeExclude:
   - '@better-auth/core@1.6.27'

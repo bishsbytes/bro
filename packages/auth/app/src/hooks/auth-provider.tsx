@@ -8,13 +8,17 @@ import {
 import { assertRemoteAuthConfigured, authClient } from "../client";
 
 type SessionState = ReturnType<typeof authClient.useSession>;
-type RemoteSessionState = Pick<SessionState, "data" | "isPending" | "error">;
+type RemoteSessionState = Pick<
+	SessionState,
+	"data" | "isPending" | "error" | "refetch"
+>;
 
 /** The state a user with no stored session is in, and stays in. */
 const NO_REMOTE_SESSION: RemoteSessionState = {
 	data: null,
 	isPending: false,
 	error: null,
+	refetch: async () => undefined,
 };
 
 export type AuthContextValue = {
@@ -28,6 +32,8 @@ export type AuthContextValue = {
 	signIn: (email: string, password: string) => Promise<void>;
 	signUp: (name: string, email: string, password: string) => Promise<void>;
 	signOut: () => Promise<{ remoteRevocationPending: boolean }>;
+	refreshRemoteIdentity: () => Promise<void>;
+	deleteAccount: (password: string) => Promise<void>;
 };
 
 export type AuthProviderProps = {
@@ -88,11 +94,11 @@ function RemoteSessionBridge({
 	onRemoteSessionCleared,
 	onSessionState,
 }: RemoteSessionBridgeProps) {
-	const { data, isPending, error } = authClient.useSession();
+	const { data, isPending, error, refetch } = authClient.useSession();
 
 	useEffect(() => {
-		onSessionState({ data, isPending, error });
-	}, [data, isPending, error, onSessionState]);
+		onSessionState({ data, isPending, error, refetch });
+	}, [data, isPending, error, onSessionState, refetch]);
 
 	useEffect(() => {
 		if (isPending) {
@@ -130,7 +136,7 @@ function useAuthValue(
 		"onRemoteSessionStored" | "onRemoteSessionCleared"
 	>,
 ): AuthContextValue {
-	const { data: session, isPending, error } = sessionState;
+	const { data: session, isPending, error, refetch } = sessionState;
 
 	return useMemo<AuthContextValue>(
 		() => ({
@@ -152,8 +158,8 @@ function useAuthValue(
 					throw new Error(signInError.message ?? "Could not sign in.");
 				}
 
-				// Record the account this device now belongs to. Phase 2 keys
-				// workspace ownership off it, so it must not lag behind by a render.
+				// Record which remote account is signed in without waiting for the
+				// session hook. This is a startup hint, never ownership of local data.
 				await onRemoteSessionStored(data?.user.id ?? null);
 			},
 			signUp: async (name, email, password) => {
@@ -187,7 +193,48 @@ function useAuthValue(
 					return { remoteRevocationPending: true };
 				}
 			},
+			refreshRemoteIdentity: async () => {
+				await refetch();
+			},
+			deleteAccount: async (password) => {
+				assertRemoteAuthConfigured();
+				const { error: deleteError } = await authClient.deleteUser({
+					password,
+				});
+
+				if (deleteError) {
+					throw new Error(
+						deleteError.message ?? "Could not delete the account.",
+					);
+				}
+
+				// Better Auth's server response expires its cookie. The Expo client only
+				// eagerly clears its persisted session cache through the supported
+				// signOut action, whose pre-request clearing is pinned by a contract test.
+				// The account is already gone, so any revocation result is irrelevant.
+				try {
+					await authClient.signOut();
+				} catch {
+					// The Expo pre-request hook has already completed local clearing.
+				}
+
+				try {
+					await onRemoteSessionCleared();
+				} catch {
+					// The account no longer exists, so reporting this as a failed
+					// deletion would be a lie. A stale marker costs one session request
+					// next launch, which the 401 then clears.
+					console.warn("Could not clear the remote session marker.");
+				}
+			},
 		}),
-		[session, isPending, error, onRemoteSessionCleared, onRemoteSessionStored],
+		[
+			session,
+			isPending,
+			error,
+			refetch,
+			onRemoteSessionCleared,
+			onRemoteSessionStored,
+		],
 	);
 }

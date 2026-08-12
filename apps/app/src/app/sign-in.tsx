@@ -1,21 +1,29 @@
-import { router } from "expo-router";
+import { router, useLocalSearchParams } from "expo-router";
+import { leaveAccountFlow } from "../navigation/account-flow";
 import { useDeviceSettings } from "../providers/device-settings-provider";
 import { SignInScreen } from "../screens/sign-in-screen";
 
 export default function SignInRoute() {
 	const { settings, completeOnboarding } = useDeviceSettings();
+	const { returnTo } = useLocalSearchParams<{ returnTo?: string }>();
 
 	const onSuccess = () => {
 		if (!settings.onboardingComplete) {
 			completeOnboarding();
 		}
-		router.replace("/");
+		leaveAccountFlow(returnTo, settings.onboardingComplete);
 	};
 
 	return (
 		<SignInScreen
 			onShowSignUp={
-				settings.onboardingComplete ? () => router.push("/sign-up") : undefined
+				settings.onboardingComplete
+					? () =>
+							router.push({
+								pathname: "/sign-up",
+								params: returnTo ? { returnTo } : undefined,
+							})
+					: undefined
 			}
 			onSuccess={onSuccess}
 		/>

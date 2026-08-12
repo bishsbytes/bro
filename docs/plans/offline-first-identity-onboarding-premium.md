@@ -2,7 +2,7 @@
 
 ## Status
 
-Active implementation plan, revised after review against the current codebase. Phase 1 is implemented in code, with its native-device acceptance pass still pending. Sync architecture, anonymous identity, local data and multiple accounts, and the consent model are settled — see [Decisions taken](#decisions-taken). [Platform backup](#platform-backup) is the one storage decision still open, and it is not yet implemented.
+Active implementation plan, revised after review against the current codebase. Phase 1 is complete in code, automated coverage, and native-device acceptance. Phase 2 is implemented in code with automated coverage; its focused native Android/iOS acceptance pass remains. Sync architecture, anonymous identity, local data and multiple accounts, and the consent model are settled — see [Decisions taken](#decisions-taken). [Platform backup](#platform-backup) is the one storage decision still open, and it is not yet implemented.
 
 ## Goals
 
@@ -565,17 +565,21 @@ Three pieces of work are assumed by later phases and exist in neither the worksp
 
 **Exit criteria:** A clean install in airplane mode can complete onboarding, relaunch, and use the core app without seeing an account requirement, and issues no request to our backend while doing so. Sign-out succeeds with no network. Auth failure never reaches a startup screen; storage failure always does, with a retry path. Covered by automated tests, not only by hand.
 
-**Implementation status:** The Phase 1 code and automated harness are complete. The remaining release gate is the native Android/iOS acceptance pass covering fresh install, cold relaunch, airplane-mode sign-out, and storage retry on a real SQLite handle.
+**Implementation status:** Complete. The code and automated harness are green, and the native Android/iOS acceptance pass covering fresh install, cold relaunch, airplane-mode sign-out, storage retry on a real SQLite handle, and both colour schemes was reported complete on 12 August 2026.
 
 ### Phase 2: Optional accounts
 
+**Detailed delivery plan:** [Phase 2: Optional accounts implementation plan](phase-2-optional-accounts.md).
+
 - Implement in-app Account settings, with sign-in, sign-up, and sign-out as optional flows reachable from the main app.
 - Implement account deletion, including everything the server holds.
-- Implement the four destructive operations as distinct actions with distinct confirmation copy.
+- Preserve the four destructive operations as distinct contracts with distinct confirmation copy. Implement sign-out and account deletion now; add local-data deletion once a product domain gives it meaningful data and recovery behaviour, and add sync opt-out with sync in Phase 5. Do not ship controls for capabilities that do not exist.
 
 Reconciliation of *product* data is not in this phase. Under native sync it happens at adoption, which cannot occur before a user is entitled and opted in — see Phase 5.
 
 **Exit criteria:** Registering, signing in, signing out, and switching accounts never destroy, hide, or implicitly re-scope local product data, and none of them is required to use the app.
+
+**Implementation status:** Code and automated verification complete on 12 August 2026. The focused native Android/iOS acceptance pass for the Account states, identity journeys, deletion, local-data continuity, and both colour schemes remains before the phase is complete.
 
 ### Phase 3: Optional app protection
 
@@ -748,7 +752,22 @@ Phase 1 now contains:
    - Better Auth's pre-request sign-out clearing, pinned as a dependency contract.
    - Design-token parity between the light and dark themes, since a token missing from one resolves to `undefined` rather than failing loudly.
 
-Before calling the phase release-ready, complete the native Android/iOS acceptance pass for fresh install, cold relaunch, airplane-mode sign-out, storage retry, and both colour schemes. The pass also covers `expo-sqlite/kv-store` and Unistyles themselves, since both are stood in for by mocks under Jest.
+The native Android/iOS acceptance pass for fresh install, cold relaunch, airplane-mode sign-out, storage retry, and both colour schemes was reported complete on 12 August 2026. The pass also covered `expo-sqlite/kv-store` and Unistyles themselves, since both are stood in for by mocks under Jest.
+
+## Phase 2 delivered slice
+
+Phase 2 now contains:
+
+1. An in-app Account route with local-only, checking, registered, and recoverable unavailable states; accounts remain optional and never gate app entry.
+2. Origin-aware sign-in and sign-up journeys that return to Account from the main app while preserving the onboarding sign-in path. Returning dismisses back onto the Account already in the stack, so Back from Account reaches the app rather than a second Account.
+3. Confirmed local-first sign-out and password-confirmed server-first account deletion, with explicit copy that local device data remains. Deletion reports success once the server has deleted the account: a device-local marker write that fails afterwards is warned about, not reported as a failed deletion, since the account is already gone.
+4. Better Auth user deletion enabled on the API, backed by Vitest integration tests whose PostgreSQL Testcontainer covers registration state, wrong-password preservation, successful removal of user, credential-account, and session rows, and the deleted session no longer resolving.
+5. Provider-level identity retry and deletion ordering that composes `deleteUser()` with Better Auth's public local-clearing `signOut()` path before clearing the app-owned session marker.
+6. Router and screen coverage for local-only/no-request behavior, offline account refresh, offline sign-out, account A → account B, wrong-password deletion, successful deletion, and — through the real router, for both sign-out/sign-in and account deletion — the same `bro.db` handle staying open while onboarding state and the settings store are left untouched.
+7. Direct coverage of the stored-session marker rules the Account states rest on: a resolved absence or an explicit 401 clears the marker, any other failure preserves it, and a pending request touches neither. Pinned against the dependency by a contract test asserting that Better Auth's session hook reports a 401 with its status, a resolved absence with no error, and an unreachable server as a settled error carrying no status.
+8. Development documentation for the Account journey and Testcontainers-backed auth-deletion suite.
+
+The focused native Android/iOS acceptance pass remains. Until the first product table exists, local-data continuity is pinned structurally by asserting identity changes do not close or replace `bro.db`; that becomes a sentinel-row assertion when there is real product data to seed. `installationId` itself is covered by the device-settings suite against a real SQLite engine rather than at the router level, where it is not rendered.
 
 ### Two spikes before committing
 

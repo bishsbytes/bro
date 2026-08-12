@@ -1,7 +1,9 @@
 import { serve } from "@hono/node-server";
 import { createApp } from "./app.js";
-import { env } from "./env.js";
+import { auth, env } from "./env.js";
 
-serve({ fetch: createApp().fetch, port: env.port }, ({ port }) => {
+const app = createApp({ auth, corsOrigin: env.corsOrigin });
+
+serve({ fetch: app.fetch, port: env.port }, ({ port }) => {
 	console.log(`API listening on http://localhost:${port}`);
 });

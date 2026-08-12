@@ -11,6 +11,10 @@ export const APP_SCHEME = "app";
  */
 export const authOptions = {
 	emailAndPassword: { enabled: true },
+	// External account-owned resources must be removed through a beforeDelete
+	// hook before they ship. Phase 2 owns only the Better Auth rows, whose
+	// foreign keys cascade from the user record.
+	user: { deleteUser: { enabled: true } },
 	plugins: [expo()],
 } satisfies Partial<BetterAuthOptions>;
 

@@ -68,6 +68,16 @@ The auth tables in [`database/api/src/schema/auth.ts`](packages/database/api/src
 
 When custom `user`/`session` fields are added, the client will need `inferAdditionalFields<typeof auth>()` to know about them — a type-only generic, so it doesn't bundle server code.
 
+Accounts are optional and never gate local app entry. The in-app Account route owns sign-in, registration, local-first sign-out, retrying a stored session, account switching, and password-confirmed deletion. Deletion is server-first: a failed request preserves the session marker and all local data; success removes the Better Auth user/account/session rows, clears the supported Expo auth cache, and leaves `bro.db` open.
+
+### Auth integration tests
+
+Account deletion is exercised through Hono and Better Auth with Vitest. Testcontainers starts a fresh PostgreSQL container, applies the real migrations, and removes the container after the suite; no test database URL or manually managed Compose service is required.
+
+```sh
+pnpm nx run @bro/api:test
+```
+
 ## Getting started
 
 Requires Node 20+, pnpm, and Docker.
@@ -95,6 +105,8 @@ alias to the development machine. The iOS simulator and web can use
 |---|---|
 | `nx run @bro/api:serve` | Run the development esbuild bundle with watch and automatic restart |
 | `nx run @bro/api:build` | Production bundle (esbuild) |
+| `pnpm nx run @bro/api:test` | Run API integration tests with Vitest and Testcontainers |
+| `pnpm nx run @bro/app:test` | Run the Expo router, Account, startup, and storage tests |
 | `nx run app:start` | Expo dev server |
 | `nx run @bro/database-api:db:generate` | Generate a Postgres migration from schema changes |
 | `nx run @bro/database-api:db:migrate` | Apply pending Postgres migrations |

@@ -1,13 +1,10 @@
 {
 	"extends": "../../tsconfig.base.json",
 	"compilerOptions": {
-		"outDir": "dist",
-		"types": ["node"],
-		"rootDir": "src",
-		"tsBuildInfoFile": "dist/tsconfig.app.tsbuildinfo"
+		"outDir": "./out-tsc/vitest",
+		"types": ["node"]
 	},
-	"include": ["src/**/*.ts"],
-	"exclude": ["src/**/*.test.ts", "out-tsc", "dist"],
+	"include": ["src/**/*.ts", "vitest.config.ts"],
 	"references": [
 		{
 			"path": "../../packages/database/api/tsconfig.lib.json"

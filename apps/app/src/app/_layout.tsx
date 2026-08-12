@@ -78,6 +78,7 @@ function RootNavigator() {
 			</Stack.Protected>
 			<Stack.Protected guard={settings.onboardingComplete}>
 				<Stack.Screen name="index" />
+				<Stack.Screen name="account" />
 			</Stack.Protected>
 			<Stack.Screen name="sign-in" />
 			<Stack.Screen name="sign-up" />

@@ -21,8 +21,8 @@ const shared = {
 		display: { fontSize: 36, lineHeight: 42, fontWeight: "700" },
 		title: { fontSize: 32, fontWeight: "600" },
 		body: { fontSize: 17, lineHeight: 26 },
-		label: { fontSize: 16 },
-		caption: { fontSize: 14 },
+		label: { fontSize: 16, lineHeight: 23 },
+		caption: { fontSize: 14, lineHeight: 21 },
 	},
 } as const;
 
@@ -37,6 +37,7 @@ export const lightTheme = {
 		brand: "#143055",
 		onBrand: "#ffffff",
 		danger: "#b91c1c",
+		onDanger: "#ffffff",
 	},
 } as const;
 
@@ -52,7 +53,10 @@ export const darkTheme = {
 		// than carrying the same hex across both themes.
 		brand: "#8fb3dd",
 		onBrand: "#0d1117",
+		// The light danger red is unreadable on a dark ground, so it lightens —
+		// which flips what can legibly sit on top of it.
 		danger: "#f87171",
+		onDanger: "#0d1117",
 	},
 } as const;
 

@@ -14,6 +14,7 @@ jest.mock("../../../packages/auth/app/src/client", () => ({
 		signIn: { email: jest.fn() },
 		signUp: { email: jest.fn() },
 		signOut: jest.fn(),
+		deleteUser: jest.fn(),
 	},
 }));
 
@@ -22,6 +23,7 @@ const mockedAuthClient = authClient as unknown as {
 	signIn: { email: jest.Mock };
 	signUp: { email: jest.Mock };
 	signOut: jest.Mock;
+	deleteUser: jest.Mock;
 };
 
 function Probe({ onValue }: { onValue: (value: AuthContextValue) => void }) {
@@ -198,5 +200,274 @@ describe("AuthProvider local-first behavior", () => {
 		});
 
 		expect(result).toEqual({ remoteRevocationPending: true });
+	});
+
+	it("retries remote identity through the marker-owned session hook", async () => {
+		const refetch = jest.fn().mockResolvedValue(undefined);
+		mockedAuthClient.useSession.mockReturnValue({
+			data: null,
+			isPending: false,
+			error: { message: "offline" },
+			refetch,
+		});
+		let value: AuthContextValue | undefined;
+
+		await render(
+			<AuthProvider
+				hasStoredRemoteSession
+				onRemoteSessionStored={jest.fn().mockResolvedValue(undefined)}
+				onRemoteSessionCleared={jest.fn().mockResolvedValue(undefined)}
+			>
+				<Probe onValue={(next) => (value = next)} />
+			</AuthProvider>,
+		);
+
+		await act(async () => {
+			await value?.refreshRemoteIdentity();
+		});
+
+		expect(refetch).toHaveBeenCalledTimes(1);
+	});
+
+	it("deletes on the server, clears Better Auth locally, then clears the marker", async () => {
+		mockedAuthClient.useSession.mockReturnValue({
+			data: {
+				user: { id: "user-a", name: "A", email: "a@example.com" },
+				session: { id: "session-a" },
+			},
+			isPending: false,
+			error: null,
+			refetch: jest.fn(),
+		});
+		mockedAuthClient.deleteUser.mockResolvedValue({
+			data: { success: true, message: "User deleted" },
+			error: null,
+		});
+		mockedAuthClient.signOut.mockResolvedValue({ data: {}, error: null });
+		const clearRemoteSession = jest.fn().mockResolvedValue(undefined);
+		let value: AuthContextValue | undefined;
+
+		await render(
+			<AuthProvider
+				hasStoredRemoteSession
+				onRemoteSessionStored={jest.fn().mockResolvedValue(undefined)}
+				onRemoteSessionCleared={clearRemoteSession}
+			>
+				<Probe onValue={(next) => (value = next)} />
+			</AuthProvider>,
+		);
+
+		await act(async () => {
+			await value?.deleteAccount("password");
+		});
+
+		expect(mockedAuthClient.deleteUser).toHaveBeenCalledWith({
+			password: "password",
+		});
+		expect(
+			mockedAuthClient.deleteUser.mock.invocationCallOrder[0],
+		).toBeLessThan(mockedAuthClient.signOut.mock.invocationCallOrder[0]);
+		expect(mockedAuthClient.signOut.mock.invocationCallOrder[0]).toBeLessThan(
+			clearRemoteSession.mock.invocationCallOrder[0],
+		);
+	});
+
+	it("preserves the marker when server-side account deletion fails", async () => {
+		mockedAuthClient.useSession.mockReturnValue({
+			data: {
+				user: { id: "user-a", name: "A", email: "a@example.com" },
+				session: { id: "session-a" },
+			},
+			isPending: false,
+			error: null,
+			refetch: jest.fn(),
+		});
+		mockedAuthClient.deleteUser.mockResolvedValue({
+			data: null,
+			error: { message: "Invalid password" },
+		});
+		const clearRemoteSession = jest.fn().mockResolvedValue(undefined);
+		let value: AuthContextValue | undefined;
+
+		await render(
+			<AuthProvider
+				hasStoredRemoteSession
+				onRemoteSessionStored={jest.fn().mockResolvedValue(undefined)}
+				onRemoteSessionCleared={clearRemoteSession}
+			>
+				<Probe onValue={(next) => (value = next)} />
+			</AuthProvider>,
+		);
+
+		await expect(
+			act(async () => {
+				await value?.deleteAccount("wrong password");
+			}),
+		).rejects.toThrow("Invalid password");
+		expect(mockedAuthClient.signOut).not.toHaveBeenCalled();
+		expect(clearRemoteSession).not.toHaveBeenCalled();
+	});
+
+	it("preserves the marker when the account deletion request cannot reach the server", async () => {
+		mockedAuthClient.useSession.mockReturnValue({
+			data: {
+				user: { id: "user-a", name: "A", email: "a@example.com" },
+				session: { id: "session-a" },
+			},
+			isPending: false,
+			error: null,
+			refetch: jest.fn(),
+		});
+		mockedAuthClient.deleteUser.mockRejectedValue(new Error("Network offline"));
+		const clearRemoteSession = jest.fn().mockResolvedValue(undefined);
+		let value: AuthContextValue | undefined;
+
+		await render(
+			<AuthProvider
+				hasStoredRemoteSession
+				onRemoteSessionStored={jest.fn().mockResolvedValue(undefined)}
+				onRemoteSessionCleared={clearRemoteSession}
+			>
+				<Probe onValue={(next) => (value = next)} />
+			</AuthProvider>,
+		);
+
+		await expect(
+			act(async () => {
+				await value?.deleteAccount("password");
+			}),
+		).rejects.toThrow("Network offline");
+		expect(mockedAuthClient.signOut).not.toHaveBeenCalled();
+		expect(clearRemoteSession).not.toHaveBeenCalled();
+	});
+
+	it("still reports success when the marker cannot be cleared after deletion", async () => {
+		mockedAuthClient.useSession.mockReturnValue({
+			data: {
+				user: { id: "user-a", name: "A", email: "a@example.com" },
+				session: { id: "session-a" },
+			},
+			isPending: false,
+			error: null,
+			refetch: jest.fn(),
+		});
+		mockedAuthClient.deleteUser.mockResolvedValue({
+			data: { success: true, message: "User deleted" },
+			error: null,
+		});
+		mockedAuthClient.signOut.mockResolvedValue({ data: {}, error: null });
+		let value: AuthContextValue | undefined;
+
+		await render(
+			<AuthProvider
+				hasStoredRemoteSession
+				onRemoteSessionStored={jest.fn().mockResolvedValue(undefined)}
+				onRemoteSessionCleared={jest
+					.fn()
+					.mockRejectedValue(new Error("settings store unavailable"))}
+			>
+				<Probe onValue={(next) => (value = next)} />
+			</AuthProvider>,
+		);
+
+		// The account is gone by this point, so surfacing a device-local write
+		// failure as a failed deletion would tell the user the opposite of what
+		// happened. The stale marker costs one request next launch.
+		await act(async () => {
+			await expect(value?.deleteAccount("password")).resolves.toBeUndefined();
+		});
+	});
+});
+
+/**
+ * The marker decides whether the next launch does any session work at all, and
+ * Account's "temporarily unavailable" state depends on the same distinction:
+ * a resolved absence means signed out, any other failure means try again.
+ */
+describe("stored-session marker reconciliation", () => {
+	beforeEach(() => {
+		jest.clearAllMocks();
+	});
+
+	async function mountWithSession(state: {
+		data: unknown;
+		isPending: boolean;
+		error: unknown;
+	}) {
+		mockedAuthClient.useSession.mockReturnValue({
+			...state,
+			refetch: jest.fn(),
+		});
+		const onRemoteSessionStored = jest.fn().mockResolvedValue(undefined);
+		const onRemoteSessionCleared = jest.fn().mockResolvedValue(undefined);
+
+		await render(
+			<AuthProvider
+				hasStoredRemoteSession
+				onRemoteSessionStored={onRemoteSessionStored}
+				onRemoteSessionCleared={onRemoteSessionCleared}
+			>
+				<Probe onValue={() => undefined} />
+			</AuthProvider>,
+		);
+
+		return { onRemoteSessionStored, onRemoteSessionCleared };
+	}
+
+	it("clears the marker when the server resolves with no session", async () => {
+		const { onRemoteSessionCleared } = await mountWithSession({
+			data: null,
+			isPending: false,
+			error: null,
+		});
+
+		expect(onRemoteSessionCleared).toHaveBeenCalled();
+	});
+
+	it("clears the marker when the session is explicitly rejected", async () => {
+		const { onRemoteSessionCleared } = await mountWithSession({
+			data: null,
+			isPending: false,
+			error: {
+				status: 401,
+				statusText: "UNAUTHORIZED",
+				message: "Unauthorized",
+			},
+		});
+
+		expect(onRemoteSessionCleared).toHaveBeenCalled();
+	});
+
+	it("keeps the marker when the session request simply failed", async () => {
+		// Offline startup above all: this is a failed request, not proof that the
+		// session is gone, so the device must stay registered and retry later.
+		const { onRemoteSessionCleared } = await mountWithSession({
+			data: null,
+			isPending: false,
+			error: { status: 500, message: "Network request failed" },
+		});
+
+		expect(onRemoteSessionCleared).not.toHaveBeenCalled();
+	});
+
+	it("waits for the request to settle before touching the marker", async () => {
+		const { onRemoteSessionStored, onRemoteSessionCleared } =
+			await mountWithSession({ data: null, isPending: true, error: null });
+
+		expect(onRemoteSessionCleared).not.toHaveBeenCalled();
+		expect(onRemoteSessionStored).not.toHaveBeenCalled();
+	});
+
+	it("records the user id the session hook reports", async () => {
+		const { onRemoteSessionStored } = await mountWithSession({
+			data: {
+				user: { id: "user-a", name: "A", email: "a@example.com" },
+				session: { id: "session-a" },
+			},
+			isPending: false,
+			error: null,
+		});
+
+		expect(onRemoteSessionStored).toHaveBeenCalledWith("user-a");
 	});
 });

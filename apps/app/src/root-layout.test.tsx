@@ -23,10 +23,16 @@ jest.mock("@bro/database-app", () => ({
 jest.mock("../../../packages/auth/app/src/client", () => ({
 	assertRemoteAuthConfigured: jest.fn(),
 	authClient: {
-		useSession: jest.fn(() => ({ data: null, isPending: false, error: null })),
+		useSession: jest.fn(() => ({
+			data: null,
+			isPending: false,
+			error: null,
+			refetch: jest.fn(),
+		})),
 		signIn: { email: jest.fn() },
 		signUp: { email: jest.fn() },
 		signOut: jest.fn(),
+		deleteUser: jest.fn(),
 	},
 }));
 
@@ -62,6 +68,7 @@ describe("startup", () => {
 			data: null,
 			isPending: false,
 			error: null,
+			refetch: jest.fn(),
 		});
 		mockInitDb.mockResolvedValue({ handle: true });
 		mockRunMigrations.mockResolvedValue({ applied: [] });
@@ -105,9 +112,7 @@ describe("startup", () => {
 		expect(view.getByText("disk unavailable")).toBeTruthy();
 		expect(view.queryByText("Local database ready")).toBeNull();
 
-		await act(async () => {
-			fireEvent.press(view.getByText("Try again"));
-		});
+		await fireEvent.press(view.getByText("Try again"));
 
 		expect(view.getByText("Local database ready")).toBeTruthy();
 		// Both handles must be released, or the retry reopens against a half-known
@@ -125,9 +130,7 @@ describe("startup", () => {
 
 		expect(view.getByText("migration 003 failed")).toBeTruthy();
 
-		await act(async () => {
-			fireEvent.press(view.getByText("Try again"));
-		});
+		await fireEvent.press(view.getByText("Try again"));
 
 		expect(view.getByText("Local database ready")).toBeTruthy();
 	});
@@ -137,6 +140,7 @@ describe("startup", () => {
 			data: null,
 			isPending: false,
 			error: { status: 500, message: "auth is down" },
+			refetch: jest.fn(),
 		});
 
 		const view = await startApp({

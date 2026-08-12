@@ -9,6 +9,13 @@
 			"type:app"
 		],
 		"targets": {
+			"test": {
+				"executor": "nx:run-commands",
+				"options": {
+					"cwd": "apps/api",
+					"command": "vitest run"
+				}
+			},
 			"build": {
 				"executor": "@nx/esbuild:esbuild",
 				"outputs": [
@@ -113,5 +120,9 @@
 		"drizzle-orm": "^0.45.2",
 		"hono": "^4.13.1",
 		"postgres": "^3.4.9"
+	},
+	"devDependencies": {
+		"@testcontainers/postgresql": "^12.1.0",
+		"vitest": "^4.1.10"
 	}
 }
