@@ -2,7 +2,7 @@
 
 ## Status
 
-Draft, 14 August 2026. This is the delivery plan for [sequencing step 2 of the product domains plan](product-domains-and-data.md#sequencing): the reminders domain — a daily check-in nudge whose schedule survives a phone change but whose OS notifications belong to the install. It assumes [step 1](step-1-check-in.md) code-complete (it is) and carries the product's **first native dependency and first prebuild regeneration**, which also makes it the natural moment to run step 1's still-pending physical-device acceptance checklist: one dev-client build serves both.
+Draft, 14 August 2026. This is the delivery plan for [sequencing step 2 of the product domains plan](product-domains-and-data.md#sequencing): the reminders domain — a daily check-in nudge whose schedule survives a phone change but whose OS notifications belong to the install. It assumes [step 1](step-1-check-in.md) code-complete (it is) and carries the product's **first native dependency and first prebuild regeneration**, which also makes it the natural moment to run step 1's still-pending physical-device acceptance checklist: one dev-client build serves both. The [app shell and shared components plan](app-shell-and-components.md) lands first: slice 4 below builds the reminders UI from the shared components inside the settings tab's stack, not from scratch.
 
 ## Outcome
 
