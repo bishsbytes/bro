@@ -2,7 +2,7 @@
 
 ## Status
 
-Ready for review. This is the delivery plan for [sequencing step 1 of the product domains plan](product-domains-and-data.md#sequencing): the check-in domain — mood, energy, and the factor panel — plus day notes, the first per-metric trend view, delete local data, and the export serialisation design. The product plan remains authoritative for domain and privacy decisions; this document turns its first step into reviewable slices against the current workspace.
+Code-complete through slices 1–6 on 14 August 2026, with automated acceptance green. The remaining exit item is the native Android/iOS acceptance pass listed in slice 6: airplane-mode relaunch, near-midnight entry, both colour schemes, and the fifteen-second timing require physical devices and are not claimed by Jest. This is the delivery plan for [sequencing step 1 of the product domains plan](product-domains-and-data.md#sequencing): the check-in domain — mood, energy, and the factor panel — plus day notes, the first per-metric trend view, delete local data, and the export serialisation design.
 
 Umbrella [Phase 1](offline-first-identity-onboarding-premium.md#phase-1-local-first-app-entry) is complete and [Phase 2](phase-2-optional-accounts.md) is code-complete; this step assumes both and requires neither Phase 3 nor any native dependency.
 
@@ -112,7 +112,21 @@ In a settings context reachable from home (a minimal settings route is acceptabl
 
 ### Export (design only)
 
-A versioned JSON format: metadata (format version, exported-at, app version), observations, day notes, tracked-metric overlay. Values canonical, slugs raw, labels resolved at read time by the importer — the serialiser snapshots nothing because the catalogue data needed to interpret it ships in the file's registry section. `sensitive` metrics are included by default in a user's own export but the serialiser accepts an exclusion flag, establishing the code path decision 10 needs. Implemented as a pure function with tests; no share-sheet UI this step.
+A versioned JSON format: metadata (format version, exported-at, app version), observations, day notes, tracked-metric overlay. Values canonical, slugs raw, labels resolved at read time by the importer — observation records snapshot no label because the catalogue data needed to interpret them ships in the file's registry section. `sensitive` metrics are included by default in a user's own export but the serialiser accepts an exclusion flag, establishing the code path decision 10 needs. Implemented as a pure function with tests; no share-sheet UI this step.
+
+Version 1 is UTF-8 JSON with a trailing newline and this top-level shape:
+
+```ts
+{
+  metadata: { formatVersion: 1, exportedAt: string, appVersion: string },
+  registry: { metrics: MetricDefinition[] },
+  observations: Observation[],
+  dayNotes: DayNote[],
+  trackedMetrics: TrackedMetric[],
+}
+```
+
+`exportedAt` is ISO 8601 UTC. Rows retain database ids, timestamps, provenance, local-day/timezone fields, and scale snapshots. Arrays have deterministic chronological/catalogue ordering so equivalent input produces a stable file. Sensitive exclusion removes known-sensitive registry definitions, observations, and tracked-metric overlay rows; day notes remain because the option is metric-specific, and unknown slugs remain because an older binary cannot safely classify them as sensitive or non-sensitive. The export UI must make that limitation explicit when it ships.
 
 ## Delivery slices
 
@@ -164,6 +178,8 @@ A versioned JSON format: metadata (format version, exported-at, app version), ob
    - delete local data with a signed-in account: data gone, session and onboarding intact;
    - both colour schemes;
    - the fifteen-second timing on a real device.
+
+**Implementation status:** serializer, golden/empty/sensitive tests, and documentation are complete. The native checklist above remains pending on physical Android and iOS devices.
 
 ## Expected touchpoints
 

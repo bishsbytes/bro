@@ -573,13 +573,13 @@ Three pieces of work are assumed by later phases and exist in neither the worksp
 
 - Implement in-app Account settings, with sign-in, sign-up, and sign-out as optional flows reachable from the main app.
 - Implement account deletion, including everything the server holds.
-- Preserve the four destructive operations as distinct contracts with distinct confirmation copy. Implement sign-out and account deletion now; add local-data deletion once a product domain gives it meaningful data and recovery behaviour, and add sync opt-out with sync in Phase 5. Do not ship controls for capabilities that do not exist.
+- Preserve the four destructive operations as distinct contracts with distinct confirmation copy. Sign-out and account deletion shipped in Phase 2; transactional local-data deletion shipped with check-in step 1 once product tables existed; sync opt-out still arrives with sync in Phase 5. Do not ship controls for capabilities that do not exist.
 
 Reconciliation of *product* data is not in this phase. Under native sync it happens at adoption, which cannot occur before a user is entitled and opted in — see Phase 5.
 
 **Exit criteria:** Registering, signing in, signing out, and switching accounts never destroy, hide, or implicitly re-scope local product data, and none of them is required to use the app.
 
-**Implementation status:** Code and automated verification complete on 12 August 2026. The focused native Android/iOS acceptance pass for the Account states, identity journeys, deletion, local-data continuity, and both colour schemes remains before the phase is complete.
+**Implementation status:** Code and automated verification complete on 12 August 2026. Check-in step 1 subsequently replaced the deferred local-data assertion with real sentinel rows and shipped the distinct delete-local-data control, proving product rows are removed while the account session, onboarding, device settings, and migration marker survive. The focused native Android/iOS acceptance pass for the Account states, identity journeys, deletion, local-data continuity, and both colour schemes remains before the phase is complete.
 
 ### Phase 3: Optional app protection
 

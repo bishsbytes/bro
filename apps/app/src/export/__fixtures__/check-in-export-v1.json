@@ -1,0 +1,89 @@
+{
+  "metadata": {
+    "formatVersion": 1,
+    "exportedAt": "2026-08-14T12:00:00.000Z",
+    "appVersion": "1.0.0"
+  },
+  "registry": {
+    "metrics": [
+      {
+        "slug": "mood",
+        "label": "Mood",
+        "kind": "scored",
+        "scaleMin": 1,
+        "scaleMax": 5,
+        "category": null,
+        "aggregation": "mean",
+        "sensitive": false,
+        "userEnterable": true,
+        "deprecated": false,
+        "defaultPosition": 0
+      },
+      {
+        "slug": "alcohol",
+        "label": "Alcohol",
+        "kind": "factor",
+        "scaleMin": null,
+        "scaleMax": null,
+        "category": "lifestyle",
+        "aggregation": "presence",
+        "sensitive": false,
+        "userEnterable": true,
+        "deprecated": false,
+        "defaultPosition": 6
+      }
+    ]
+  },
+  "observations": [
+    {
+      "id": "observation-mood",
+      "metricSlug": "mood",
+      "value": 4,
+      "scaleMin": 1,
+      "scaleMax": 5,
+      "observedAt": 1786701600000,
+      "localDay": "2026-08-14",
+      "tzOffsetMinutes": -60,
+      "source": "user",
+      "sourceRecordId": null,
+      "assessmentId": null,
+      "createdAt": 1786701600100,
+      "updatedAt": 1786701600100
+    },
+    {
+      "id": "observation-alcohol",
+      "metricSlug": "alcohol",
+      "value": 1,
+      "scaleMin": null,
+      "scaleMax": null,
+      "observedAt": 1786705200000,
+      "localDay": "2026-08-14",
+      "tzOffsetMinutes": -60,
+      "source": "user",
+      "sourceRecordId": null,
+      "assessmentId": null,
+      "createdAt": 1786705200100,
+      "updatedAt": 1786705200100
+    }
+  ],
+  "dayNotes": [
+    {
+      "id": "note-1",
+      "localDay": "2026-08-14",
+      "body": "A useful day",
+      "createdAt": 1786708800000,
+      "updatedAt": 1786708800000
+    }
+  ],
+  "trackedMetrics": [
+    {
+      "id": "tracked-alcohol",
+      "metricSlug": "alcohol",
+      "position": 6,
+      "addedAt": null,
+      "removedAt": 1786708800000,
+      "createdAt": 1786708800000,
+      "updatedAt": 1786708800000
+    }
+  ]
+}

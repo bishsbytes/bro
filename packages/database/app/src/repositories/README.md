@@ -5,18 +5,23 @@ data domain, each issuing hand-written parameterised SQL. Drizzle is used here
 only to author the schema and generate migrations — the Drizzle query client is
 never imported at runtime.
 
-No product domains exist yet. When you add the first one:
+The first product domains are implemented. Use
+[`observation-repository.ts`](observation-repository.ts) as the reference for a
+value-bearing repository and [`day-note-repository.ts`](day-note-repository.ts)
+for a smaller text domain. When adding another one:
 
 ## 1. Define the table
 
-Add a `sqliteTable` to [`../schema.ts`](../schema.ts). This drives migration
-codegen and is the reference for the column names your SQL will use.
+Add the table name to [`../product-tables.ts`](../product-tables.ts), then add a
+`sqliteTable` to [`../schema.ts`](../schema.ts). The shared name list drives
+local-data deletion and is checked against migration history during generation;
+the schema drives migration codegen and is the reference for SQL column names.
 
 ```ts
-export const checkIns = sqliteTable("check_ins", {
-  id: text("id").primaryKey(),
-  createdAt: integer("created_at").notNull(),
-});
+export const observations = sqliteTable(
+  PRODUCT_TABLE_NAMES.observations,
+  { /* see ../schema.ts for the real columns */ },
+);
 ```
 
 ## 2. Generate the migration
@@ -33,29 +38,18 @@ updated manifest.
 ## 3. Write the repository
 
 Create `<domain>-repository.ts` in this directory, extending `BaseRepository`.
-Expose domain operations as named methods; keep the SQL inside them.
+Expose domain operations as named methods; keep the SQL and row-to-domain
+mapping inside it. The real observation read path is the pattern:
 
 ```ts
-import { BaseRepository } from "./base-repository";
-import type { SQLiteDatabase } from "expo-sqlite";
-
-type CheckInRow = { id: string; created_at: number };
-
-export class CheckInRepository extends BaseRepository {
-  constructor(db: SQLiteDatabase) {
-    super(db);
-  }
-
-  async findById(id: string): Promise<CheckInRow | null> {
-    return await this.first<CheckInRow>("SELECT id, created_at FROM check_ins WHERE id = ?", [id]);
-  }
-
-  async create(row: CheckInRow): Promise<void> {
-    await this.run("INSERT INTO check_ins (id, created_at) VALUES (?, ?)", [
-      row.id,
-      row.created_at,
-    ]);
-  }
+async listByDay(localDay: string): Promise<Observation[]> {
+  const rows = await this.all<ObservationRow>(
+    `SELECT ${SELECT_COLUMNS} FROM observations
+     WHERE local_day = ?
+     ORDER BY observed_at ASC, created_at ASC, id ASC`,
+    [localDay],
+  );
+  return rows.map(toObservation);
 }
 ```
 
@@ -72,5 +66,6 @@ Construct it against the open database handle, after `initDb()` has run during
 app startup:
 
 ```ts
-const checkIns = new CheckInRepository(getDb());
+const observations = new ObservationRepository(getDb());
+const today = await observations.listByDay("2026-08-14");
 ```
