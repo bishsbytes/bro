@@ -4,6 +4,7 @@ export {
 	getDb,
 	initDb,
 } from "./connection";
+export { deleteLocalProductData } from "./delete-local-product-data";
 export {
 	closeDeviceSettings,
 	DEVICE_SETTINGS_DATABASE_NAME,
@@ -35,3 +36,8 @@ export {
 	TrackedMetricsRepository,
 } from "./repositories/tracked-metrics-repository";
 export { createUuidV7, type RandomBytes } from "./uuid-v7";
+export {
+	PRODUCT_TABLE_NAMES,
+	PRODUCT_TABLES,
+	type ProductTableName,
+} from "./product-tables";

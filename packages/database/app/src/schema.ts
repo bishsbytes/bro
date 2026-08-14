@@ -18,9 +18,10 @@ import {
 	sqliteTable,
 	text,
 } from "drizzle-orm/sqlite-core";
+import { PRODUCT_TABLE_NAMES } from "./product-tables";
 
 export const observations = sqliteTable(
-	"observations",
+	PRODUCT_TABLE_NAMES.observations,
 	{
 		id: text("id").primaryKey(),
 		metricSlug: text("metric_slug").notNull(),
@@ -43,7 +44,7 @@ export const observations = sqliteTable(
 );
 
 export const dayNotes = sqliteTable(
-	"day_notes",
+	PRODUCT_TABLE_NAMES.dayNotes,
 	{
 		id: text("id").primaryKey(),
 		localDay: text("local_day").notNull(),
@@ -54,7 +55,7 @@ export const dayNotes = sqliteTable(
 	(table) => [index("idx_day_notes_day").on(table.localDay)],
 );
 
-export const trackedMetrics = sqliteTable("tracked_metrics", {
+export const trackedMetrics = sqliteTable(PRODUCT_TABLE_NAMES.trackedMetrics, {
 	id: text("id").primaryKey(),
 	metricSlug: text("metric_slug").notNull(),
 	position: integer("position").notNull(),

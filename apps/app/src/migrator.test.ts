@@ -65,6 +65,12 @@ describe("product database migrations", () => {
 			{ name: "observations", type: "table" },
 			{ name: "tracked_metrics", type: "table" },
 		]);
+		expect(
+			objects
+				.filter(({ type }) => type === "table")
+				.map(({ name }) => name)
+				.sort(),
+		).toEqual([...databaseApp.PRODUCT_TABLES].sort());
 	});
 
 	it("is a no-op when the same database is migrated again", async () => {

@@ -9,6 +9,7 @@
 import { mkdir, readdir, readFile, writeFile } from "node:fs/promises";
 import { dirname, join, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
+import { PRODUCT_TABLES } from "../src/product-tables";
 
 const packageRoot = resolve(dirname(fileURLToPath(import.meta.url)), "..");
 const drizzleDir = join(packageRoot, "drizzle");
@@ -82,6 +83,19 @@ const migrations = await Promise.all(
 		sql: await readFile(join(drizzleDir, `${tag}.sql`), "utf8"),
 	})),
 );
+
+const missingProductTables = PRODUCT_TABLES.filter(
+	(table) =>
+		!migrations.some(({ sql }) =>
+			sql.includes(`CREATE TABLE IF NOT EXISTS \`${table}\``),
+		),
+);
+
+if (missingProductTables.length > 0) {
+	throw new Error(
+		`Product tables missing from migrations: ${missingProductTables.join(", ")}`,
+	);
+}
 
 await mkdir(dirname(outputFile), { recursive: true });
 await writeFile(outputFile, toModule(migrations), "utf8");
