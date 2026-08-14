@@ -34,6 +34,7 @@
 		"better-auth": "^1.6.27",
 		"expo": "*",
 		"expo-constants": "*",
+		"expo-crypto": "~56.0.4",
 		"expo-linking": "*",
 		"expo-network": "*",
 		"expo-router": "~56.2.18",

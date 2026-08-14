@@ -40,8 +40,14 @@ export abstract class BaseRepository {
 		return await this.db.runAsync(sql, params);
 	}
 
-	/** Runs several writes atomically. */
-	protected async transaction(work: () => Promise<void>): Promise<void> {
-		await this.db.withTransactionAsync(work);
+	/** Runs several reads and writes atomically and returns the callback result. */
+	protected async transaction<Result>(
+		work: () => Promise<Result>,
+	): Promise<Result> {
+		let result: Result | undefined;
+		await this.db.withTransactionAsync(async () => {
+			result = await work();
+		});
+		return result as Result;
 	}
 }

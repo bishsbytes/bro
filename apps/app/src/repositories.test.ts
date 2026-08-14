@@ -1,0 +1,207 @@
+import type * as DatabaseApp from "@bro/database-app";
+import type { SQLiteDatabase } from "expo-sqlite";
+import { DEFAULT_TRACKED_METRICS } from "./content/metric-registry";
+import { createNodeSqliteMock } from "./test-support/node-sqlite";
+
+const mockSqlite = createNodeSqliteMock();
+let databaseApp: typeof DatabaseApp;
+let db: SQLiteDatabase;
+
+jest.mock("expo-sqlite", () => ({
+	openDatabaseSync: mockSqlite.openDatabaseSync,
+	openDatabaseAsync: mockSqlite.openDatabaseAsync,
+}));
+jest.mock("expo-crypto", () => ({
+	getRandomBytes: jest.fn((length: number) => new Uint8Array(length)),
+}));
+
+async function openDatabase(databaseName = "repositories.db") {
+	jest.resetModules();
+	databaseApp = jest.requireActual("@bro/database-app");
+	db = await databaseApp.initDb(databaseName);
+	await databaseApp.runMigrations(db);
+}
+
+function observation(
+	overrides: Partial<DatabaseApp.CreateObservation> = {},
+): DatabaseApp.CreateObservation {
+	return {
+		metricSlug: "mood",
+		value: 4,
+		scaleMin: 1,
+		scaleMax: 5,
+		observedAt: Date.UTC(2026, 7, 15, 0, 30),
+		localDay: "2026-08-14",
+		tzOffsetMinutes: 120,
+		source: "user",
+		sourceRecordId: null,
+		assessmentId: null,
+		...overrides,
+	};
+}
+
+describe("product repositories", () => {
+	beforeEach(async () => {
+		mockSqlite.reset();
+		await openDatabase();
+	});
+
+	afterEach(async () => {
+		await databaseApp.closeDb();
+	});
+
+	afterAll(() => {
+		mockSqlite.cleanup();
+	});
+
+	it("round-trips observations without deriving their local day from UTC", async () => {
+		const repository = new databaseApp.ObservationRepository(db, {
+			now: () => 10_000,
+			createId: () => "observation-1",
+		});
+
+		const created = await repository.create(observation());
+
+		expect(await repository.findById(created.id)).toEqual(created);
+		expect(await repository.listByDay("2026-08-14")).toEqual([created]);
+		expect(await repository.listByDay("2026-08-15")).toEqual([]);
+		expect(created).toMatchObject({
+			localDay: "2026-08-14",
+			tzOffsetMinutes: 120,
+		});
+	});
+
+	it("queries a metric by inclusive local-day range and bumps updatedAt", async () => {
+		let now = 10_000;
+		let nextId = 0;
+		const repository = new databaseApp.ObservationRepository(db, {
+			now: () => now,
+			createId: () => `observation-${(nextId += 1)}`,
+		});
+		const first = await repository.create(
+			observation({ localDay: "2026-08-13" }),
+		);
+		await repository.create(
+			observation({
+				metricSlug: "energy",
+				localDay: "2026-08-14",
+			}),
+		);
+		await repository.create(observation({ localDay: "2026-08-15" }));
+
+		expect(
+			(
+				await repository.listByMetricAndDayRange(
+					"mood",
+					"2026-08-13",
+					"2026-08-14",
+				)
+			).map((row) => row.id),
+		).toEqual([first.id]);
+
+		now = 20_000;
+		const updated = await repository.update(first.id, {
+			value: 5,
+			scaleMin: 1,
+			scaleMax: 5,
+			observedAt: first.observedAt,
+			localDay: first.localDay,
+			tzOffsetMinutes: first.tzOffsetMinutes,
+		});
+		expect(updated).toMatchObject({
+			id: first.id,
+			createdAt: 10_000,
+			updatedAt: 20_000,
+			value: 5,
+		});
+		await expect(repository.delete(first.id)).resolves.toBe(true);
+		await expect(repository.findById(first.id)).resolves.toBeNull();
+	});
+
+	it("hard-deletes factor taps without touching scored observations", async () => {
+		let nextId = 0;
+		const repository = new databaseApp.ObservationRepository(db, {
+			createId: () => `observation-${(nextId += 1)}`,
+		});
+		await repository.create(
+			observation({
+				metricSlug: "alcohol",
+				value: 1,
+				scaleMin: null,
+				scaleMax: null,
+			}),
+		);
+		await repository.create(
+			observation({
+				metricSlug: "alcohol",
+				value: 1,
+				scaleMin: null,
+				scaleMax: null,
+			}),
+		);
+		const mood = await repository.create(observation());
+
+		await expect(
+			repository.untapFactorForDay("alcohol", "2026-08-14"),
+		).resolves.toBe(2);
+		expect(await repository.listByDay("2026-08-14")).toEqual([mood]);
+	});
+
+	it("upserts the UI note while retaining manufactured duplicates", async () => {
+		let now = 1_000;
+		let nextId = 0;
+		const repository = new databaseApp.DayNoteRepository(db, {
+			now: () => now,
+			createId: () => `note-${(nextId += 1)}`,
+		});
+		const first = await repository.upsertForDay("2026-08-14", "First");
+
+		now = 2_000;
+		const updated = await repository.upsertForDay("2026-08-14", "Updated");
+		expect(updated).toMatchObject({
+			id: first.id,
+			createdAt: 1_000,
+			updatedAt: 2_000,
+			body: "Updated",
+		});
+
+		now = 3_000;
+		const duplicate = await repository.create(
+			"2026-08-14",
+			"Replicated duplicate",
+		);
+		expect(await repository.listByDay("2026-08-14")).toHaveLength(2);
+		await expect(repository.delete(duplicate.id)).resolves.toBe(true);
+		expect(await repository.listByDay("2026-08-14")).toEqual([updated]);
+	});
+
+	it("materialises defaults lazily and persists a disabled overlay", async () => {
+		let now = 1_000;
+		const repository = new databaseApp.TrackedMetricsRepository(db, {
+			now: () => now,
+			createId: () => "tracked-alcohol",
+		});
+
+		const initial = await repository.listResolved(DEFAULT_TRACKED_METRICS);
+		expect(initial).toHaveLength(DEFAULT_TRACKED_METRICS.length);
+		expect(initial.every((metric) => metric.enabled)).toBe(true);
+		expect(await repository.listAll()).toEqual([]);
+
+		const alcohol = initial.find((metric) => metric.metricSlug === "alcohol");
+		expect(alcohol).toBeDefined();
+		now = 2_000;
+		await repository.configure("alcohol", alcohol?.position ?? 0, false);
+
+		await databaseApp.closeDb();
+		await openDatabase();
+		const relaunched = new databaseApp.TrackedMetricsRepository(db);
+		const resolved = await relaunched.listResolved(DEFAULT_TRACKED_METRICS);
+		expect(
+			resolved.find((metric) => metric.metricSlug === "alcohol"),
+		).toMatchObject({
+			enabled: false,
+			overlayId: "tracked-alcohol",
+			removedAt: 2_000,
+		});
+	});
+});
