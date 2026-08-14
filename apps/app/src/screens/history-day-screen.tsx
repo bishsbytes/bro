@@ -1,13 +1,12 @@
 import type { DayNote, Observation } from "@bro/database-app";
 import { useEffect, useMemo, useState } from "react";
-import {
-	ActivityIndicator,
-	ScrollView,
-	Text,
-	TextInput,
-	TouchableOpacity,
-	View,
-} from "react-native";
+import { ActivityIndicator, TouchableOpacity, View } from "react-native";
+import { AppText } from "../components/app-text";
+import { Button } from "../components/button";
+import { Card } from "../components/card";
+import { FormField } from "../components/form-field";
+import { Screen } from "../components/screen";
+import { SectionHeader } from "../components/section-header";
 import { StyleSheet } from "../theme/unistyles";
 import { resolveMetric } from "../content/metric-registry";
 import {
@@ -45,18 +44,20 @@ function CheckInEditor({
 	const [energy, setEnergy] = useState(checkIn.energy.value);
 
 	return (
-		<View style={styles.card}>
-			<Text style={styles.cardTitle}>
+		<Card style={styles.card}>
+			<AppText variant="score">
 				{new Date(checkIn.observedAt).toLocaleTimeString([], {
 					hour: "2-digit",
 					minute: "2-digit",
 				})}
-			</Text>
-			<Text style={styles.source}>
+			</AppText>
+			<AppText variant="micro" color="subtle">
 				Mood source: {checkIn.mood.source} · Energy source:{" "}
 				{checkIn.energy.source}
-			</Text>
-			<Text style={styles.label}>Mood</Text>
+			</AppText>
+			<AppText variant="label" color="muted">
+				Mood
+			</AppText>
 			<View style={styles.scoreRow}>
 				{SCORES.map((score) => (
 					<TouchableOpacity
@@ -65,11 +66,13 @@ function CheckInEditor({
 						style={[styles.scoreButton, mood === score && styles.selected]}
 						onPress={() => setMood(score)}
 					>
-						<Text style={styles.scoreText}>{score}</Text>
+						<AppText variant="label">{score}</AppText>
 					</TouchableOpacity>
 				))}
 			</View>
-			<Text style={styles.label}>Energy</Text>
+			<AppText variant="label" color="muted">
+				Energy
+			</AppText>
 			<View style={styles.scoreRow}>
 				{SCORES.map((score) => (
 					<TouchableOpacity
@@ -78,22 +81,23 @@ function CheckInEditor({
 						style={[styles.scoreButton, energy === score && styles.selected]}
 						onPress={() => setEnergy(score)}
 					>
-						<Text style={styles.scoreText}>{score}</Text>
+						<AppText variant="label">{score}</AppText>
 					</TouchableOpacity>
 				))}
 			</View>
 			<View style={styles.actions}>
-				<TouchableOpacity
-					style={styles.primaryButton}
+				<Button
+					label="Save changes"
 					onPress={() => onSave(checkIn, mood, energy)}
-				>
-					<Text style={styles.primaryButtonText}>Save changes</Text>
-				</TouchableOpacity>
-				<TouchableOpacity onPress={() => onDelete(checkIn)}>
-					<Text style={styles.deleteText}>Delete check-in</Text>
-				</TouchableOpacity>
+				/>
+				<Button
+					label="Delete check-in"
+					variant="text"
+					tone="danger"
+					onPress={() => onDelete(checkIn)}
+				/>
 			</View>
-		</View>
+		</Card>
 	);
 }
 
@@ -108,23 +112,29 @@ function NoteEditor({
 }) {
 	const [body, setBody] = useState(note.body);
 	return (
-		<View style={styles.card}>
-			<TextInput
+		<Card style={styles.card}>
+			<FormField
+				label="Note"
+				showLabel={false}
 				accessibilityLabel={`Note ${note.id}`}
-				style={styles.noteInput}
 				multiline
 				value={body}
 				onChangeText={setBody}
 			/>
 			<View style={styles.actions}>
-				<TouchableOpacity onPress={() => onSave(note, body)}>
-					<Text style={styles.link}>Save note</Text>
-				</TouchableOpacity>
-				<TouchableOpacity onPress={() => onDelete(note)}>
-					<Text style={styles.deleteText}>Delete note</Text>
-				</TouchableOpacity>
+				<Button
+					label="Save note"
+					variant="text"
+					onPress={() => onSave(note, body)}
+				/>
+				<Button
+					label="Delete note"
+					variant="text"
+					tone="danger"
+					onPress={() => onDelete(note)}
+				/>
 			</View>
-		</View>
+		</Card>
 	);
 }
 
@@ -144,17 +154,20 @@ function ObservationRow({
 			: `${observation.metricSlug}: ${observation.value}`;
 
 	return (
-		<View style={styles.observationRow}>
+		<Card style={styles.observationRow}>
 			<View style={styles.grow}>
-				<Text style={styles.cardTitle}>{title}</Text>
-				<Text style={styles.source}>Source: {observation.source}</Text>
+				<AppText variant="score">{title}</AppText>
+				<AppText variant="micro" color="subtle">
+					Source: {observation.source}
+				</AppText>
 			</View>
-			<TouchableOpacity onPress={() => onDelete(observation)}>
-				<Text style={styles.deleteText}>
-					{resolved.kind === "known" ? "Remove" : "Delete"}
-				</Text>
-			</TouchableOpacity>
-		</View>
+			<Button
+				label={resolved.kind === "known" ? "Remove" : "Delete"}
+				variant="text"
+				tone="danger"
+				onPress={() => onDelete(observation)}
+			/>
+		</Card>
 	);
 }
 
@@ -183,25 +196,26 @@ export function HistoryDayScreen({ localDay, store }: HistoryDayScreenProps) {
 
 	if (!day && !error) {
 		return (
-			<View style={styles.centered}>
+			<Screen centered>
 				<ActivityIndicator size="large" />
-			</View>
+			</Screen>
 		);
 	}
 
 	return (
-		<ScrollView
-			style={styles.container}
+		<Screen
+			scroll
+			padded
 			contentContainerStyle={styles.content}
 			keyboardShouldPersistTaps="handled"
 		>
-			{error ? <Text style={styles.error}>{error}</Text> : null}
+			{error ? <AppText color="danger">{error}</AppText> : null}
 
 			{day ? (
 				<>
-					<Text style={styles.sectionTitle}>Check-ins</Text>
+					<SectionHeader title="Check-ins" />
 					{day.checkIns.length === 0 ? (
-						<Text style={styles.muted}>No scored check-ins.</Text>
+						<AppText color="muted">No scored check-ins.</AppText>
 					) : null}
 					{day.checkIns.map((checkIn) => (
 						<CheckInEditor
@@ -216,7 +230,7 @@ export function HistoryDayScreen({ localDay, store }: HistoryDayScreenProps) {
 						/>
 					))}
 					{day.unpairedScored.length > 0 ? (
-						<Text style={styles.sectionTitle}>Unpaired observations</Text>
+						<SectionHeader title="Unpaired observations" />
 					) : null}
 					{day.unpairedScored.map((observation) => (
 						<ObservationRow
@@ -228,9 +242,7 @@ export function HistoryDayScreen({ localDay, store }: HistoryDayScreenProps) {
 						/>
 					))}
 
-					{day.factors.length > 0 ? (
-						<Text style={styles.sectionTitle}>Factors</Text>
-					) : null}
+					{day.factors.length > 0 ? <SectionHeader title="Factors" /> : null}
 					{day.factors.map((factor) => (
 						<ObservationRow
 							key={factor.id}
@@ -242,7 +254,7 @@ export function HistoryDayScreen({ localDay, store }: HistoryDayScreenProps) {
 					))}
 
 					{day.unknown.length > 0 ? (
-						<Text style={styles.sectionTitle}>Other observations</Text>
+						<SectionHeader title="Other observations" />
 					) : null}
 					{day.unknown.map((observation) => (
 						<ObservationRow
@@ -254,9 +266,7 @@ export function HistoryDayScreen({ localDay, store }: HistoryDayScreenProps) {
 						/>
 					))}
 
-					{day.notes.length > 0 ? (
-						<Text style={styles.sectionTitle}>Notes</Text>
-					) : null}
+					{day.notes.length > 0 ? <SectionHeader title="Notes" /> : null}
 					{day.notes.map((note) => (
 						<NoteEditor
 							key={note.id}
@@ -269,34 +279,13 @@ export function HistoryDayScreen({ localDay, store }: HistoryDayScreenProps) {
 					))}
 				</>
 			) : null}
-		</ScrollView>
+		</Screen>
 	);
 }
 
 const styles = StyleSheet.create((theme) => ({
-	container: { flex: 1, backgroundColor: theme.colors.background },
-	content: { padding: theme.spacing.xl, gap: theme.spacing.md },
-	centered: {
-		flex: 1,
-		alignItems: "center",
-		justifyContent: "center",
-		backgroundColor: theme.colors.background,
-	},
-	sectionTitle: {
-		...theme.typography.section,
-		color: theme.colors.text,
-		marginTop: theme.spacing.sm,
-	},
-	card: {
-		padding: theme.spacing.lg,
-		gap: theme.spacing.sm,
-		borderRadius: theme.radius.md,
-		backgroundColor: theme.colors.surface,
-	},
-	cardTitle: { ...theme.typography.score, color: theme.colors.text },
-	label: { ...theme.typography.label, color: theme.colors.textMuted },
-	source: { ...theme.typography.micro, color: theme.colors.textSubtle },
-	muted: { ...theme.typography.body, color: theme.colors.textMuted },
+	content: { gap: theme.spacing.md },
+	card: { gap: theme.spacing.sm },
 	scoreRow: { flexDirection: "row", gap: theme.spacing.sm },
 	scoreButton: {
 		flex: 1,
@@ -311,43 +300,16 @@ const styles = StyleSheet.create((theme) => ({
 		backgroundColor: theme.colors.selected,
 		borderColor: theme.colors.brand,
 	},
-	scoreText: { ...theme.typography.label, color: theme.colors.text },
 	actions: {
 		flexDirection: "row",
 		alignItems: "center",
 		justifyContent: "space-between",
 		gap: theme.spacing.md,
 	},
-	primaryButton: {
-		paddingHorizontal: theme.spacing.lg,
-		paddingVertical: theme.spacing.sm,
-		borderRadius: theme.radius.sm,
-		backgroundColor: theme.colors.brand,
-	},
-	primaryButtonText: {
-		...theme.typography.label,
-		color: theme.colors.onBrand,
-	},
-	link: { ...theme.typography.label, color: theme.colors.brand },
-	deleteText: { ...theme.typography.label, color: theme.colors.danger },
-	noteInput: {
-		...theme.typography.body,
-		minHeight: theme.control.noteMinHeight,
-		padding: theme.spacing.md,
-		borderWidth: 1,
-		borderColor: theme.colors.border,
-		borderRadius: theme.radius.sm,
-		color: theme.colors.text,
-		textAlignVertical: "top",
-	},
 	observationRow: {
 		flexDirection: "row",
 		alignItems: "center",
-		padding: theme.spacing.lg,
 		gap: theme.spacing.md,
-		borderRadius: theme.radius.md,
-		backgroundColor: theme.colors.surface,
 	},
 	grow: { flex: 1 },
-	error: { ...theme.typography.body, color: theme.colors.danger },
 }));

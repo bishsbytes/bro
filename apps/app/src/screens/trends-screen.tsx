@@ -1,12 +1,10 @@
 import { useEffect, useMemo, useState } from "react";
-import {
-	ActivityIndicator,
-	ScrollView,
-	Text,
-	TouchableOpacity,
-	View,
-} from "react-native";
+import { ActivityIndicator, TouchableOpacity, View } from "react-native";
 import Svg, { Circle, Line, Polyline } from "react-native-svg";
+import { AppText } from "../components/app-text";
+import { Card } from "../components/card";
+import { Screen } from "../components/screen";
+import { SectionHeader } from "../components/section-header";
 import { StyleSheet, useUnistyles } from "../theme/unistyles";
 import {
 	createTrendsStore,
@@ -77,71 +75,65 @@ export function TrendsScreen({ store }: TrendsScreenProps) {
 	}, [period, trends]);
 
 	return (
-		<View style={styles.screen}>
-			<ScrollView
-				style={styles.container}
-				contentContainerStyle={styles.content}
-			>
-				<Text style={styles.intro}>
-					Daily averages; days without a check-in stay as gaps.
-				</Text>
-				<View style={styles.periodRow}>
-					{TREND_PERIODS.map((option) => (
-						<TouchableOpacity
-							key={option}
-							accessibilityRole="button"
-							accessibilityState={{ selected: period === option }}
-							style={[
-								styles.periodButton,
-								period === option && styles.periodSelected,
-							]}
-							onPress={() => setPeriod(option)}
-						>
-							<Text style={styles.periodText}>{option} days</Text>
-						</TouchableOpacity>
-					))}
-				</View>
-
-				{!snapshot && !error ? <ActivityIndicator size="large" /> : null}
-				{error ? (
-					<Text style={styles.error}>Trends could not be loaded: {error}</Text>
-				) : null}
-
-				{snapshot ? (
-					<Text style={styles.range}>
-						{snapshot.fromLocalDay} to {snapshot.throughLocalDay}
-					</Text>
-				) : null}
-				{snapshot?.metrics.map(({ metric, series }) => (
-					<View key={metric.slug} style={styles.card}>
-						<View style={styles.cardHeader}>
-							<Text style={styles.sectionTitle}>{metric.label}</Text>
-							<Text style={styles.count}>
-								{series.observedDayCount} logged days
-							</Text>
-						</View>
-						<TrendChart series={series} />
-						{series.daysUntilMeaningful > 0 ? (
-							<Text style={styles.notEnough}>
-								Not enough data yet. Log {series.daysUntilMeaningful} more day
-								{series.daysUntilMeaningful === 1 ? "" : "s"} to make this trend
-								useful.
-							</Text>
-						) : (
-							<Text style={styles.ready}>Enough data for a first trend.</Text>
-						)}
-					</View>
+		<Screen scroll padded contentContainerStyle={styles.content}>
+			<AppText color="muted">
+				Daily averages; days without a check-in stay as gaps.
+			</AppText>
+			<View style={styles.periodRow}>
+				{TREND_PERIODS.map((option) => (
+					<TouchableOpacity
+						key={option}
+						accessibilityRole="button"
+						accessibilityState={{ selected: period === option }}
+						style={[
+							styles.periodButton,
+							period === option && styles.periodSelected,
+						]}
+						onPress={() => setPeriod(option)}
+					>
+						<AppText variant="label">{option} days</AppText>
+					</TouchableOpacity>
 				))}
-			</ScrollView>
-		</View>
+			</View>
+
+			{!snapshot && !error ? <ActivityIndicator size="large" /> : null}
+			{error ? (
+				<AppText color="danger">Trends could not be loaded: {error}</AppText>
+			) : null}
+
+			{snapshot ? (
+				<AppText variant="caption" color="subtle">
+					{snapshot.fromLocalDay} to {snapshot.throughLocalDay}
+				</AppText>
+			) : null}
+			{snapshot?.metrics.map(({ metric, series }) => (
+				<Card key={metric.slug} style={styles.card}>
+					<SectionHeader
+						title={metric.label}
+						action={
+							<AppText variant="caption" color="muted">
+								{series.observedDayCount} logged days
+							</AppText>
+						}
+					/>
+					<TrendChart series={series} />
+					{series.daysUntilMeaningful > 0 ? (
+						<AppText color="muted">
+							Not enough data yet. Log {series.daysUntilMeaningful} more day
+							{series.daysUntilMeaningful === 1 ? "" : "s"} to make this trend
+							useful.
+						</AppText>
+					) : (
+						<AppText>Enough data for a first trend.</AppText>
+					)}
+				</Card>
+			))}
+		</Screen>
 	);
 }
 
 const styles = StyleSheet.create((theme) => ({
-	screen: { flex: 1, backgroundColor: theme.colors.background },
-	container: { flex: 1, backgroundColor: theme.colors.background },
-	content: { padding: theme.spacing.xl, gap: theme.spacing.lg },
-	intro: { ...theme.typography.body, color: theme.colors.textMuted },
+	content: { gap: theme.spacing.lg },
 	periodRow: { flexDirection: "row", gap: theme.spacing.sm },
 	periodButton: {
 		paddingHorizontal: theme.spacing.lg,
@@ -154,22 +146,5 @@ const styles = StyleSheet.create((theme) => ({
 		backgroundColor: theme.colors.selected,
 		borderColor: theme.colors.brand,
 	},
-	periodText: { ...theme.typography.label, color: theme.colors.text },
-	range: { ...theme.typography.caption, color: theme.colors.textSubtle },
-	card: {
-		padding: theme.spacing.lg,
-		borderRadius: theme.radius.md,
-		backgroundColor: theme.colors.surface,
-	},
-	cardHeader: {
-		flexDirection: "row",
-		alignItems: "center",
-		justifyContent: "space-between",
-		gap: theme.spacing.md,
-	},
-	sectionTitle: { ...theme.typography.section, color: theme.colors.text },
-	count: { ...theme.typography.caption, color: theme.colors.textMuted },
-	notEnough: { ...theme.typography.body, color: theme.colors.textMuted },
-	ready: { ...theme.typography.body, color: theme.colors.text },
-	error: { ...theme.typography.body, color: theme.colors.danger },
+	card: { gap: theme.spacing.md },
 }));

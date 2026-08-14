@@ -1,23 +1,26 @@
 import { router } from "expo-router";
-import { Text, TouchableOpacity, View } from "react-native";
+import { AppText } from "../../components/app-text";
+import { Button } from "../../components/button";
+import { Screen } from "../../components/screen";
 import { onboardingStyles as styles } from "../../screens/onboarding-styles";
 
 export default function WelcomeRoute() {
 	return (
-		<View style={styles.container}>
-			<Text style={styles.eyebrow}>bro</Text>
-			<Text style={styles.title}>
+		<Screen padded centered contentContainerStyle={styles.container}>
+			<AppText variant="label" color="brand" style={styles.eyebrow}>
+				bro
+			</AppText>
+			<AppText variant="display" style={styles.title}>
 				A private place to check in with yourself.
-			</Text>
-			<Text style={styles.body}>
+			</AppText>
+			<AppText color="muted" style={styles.body}>
 				No account. No sign-up. Nothing to fill in first.
-			</Text>
-			<TouchableOpacity
+			</AppText>
+			<Button
+				label="Continue"
 				style={styles.primaryButton}
 				onPress={() => router.push("/onboarding/privacy")}
-			>
-				<Text style={styles.primaryButtonText}>Continue</Text>
-			</TouchableOpacity>
-		</View>
+			/>
+		</Screen>
 	);
 }

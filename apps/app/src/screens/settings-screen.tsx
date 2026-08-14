@@ -1,14 +1,12 @@
 import { deleteLocalProductData } from "@bro/database-app";
 import { router } from "expo-router";
 import { useState } from "react";
-import {
-	ActivityIndicator,
-	ScrollView,
-	Text,
-	TouchableOpacity,
-	View,
-} from "react-native";
-import { SafeAreaView } from "react-native-safe-area-context";
+import { View } from "react-native";
+import { AppText } from "../components/app-text";
+import { Button } from "../components/button";
+import { Card } from "../components/card";
+import { Screen } from "../components/screen";
+import { SectionHeader } from "../components/section-header";
 import { StyleSheet } from "../theme/unistyles";
 
 const DELETE_LOCAL_DATA_COPY =
@@ -49,123 +47,68 @@ export function SettingsScreen({
 	}
 
 	return (
-		<SafeAreaView style={styles.safeArea} edges={["bottom"]}>
-			<ScrollView contentContainerStyle={styles.container}>
-				<View style={styles.section}>
-					<Text style={styles.sectionTitle}>Data on this device</Text>
-					{deleteStep === "idle" ? (
-						<>
-							<Text style={styles.detail}>
-								Delete your check-ins, notes, and metric preferences from this
-								device.
-							</Text>
-							<TouchableOpacity
-								style={styles.dangerOutlineButton}
-								onPress={() => {
-									setError(null);
-									setDeleteStep("confirm");
-								}}
-							>
-								<Text style={styles.dangerOutlineText}>Delete local data</Text>
-							</TouchableOpacity>
-						</>
-					) : null}
+		<Screen scroll padded edges={["bottom"]}>
+			<Card style={styles.section}>
+				<SectionHeader title="Data on this device" />
+				{deleteStep === "idle" ? (
+					<>
+						<AppText color="muted">
+							Delete your check-ins, notes, and metric preferences from this
+							device.
+						</AppText>
+						<Button
+							label="Delete local data"
+							variant="secondary"
+							tone="danger"
+							onPress={() => {
+								setError(null);
+								setDeleteStep("confirm");
+							}}
+						/>
+					</>
+				) : null}
 
-					{deleteStep === "confirm" ? (
-						<View style={styles.confirmation}>
-							<Text style={styles.warningTitle}>Delete local data?</Text>
-							<Text style={styles.detail}>{DELETE_LOCAL_DATA_COPY}</Text>
-							{error ? <Text style={styles.error}>{error}</Text> : null}
-							<TouchableOpacity
-								disabled={deleting}
-								style={[styles.dangerButton, deleting && styles.disabled]}
-								onPress={() => void confirmDelete()}
-							>
-								{deleting ? (
-									<ActivityIndicator color={styles.dangerButtonText.color} />
-								) : (
-									<Text style={styles.dangerButtonText}>
-										Permanently delete local data
-									</Text>
-								)}
-							</TouchableOpacity>
-							<TouchableOpacity
-								disabled={deleting}
-								style={styles.cancelButton}
-								onPress={() => {
-									setError(null);
-									setDeleteStep("idle");
-								}}
-							>
-								<Text style={styles.cancelText}>Cancel</Text>
-							</TouchableOpacity>
-						</View>
-					) : null}
+				{deleteStep === "confirm" ? (
+					<View style={styles.confirmation}>
+						<AppText variant="score" color="danger">
+							Delete local data?
+						</AppText>
+						<AppText color="muted">{DELETE_LOCAL_DATA_COPY}</AppText>
+						{error ? <AppText color="danger">{error}</AppText> : null}
+						<Button
+							label="Permanently delete local data"
+							variant="danger"
+							loading={deleting}
+							onPress={() => void confirmDelete()}
+						/>
+						<Button
+							label="Cancel"
+							variant="text"
+							disabled={deleting}
+							onPress={() => {
+								setError(null);
+								setDeleteStep("idle");
+							}}
+						/>
+					</View>
+				) : null}
 
-					{deleteStep === "complete" ? (
-						<View style={styles.confirmation}>
-							<Text style={styles.sectionTitle}>Local data deleted</Text>
-							<Text style={styles.detail}>
-								Check-ins, notes, and metric preferences have been removed from
-								this device.
-							</Text>
-							<TouchableOpacity
-								style={styles.primaryButton}
-								onPress={() => router.replace("/")}
-							>
-								<Text style={styles.primaryButtonText}>Back to today</Text>
-							</TouchableOpacity>
-						</View>
-					) : null}
-				</View>
-			</ScrollView>
-		</SafeAreaView>
+				{deleteStep === "complete" ? (
+					<View style={styles.confirmation}>
+						<SectionHeader title="Local data deleted" />
+						<AppText color="muted">
+							Check-ins, notes, and metric preferences have been removed from
+							this device.
+						</AppText>
+						<Button label="Back to today" onPress={() => router.replace("/")} />
+					</View>
+				) : null}
+			</Card>
+		</Screen>
 	);
 }
 
 const styles = StyleSheet.create((theme) => ({
-	safeArea: { flex: 1, backgroundColor: theme.colors.background },
-	container: { padding: theme.spacing.xl, gap: theme.spacing.lg },
-	section: {
-		padding: theme.spacing.lg,
-		gap: theme.spacing.md,
-		borderRadius: theme.radius.md,
-		backgroundColor: theme.colors.surface,
-	},
-	sectionTitle: { ...theme.typography.section, color: theme.colors.text },
-	warningTitle: { ...theme.typography.score, color: theme.colors.danger },
-	detail: { ...theme.typography.body, color: theme.colors.textMuted },
+	section: { gap: theme.spacing.md },
 	confirmation: { gap: theme.spacing.md },
-	dangerOutlineButton: {
-		alignItems: "center",
-		padding: theme.spacing.md,
-		borderWidth: 1,
-		borderColor: theme.colors.danger,
-		borderRadius: theme.radius.sm,
-	},
-	dangerOutlineText: { ...theme.typography.label, color: theme.colors.danger },
-	dangerButton: {
-		alignItems: "center",
-		padding: theme.spacing.md,
-		borderRadius: theme.radius.sm,
-		backgroundColor: theme.colors.danger,
-	},
-	dangerButtonText: {
-		...theme.typography.label,
-		color: theme.colors.onDanger,
-	},
-	cancelButton: { alignItems: "center", padding: theme.spacing.sm },
-	cancelText: { ...theme.typography.label, color: theme.colors.textMuted },
-	primaryButton: {
-		alignItems: "center",
-		padding: theme.spacing.md,
-		borderRadius: theme.radius.sm,
-		backgroundColor: theme.colors.brand,
-	},
-	primaryButtonText: {
-		...theme.typography.label,
-		color: theme.colors.onBrand,
-	},
-	error: { ...theme.typography.body, color: theme.colors.danger },
-	disabled: { opacity: theme.opacity.disabled },
 }));

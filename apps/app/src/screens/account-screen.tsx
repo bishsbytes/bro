@@ -1,15 +1,13 @@
 import { useAuth } from "@bro/auth-app";
 import { router } from "expo-router";
 import { useState } from "react";
-import {
-	ActivityIndicator,
-	ScrollView,
-	Text,
-	TextInput,
-	TouchableOpacity,
-	View,
-} from "react-native";
-import { SafeAreaView } from "react-native-safe-area-context";
+import { ActivityIndicator, View } from "react-native";
+import { AppText } from "../components/app-text";
+import { Button } from "../components/button";
+import { Card } from "../components/card";
+import { FormField } from "../components/form-field";
+import { Screen } from "../components/screen";
+import { SectionHeader } from "../components/section-header";
 import { StyleSheet } from "../theme/unistyles";
 import { useDeviceSettings } from "../providers/device-settings-provider";
 
@@ -87,339 +85,232 @@ export function AccountScreen() {
 	const isResolving = hasStoredSession && !isRegistered && !error && !isPending;
 
 	return (
-		<SafeAreaView style={styles.safeArea} edges={["bottom"]}>
-			<ScrollView
-				contentContainerStyle={styles.container}
-				keyboardShouldPersistTaps="handled"
-			>
-				{notice ? <Text style={styles.notice}>{notice}</Text> : null}
+		<Screen
+			scroll
+			padded
+			edges={["bottom"]}
+			contentContainerStyle={styles.container}
+			keyboardShouldPersistTaps="handled"
+		>
+			{notice ? (
+				<AppText variant="caption" color="muted" style={styles.notice}>
+					{notice}
+				</AppText>
+			) : null}
 
-				{!hasStoredSession && confirmation === null ? (
-					<View>
-						<Text style={styles.stateTitle}>Using bro without an account</Text>
-						<Text style={styles.detail}>
-							Creating or signing into an account does not move or back up data
-							on this device.
-						</Text>
-						<PrimaryButton
-							label="Sign in"
-							onPress={() =>
-								router.push({
-									pathname: "/sign-in",
-									params: { returnTo: "account" },
-								})
-							}
-						/>
-						<SecondaryButton
-							label="Create an account"
-							onPress={() =>
-								router.push({
-									pathname: "/sign-up",
-									params: { returnTo: "account" },
-								})
-							}
-						/>
-					</View>
-				) : null}
+			{!hasStoredSession && confirmation === null ? (
+				<View>
+					<AppText variant="body" style={styles.stateTitle}>
+						Using bro without an account
+					</AppText>
+					<AppText variant="label" color="subtle">
+						Creating or signing into an account does not move or back up data on
+						this device.
+					</AppText>
+					<Button
+						label="Sign in"
+						style={styles.primaryAction}
+						onPress={() =>
+							router.push({
+								pathname: "/sign-in",
+								params: { returnTo: "account" },
+							})
+						}
+					/>
+					<Button
+						label="Create an account"
+						variant="secondary"
+						style={styles.secondaryAction}
+						onPress={() =>
+							router.push({
+								pathname: "/sign-up",
+								params: { returnTo: "account" },
+							})
+						}
+					/>
+				</View>
+			) : null}
 
-				{(isChecking || isResolving) && confirmation === null ? (
-					<View style={styles.centeredState}>
-						<ActivityIndicator />
-						<Text style={styles.detail}>Checking your account…</Text>
-					</View>
-				) : null}
+			{(isChecking || isResolving) && confirmation === null ? (
+				<View style={styles.centeredState}>
+					<ActivityIndicator />
+					<AppText variant="label" color="subtle">
+						Checking your account…
+					</AppText>
+				</View>
+			) : null}
 
-				{isUnavailable && confirmation === null ? (
-					<View>
-						<Text style={styles.stateTitle}>
-							Account temporarily unavailable
-						</Text>
-						<Text style={styles.detail}>
-							Your account could not be refreshed. You can keep using your data
-							on this device.
-						</Text>
-						<PrimaryButton
-							label="Try again"
-							onPress={() => void refreshRemoteIdentity()}
-						/>
-						<SecondaryButton
-							label="Sign out"
+			{isUnavailable && confirmation === null ? (
+				<View>
+					<AppText style={styles.stateTitle}>
+						Account temporarily unavailable
+					</AppText>
+					<AppText variant="label" color="subtle">
+						Your account could not be refreshed. You can keep using your data on
+						this device.
+					</AppText>
+					<Button
+						label="Try again"
+						style={styles.primaryAction}
+						onPress={() => void refreshRemoteIdentity()}
+					/>
+					<Button
+						label="Sign out"
+						variant="secondary"
+						style={styles.secondaryAction}
+						onPress={() => {
+							setNotice(null);
+							setConfirmation("sign-out");
+						}}
+					/>
+				</View>
+			) : null}
+
+			{isRegistered && confirmation === null ? (
+				<View>
+					<AppText style={styles.stateTitle}>{user?.name}</AppText>
+					<AppText variant="label" color="subtle">
+						{user?.email}
+					</AppText>
+					<AppText variant="caption" color="muted" style={styles.localDataNote}>
+						Your account does not own or back up data on this device.
+					</AppText>
+
+					<Button
+						label="Sign out"
+						variant="secondary"
+						style={styles.secondaryAction}
+						onPress={() => {
+							setNotice(null);
+							setConfirmation("sign-out");
+						}}
+					/>
+
+					<View style={styles.dangerSection}>
+						<SectionHeader title="Danger zone" tone="danger" />
+						<Button
+							label="Delete account"
+							variant="secondary"
+							tone="danger"
+							style={styles.secondaryAction}
 							onPress={() => {
 								setNotice(null);
-								setConfirmation("sign-out");
+								setConfirmation("delete-account");
 							}}
 						/>
 					</View>
-				) : null}
+				</View>
+			) : null}
 
-				{isRegistered && confirmation === null ? (
-					<View>
-						<Text style={styles.stateTitle}>{user?.name}</Text>
-						<Text style={styles.detail}>{user?.email}</Text>
-						<Text style={styles.localDataNote}>
-							Your account does not own or back up data on this device.
-						</Text>
+			{confirmation === "sign-out" ? (
+				<Card style={styles.confirmation}>
+					<AppText style={styles.confirmationTitle}>
+						Sign out on this device?
+					</AppText>
+					<AppText variant="label" color="subtle">
+						Your data on this device will stay here and remain available. This
+						does not delete your account.
+					</AppText>
+					{actionError ? (
+						<AppText variant="caption" color="danger">
+							{actionError}
+						</AppText>
+					) : null}
+					<Button
+						label="Sign out"
+						loading={submitting}
+						style={styles.primaryAction}
+						onPress={() => void onSignOut()}
+					/>
+					<Button
+						label="Cancel"
+						variant="secondary"
+						style={styles.secondaryAction}
+						onPress={resetAction}
+						disabled={submitting}
+					/>
+				</Card>
+			) : null}
 
-						<SecondaryButton
-							label="Sign out"
-							onPress={() => {
-								setNotice(null);
-								setConfirmation("sign-out");
-							}}
-						/>
-
-						<View style={styles.dangerSection}>
-							<Text style={styles.dangerHeading}>Danger zone</Text>
-							<TouchableOpacity
-								style={styles.dangerButton}
-								onPress={() => {
-									setNotice(null);
-									setConfirmation("delete-account");
-								}}
-							>
-								<Text style={styles.dangerButtonText}>Delete account</Text>
-							</TouchableOpacity>
-						</View>
-					</View>
-				) : null}
-
-				{confirmation === "sign-out" ? (
-					<View style={styles.confirmation}>
-						<Text style={styles.confirmationTitle}>
-							Sign out on this device?
-						</Text>
-						<Text style={styles.detail}>
-							Your data on this device will stay here and remain available. This
-							does not delete your account.
-						</Text>
-						{actionError ? (
-							<Text style={styles.error}>{actionError}</Text>
-						) : null}
-						<PrimaryButton
-							label={submitting ? "Signing out…" : "Sign out"}
-							onPress={() => void onSignOut()}
-							disabled={submitting}
-						/>
-						<SecondaryButton
-							label="Cancel"
-							onPress={resetAction}
-							disabled={submitting}
-						/>
-					</View>
-				) : null}
-
-				{confirmation === "delete-account" ? (
-					<View style={styles.confirmation}>
-						<Text style={styles.confirmationTitle}>Delete your account?</Text>
-						<Text style={styles.detail}>
-							This permanently deletes your account and everything we hold for
-							it. Your data on this device will stay here.
-						</Text>
-						{actionError ? (
-							<Text style={styles.error}>{actionError}</Text>
-						) : null}
-						<TextInput
-							style={styles.input}
-							placeholder="Current password"
-							value={password}
-							onChangeText={setPassword}
-							autoCapitalize="none"
-							autoComplete="current-password"
-							secureTextEntry
-							editable={!submitting}
-						/>
-						<TouchableOpacity
-							style={[
-								styles.dangerConfirmButton,
-								(submitting || password.length === 0) && styles.disabled,
-							]}
-							onPress={() => void onDeleteAccount()}
-							disabled={submitting || password.length === 0}
-						>
-							<Text style={styles.dangerConfirmText}>
-								{submitting ? "Deleting account…" : "Delete account"}
-							</Text>
-						</TouchableOpacity>
-						<SecondaryButton
-							label="Cancel"
-							onPress={resetAction}
-							disabled={submitting}
-						/>
-					</View>
-				) : null}
-			</ScrollView>
-		</SafeAreaView>
-	);
-}
-
-function PrimaryButton({
-	label,
-	onPress,
-	disabled = false,
-}: {
-	label: string;
-	onPress: () => void;
-	disabled?: boolean;
-}) {
-	return (
-		<TouchableOpacity
-			style={[styles.primaryButton, disabled && styles.disabled]}
-			onPress={onPress}
-			disabled={disabled}
-		>
-			<Text style={styles.primaryButtonText}>{label}</Text>
-		</TouchableOpacity>
-	);
-}
-
-function SecondaryButton({
-	label,
-	onPress,
-	disabled = false,
-}: {
-	label: string;
-	onPress: () => void;
-	disabled?: boolean;
-}) {
-	return (
-		<TouchableOpacity
-			style={[styles.secondaryButton, disabled && styles.disabled]}
-			onPress={onPress}
-			disabled={disabled}
-		>
-			<Text style={styles.secondaryButtonText}>{label}</Text>
-		</TouchableOpacity>
+			{confirmation === "delete-account" ? (
+				<Card style={styles.confirmation}>
+					<AppText style={styles.confirmationTitle}>
+						Delete your account?
+					</AppText>
+					<AppText variant="label" color="subtle">
+						This permanently deletes your account and everything we hold for it.
+						Your data on this device will stay here.
+					</AppText>
+					{actionError ? (
+						<AppText variant="caption" color="danger">
+							{actionError}
+						</AppText>
+					) : null}
+					<FormField
+						label="Current password"
+						showLabel={false}
+						containerStyle={styles.passwordField}
+						placeholder="Current password"
+						value={password}
+						onChangeText={setPassword}
+						autoCapitalize="none"
+						autoComplete="current-password"
+						secureTextEntry
+						editable={!submitting}
+					/>
+					<Button
+						label="Delete account"
+						variant="danger"
+						loading={submitting}
+						style={styles.secondaryAction}
+						onPress={() => void onDeleteAccount()}
+						disabled={submitting || password.length === 0}
+					/>
+					<Button
+						label="Cancel"
+						variant="secondary"
+						style={styles.secondaryAction}
+						onPress={resetAction}
+						disabled={submitting}
+					/>
+				</Card>
+			) : null}
+		</Screen>
 	);
 }
 
 const styles = StyleSheet.create((theme) => ({
-	safeArea: {
-		flex: 1,
-		backgroundColor: theme.colors.background,
-	},
 	container: {
-		flexGrow: 1,
-		paddingHorizontal: theme.spacing.xl,
-		paddingVertical: theme.spacing.xxl,
-		backgroundColor: theme.colors.background,
+		paddingVertical: theme.spacing.xs,
 	},
 	stateTitle: {
-		fontSize: theme.typography.body.fontSize,
 		fontWeight: "600",
-		color: theme.colors.text,
 		marginBottom: theme.spacing.sm,
 	},
-	detail: {
-		fontSize: theme.typography.label.fontSize,
-		color: theme.colors.textSubtle,
-		lineHeight: theme.typography.label.lineHeight,
-	},
-	localDataNote: {
-		fontSize: theme.typography.caption.fontSize,
-		color: theme.colors.textMuted,
-		lineHeight: theme.typography.caption.lineHeight,
-		marginTop: theme.spacing.lg,
-	},
+	localDataNote: { marginTop: theme.spacing.lg },
 	centeredState: {
 		alignItems: "center",
 		gap: theme.spacing.md,
 		paddingVertical: theme.spacing.xl,
 	},
-	primaryButton: {
-		backgroundColor: theme.colors.brand,
-		borderRadius: theme.radius.sm,
-		paddingVertical: theme.spacing.lg,
-		alignItems: "center",
-		marginTop: theme.spacing.xl,
-	},
-	primaryButtonText: {
-		color: theme.colors.onBrand,
-		fontSize: theme.typography.label.fontSize,
-		fontWeight: "500",
-	},
-	secondaryButton: {
-		borderWidth: 1,
-		borderColor: theme.colors.border,
-		borderRadius: theme.radius.sm,
-		paddingVertical: theme.spacing.lg,
-		alignItems: "center",
-		marginTop: theme.spacing.md,
-	},
-	secondaryButtonText: {
-		color: theme.colors.brand,
-		fontSize: theme.typography.label.fontSize,
-		fontWeight: "500",
-	},
-	notice: {
-		fontSize: theme.typography.caption.fontSize,
-		color: theme.colors.textMuted,
-		marginBottom: theme.spacing.lg,
-	},
+	primaryAction: { marginTop: theme.spacing.xl },
+	secondaryAction: { marginTop: theme.spacing.md },
+	notice: { marginBottom: theme.spacing.lg },
 	dangerSection: {
 		borderTopWidth: 1,
 		borderTopColor: theme.colors.border,
 		marginTop: theme.spacing.xxl,
 		paddingTop: theme.spacing.xl,
 	},
-	dangerHeading: {
-		fontSize: theme.typography.label.fontSize,
-		fontWeight: "600",
-		color: theme.colors.danger,
-	},
-	dangerButton: {
-		borderWidth: 1,
-		borderColor: theme.colors.danger,
-		borderRadius: theme.radius.sm,
-		paddingVertical: theme.spacing.lg,
-		alignItems: "center",
-		marginTop: theme.spacing.md,
-	},
-	dangerButtonText: {
-		color: theme.colors.danger,
-		fontSize: theme.typography.label.fontSize,
-		fontWeight: "500",
-	},
 	confirmation: {
 		borderWidth: 1,
 		borderColor: theme.colors.border,
-		borderRadius: theme.radius.md,
-		padding: theme.spacing.lg,
+		backgroundColor: theme.colors.background,
 		marginTop: theme.spacing.xl,
+		gap: theme.spacing.md,
 	},
 	confirmationTitle: {
-		fontSize: theme.typography.body.fontSize,
-		fontWeight: "600",
-		color: theme.colors.text,
-		marginBottom: theme.spacing.sm,
-	},
-	input: {
-		borderWidth: 1,
-		borderColor: theme.colors.border,
-		borderRadius: theme.radius.sm,
-		paddingHorizontal: theme.spacing.md,
-		paddingVertical: theme.spacing.md,
-		fontSize: theme.typography.label.fontSize,
-		color: theme.colors.text,
-		marginTop: theme.spacing.lg,
-	},
-	error: {
-		color: theme.colors.danger,
-		fontSize: theme.typography.caption.fontSize,
-		marginTop: theme.spacing.md,
-	},
-	dangerConfirmButton: {
-		backgroundColor: theme.colors.danger,
-		borderRadius: theme.radius.sm,
-		paddingVertical: theme.spacing.lg,
-		alignItems: "center",
-		marginTop: theme.spacing.md,
-	},
-	dangerConfirmText: {
-		color: theme.colors.onDanger,
-		fontSize: theme.typography.label.fontSize,
 		fontWeight: "600",
 	},
-	disabled: {
-		opacity: 0.6,
-	},
+	passwordField: { marginTop: theme.spacing.sm },
 }));

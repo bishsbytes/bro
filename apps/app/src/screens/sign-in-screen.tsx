@@ -1,6 +1,9 @@
 import { useAuth } from "@bro/auth-app";
 import { useState } from "react";
-import { Text, TextInput, TouchableOpacity, View } from "react-native";
+import { AppText } from "../components/app-text";
+import { Button } from "../components/button";
+import { FormField } from "../components/form-field";
+import { Screen } from "../components/screen";
 import { authStyles } from "./auth-styles";
 
 export type SignInScreenProps = {
@@ -30,14 +33,17 @@ export function SignInScreen({ onShowSignUp, onSuccess }: SignInScreenProps) {
 	};
 
 	return (
-		<View style={authStyles.container}>
-			<Text style={authStyles.title}>Welcome back</Text>
-			<Text style={authStyles.subtitle}>Sign in to continue.</Text>
+		<Screen padded centered contentContainerStyle={authStyles.container}>
+			<AppText variant="title">Welcome back</AppText>
+			<AppText color="subtle" style={authStyles.subtitle}>
+				Sign in to continue.
+			</AppText>
 
-			{error ? <Text style={authStyles.error}>{error}</Text> : null}
+			{error ? <AppText color="danger">{error}</AppText> : null}
 
-			<TextInput
-				style={authStyles.input}
+			<FormField
+				label="Email"
+				showLabel={false}
 				placeholder="Email"
 				value={email}
 				onChangeText={setEmail}
@@ -46,8 +52,9 @@ export function SignInScreen({ onShowSignUp, onSuccess }: SignInScreenProps) {
 				keyboardType="email-address"
 				editable={!submitting}
 			/>
-			<TextInput
-				style={authStyles.input}
+			<FormField
+				label="Password"
+				showLabel={false}
 				placeholder="Password"
 				value={password}
 				onChangeText={setPassword}
@@ -57,25 +64,22 @@ export function SignInScreen({ onShowSignUp, onSuccess }: SignInScreenProps) {
 				editable={!submitting}
 			/>
 
-			<TouchableOpacity
-				style={[authStyles.button, submitting && authStyles.buttonDisabled]}
-				onPress={onSubmit}
-				disabled={submitting}
-			>
-				<Text style={authStyles.buttonText}>
-					{submitting ? "Signing in…" : "Sign in"}
-				</Text>
-			</TouchableOpacity>
+			<Button
+				label="Sign in"
+				loading={submitting}
+				style={authStyles.submit}
+				onPress={() => void onSubmit()}
+			/>
 
 			{onShowSignUp ? (
-				<TouchableOpacity
+				<Button
+					label="Need an account? Sign up"
+					variant="text"
 					style={authStyles.link}
 					onPress={onShowSignUp}
 					disabled={submitting}
-				>
-					<Text style={authStyles.linkText}>Need an account? Sign up</Text>
-				</TouchableOpacity>
+				/>
 			) : null}
-		</View>
+		</Screen>
 	);
 }

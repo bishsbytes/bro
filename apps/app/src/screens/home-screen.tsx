@@ -1,12 +1,11 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
-import {
-	ActivityIndicator,
-	ScrollView,
-	Text,
-	TextInput,
-	TouchableOpacity,
-	View,
-} from "react-native";
+import { ActivityIndicator, TouchableOpacity, View } from "react-native";
+import { AppText } from "../components/app-text";
+import { Button } from "../components/button";
+import { Card } from "../components/card";
+import { FormField } from "../components/form-field";
+import { Screen } from "../components/screen";
+import { SectionHeader } from "../components/section-header";
 import { StyleSheet } from "../theme/unistyles";
 import {
 	type CheckInEntry,
@@ -109,25 +108,23 @@ export function HomeScreen({ store }: HomeScreenProps) {
 
 	if (!today && !error) {
 		return (
-			<View style={styles.screen}>
-				<View style={styles.loading}>
-					<ActivityIndicator size="large" />
-				</View>
-			</View>
+			<Screen centered>
+				<ActivityIndicator size="large" />
+			</Screen>
 		);
 	}
 
 	if (!today) {
 		return (
-			<View style={styles.screen}>
-				<View style={styles.loading}>
-					<Text style={styles.errorTitle}>Today could not be loaded</Text>
-					<Text style={styles.errorText}>{error}</Text>
-					<TouchableOpacity style={styles.secondaryButton} onPress={load}>
-						<Text style={styles.secondaryButtonText}>Try again</Text>
-					</TouchableOpacity>
-				</View>
-			</View>
+			<Screen padded centered contentContainerStyle={styles.loading}>
+				<AppText variant="section">Today could not be loaded</AppText>
+				<AppText color="danger">{error}</AppText>
+				<Button
+					label="Try again"
+					variant="secondary"
+					onPress={() => void load()}
+				/>
+			</Screen>
 		);
 	}
 
@@ -146,266 +143,210 @@ export function HomeScreen({ store }: HomeScreenProps) {
 	});
 
 	return (
-		<View style={styles.screen}>
-			<ScrollView
-				style={styles.container}
-				contentContainerStyle={styles.content}
-				keyboardShouldPersistTaps="handled"
-			>
-				<Text style={styles.pageTitle}>How are you?</Text>
-				{today.entries.length > 0 ? (
-					<View style={styles.section}>
-						<View style={styles.sectionHeadingRow}>
-							<Text style={styles.sectionTitle}>Logged today</Text>
-							<Text style={styles.count}>
+		<Screen
+			scroll
+			padded
+			contentContainerStyle={styles.content}
+			keyboardShouldPersistTaps="handled"
+		>
+			<AppText variant="display" style={styles.pageTitle}>
+				How are you?
+			</AppText>
+			{today.entries.length > 0 ? (
+				<View style={styles.section}>
+					<SectionHeader
+						title="Logged today"
+						action={
+							<AppText variant="caption" color="subtle">
 								{today.entries.length} check-in
 								{today.entries.length === 1 ? "" : "s"}
-							</Text>
-						</View>
-						{today.entries.map((entry) => (
-							<View key={entry.id} style={styles.entryCard}>
-								<View>
-									<Text style={styles.entryValue}>
-										Mood {entry.mood.value} · Energy {entry.energy.value}
-									</Text>
-									<Text style={styles.entryTime}>
-										{new Date(entry.observedAt).toLocaleTimeString([], {
-											hour: "2-digit",
-											minute: "2-digit",
-										})}
-									</Text>
-								</View>
-								<TouchableOpacity onPress={() => startEditing(entry)}>
-									<Text style={styles.editLink}>Edit</Text>
-								</TouchableOpacity>
+							</AppText>
+						}
+					/>
+					{today.entries.map((entry) => (
+						<Card key={entry.id} style={styles.entryCard}>
+							<View>
+								<AppText variant="label">
+									Mood {entry.mood.value} · Energy {entry.energy.value}
+								</AppText>
+								<AppText variant="caption" color="subtle">
+									{new Date(entry.observedAt).toLocaleTimeString([], {
+										hour: "2-digit",
+										minute: "2-digit",
+									})}
+								</AppText>
 							</View>
-						))}
-						{selectedFactorLabels.length > 0 ? (
-							<Text style={styles.summaryText}>
-								Factors: {selectedFactorLabels.join(", ")}
-							</Text>
-						) : null}
-						{today.note ? (
-							<Text style={styles.summaryText}>Note: {today.note}</Text>
-						) : null}
-						{!formOpen ? (
-							<TouchableOpacity
-								style={styles.secondaryButton}
-								onPress={startAnother}
-							>
-								<Text style={styles.secondaryButtonText}>
-									Add another check-in
-								</Text>
+							<TouchableOpacity onPress={() => startEditing(entry)}>
+								<AppText variant="label" color="brand">
+									Edit
+								</AppText>
 							</TouchableOpacity>
-						) : null}
-					</View>
-				) : null}
-
-				{formOpen ? (
-					<View style={styles.form}>
-						<Text style={styles.sectionTitle}>
-							{editing ? "Edit check-in" : "Check in"}
-						</Text>
-
-						<Text style={styles.prompt}>Mood</Text>
-						<View style={styles.scoreRow}>
-							{SCORES.map((score, index) => {
-								const selected = mood === score;
-								return (
-									<TouchableOpacity
-										key={score}
-										accessibilityRole="button"
-										accessibilityLabel={`Mood ${score}`}
-										accessibilityState={{ selected }}
-										style={[
-											styles.scoreButton,
-											selected && styles.choiceSelected,
-										]}
-										onPress={() => setMood(score)}
-									>
-										<Text style={styles.face}>{MOOD_FACES[index]}</Text>
-										<Text
-											style={[
-												styles.scoreLabel,
-												selected && styles.choiceSelectedText,
-											]}
-										>
-											{score}
-										</Text>
-									</TouchableOpacity>
-								);
-							})}
-						</View>
-
-						<Text style={styles.prompt}>Energy</Text>
-						<View style={styles.scoreRow}>
-							{SCORES.map((score) => {
-								const selected = energy === score;
-								return (
-									<TouchableOpacity
-										key={score}
-										accessibilityRole="button"
-										accessibilityLabel={`Energy ${score}`}
-										accessibilityState={{ selected }}
-										style={[
-											styles.scoreButton,
-											selected && styles.choiceSelected,
-										]}
-										onPress={() => setEnergy(score)}
-									>
-										<Text
-											style={[
-												styles.energyValue,
-												selected && styles.choiceSelectedText,
-											]}
-										>
-											{score}
-										</Text>
-									</TouchableOpacity>
-								);
-							})}
-						</View>
-
-						<Text style={styles.prompt}>What applied today?</Text>
-						{groupedFactors.map(({ category, label, factors }) =>
-							factors.length > 0 ? (
-								<View key={category} style={styles.factorGroup}>
-									<Text style={styles.categoryLabel}>{label}</Text>
-									<View style={styles.factorRow}>
-										{factors.map((factor) => {
-											const selected = selectedFactors.includes(factor.slug);
-											return (
-												<TouchableOpacity
-													key={factor.slug}
-													accessibilityRole="button"
-													accessibilityLabel={factor.label}
-													accessibilityState={{ selected }}
-													style={[
-														styles.factorButton,
-														selected && styles.choiceSelected,
-													]}
-													onPress={() => toggleFactor(factor.slug)}
-												>
-													<Text
-														style={[
-															styles.factorText,
-															selected && styles.choiceSelectedText,
-														]}
-													>
-														{factor.label}
-													</Text>
-												</TouchableOpacity>
-											);
-										})}
-									</View>
-								</View>
-							) : null,
-						)}
-
-						<Text style={styles.prompt}>Note (optional)</Text>
-						<TextInput
-							style={styles.noteInput}
-							value={note}
-							onChangeText={setNote}
-							placeholder="Anything worth remembering?"
-							placeholderTextColor={styles.notePlaceholder.color}
-							multiline
+						</Card>
+					))}
+					{selectedFactorLabels.length > 0 ? (
+						<AppText variant="caption" color="muted">
+							Factors: {selectedFactorLabels.join(", ")}
+						</AppText>
+					) : null}
+					{today.note ? (
+						<AppText variant="caption" color="muted">
+							Note: {today.note}
+						</AppText>
+					) : null}
+					{!formOpen ? (
+						<Button
+							label="Add another check-in"
+							variant="secondary"
+							onPress={startAnother}
 						/>
+					) : null}
+				</View>
+			) : null}
 
-						{error ? <Text style={styles.errorText}>{error}</Text> : null}
-						<TouchableOpacity
-							accessibilityRole="button"
-							accessibilityState={{
-								disabled: mood === null || energy === null || saving,
-							}}
-							style={[
-								styles.saveButton,
-								(mood === null || energy === null || saving) &&
-									styles.buttonDisabled,
-							]}
-							disabled={mood === null || energy === null || saving}
-							onPress={save}
-						>
-							<Text style={styles.saveButtonText}>
-								{saving
-									? "Saving…"
-									: editing
-										? "Update check-in"
-										: "Save check-in"}
-							</Text>
-						</TouchableOpacity>
+			{formOpen ? (
+				<View style={styles.form}>
+					<SectionHeader title={editing ? "Edit check-in" : "Check in"} />
+
+					<AppText variant="label" style={styles.prompt}>
+						Mood
+					</AppText>
+					<View style={styles.scoreRow}>
+						{SCORES.map((score, index) => {
+							const selected = mood === score;
+							return (
+								<TouchableOpacity
+									key={score}
+									accessibilityRole="button"
+									accessibilityLabel={`Mood ${score}`}
+									accessibilityState={{ selected }}
+									style={[
+										styles.scoreButton,
+										selected && styles.choiceSelected,
+									]}
+									onPress={() => setMood(score)}
+								>
+									<AppText style={styles.face}>{MOOD_FACES[index]}</AppText>
+									<AppText
+										variant="micro"
+										color="subtle"
+										style={[selected && styles.choiceSelectedText]}
+									>
+										{score}
+									</AppText>
+								</TouchableOpacity>
+							);
+						})}
 					</View>
-				) : null}
-			</ScrollView>
-		</View>
+
+					<AppText variant="label" style={styles.prompt}>
+						Energy
+					</AppText>
+					<View style={styles.scoreRow}>
+						{SCORES.map((score) => {
+							const selected = energy === score;
+							return (
+								<TouchableOpacity
+									key={score}
+									accessibilityRole="button"
+									accessibilityLabel={`Energy ${score}`}
+									accessibilityState={{ selected }}
+									style={[
+										styles.scoreButton,
+										selected && styles.choiceSelected,
+									]}
+									onPress={() => setEnergy(score)}
+								>
+									<AppText
+										variant="score"
+										style={[selected && styles.choiceSelectedText]}
+									>
+										{score}
+									</AppText>
+								</TouchableOpacity>
+							);
+						})}
+					</View>
+
+					<AppText variant="label" style={styles.prompt}>
+						What applied today?
+					</AppText>
+					{groupedFactors.map(({ category, label, factors }) =>
+						factors.length > 0 ? (
+							<View key={category} style={styles.factorGroup}>
+								<AppText
+									variant="caption"
+									color="subtle"
+									style={styles.categoryLabel}
+								>
+									{label}
+								</AppText>
+								<View style={styles.factorRow}>
+									{factors.map((factor) => {
+										const selected = selectedFactors.includes(factor.slug);
+										return (
+											<TouchableOpacity
+												key={factor.slug}
+												accessibilityRole="button"
+												accessibilityLabel={factor.label}
+												accessibilityState={{ selected }}
+												style={[
+													styles.factorButton,
+													selected && styles.choiceSelected,
+												]}
+												onPress={() => toggleFactor(factor.slug)}
+											>
+												<AppText
+													variant="caption"
+													color="muted"
+													style={[selected && styles.choiceSelectedText]}
+												>
+													{factor.label}
+												</AppText>
+											</TouchableOpacity>
+										);
+									})}
+								</View>
+							</View>
+						) : null,
+					)}
+
+					<FormField
+						label="Note (optional)"
+						containerStyle={styles.noteField}
+						value={note}
+						onChangeText={setNote}
+						placeholder="Anything worth remembering?"
+						multiline
+					/>
+
+					{error ? <AppText color="danger">{error}</AppText> : null}
+					<Button
+						label={editing ? "Update check-in" : "Save check-in"}
+						loading={saving}
+						disabled={mood === null || energy === null || saving}
+						onPress={() => void save()}
+					/>
+				</View>
+			) : null}
+		</Screen>
 	);
 }
 
 const styles = StyleSheet.create((theme) => ({
-	screen: { flex: 1, backgroundColor: theme.colors.background },
-	container: { flex: 1, backgroundColor: theme.colors.background },
-	content: { padding: theme.spacing.xl, paddingBottom: theme.spacing.xxl * 2 },
-	pageTitle: {
-		...theme.typography.display,
-		color: theme.colors.text,
-		marginBottom: theme.spacing.xl,
-	},
+	content: { paddingBottom: theme.spacing.xxl * 2 },
+	pageTitle: { marginBottom: theme.spacing.xl },
 	loading: {
-		flex: 1,
-		alignItems: "center",
-		justifyContent: "center",
-		padding: theme.spacing.xl,
-		backgroundColor: theme.colors.background,
+		gap: theme.spacing.md,
 	},
-	section: { marginBottom: theme.spacing.xl },
-	sectionHeadingRow: {
-		flexDirection: "row",
-		justifyContent: "space-between",
-		alignItems: "center",
-		marginBottom: theme.spacing.md,
-	},
-	sectionTitle: {
-		fontSize: theme.typography.section.fontSize,
-		lineHeight: theme.typography.section.lineHeight,
-		fontWeight: theme.typography.section.fontWeight,
-		color: theme.colors.text,
-		marginBottom: theme.spacing.md,
-	},
-	count: {
-		color: theme.colors.textSubtle,
-		fontSize: theme.typography.caption.fontSize,
-	},
+	section: { marginBottom: theme.spacing.xl, gap: theme.spacing.md },
 	entryCard: {
 		flexDirection: "row",
 		justifyContent: "space-between",
 		alignItems: "center",
-		backgroundColor: theme.colors.surface,
-		borderRadius: theme.radius.md,
-		padding: theme.spacing.lg,
-		marginBottom: theme.spacing.sm,
-	},
-	entryValue: {
-		color: theme.colors.text,
-		fontSize: theme.typography.label.fontSize,
-	},
-	entryTime: {
-		color: theme.colors.textSubtle,
-		fontSize: theme.typography.caption.fontSize,
-	},
-	editLink: {
-		color: theme.colors.brand,
-		fontSize: theme.typography.label.fontSize,
-	},
-	summaryText: {
-		color: theme.colors.textMuted,
-		fontSize: theme.typography.caption.fontSize,
-		marginTop: theme.spacing.xs,
 	},
 	form: { marginBottom: theme.spacing.xl },
 	prompt: {
-		fontSize: theme.typography.label.fontSize,
 		fontWeight: "600",
-		color: theme.colors.text,
 		marginTop: theme.spacing.lg,
 		marginBottom: theme.spacing.sm,
 	},
@@ -429,23 +370,8 @@ const styles = StyleSheet.create((theme) => ({
 		fontSize: theme.typography.face.fontSize,
 		lineHeight: theme.typography.face.lineHeight,
 	},
-	scoreLabel: {
-		color: theme.colors.textSubtle,
-		fontSize: theme.typography.micro.fontSize,
-		lineHeight: theme.typography.micro.lineHeight,
-	},
-	energyValue: {
-		color: theme.colors.text,
-		fontSize: theme.typography.score.fontSize,
-		lineHeight: theme.typography.score.lineHeight,
-		fontWeight: theme.typography.score.fontWeight,
-	},
 	factorGroup: { marginBottom: theme.spacing.md },
-	categoryLabel: {
-		fontSize: theme.typography.caption.fontSize,
-		color: theme.colors.textSubtle,
-		marginBottom: theme.spacing.xs,
-	},
+	categoryLabel: { marginBottom: theme.spacing.xs },
 	factorRow: { flexDirection: "row", flexWrap: "wrap", gap: theme.spacing.sm },
 	factorButton: {
 		borderWidth: 1,
@@ -455,56 +381,5 @@ const styles = StyleSheet.create((theme) => ({
 		paddingVertical: theme.spacing.sm,
 		paddingHorizontal: theme.spacing.md,
 	},
-	factorText: {
-		color: theme.colors.textMuted,
-		fontSize: theme.typography.caption.fontSize,
-	},
-	noteInput: {
-		minHeight: theme.control.noteMinHeight,
-		borderWidth: 1,
-		borderColor: theme.colors.border,
-		borderRadius: theme.radius.md,
-		padding: theme.spacing.md,
-		color: theme.colors.text,
-		backgroundColor: theme.colors.surface,
-		textAlignVertical: "top",
-		fontSize: theme.typography.label.fontSize,
-	},
-	notePlaceholder: { color: theme.colors.textSubtle },
-	saveButton: {
-		alignItems: "center",
-		backgroundColor: theme.colors.brand,
-		borderRadius: theme.radius.md,
-		padding: theme.spacing.lg,
-		marginTop: theme.spacing.lg,
-	},
-	buttonDisabled: { opacity: theme.opacity.disabled },
-	saveButtonText: {
-		color: theme.colors.onBrand,
-		fontSize: theme.typography.label.fontSize,
-		fontWeight: "600",
-	},
-	secondaryButton: {
-		alignItems: "center",
-		borderWidth: 1,
-		borderColor: theme.colors.border,
-		borderRadius: theme.radius.md,
-		padding: theme.spacing.md,
-		marginTop: theme.spacing.md,
-	},
-	secondaryButtonText: {
-		color: theme.colors.brand,
-		fontSize: theme.typography.label.fontSize,
-	},
-	errorTitle: {
-		color: theme.colors.text,
-		fontSize: theme.typography.score.fontSize,
-		lineHeight: theme.typography.score.lineHeight,
-		fontWeight: theme.typography.score.fontWeight,
-	},
-	errorText: {
-		color: theme.colors.danger,
-		fontSize: theme.typography.caption.fontSize,
-		marginTop: theme.spacing.sm,
-	},
+	noteField: { marginTop: theme.spacing.lg, marginBottom: theme.spacing.lg },
 }));

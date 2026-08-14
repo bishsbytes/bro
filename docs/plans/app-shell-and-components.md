@@ -2,7 +2,7 @@
 
 ## Status
 
-In progress, 14 August 2026. Slices 1 and 2 are implemented with the JS-tabs fallback described below; slice 3 is underway with the shared top-level header and account avatar. Infrastructure between [step 1](step-1-check-in.md) and [step 2](step-2-reminders.md), not a product-sequencing step: tab navigation, native stack headers, and a first shared component layer extracted from the eight screens that exist. Step 2's reminders UI (its slice 4) builds on this shell, so this lands first. Decisions here were taken with Nick on 14 August 2026: four tabs, a common tab-root header, native pushed-screen headers, components in-app.
+Implementation complete, 14 August 2026. All four slices are implemented with the JS-tabs fallback described below: tab navigation, a persistent title/action header with account avatar, native pushed-screen headers, and the ten app-local shared components are in place. The eight product/auth screens and onboarding routes consume the shared layer; the former auth/onboarding style modules now contain spacing-only feature layout. Automated acceptance is green. The final light/dark device pass remains folded into step 2's native session as planned.
 
 ## Why now
 
@@ -70,7 +70,7 @@ Extracted, with the screens that currently duplicate them:
 ### Slice 2: Route restructure and native headers
 
 1. Move routes into the structure above; guards to the group; per-tab stacks with native headers themed from tokens.
-2. Delete the five hand-rolled Back buttons and each screen's header scaffolding; move the account entry point to the settings menu.
+2. Delete the five hand-rolled Back buttons and each screen's header scaffolding; expose Account consistently from the common tab header avatar.
 3. Router tests updated where they pressed hand-rolled "Back" text — navigation in tests drives the router (or platform back) rather than header internals, since native-stack header buttons may not render as reachable text under jest. Pathname assertions stay as they are.
 4. Both colour schemes verified for tab bar and headers; new tokens join the parity test.
 
@@ -80,11 +80,15 @@ Extracted, with the screens that currently duplicate them:
 2. Existing screen and flow tests are the harness — they pass unmodified except where they queried style-specific internals. No new snapshot layer; behaviour tests already cover these screens.
 3. Component-level tests only for behaviour a component owns (Button busy/disabled blocking presses, FormField error rendering) — not appearance.
 
+**Result, 14 August 2026:** complete. All ten planned components are app-local and all eight screens compose from them. `Button` and `FormField` have focused ownership tests; existing screen and flow tests remain the product-behaviour harness.
+
 ### Slice 4: Close-out
 
 1. `auth-styles.ts`/`onboarding-styles.ts` dissolved or trimmed to the genuinely local remainder.
 2. Repository conventions noted in `apps/app/src/components/README.md`: token-only styling, extraction-not-speculation, where a component must come from before it is added.
 3. Step 2's plan note confirmed (its slice 4 builds reminders UI from these components inside the settings stack); this document's status updated.
+
+**Result, 14 August 2026:** complete. The two legacy style modules are reduced to feature-specific spacing, component conventions are recorded in `components/README.md`, and the settings stack now has the `Screen`, `ListRow`, `Button`, and `FormField` foundation required by step 2 reminders.
 
 ## Automated acceptance matrix
 
@@ -95,7 +99,7 @@ Extracted, with the screens that currently duplicate them:
 | Tab navigation | Each tab reachable and its screen rendered under the real router in jest. |
 | Shared header | Every tab root has its configured header and Account avatar; pushed screens do not render it. |
 | Back navigation | Day view and settings children return correctly with no hand-rolled Back button present. |
-| Account entry | Reachable from Settings; `/account` route unchanged. |
+| Account entry | Reachable from every tab header avatar; `/account` route unchanged. |
 | Like-for-like | Every pre-existing screen/flow test passes after component extraction. |
 | Theme parity | Tab bar and header tokens exist in both themes; no hardcoded colour anywhere in `components/`. |
 | No behaviour change | Check-in, history editing, trends, delete-local-data flows byte-identical in assertions. |

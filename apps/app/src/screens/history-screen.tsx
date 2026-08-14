@@ -1,13 +1,10 @@
 import { router, useFocusEffect } from "expo-router";
 import { useCallback, useMemo, useState } from "react";
-import {
-	ActivityIndicator,
-	ScrollView,
-	Text,
-	TouchableOpacity,
-	View,
-} from "react-native";
-import { StyleSheet } from "../theme/unistyles";
+import { ActivityIndicator } from "react-native";
+import { AppText } from "../components/app-text";
+import { EmptyState } from "../components/empty-state";
+import { ListRow } from "../components/list-row";
+import { Screen } from "../components/screen";
 import {
 	createHistoryStore,
 	type HistoryDaySummary,
@@ -40,102 +37,59 @@ export function HistoryScreen({ store }: HistoryScreenProps) {
 
 	if (!days && !error) {
 		return (
-			<View style={styles.screen}>
-				<View style={styles.centered}>
-					<ActivityIndicator size="large" />
-				</View>
-			</View>
+			<Screen centered>
+				<ActivityIndicator size="large" />
+			</Screen>
 		);
 	}
 
 	return (
-		<View style={styles.screen}>
-			<ScrollView
-				style={styles.container}
-				contentContainerStyle={styles.content}
-			>
-				{error ? (
-					<View style={styles.emptyCard}>
-						<Text style={styles.error}>
-							History could not be loaded: {error}
-						</Text>
-						<TouchableOpacity onPress={load}>
-							<Text style={styles.link}>Try again</Text>
-						</TouchableOpacity>
-					</View>
-				) : null}
+		<Screen scroll padded gap="lg">
+			{error ? (
+				<EmptyState
+					title="History could not be loaded"
+					body={error}
+					actionLabel="Try again"
+					onAction={() => void load()}
+					tone="danger"
+				/>
+			) : null}
 
-				{days?.length === 0 ? (
-					<View style={styles.emptyCard}>
-						<Text style={styles.sectionTitle}>Nothing logged yet</Text>
-						<Text style={styles.body}>Your check-ins will appear here.</Text>
-					</View>
-				) : null}
+			{days?.length === 0 ? (
+				<EmptyState
+					title="Nothing logged yet"
+					body="Your check-ins will appear here."
+				/>
+			) : null}
 
-				{days?.map((day) => (
-					<TouchableOpacity
-						key={day.localDay}
-						accessibilityRole="button"
-						accessibilityLabel={`Open ${day.localDay}`}
-						style={styles.dayCard}
-						onPress={() =>
-							router.push({
-								pathname: "/history/[localDay]",
-								params: { localDay: day.localDay },
-							})
-						}
-					>
-						<Text style={styles.day}>{day.localDay}</Text>
-						{day.moodValues.length > 0 || day.energyValues.length > 0 ? (
-							<Text style={styles.summary}>
-								Mood {day.moodValues.join(", ")} · Energy{" "}
-								{day.energyValues.join(", ")}
-							</Text>
-						) : null}
-						{day.factorLabels.length > 0 ? (
-							<Text style={styles.body}>
-								Factors: {day.factorLabels.join(", ")}
-							</Text>
-						) : null}
-						{day.noteBodies.map((body, index) => (
-							<Text key={`${day.localDay}-note-${index}`} style={styles.note}>
-								{body}
-							</Text>
-						))}
-					</TouchableOpacity>
-				))}
-			</ScrollView>
-		</View>
+			{days?.map((day) => (
+				<ListRow
+					key={day.localDay}
+					accessibilityLabel={`Open ${day.localDay}`}
+					title={day.localDay}
+					onPress={() =>
+						router.push({
+							pathname: "/history/[localDay]",
+							params: { localDay: day.localDay },
+						})
+					}
+				>
+					{day.moodValues.length > 0 || day.energyValues.length > 0 ? (
+						<AppText variant="score">
+							Mood {day.moodValues.join(", ")} · Energy{" "}
+							{day.energyValues.join(", ")}
+						</AppText>
+					) : null}
+					{day.factorLabels.length > 0 ? (
+						<AppText color="muted">
+							Factors: {day.factorLabels.join(", ")}
+						</AppText>
+					) : null}
+					{day.noteBodies.map((body, index) => (
+						<AppText key={`${day.localDay}-note-${index}`}>{body}</AppText>
+					))}
+				</ListRow>
+			))}
+		</Screen>
 	);
 }
-
-const styles = StyleSheet.create((theme) => ({
-	screen: { flex: 1, backgroundColor: theme.colors.background },
-	container: { flex: 1, backgroundColor: theme.colors.background },
-	content: { padding: theme.spacing.xl, gap: theme.spacing.lg },
-	centered: {
-		flex: 1,
-		alignItems: "center",
-		justifyContent: "center",
-		backgroundColor: theme.colors.background,
-	},
-	dayCard: {
-		padding: theme.spacing.lg,
-		gap: theme.spacing.xs,
-		borderRadius: theme.radius.md,
-		backgroundColor: theme.colors.surface,
-	},
-	emptyCard: {
-		padding: theme.spacing.xl,
-		gap: theme.spacing.sm,
-		borderRadius: theme.radius.md,
-		backgroundColor: theme.colors.surface,
-	},
-	day: { ...theme.typography.section, color: theme.colors.text },
-	sectionTitle: { ...theme.typography.section, color: theme.colors.text },
-	summary: { ...theme.typography.score, color: theme.colors.text },
-	body: { ...theme.typography.body, color: theme.colors.textMuted },
-	note: { ...theme.typography.body, color: theme.colors.text },
-	error: { ...theme.typography.body, color: theme.colors.danger },
-	link: { ...theme.typography.label, color: theme.colors.brand },
-}));
