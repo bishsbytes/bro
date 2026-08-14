@@ -19,6 +19,19 @@ jest.mock("@bro/database-app", () => ({
 	setRemoteSessionMarker: jest.fn(),
 }));
 
+jest.mock("./check-in/check-in-store", () => ({
+	createCheckInStore: () => ({
+		loadToday: async () => ({
+			localDay: "2026-08-14",
+			entries: [],
+			selectedFactorSlugs: [],
+			availableFactors: [],
+			note: "",
+		}),
+		save: jest.fn(),
+	}),
+}));
+
 const mockedAuthClient = authClient as unknown as {
 	useSession: jest.Mock;
 	signIn: { email: jest.Mock };
@@ -102,7 +115,7 @@ describe("app entry", () => {
 		const { router, view } = await launch({ onboardingComplete: true });
 
 		expect(router.getPathname()).toBe("/");
-		expect(view.getByText("Local database ready")).toBeTruthy();
+		expect(await view.findByText("How are you?")).toBeTruthy();
 	});
 
 	it("walks onboarding through to the app without a backend request", async () => {
@@ -119,6 +132,7 @@ describe("app entry", () => {
 
 		expect(mockSetOnboardingComplete).toHaveBeenCalledWith(true);
 		expect(router.getPathname()).toBe("/");
+		expect(await view.findByText("How are you?")).toBeTruthy();
 		// The whole first run, end to end, touches nothing of ours over the network.
 		expect(globalThis.fetch).not.toHaveBeenCalled();
 	});
@@ -314,6 +328,6 @@ describe("app entry", () => {
 
 		await press(view, "Back");
 		expect(router.getPathname()).toBe("/");
-		expect(view.getByText("Local database ready")).toBeTruthy();
+		expect(await view.findByText("How are you?")).toBeTruthy();
 	});
 });

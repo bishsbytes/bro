@@ -1,0 +1,270 @@
+import {
+	DayNoteRepository,
+	getDb,
+	type Observation,
+	ObservationRepository,
+	TrackedMetricsRepository,
+} from "@bro/database-app";
+import type { SQLiteDatabase } from "expo-sqlite";
+import {
+	DEFAULT_TRACKED_METRICS,
+	type FactorMetricDefinition,
+	listFactors,
+	resolveMetric,
+} from "../content/metric-registry";
+
+export type CheckInEntry = {
+	id: string;
+	observedAt: number;
+	mood: Observation;
+	energy: Observation;
+};
+
+export type TodayCheckIn = {
+	localDay: string;
+	entries: CheckInEntry[];
+	selectedFactorSlugs: string[];
+	availableFactors: FactorMetricDefinition[];
+	note: string;
+};
+
+export type CheckInDraft = {
+	mood: number;
+	energy: number;
+	selectedFactorSlugs: readonly string[];
+	note: string;
+};
+
+export function localDayOf(date: Date): string {
+	const year = date.getFullYear();
+	const month = String(date.getMonth() + 1).padStart(2, "0");
+	const day = String(date.getDate()).padStart(2, "0");
+	return `${year}-${month}-${day}`;
+}
+
+function pairCheckIns(observations: readonly Observation[]): CheckInEntry[] {
+	const moods = observations.filter((row) => row.metricSlug === "mood");
+	const energies = observations.filter((row) => row.metricSlug === "energy");
+	const pairCount = Math.min(moods.length, energies.length);
+	const entries: CheckInEntry[] = [];
+
+	for (let index = 0; index < pairCount; index += 1) {
+		const mood = moods[index];
+		const energy = energies[index];
+		entries.push({
+			id: mood.id,
+			observedAt: Math.max(mood.observedAt, energy.observedAt),
+			mood,
+			energy,
+		});
+	}
+
+	return entries.reverse();
+}
+
+function assertDraft(draft: CheckInDraft): void {
+	for (const [label, value] of [
+		["Mood", draft.mood],
+		["Energy", draft.energy],
+	] as const) {
+		if (!Number.isInteger(value) || value < 1 || value > 5) {
+			throw new RangeError(`${label} must be a whole number from 1 to 5.`);
+		}
+	}
+
+	for (const slug of draft.selectedFactorSlugs) {
+		const resolved = resolveMetric(slug);
+		if (resolved.kind !== "known" || resolved.metric.kind !== "factor") {
+			throw new TypeError(`Unknown factor slug: ${slug}`);
+		}
+	}
+}
+
+export class CheckInStore {
+	private readonly observations: ObservationRepository;
+	private readonly notes: DayNoteRepository;
+	private readonly trackedMetrics: TrackedMetricsRepository;
+
+	constructor(
+		private readonly db: SQLiteDatabase,
+		private readonly now: () => Date = () => new Date(),
+	) {
+		this.observations = new ObservationRepository(db);
+		this.notes = new DayNoteRepository(db);
+		this.trackedMetrics = new TrackedMetricsRepository(db);
+	}
+
+	async loadToday(date = this.now()): Promise<TodayCheckIn> {
+		const localDay = localDayOf(date);
+		const [observations, notes, tracked] = await Promise.all([
+			this.observations.listByDay(localDay),
+			this.notes.listByDay(localDay),
+			this.trackedMetrics.listResolved(DEFAULT_TRACKED_METRICS),
+		]);
+		const enabledSlugs = new Set(
+			tracked
+				.filter((metric) => metric.enabled)
+				.map((metric) => metric.metricSlug),
+		);
+		const availableFactors = listFactors().filter((factor) =>
+			enabledSlugs.has(factor.slug),
+		);
+		const factorSlugs = new Set(availableFactors.map((factor) => factor.slug));
+
+		return {
+			localDay,
+			entries: pairCheckIns(observations),
+			selectedFactorSlugs: [
+				...new Set(
+					observations
+						.filter((row) => factorSlugs.has(row.metricSlug))
+						.map((row) => row.metricSlug),
+				),
+			],
+			availableFactors,
+			note: notes[0]?.body ?? "",
+		};
+	}
+
+	async save(
+		draft: CheckInDraft,
+		entry: CheckInEntry | null = null,
+	): Promise<TodayCheckIn> {
+		assertDraft(draft);
+		const capturedAt = this.now();
+		const observedAt = capturedAt.getTime();
+		const localDay = localDayOf(capturedAt);
+		const tzOffsetMinutes = capturedAt.getTimezoneOffset();
+		const selectedFactors = new Set(draft.selectedFactorSlugs);
+
+		await this.db.withTransactionAsync(async () => {
+			const tracked = await this.trackedMetrics.listResolved(
+				DEFAULT_TRACKED_METRICS,
+			);
+			const activeFactorSlugs = new Set(
+				tracked
+					.filter((metric) => {
+						const resolved = resolveMetric(metric.metricSlug);
+						return (
+							metric.enabled &&
+							resolved.kind === "known" &&
+							resolved.metric.kind === "factor"
+						);
+					})
+					.map((metric) => metric.metricSlug),
+			);
+			for (const slug of selectedFactors) {
+				if (!activeFactorSlugs.has(slug)) {
+					throw new TypeError(`Factor is not active in this check-in: ${slug}`);
+				}
+			}
+
+			if (entry) {
+				await this.observations.update(entry.mood.id, {
+					value: draft.mood,
+					scaleMin: 1,
+					scaleMax: 5,
+					observedAt: entry.mood.observedAt,
+					localDay: entry.mood.localDay,
+					tzOffsetMinutes: entry.mood.tzOffsetMinutes,
+				});
+				await this.observations.update(entry.energy.id, {
+					value: draft.energy,
+					scaleMin: 1,
+					scaleMax: 5,
+					observedAt: entry.energy.observedAt,
+					localDay: entry.energy.localDay,
+					tzOffsetMinutes: entry.energy.tzOffsetMinutes,
+				});
+			} else {
+				await this.observations.create({
+					metricSlug: "mood",
+					value: draft.mood,
+					scaleMin: 1,
+					scaleMax: 5,
+					observedAt,
+					localDay,
+					tzOffsetMinutes,
+					source: "user",
+					sourceRecordId: null,
+					assessmentId: null,
+				});
+				await this.observations.create({
+					metricSlug: "energy",
+					value: draft.energy,
+					scaleMin: 1,
+					scaleMax: 5,
+					observedAt,
+					localDay,
+					tzOffsetMinutes,
+					source: "user",
+					sourceRecordId: null,
+					assessmentId: null,
+				});
+			}
+
+			await this.reconcileFactors(
+				localDay,
+				observedAt,
+				tzOffsetMinutes,
+				activeFactorSlugs,
+				selectedFactors,
+			);
+			if (draft.note.trim().length > 0) {
+				await this.notes.upsertForDayInCurrentTransaction(localDay, draft.note);
+			}
+		});
+
+		return await this.loadToday(capturedAt);
+	}
+
+	private async reconcileFactors(
+		localDay: string,
+		observedAt: number,
+		tzOffsetMinutes: number,
+		active: ReadonlySet<string>,
+		selected: ReadonlySet<string>,
+	): Promise<void> {
+		const current = (await this.observations.listByDay(localDay)).filter(
+			(row) => {
+				const resolved = resolveMetric(row.metricSlug);
+				return (
+					active.has(row.metricSlug) &&
+					resolved.kind === "known" &&
+					resolved.metric.kind === "factor"
+				);
+			},
+		);
+		const kept = new Set<string>();
+
+		for (const factor of current) {
+			if (!selected.has(factor.metricSlug) || kept.has(factor.metricSlug)) {
+				await this.observations.delete(factor.id);
+			} else {
+				kept.add(factor.metricSlug);
+			}
+		}
+
+		for (const slug of selected) {
+			if (kept.has(slug)) {
+				continue;
+			}
+			await this.observations.create({
+				metricSlug: slug,
+				value: 1,
+				scaleMin: null,
+				scaleMax: null,
+				observedAt,
+				localDay,
+				tzOffsetMinutes,
+				source: "user",
+				sourceRecordId: null,
+				assessmentId: null,
+			});
+		}
+	}
+}
+
+export function createCheckInStore(): CheckInStore {
+	return new CheckInStore(getDb());
+}

@@ -82,33 +82,41 @@ export class DayNoteRepository extends BaseRepository {
 	}
 
 	async upsertForDay(localDay: string, body: string): Promise<DayNote> {
-		return await this.transaction(async () => {
-			const existing = await this.first<DayNoteRow>(
-				`SELECT id, local_day, body, created_at, updated_at
-				 FROM day_notes WHERE local_day = ?
-				 ORDER BY created_at ASC, id ASC LIMIT 1`,
-				[localDay],
+		return await this.transaction(async () =>
+			this.upsertForDayInCurrentTransaction(localDay, body),
+		);
+	}
+
+	/** Used by a larger domain transaction that already owns the database lock. */
+	async upsertForDayInCurrentTransaction(
+		localDay: string,
+		body: string,
+	): Promise<DayNote> {
+		const existing = await this.first<DayNoteRow>(
+			`SELECT id, local_day, body, created_at, updated_at
+			 FROM day_notes WHERE local_day = ?
+			 ORDER BY created_at ASC, id ASC LIMIT 1`,
+			[localDay],
+		);
+		const now = this.now();
+
+		if (existing) {
+			await this.run(
+				"UPDATE day_notes SET body = ?, updated_at = ? WHERE id = ?",
+				[body, now, existing.id],
 			);
-			const now = this.now();
+			return toDayNote({ ...existing, body, updated_at: now });
+		}
 
-			if (existing) {
-				await this.run(
-					"UPDATE day_notes SET body = ?, updated_at = ? WHERE id = ?",
-					[body, now, existing.id],
-				);
-				return toDayNote({ ...existing, body, updated_at: now });
-			}
-
-			const note: DayNote = {
-				id: this.createId(now),
-				localDay,
-				body,
-				createdAt: now,
-				updatedAt: now,
-			};
-			await this.insert(note);
-			return note;
-		});
+		const note: DayNote = {
+			id: this.createId(now),
+			localDay,
+			body,
+			createdAt: now,
+			updatedAt: now,
+		};
+		await this.insert(note);
+		return note;
 	}
 
 	async update(id: string, body: string): Promise<DayNote | null> {

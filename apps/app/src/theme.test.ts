@@ -25,9 +25,11 @@ describe("design tokens", () => {
 		expect(shared).toEqual([]);
 	});
 
-	it("shares spacing, radius, and typography across themes", () => {
+	it("shares non-colour tokens across themes", () => {
 		expect(darkTheme.spacing).toEqual(lightTheme.spacing);
 		expect(darkTheme.radius).toEqual(lightTheme.radius);
 		expect(darkTheme.typography).toEqual(lightTheme.typography);
+		expect(darkTheme.control).toEqual(lightTheme.control);
+		expect(darkTheme.opacity).toEqual(lightTheme.opacity);
 	});
 });

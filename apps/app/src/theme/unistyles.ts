@@ -20,9 +20,21 @@ const shared = {
 	typography: {
 		display: { fontSize: 36, lineHeight: 42, fontWeight: "700" },
 		title: { fontSize: 32, fontWeight: "600" },
+		section: { fontSize: 22, lineHeight: 28, fontWeight: "600" },
+		score: { fontSize: 20, lineHeight: 24, fontWeight: "600" },
 		body: { fontSize: 17, lineHeight: 26 },
 		label: { fontSize: 16, lineHeight: 23 },
 		caption: { fontSize: 14, lineHeight: 21 },
+		micro: { fontSize: 12, lineHeight: 16 },
+		face: { fontSize: 22, lineHeight: 28 },
+		eyebrow: { letterSpacing: 1.2 },
+	},
+	control: {
+		scoreMinHeight: 58,
+		noteMinHeight: 90,
+	},
+	opacity: {
+		disabled: 0.45,
 	},
 } as const;
 
@@ -34,6 +46,9 @@ export const lightTheme = {
 		textMuted: "#4b5563",
 		textSubtle: "#6b7280",
 		border: "#d1d5db",
+		surface: "#f3f4f6",
+		selected: "#dbeafe",
+		onSelected: "#143055",
 		brand: "#143055",
 		onBrand: "#ffffff",
 		danger: "#b91c1c",
@@ -49,6 +64,9 @@ export const darkTheme = {
 		textMuted: "#b6bec9",
 		textSubtle: "#9aa4b2",
 		border: "#2b3440",
+		surface: "#161b22",
+		selected: "#264b73",
+		onSelected: "#f3f4f6",
 		// The light brand is unreadable on a dark ground, so it lightens rather
 		// than carrying the same hex across both themes.
 		brand: "#8fb3dd",

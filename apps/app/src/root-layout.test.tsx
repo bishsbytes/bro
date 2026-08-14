@@ -18,6 +18,19 @@ jest.mock("@bro/database-app", () => ({
 	setRemoteSessionMarker: jest.fn(),
 }));
 
+jest.mock("./check-in/check-in-store", () => ({
+	createCheckInStore: () => ({
+		loadToday: async () => ({
+			localDay: "2026-08-14",
+			entries: [],
+			selectedFactorSlugs: [],
+			availableFactors: [],
+			note: "",
+		}),
+		save: jest.fn(),
+	}),
+}));
+
 // The real auth provider is under test here too: a local-only startup must not
 // mount the session hook, so the client is mocked rather than the package.
 jest.mock("../../../packages/auth/app/src/client", () => ({
@@ -80,7 +93,7 @@ describe("startup", () => {
 
 		expect(mockInitDb).toHaveBeenCalledWith();
 		expect(mockRunMigrations).toHaveBeenCalledWith({ handle: true });
-		expect(view.getByText("Local database ready")).toBeTruthy();
+		expect(await view.findByText("How are you?")).toBeTruthy();
 	});
 
 	it("issues no session request and no network call for a local-only start", async () => {
@@ -110,11 +123,11 @@ describe("startup", () => {
 
 		expect(view.getByText("Local storage is unavailable")).toBeTruthy();
 		expect(view.getByText("disk unavailable")).toBeTruthy();
-		expect(view.queryByText("Local database ready")).toBeNull();
+		expect(view.queryByText("How are you?")).toBeNull();
 
 		await fireEvent.press(view.getByText("Try again"));
 
-		expect(view.getByText("Local database ready")).toBeTruthy();
+		expect(await view.findByText("How are you?")).toBeTruthy();
 		// Both handles must be released, or the retry reopens against a half-known
 		// schema rather than a clean one.
 		expect(mockCloseDb).toHaveBeenCalledTimes(1);
@@ -132,7 +145,7 @@ describe("startup", () => {
 
 		await fireEvent.press(view.getByText("Try again"));
 
-		expect(view.getByText("Local database ready")).toBeTruthy();
+		expect(await view.findByText("How are you?")).toBeTruthy();
 	});
 
 	it("never lets an auth failure reach the startup screen", async () => {
@@ -149,6 +162,6 @@ describe("startup", () => {
 		});
 
 		expect(view.queryByText("Local storage is unavailable")).toBeNull();
-		expect(view.getByText("Local database ready")).toBeTruthy();
+		expect(await view.findByText("How are you?")).toBeTruthy();
 	});
 });
