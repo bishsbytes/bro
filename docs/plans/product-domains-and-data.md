@@ -62,7 +62,7 @@ observations = {
   scaleMax,         //   null for dimensional metrics — see Check-in
   observedAt,       // epoch ms UTC
   localDay,         // 'YYYY-MM-DD' as computed where it was written
-  tzOffsetMinutes,
+  tzOffsetMinutes,  // getTimezoneOffset() convention: local + offset = UTC, so UTC+2 → -120
   source,           // 'user' | 'healthkit' | 'health_connect' | …
   sourceRecordId,   // the platform sample id, null for user entries
   createdAt,
@@ -492,7 +492,7 @@ This does not block AI. It decides its shape: the user picks what is sent, conse
 ## Conventions to lock in now
 
 - **`id`:** `TEXT PRIMARY KEY`, client-generated. Prefer UUIDv7 — time-ordered ids give locality on append-heavy series and make "most recent" cheap. The exception is derived facts that two devices can compute independently — `dailyMetrics` — whose id is derived from the natural key (UUIDv5) so duplicate computes converge on one row instead of colliding.
-- **Timestamps:** `INTEGER` epoch milliseconds UTC, plus `localDay` and `tzOffsetMinutes`. Store the local day rather than deriving it, or the answer changes after travel and differs across devices.
+- **Timestamps:** `INTEGER` epoch milliseconds UTC, plus `localDay` and `tzOffsetMinutes`. Store the local day rather than deriving it, or the answer changes after travel and differs across devices. `tzOffsetMinutes` uses JavaScript's `Date.prototype.getTimezoneOffset()` convention — the minutes to *add* to local time to reach UTC, so UTC+2 stores **−120**, the inverse of the ISO 8601 sign. This is baked into device rows and export format v1; importers and sync peers must not assume the ISO sign.
 - **Unique indexes:** safe when they collapse the *same* fact — `(source, sourceRecordId)` on imports. Never when they collapse *distinct* facts: a unique index on `(metricSlug, localDay)` would mean two offline devices logging the same day silently lose one entry at the primary. Enforce one-per-day in the UI, where it can be explained.
 - **Deletes are hard deletes.** Justified above.
 - **No `createdByUserId`** — but the challenge-social question above is exactly the thing that would change this, and retrofitting authorship after sync ships means a migration across live replicas. Answer "solo, always" deliberately or not at all.

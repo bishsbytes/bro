@@ -123,8 +123,13 @@ export class TrackedMetricsRepository extends BaseRepository {
 			const now = this.now();
 
 			if (existing) {
-				const addedAt = enabled ? now : existing.added_at;
-				const removedAt = enabled ? null : now;
+				// added_at/removed_at record when the metric last changed state, so
+				// they only move on a disabled<->enabled transition — reordering an
+				// enabled metric must not rewrite when it was enabled.
+				const wasEnabled = existing.removed_at === null;
+				const addedAt =
+					enabled && !wasEnabled ? now : existing.added_at;
+				const removedAt = enabled ? null : wasEnabled ? now : existing.removed_at;
 				await this.run(
 					`UPDATE tracked_metrics
 					 SET position = ?, added_at = ?, removed_at = ?, updated_at = ?

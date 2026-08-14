@@ -175,6 +175,34 @@ describe("product repositories", () => {
 		expect(await repository.listByDay("2026-08-14")).toEqual([updated]);
 	});
 
+	it("stamps added_at and removed_at only on enable/disable transitions", async () => {
+		let now = 1_000;
+		const repository = new databaseApp.TrackedMetricsRepository(db, {
+			now: () => now,
+			createId: () => "tracked-alcohol",
+		});
+
+		await repository.configure("alcohol", 6, false);
+		now = 2_000;
+		await repository.configure("alcohol", 6, false);
+		expect((await repository.listAll())[0]).toMatchObject({
+			addedAt: null,
+			removedAt: 1_000,
+			updatedAt: 2_000,
+		});
+
+		now = 3_000;
+		await repository.configure("alcohol", 6, true);
+		now = 4_000;
+		await repository.configure("alcohol", 2, true);
+		expect((await repository.listAll())[0]).toMatchObject({
+			position: 2,
+			addedAt: 3_000,
+			removedAt: null,
+			updatedAt: 4_000,
+		});
+	});
+
 	it("materialises defaults lazily and persists a disabled overlay", async () => {
 		let now = 1_000;
 		const repository = new databaseApp.TrackedMetricsRepository(db, {

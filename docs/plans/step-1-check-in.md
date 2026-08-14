@@ -38,7 +38,7 @@ These implement decisions the product plan has already taken; the rationale live
 - **Factors write value 1 on tap; untapping the same day hard-deletes the row.** Untapped is unrecorded, never 0.
 - **The registry is a typed TypeScript module in the app**, not data: slug, label, kind (`scored` | `factor`), scale bounds, category, aggregation rule, `sensitive`, `userEnterable`, deprecation status. The v1 set: `mood` and `energy` (scored, 1–5), and a factor vocabulary of roughly a dozen (alcohol, caffeine, training, late screen, poor sleep environment, stress, social, outdoors, travel, illness, junk food, sex — draft; the shipped list is product [open decision 7](product-domains-and-data.md#open-decisions) and needs sign-off before the panel is built). No v1 metric is `sensitive`, but the flag exists and one code path (export) already honours it, so the pattern is set.
 - **`trackedMetrics` materialises lazily.** No rows means "registry defaults". Rows are written only when the user deviates (disable, reorder). This avoids two devices each seeding defaults into a future synced database, and it is why "make it yours" costs nothing at rest.
-- **Ids are UUIDv7** (small local generator; `expo-crypto` provides randomness). Timestamps are epoch-ms UTC with `localDay` and `tzOffsetMinutes` stored, never derived.
+- **Ids are UUIDv7** (small local generator; `expo-crypto` provides randomness). Timestamps are epoch-ms UTC with `localDay` and `tzOffsetMinutes` stored, never derived. `tzOffsetMinutes` follows the JavaScript `getTimezoneOffset()` convention (local + offset = UTC; UTC+2 stores −120) — see the [product conventions](product-domains-and-data.md#conventions-to-lock-in-now).
 - **Migration 001 is conflict-tolerant end to end**: `CREATE TABLE IF NOT EXISTS` / `CREATE INDEX IF NOT EXISTS` in the shipped SQL (drizzle-kit's generated output is adjusted before committing — the generated file is the artefact, the generator is not sacred), and the migrator's marker insert uses `ON CONFLICT DO NOTHING`. The umbrella plan is explicit that retrofitting tolerance into migration 001 is impossible once it has run on a device.
 - **Deletes are hard deletes**, including check-in edits from the day view.
 - **Delete local data is `DELETE FROM` each product table in one transaction — never file deletion**, preserving `__app_migrations`, exactly per the [product plan](product-domains-and-data.md#delete-local-data). Uses Phase 2's reserved copy verbatim.
@@ -94,7 +94,9 @@ No unique index on `day_notes.local_day` or on `observations (metric_slug, local
 
 ### Check-in
 
-Home (`/`) becomes the today screen. Its primary state is the check-in: five mood faces, five energy levels, the factor panel grouped by category, an optional note field, one save action. After saving, today shows what was logged with an edit affordance. Multiple check-ins in a day append; the day view lists them all.
+Home (`/`) becomes the today screen. Its primary state is the check-in: five mood faces, five energy levels, the factor panel grouped by category, an optional note field, one save action. After saving, today shows what was logged with an edit affordance. Multiple check-ins in a day append; the day view lists them all. The note field is always prefilled with the day's current note, so saving with the field emptied deletes that note — the field shows exactly what will be stored.
+
+Two deliberate simplifications on the write/read path, to revisit when sync (Phase 5) can produce rows this device did not write: the today screen presents mood/energy as index-paired entries and does not render an unpaired scored row (the day view does, as `unpairedScored`); and saving a check-in reconciles the day's factor rows against the panel, which collapses duplicate same-slug factor rows for that day into one. Both preserve the per-day semantics; neither loses a fact a screen was showing.
 
 Timing is a requirement, not an aspiration: from cold app open to saved check-in in under fifteen seconds on a mid-range device, and the automated tests assert the flow is three taps plus save with no intermediate screens.
 
@@ -126,7 +128,7 @@ Version 1 is UTF-8 JSON with a trailing newline and this top-level shape:
 }
 ```
 
-`exportedAt` is ISO 8601 UTC. Rows retain database ids, timestamps, provenance, local-day/timezone fields, and scale snapshots. Arrays have deterministic chronological/catalogue ordering so equivalent input produces a stable file. Sensitive exclusion removes known-sensitive registry definitions, observations, and tracked-metric overlay rows; day notes remain because the option is metric-specific, and unknown slugs remain because an older binary cannot safely classify them as sensitive or non-sensitive. The export UI must make that limitation explicit when it ships.
+`exportedAt` is ISO 8601 UTC. Rows retain database ids, timestamps, provenance, local-day/timezone fields, and scale snapshots. `tzOffsetMinutes` carries the stored value unchanged, which uses the JavaScript `getTimezoneOffset()` sign convention (UTC+2 → −120, the inverse of ISO 8601); format v1 importers must read it that way. Arrays have deterministic chronological/catalogue ordering so equivalent input produces a stable file. Sensitive exclusion removes known-sensitive registry definitions, observations, and tracked-metric overlay rows; day notes remain because the option is metric-specific, and unknown slugs remain because an older binary cannot safely classify them as sensitive or non-sensitive. The export UI must make that limitation explicit when it ships.
 
 ## Delivery slices
 

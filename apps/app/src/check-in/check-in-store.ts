@@ -160,18 +160,21 @@ export class CheckInStore {
 			}
 
 			if (entry) {
+				// An edit rewrites the value, never the row's scale snapshot: rows
+				// recorded under an older scale must keep the bounds they were
+				// scored on.
 				await this.observations.update(entry.mood.id, {
 					value: draft.mood,
-					scaleMin: 1,
-					scaleMax: 5,
+					scaleMin: entry.mood.scaleMin,
+					scaleMax: entry.mood.scaleMax,
 					observedAt: entry.mood.observedAt,
 					localDay: entry.mood.localDay,
 					tzOffsetMinutes: entry.mood.tzOffsetMinutes,
 				});
 				await this.observations.update(entry.energy.id, {
 					value: draft.energy,
-					scaleMin: 1,
-					scaleMax: 5,
+					scaleMin: entry.energy.scaleMin,
+					scaleMax: entry.energy.scaleMax,
 					observedAt: entry.energy.observedAt,
 					localDay: entry.energy.localDay,
 					tzOffsetMinutes: entry.energy.tzOffsetMinutes,
@@ -212,6 +215,13 @@ export class CheckInStore {
 			);
 			if (draft.note.trim().length > 0) {
 				await this.notes.upsertForDayInCurrentTransaction(localDay, draft.note);
+			} else {
+				// The form prefills the day's note, so an emptied field is an
+				// explicit clear of the note the user was shown — not an absent one.
+				const [uiNote] = await this.notes.listByDay(localDay);
+				if (uiNote) {
+					await this.notes.delete(uiNote.id);
+				}
 			}
 		});
 
