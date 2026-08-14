@@ -1,0 +1,122 @@
+import type { Observation } from "@bro/database-app";
+import { resolveMetric } from "../content/metric-registry";
+import { buildTrendSeries, trendRange } from "./trend-math";
+
+function observation(
+	id: string,
+	localDay: string,
+	value: number,
+	overrides: Partial<Observation> = {},
+): Observation {
+	return {
+		id,
+		metricSlug: "mood",
+		value,
+		scaleMin: 1,
+		scaleMax: 5,
+		observedAt: Date.parse(`${localDay}T12:00:00.000Z`),
+		localDay,
+		tzOffsetMinutes: 0,
+		source: "user",
+		sourceRecordId: null,
+		assessmentId: null,
+		createdAt: 1,
+		updatedAt: 1,
+		...overrides,
+	};
+}
+
+function knownMetric(slug: string) {
+	const resolved = resolveMetric(slug);
+	if (resolved.kind !== "known") {
+		throw new Error(`Expected ${slug} to be registered.`);
+	}
+	return resolved.metric;
+}
+
+describe("trend math", () => {
+	it("means repeated check-ins by registry rule and leaves missing days as gaps", () => {
+		const series = buildTrendSeries(
+			[
+				observation("a", "2026-08-08", 1),
+				observation("b", "2026-08-08", 5),
+				observation("c", "2026-08-10", 4),
+			],
+			knownMetric("mood"),
+			"2026-08-14",
+			7,
+		);
+
+		expect(series.points).toEqual([
+			{ localDay: "2026-08-08", value: 3 },
+			{ localDay: "2026-08-09", value: null },
+			{ localDay: "2026-08-10", value: 4 },
+			{ localDay: "2026-08-11", value: null },
+			{ localDay: "2026-08-12", value: null },
+			{ localDay: "2026-08-13", value: null },
+			{ localDay: "2026-08-14", value: null },
+		]);
+		expect(series.segments).toHaveLength(2);
+		expect(series.observedDayCount).toBe(2);
+		expect(series.daysUntilMeaningful).toBe(5);
+	});
+
+	it("normalises stored scale snapshots before aggregating", () => {
+		const series = buildTrendSeries(
+			[
+				observation("old", "2026-08-14", 50, {
+					scaleMin: 0,
+					scaleMax: 100,
+				}),
+				observation("current", "2026-08-14", 5),
+			],
+			knownMetric("mood"),
+			"2026-08-14",
+			7,
+		);
+
+		expect(series.points.at(-1)?.value).toBe(4);
+	});
+
+	it("uses presence aggregation and produces inclusive 30-day ranges", () => {
+		const factor = knownMetric("stress");
+		const series = buildTrendSeries(
+			[
+				observation("stress-1", "2026-08-14", 9, {
+					metricSlug: "stress",
+					scaleMin: null,
+					scaleMax: null,
+				}),
+			],
+			factor,
+			"2026-08-14",
+			30,
+		);
+
+		expect(trendRange("2026-08-14", 30)).toEqual({
+			fromLocalDay: "2026-07-16",
+			throughLocalDay: "2026-08-14",
+		});
+		expect(series.points).toHaveLength(30);
+		expect(series.points.at(-1)?.value).toBe(1);
+	});
+
+	it("marks a metric meaningful after seven distinct logged days", () => {
+		const rows = Array.from({ length: 7 }, (_, index) =>
+			observation(
+				`day-${index}`,
+				`2026-08-${String(index + 8).padStart(2, "0")}`,
+				3,
+			),
+		);
+		const series = buildTrendSeries(
+			rows,
+			knownMetric("mood"),
+			"2026-08-14",
+			7,
+		);
+
+		expect(series.observedDayCount).toBe(7);
+		expect(series.daysUntilMeaningful).toBe(0);
+	});
+});

@@ -1,5 +1,5 @@
-import { ComingSoonScreen } from "../screens/coming-soon-screen";
+import { TrendsScreen } from "../screens/trends-screen";
 
 export default function TrendsRoute() {
-	return <ComingSoonScreen title="Trends" />;
+	return <TrendsScreen />;
 }

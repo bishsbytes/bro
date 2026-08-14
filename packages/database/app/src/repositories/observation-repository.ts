@@ -164,6 +164,14 @@ export class ObservationRepository extends BaseRepository {
 		return row ? toObservation(row) : null;
 	}
 
+	async listAll(): Promise<Observation[]> {
+		const rows = await this.all<ObservationRow>(
+			`SELECT ${SELECT_COLUMNS} FROM observations
+			 ORDER BY local_day DESC, observed_at ASC, created_at ASC, id ASC`,
+		);
+		return rows.map(toObservation);
+	}
+
 	async listByDay(localDay: string): Promise<Observation[]> {
 		const rows = await this.all<ObservationRow>(
 			`SELECT ${SELECT_COLUMNS} FROM observations

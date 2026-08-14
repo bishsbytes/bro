@@ -80,6 +80,7 @@ function RootNavigator() {
 				<Stack.Screen name="index" />
 				<Stack.Screen name="account" />
 				<Stack.Screen name="history" />
+				<Stack.Screen name="history/[localDay]" />
 				<Stack.Screen name="trends" />
 				<Stack.Screen name="settings" />
 			</Stack.Protected>

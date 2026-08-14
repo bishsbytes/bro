@@ -57,6 +57,15 @@ export class DayNoteRepository extends BaseRepository {
 		return note;
 	}
 
+	async listAll(): Promise<DayNote[]> {
+		const rows = await this.all<DayNoteRow>(
+			`SELECT id, local_day, body, created_at, updated_at
+			 FROM day_notes
+			 ORDER BY local_day DESC, created_at ASC, id ASC`,
+		);
+		return rows.map(toDayNote);
+	}
+
 	async listByDay(localDay: string): Promise<DayNote[]> {
 		const rows = await this.all<DayNoteRow>(
 			`SELECT id, local_day, body, created_at, updated_at
