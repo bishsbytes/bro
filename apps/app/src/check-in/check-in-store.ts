@@ -8,6 +8,7 @@ import {
 import type { SQLiteDatabase } from "expo-sqlite";
 import {
 	DEFAULT_TRACKED_METRICS,
+	FACTOR_PRESENCE_VALUE,
 	type FactorMetricDefinition,
 	listFactors,
 	resolveMetric,
@@ -261,7 +262,7 @@ export class CheckInStore {
 			}
 			await this.observations.create({
 				metricSlug: slug,
-				value: 1,
+				value: FACTOR_PRESENCE_VALUE,
 				scaleMin: null,
 				scaleMax: null,
 				observedAt,

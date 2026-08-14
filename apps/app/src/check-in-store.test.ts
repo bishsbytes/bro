@@ -108,6 +108,26 @@ describe("check-in store", () => {
 		expect(await notes.listByDay(LOCAL_DAY)).toEqual([]);
 	});
 
+	it("writes factor rows with exactly the presence value and null bounds", async () => {
+		const observations = new databaseApp.ObservationRepository(db);
+		const store = new CheckInStore(db, () => CAPTURED_AT);
+
+		await store.save({
+			mood: 4,
+			energy: 3,
+			selectedFactorSlugs: ["alcohol", "training"],
+			note: "",
+		});
+
+		const factorRows = (await observations.listByDay(LOCAL_DAY)).filter(
+			(row) => row.metricSlug !== "mood" && row.metricSlug !== "energy",
+		);
+		expect(factorRows).toHaveLength(2);
+		for (const row of factorRows) {
+			expect(row).toMatchObject({ value: 1, scaleMin: null, scaleMax: null });
+		}
+	});
+
 	it("clears only the note the form showed, retaining manufactured duplicates", async () => {
 		const notes = new databaseApp.DayNoteRepository(db);
 		const store = new CheckInStore(db, () => CAPTURED_AT);

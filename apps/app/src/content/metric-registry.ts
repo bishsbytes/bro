@@ -35,6 +35,14 @@ export type MetricResolution =
 	| { kind: "known"; metric: MetricDefinition }
 	| { kind: "unknown"; slug: string };
 
+/**
+ * The only value a factor observation ever carries. A factor that later needs
+ * quantity gets a separate quantified-counterpart metric (`alcohol` →
+ * `alcohol_units`); reusing the factor's value would make existing rows
+ * ambiguous. Convention: product plan, check-in domain.
+ */
+export const FACTOR_PRESENCE_VALUE = 1;
+
 const scored = (
 	slug: string,
 	label: string,
