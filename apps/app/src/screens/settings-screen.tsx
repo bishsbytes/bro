@@ -7,6 +7,7 @@ import { Button } from "../components/button";
 import { Card } from "../components/card";
 import { Screen } from "../components/screen";
 import { SectionHeader } from "../components/section-header";
+import { cancelAllReminderNotifications } from "../reminders/reminder-materialiser";
 import { StyleSheet } from "../theme/unistyles";
 
 const DELETE_LOCAL_DATA_COPY =
@@ -14,12 +15,14 @@ const DELETE_LOCAL_DATA_COPY =
 
 type SettingsScreenProps = {
 	deleteProductData?: () => Promise<void>;
+	cancelReminderNotifications?: () => Promise<unknown>;
 };
 
 type DeleteStep = "idle" | "confirm" | "complete";
 
 export function SettingsScreen({
 	deleteProductData = deleteLocalProductData,
+	cancelReminderNotifications = cancelAllReminderNotifications,
 }: SettingsScreenProps) {
 	const [deleteStep, setDeleteStep] = useState<DeleteStep>("idle");
 	const [deleting, setDeleting] = useState(false);
@@ -34,6 +37,7 @@ export function SettingsScreen({
 		setError(null);
 		try {
 			await deleteProductData();
+			await cancelReminderNotifications();
 			setDeleteStep("complete");
 		} catch (caught) {
 			setError(
@@ -48,6 +52,17 @@ export function SettingsScreen({
 
 	return (
 		<Screen scroll padded edges={["bottom"]}>
+			<Card style={styles.section}>
+				<SectionHeader title="Reminders" />
+				<AppText color="muted">
+					Choose when this device nudges you to check in.
+				</AppText>
+				<Button
+					label="Manage reminders"
+					variant="secondary"
+					onPress={() => router.push("/settings/reminders")}
+				/>
+			</Card>
 			<Card style={styles.section}>
 				<SectionHeader title="Data on this device" />
 				{deleteStep === "idle" ? (

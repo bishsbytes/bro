@@ -64,3 +64,12 @@ export const trackedMetrics = sqliteTable(PRODUCT_TABLE_NAMES.trackedMetrics, {
 	createdAt: integer("created_at").notNull(),
 	updatedAt: integer("updated_at").notNull(),
 });
+
+export const reminders = sqliteTable(PRODUCT_TABLE_NAMES.reminders, {
+	id: text("id").primaryKey(),
+	minuteOfDay: integer("minute_of_day").notNull(),
+	daysOfWeek: integer("days_of_week").notNull(),
+	enabled: integer("enabled").notNull(),
+	createdAt: integer("created_at").notNull(),
+	updatedAt: integer("updated_at").notNull(),
+});

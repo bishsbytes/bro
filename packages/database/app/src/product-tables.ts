@@ -10,6 +10,7 @@ export const PRODUCT_TABLE_NAMES = {
 	observations: "observations",
 	dayNotes: "day_notes",
 	trackedMetrics: "tracked_metrics",
+	reminders: "reminders",
 } as const;
 
 export type ProductTableName =

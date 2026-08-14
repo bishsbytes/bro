@@ -2,7 +2,9 @@
 
 ## Status
 
-Draft, 14 August 2026. This is the delivery plan for [sequencing step 2 of the product domains plan](product-domains-and-data.md#sequencing): the reminders domain — a daily check-in nudge whose schedule survives a phone change but whose OS notifications belong to the install. It assumes [step 1](step-1-check-in.md) code-complete (it is) and carries the product's **first native dependency and first prebuild regeneration**, which also makes it the natural moment to run step 1's still-pending physical-device acceptance checklist: one dev-client build serves both. The [app shell and shared components plan](app-shell-and-components.md) is complete: slice 4 below builds the reminders UI from the shared components inside the settings tab's stack, not from scratch.
+Implementation complete, 14 August 2026; native acceptance pending. Migration 002, the reminder repository, rolling planner and notification materialiser, settings UI, permission flow, notification-response routing, automated coverage, `expo-notifications`, and the first Android prebuild regeneration are complete. Tests, typecheck, and lint are green. The physical Android/iOS acceptance checklist below — including step 1's carried checklist — still requires development-client builds on devices. A local Android merged-manifest check was attempted but this machine has no Android SDK; Expo's installed library manifest supplies `POST_NOTIFICATIONS` and `RECEIVE_BOOT_COMPLETED`, while the committed prebuild contains the configured `reminders` default channel and no exact-alarm permission.
+
+This is the delivery plan for [sequencing step 2 of the product domains plan](product-domains-and-data.md#sequencing): the reminders domain — a daily check-in nudge whose schedule survives a phone change but whose OS notifications belong to the install. It assumes [step 1](step-1-check-in.md) code-complete (it is) and carries the product's **first native dependency and first prebuild regeneration**, which also makes it the natural moment to run step 1's still-pending physical-device acceptance checklist: one dev-client build serves both. The [app shell and shared components plan](app-shell-and-components.md) is complete: slice 4 below builds the reminders UI from the shared components inside the settings tab's stack, not from scratch.
 
 ## Outcome
 
@@ -126,6 +128,8 @@ Unchanged copy from step 1; the action now also clears `reminders` (via the shar
    - both colour schemes.
 2. **Run step 1's pending native checklist in the same session** — airplane-mode relaunch, near-midnight entry, colour schemes, fifteen-second timing — and mark both plans.
 3. Update the product plan (step 2 status in sequencing; note the resolved storage-ownership deviation for notification ids) and the umbrella plan's prebuild note (first regeneration done, batching outcome recorded).
+
+**Implementation status:** all code, generated migration/native artefacts, automated acceptance, and documentation are complete. Device-only notification delivery, killed-app timing, OS permission recovery, timezone-change behaviour, and the shared step 1 physical checklist remain pending. The first regeneration carried notifications only; Phase 3's local-authentication dependency was not batched into this product step.
 
 ## Expected touchpoints
 

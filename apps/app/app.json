@@ -34,6 +34,12 @@
         }
       ],
       "expo-router",
+      [
+        "expo-notifications",
+        {
+          "defaultChannel": "reminders"
+        }
+      ],
       "react-native-edge-to-edge"
     ],
     "experiments": {

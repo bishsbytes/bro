@@ -40,7 +40,7 @@ describe("product database migrations", () => {
 		const { databaseApp, db } = await migratedDatabase("fresh.db");
 
 		await expect(databaseApp.runMigrations(db)).resolves.toEqual({
-			applied: ["0000_check_in"],
+			applied: ["0000_check_in", "0001_odd_lockheed"],
 			skipped: [],
 		});
 
@@ -50,6 +50,7 @@ describe("product database migrations", () => {
 				'observations',
 				'day_notes',
 				'tracked_metrics',
+				'reminders',
 				'idx_observations_metric_day',
 				'idx_observations_day',
 				'idx_day_notes_day'
@@ -63,6 +64,7 @@ describe("product database migrations", () => {
 			{ name: "idx_observations_day", type: "index" },
 			{ name: "idx_observations_metric_day", type: "index" },
 			{ name: "observations", type: "table" },
+			{ name: "reminders", type: "table" },
 			{ name: "tracked_metrics", type: "table" },
 		]);
 		expect(
@@ -79,13 +81,38 @@ describe("product database migrations", () => {
 		await databaseApp.runMigrations(db);
 		await expect(databaseApp.runMigrations(db)).resolves.toEqual({
 			applied: [],
-			skipped: ["0000_check_in"],
+			skipped: ["0000_check_in", "0001_odd_lockheed"],
 		});
 
 		const markers = await db.getAllAsync<{ id: string }>(
 			"SELECT id FROM __app_migrations",
 		);
-		expect(markers).toEqual([{ id: "0000_check_in" }]);
+		expect(markers).toEqual([
+			{ id: "0000_check_in" },
+			{ id: "0001_odd_lockheed" },
+		]);
+	});
+
+	it("applies only the reminders migration to a step-1 database", async () => {
+		const { databaseApp, db } = await migratedDatabase("step-one.db");
+		await db.execAsync(`
+			CREATE TABLE IF NOT EXISTS __app_migrations (
+				id TEXT PRIMARY KEY NOT NULL,
+				applied_at INTEGER NOT NULL
+			);
+			INSERT INTO __app_migrations (id, applied_at)
+			VALUES ('0000_check_in', 1);
+		`);
+
+		await expect(databaseApp.runMigrations(db)).resolves.toEqual({
+			applied: ["0001_odd_lockheed"],
+			skipped: ["0000_check_in"],
+		});
+		expect(
+			await db.getFirstAsync<{ name: string }>(
+				"SELECT name FROM sqlite_master WHERE type = 'table' AND name = 'reminders'",
+			),
+		).toEqual({ name: "reminders" });
 	});
 
 	it("tolerates a replicated marker winning the race after startup", async () => {
@@ -115,7 +142,7 @@ describe("product database migrations", () => {
 		} as SQLiteDatabase;
 
 		await expect(databaseApp.runMigrations(racingDb)).resolves.toEqual({
-			applied: ["0000_check_in"],
+			applied: ["0000_check_in", "0001_odd_lockheed"],
 			skipped: [],
 		});
 

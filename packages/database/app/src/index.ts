@@ -30,6 +30,11 @@ export {
 	type UpdateObservation,
 } from "./repositories/observation-repository";
 export {
+	type Reminder,
+	ReminderRepository,
+	type ReminderSchedule,
+} from "./repositories/reminder-repository";
+export {
 	type ResolvedTrackedMetric,
 	type TrackedMetric,
 	type TrackedMetricDefault,

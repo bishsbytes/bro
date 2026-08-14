@@ -80,6 +80,7 @@ describe("delete local data", () => {
 		const observations = new databaseApp.ObservationRepository(db);
 		const notes = new databaseApp.DayNoteRepository(db);
 		const trackedMetrics = new databaseApp.TrackedMetricsRepository(db);
+		const reminders = new databaseApp.ReminderRepository(db);
 		await observations.create({
 			metricSlug: "mood",
 			value: 4,
@@ -94,6 +95,7 @@ describe("delete local data", () => {
 		});
 		await notes.create("2026-08-14", "Delete me");
 		await trackedMetrics.configure("alcohol", 6, false);
+		await reminders.create({ minuteOfDay: 1_200, daysOfWeek: 0b111_1111 });
 		const markerBefore = await db.getFirstAsync<{ count: number }>(
 			"SELECT COUNT(*) AS count FROM __app_migrations",
 		);
@@ -122,6 +124,7 @@ describe("delete local data", () => {
 		expect(await observations.listAll()).toEqual([]);
 		expect(await notes.listAll()).toEqual([]);
 		expect(await trackedMetrics.listAll()).toEqual([]);
+		expect(await reminders.listAll()).toEqual([]);
 		expect(transaction).toHaveBeenCalledTimes(1);
 		expect(
 			await db.getFirstAsync<{ count: number }>(

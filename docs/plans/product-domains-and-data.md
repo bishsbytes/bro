@@ -280,10 +280,10 @@ dayNotes = { id, localDay, body, createdAt, updatedAt }
 
 A daily loop that nobody is reminded of is a loop that stops. This is small, but it is the difference between a tracker people use for a fortnight and one they use for a year, so it is a domain rather than a setting.
 
-It is the one thing in the product with a foot in two stores, and splitting it is the point:
+It has one replicating fact and one derived install-local projection; splitting those responsibilities is the point:
 
 - **The schedule** — days, times, on or off — is a preference about the person. `bro.db`, replicating: someone who set up an evening nudge should not rebuild it on a new phone.
-- **The scheduled OS notification identifiers and permission state** are properties of an install. A notification id from another device is noise. `bro-local.db`, never replicating.
+- **The scheduled OS notifications and permission state** are properties of an install, but need no store. Deterministic identifiers are derived from reminder id plus local day, and permission is read live from the OS; re-materialisation therefore stays idempotent without persisting install-local state.
 
 Each device re-materialises its own OS notifications from the synced schedule after a pull. **Open:** should a second device fire the same reminders? Splitting it this way makes that the default, and a user with a phone and a tablet being nudged twice is the failure mode to check.
 
@@ -455,7 +455,7 @@ A health record spanning years, some of it imported, is exactly the data a user 
 | Food-database lookups | `bro-local.db` | No | A cache of a third party's data. |
 | Derived insight caches | `bro-local.db` | No | Rebuildable from the series. |
 | Tracker authorisations, granted types, import high-water marks | `bro-local.db` | No | A relationship between this install and this phone's platform. |
-| Scheduled notification ids, permission state | `bro-local.db` | No | Identify OS objects on this install; meaningless anywhere else. |
+| Scheduled notification ids, permission state | Nowhere | n/a | Deterministically derived from the schedule, or read live from the OS; persisting either would create a second, stale source of truth. |
 | Draft entries, last-viewed day, UI state | `bro-device.db` | No | Per-install, and transient. |
 | Streaks, trends, goal progress | Nowhere | n/a | Derived on read. |
 
@@ -567,10 +567,10 @@ Proposals for the [umbrella plan](offline-first-identity-onboarding-premium.md),
 Each step adds exactly one hard thing.
 
 1. **Check-in — code-complete, native acceptance pending.** Detailed delivery plan: [Step 1: Check-in](step-1-check-in.md). Delivered on 14 August 2026: the first product migration; `observations`, `dayNotes`, and tracked-metric repositories; authored metric registry and factor panel; Today, History/day editing, and free 7/30-day Trends; transactional **delete local data** with its reserved copy; seeded identity-continuity assertions; and a tested version 1 **export serialisation** without share UI. Automated tests, typecheck, lint, and migration regeneration are green. The physical-device airplane-mode, day-boundary, colour-scheme, and fifteen-second acceptance checklist remains before this step is fully complete.
-2. **Reminders.** Small, and the thing most likely to decide whether step 1 survives contact with real life. Carries the first native dependency, so it is worth pairing with whichever prebuild regeneration happens first. Detailed delivery plan: [Step 2: Reminders](step-2-reminders.md).
+2. **Reminders — code-complete, native acceptance pending.** Delivered on 14 August 2026: migration 002 and the replicated schedule repository; deterministic 14-day one-shot planning; permission-aware OS reconciliation on launch, foreground, schedule changes, check-in, and local-data deletion; the settings child route; warm/cold notification-tap routing; and the first Android prebuild regeneration with `expo-notifications`. Automated tests, typecheck, and lint are green. Physical killed-app delivery, permission recovery, timezone-change, and the shared step 1 device checklist remain. Detailed delivery plan: [Step 2: Reminders](step-2-reminders.md).
 3. **Wheel of life, and goals.** One grouping table over the same observation spine, and it earns its place early: it gives the empty state something to offer, and it produces the focus areas that make everything after it feel chosen rather than generic. Goals follow directly, since a focus area with no goal is a diagnosis with no treatment — but numeric goals only treat the metric-shaped areas, so this step also carries a **starter challenge set**, roughly one template per shipped area. Without it the focus selection dead-ends until step 6: the user picks "Relationships" and the app has nothing to offer.
 4. **Body metrics, and unit preferences.** The first dimensional metrics, so the first real test of canonical storage with per-dimension display. Cheap now; a mess to introduce after weights exist in an unknown unit.
-5. **Health import.** The third store, native modules, the first prebuild regeneration — best folded in with Phase 3's, which needs one anyway. With backfill on connect this is also the biggest accelerator of time-to-first-insight, which is a real argument for pulling it earlier than fifth — weigh that deliberately rather than inheriting this order.
+5. **Health import.** The third store, native modules, and the next domain-driven prebuild regeneration — best folded in with Phase 3's, which needs one anyway. With backfill on connect this is also the biggest accelerator of time-to-first-insight, which is a real argument for pulling it earlier than fifth — weigh that deliberately rather than inheriting this order.
 6. **Habits and challenges.** Self-contained, tagged to the step 3 area vocabulary, and the first thing that gives a user a reason to open the app on a day they feel fine.
 7. **Insight.** Needs 1–6 to have accumulated data worth correlating. Also the natural moment to introduce premium.
 8. **Food logging.** Last, because it is the largest, carries the external dependency, and is the easiest to get wrong in a way users abandon.

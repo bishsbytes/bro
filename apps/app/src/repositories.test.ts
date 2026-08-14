@@ -232,4 +232,38 @@ describe("product repositories", () => {
 			removedAt: 2_000,
 		});
 	});
+
+	it("creates, edits, disables, and hard-deletes reminder schedules", async () => {
+		let now = 1_000;
+		const repository = new databaseApp.ReminderRepository(db, {
+			now: () => now,
+			createId: () => "reminder-1",
+		});
+		const created = await repository.create({
+			minuteOfDay: 20 * 60,
+			daysOfWeek: 0b111_1111,
+		});
+		expect(await repository.listAll()).toEqual([created]);
+
+		now = 2_000;
+		await expect(
+			repository.update(created.id, {
+				minuteOfDay: 8 * 60 + 30,
+				daysOfWeek: 0b001_1111,
+			}),
+		).resolves.toMatchObject({
+			id: "reminder-1",
+			minuteOfDay: 510,
+			daysOfWeek: 0b001_1111,
+			createdAt: 1_000,
+			updatedAt: 2_000,
+		});
+
+		now = 3_000;
+		await expect(
+			repository.setEnabled(created.id, false),
+		).resolves.toMatchObject({ enabled: false, updatedAt: 3_000 });
+		await expect(repository.delete(created.id)).resolves.toBe(true);
+		await expect(repository.listAll()).resolves.toEqual([]);
+	});
 });

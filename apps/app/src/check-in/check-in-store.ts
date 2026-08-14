@@ -13,6 +13,7 @@ import {
 	listFactors,
 	resolveMetric,
 } from "../content/metric-registry";
+import { refreshReminderNotifications } from "../reminders/reminder-materialiser";
 
 export type CheckInEntry = {
 	id: string;
@@ -226,7 +227,12 @@ export class CheckInStore {
 			}
 		});
 
-		return await this.loadToday(capturedAt);
+		const today = await this.loadToday(capturedAt);
+		// The product transaction has committed. Notification reconciliation is a
+		// derived install-local side effect and must never make that durable save
+		// appear to have failed.
+		await refreshReminderNotifications().catch(() => undefined);
+		return today;
 	}
 
 	private async reconcileFactors(

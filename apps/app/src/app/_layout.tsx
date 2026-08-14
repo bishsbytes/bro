@@ -16,6 +16,7 @@ import {
 	DeviceSettingsProvider,
 	useDeviceSettings,
 } from "../providers/device-settings-provider";
+import { ReminderNotificationEffects } from "../reminders/reminder-notification-effects";
 import { StyleSheet, useUnistyles } from "../theme/unistyles";
 
 void SplashScreen.preventAutoHideAsync();
@@ -56,13 +57,18 @@ function AppProviders() {
 		useDeviceSettings();
 
 	return (
-		<AuthProvider
-			hasStoredRemoteSession={settings.hasStoredRemoteSession}
-			onRemoteSessionStored={markRemoteSessionStored}
-			onRemoteSessionCleared={clearRemoteSession}
-		>
-			<RootNavigator />
-		</AuthProvider>
+		<>
+			<ReminderNotificationEffects
+				onboardingComplete={settings.onboardingComplete}
+			/>
+			<AuthProvider
+				hasStoredRemoteSession={settings.hasStoredRemoteSession}
+				onRemoteSessionStored={markRemoteSessionStored}
+				onRemoteSessionCleared={clearRemoteSession}
+			>
+				<RootNavigator />
+			</AuthProvider>
+		</>
 	);
 }
 

@@ -548,7 +548,7 @@ Three pieces of work are assumed by later phases and exist in neither the worksp
 
 **Test harness.** Phase 1 adds the `@bro/app:test` Nx target using `jest-expo`, Testing Library, and `expo-router/testing-library`. Navigation is exercised through the real router over the real `src/app` directory — no stand-in for `Stack.Protected` — so app entry is asserted by resolved pathname rather than by which mock rendered. End-to-end runners were considered and deferred; see [End-to-end testing](#end-to-end-testing).
 
-**Native build.** `expo-local-authentication` (Phase 3) and the purchase SDK (Phase 4) both require a custom development client, and `apps/app/android/` is a committed prebuild that must be regenerated when either is added. That is one infrastructure task arriving twice, in consecutive phases. Doing it once, when the first of the two lands, is cheaper than doing it twice — and note that neither phase can be verified in Expo Go.
+**Native build.** The committed `apps/app/android/` prebuild was first regenerated for the reminders domain's `expo-notifications` dependency on 14 August 2026; that product step deliberately did not pull Phase 3 work forward. `expo-local-authentication` (Phase 3) and the purchase SDK (Phase 4) still both require a custom development client and another regeneration when added. They remain consecutive-phase work worth batching together, and neither phase can be verified in Expo Go.
 
 ### Phase 1: Local-first app entry
 
