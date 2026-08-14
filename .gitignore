@@ -66,4 +66,8 @@ cache/
 
 test-output
 
+# drizzle-kit emits this Expo loader, but the app bundles the generated SQL via
+# packages/database/app/src/migrations/manifest.ts instead.
+/packages/database/app/drizzle/migrations.js
+
 *.tsbuildinfo

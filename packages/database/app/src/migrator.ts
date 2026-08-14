@@ -68,7 +68,8 @@ export async function runMigrations(
 			}
 
 			await db.runAsync(
-				`INSERT INTO ${MIGRATIONS_TABLE} (id, applied_at) VALUES (?, ?)`,
+				`INSERT INTO ${MIGRATIONS_TABLE} (id, applied_at) VALUES (?, ?)
+				 ON CONFLICT (id) DO NOTHING`,
 				[migration.id, Date.now()],
 			);
 		});

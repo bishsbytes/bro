@@ -47,18 +47,37 @@ export function createNodeSqliteMock(): NodeSqliteMock {
 	}
 
 	function wrap(db: DatabaseSync) {
+		const bindParams = (params: unknown[]): unknown[] =>
+			params.length === 1 && Array.isArray(params[0])
+				? (params[0] as unknown[])
+				: params;
+
 		return {
 			execSync: (sql: string) => db.exec(sql),
 			getFirstSync: (sql: string, ...params: unknown[]) =>
-				db.prepare(sql).get(...(params as never[])) ?? null,
+				db.prepare(sql).get(...(bindParams(params) as never[])) ?? null,
+			getAllSync: (sql: string, ...params: unknown[]) =>
+				db.prepare(sql).all(...(bindParams(params) as never[])),
 			runSync: (sql: string, ...params: unknown[]) =>
-				db.prepare(sql).run(...(params as never[])),
+				db.prepare(sql).run(...(bindParams(params) as never[])),
 			closeSync: () => db.close(),
 			execAsync: async (sql: string) => db.exec(sql),
 			getFirstAsync: async (sql: string, ...params: unknown[]) =>
-				db.prepare(sql).get(...(params as never[])) ?? null,
+				db.prepare(sql).get(...(bindParams(params) as never[])) ?? null,
+			getAllAsync: async (sql: string, ...params: unknown[]) =>
+				db.prepare(sql).all(...(bindParams(params) as never[])),
 			runAsync: async (sql: string, ...params: unknown[]) =>
-				db.prepare(sql).run(...(params as never[])),
+				db.prepare(sql).run(...(bindParams(params) as never[])),
+			withTransactionAsync: async (work: () => Promise<void>) => {
+				db.exec("BEGIN");
+				try {
+					await work();
+					db.exec("COMMIT");
+				} catch (error) {
+					db.exec("ROLLBACK");
+					throw error;
+				}
+			},
 			closeAsync: async () => db.close(),
 		};
 	}

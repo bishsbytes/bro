@@ -58,6 +58,8 @@ observations = {
   id,               // client-generated UUID
   metricSlug,       // 'mood' | 'energy' | 'sleep_duration' | 'weight' | …
   value,            // REAL — every metric is numeric; see below
+  scaleMin,         // snapshot of the scale the value was scored on;
+  scaleMax,         //   null for dimensional metrics — see Check-in
   observedAt,       // epoch ms UTC
   localDay,         // 'YYYY-MM-DD' as computed where it was written
   tzOffsetMinutes,
@@ -74,7 +76,7 @@ Three reasons this wins here specifically:
 2. **A new metric is a code change, not a migration.** Given that discovering which signals matter *is* the product, migrating the schema every time is the wrong cost curve — and under sync, migrations are the most expensive thing in the plan.
 3. **Provenance is per-value, which it has to be.** Weight can come from the user on Monday and a smart scale on Tuesday. A wide row cannot say which.
 
-**The metric registry is authored content, not data.** Slug, display name, dimension, scale bounds, aggregation rule, sensitivity, deprecation status, and whether a metric is user-enterable live in the binary and version with the app — the same argument that keeps prompt text out of the database. What the user does with that catalogue *is* data; see below.
+**The metric registry is authored content, not data.** Slug, display name, dimension, scale bounds, aggregation rule, category (which check-in panel group a factor renders in), sensitivity, deprecation status, and whether a metric is user-enterable live in the binary and version with the app — the same argument that keeps prompt text out of the database. What the user does with that catalogue *is* data; see below.
 
 **Free text is not an observation.** Notes attach to the day, not to a metric, so they get their own small table rather than a `value_text` column that is null on 99% of rows.
 
@@ -118,9 +120,11 @@ User-originated, so it lives in `bro.db` and replicates — someone who set up t
 
 **Sensitivity, which is per metric and load-bearing.** Steps and libido do not deserve the same treatment in the app-switcher snapshot [Phase 3](offline-first-identity-onboarding-premium.md#phase-3-optional-app-protection) obscures, in a notification or widget, in what an AI payload includes by default, or in an export handed to a coach. The flag has to exist from the first metric, because the code paths that respect it are written long before the sensitive one arrives.
 
-**Slugs are permanent, and the scale question recurs.** Once `libido` has been written to a device it exists forever; if it later splits into two metrics, the registry must still render the retired slug while no longer offering it. And each new metric re-asks the irreversible question from [open decision 1](#open-decisions) — its scale cannot be changed once history is scored on it.
+**Slugs are permanent, and the scale question recurs.** Once `libido` has been written to a device it exists forever; if it later splits into two metrics, the registry must still render the retired slug while no longer offering it. And each new metric re-asks the scale question from [open decision 1](#open-decisions) — softened by the per-row scale snapshot (see [Check-in](#1-check-in--mood-energy-and-factors)), but still worth getting right first time.
 
-Not everything fits: a multi-select is fine as one boolean observation per selected slug, but free text is a day note, not a metric.
+**Unknown slugs arrive from the future, not only from users.** A new metric is a code change, so under sync two app versions coexist and a device on the old one pulls observations whose slug its registry has never heard of — and the [minimum-schema check](offline-first-identity-onboarding-premium.md#schema-migrations-across-devices) never fires, because the schema did not change. The "not in the catalogue" path is therefore not just for custom items. Define what an unknown slug does everywhere it can surface — hidden from check-in, shown raw in history, excluded from correlation is the sensible default — and treat it as a normal state rather than an error.
+
+Not everything fits — though more fits than it first appears: a multi-select is one boolean observation per selected slug, which is exactly what the [factor panel](#1-check-in--mood-energy-and-factors) is. Free text remains a day note, not a metric.
 
 ### Units and measurement preferences
 
@@ -166,7 +170,7 @@ The rollup resolves the tension. The insight layer wants *sleep duration for Tue
 dailyMetrics = { id, metricSlug, localDay, value, source, computedAt, createdAt, updatedAt }
 ```
 
-Small, stable, and naturally keyed on `(metricSlug, localDay, source)` — two devices computing the same day produce the same fact, so a collision at the primary is benign under the rule in [Conventions](#conventions-to-lock-in-now). It gives cross-device and post-phone-change continuity on both platforms, sidesteps sample-identity entirely, and costs a few rows a day instead of thousands.
+Small, stable, and naturally keyed on `(metricSlug, localDay, source)` — **and the `id` must be derived from that key** (UUIDv5 over it), not random. Two devices importing the same platform data both compute Tuesday's sleep; with random ids that is either two rows and a duplicate in every trend, or a unique-constraint failure surfacing however libSQL surfaces a refused forwarded write. With a deterministic id both devices write the *same row*, and the duplicate compute becomes an idempotent last-writer-wins update — the conflict model everything else here already relies on. It gives cross-device and post-phone-change continuity on both platforms, sidesteps sample-identity entirely, and costs a few rows a day instead of thousands.
 
 So three stores, with the boundary at raw versus rolled-up rather than imported versus entered:
 
@@ -178,23 +182,29 @@ So three stores, with the boundary at raw versus rolled-up rather than imported 
 
 The split pays for itself three ways: the replicated volume stays proportional to what the user actually did rather than to what their watch recorded, `bro-local.db` is explicitly disposable so it can be excluded from platform backup without argument, and a rebuild after corruption is a re-import rather than data loss.
 
+**`bro-local.db` also needs a pruning rule from the start.** Heart-rate samples at watch cadence are six figures of rows a year, forever, in a file that is never read at that granularity. Keep a trailing window of raw history — enough to re-roll-up if an aggregation rule changes — and let the platform stay the archive. Unbounded growth here is how a disposable cache becomes the largest thing in the app.
+
 **The cost, stated plainly:** raw sample detail is per-device. A user who changes phones keeps every daily figure the insight layer uses, but loses the underlying samples until the platform or the source apps repopulate them. If a journey ever needs intraday detail — a heart-rate trace on a workout screen — that journey is device-local, and should be designed knowing it.
 
 ## The domains
 
-### 1. Check-in — mood and energy
+### 1. Check-in — mood, energy, and factors
 
 The core loop. A daily subjective reading, written as observations with `source: 'user'`.
 
 Mood and energy as **two separate metrics, not one**. They come apart constantly — flat but wired, calm but exhausted — and separating them is most of what makes the insight layer say anything a user could not have guessed.
 
-**Open, and the most expensive field in the product:** the scale. Five points is fast to tap and coarse; ten is slower and gives correlation more to work with. Whatever ships, every historical record is scored on it and rescaling later is not reversible.
+**The third element is the factor panel — tags for what happened today.** Alcohol, caffeine, training, travel, stress, sex, late screen: the inputs whose delayed effects are the product's example insights. Structurally there is nothing new here — each factor is a boolean metric in the registry, and tapping a tag writes one observation with value 1 for that slug. Untapped means *unrecorded*, not 0; the rule that makes correlation honest is that a day counts as a genuine "no" for a factor only when a check-in happened on it **and** that factor was active in the user's panel that day — the check-in is the evidence the panel was seen, and `trackedMetrics`' `addedAt`/`removedAt` answers whether the tag was there to tap. A user who never enabled the alcohol tag is not logging alcohol-free days. The registry gains a `category` per factor so the panel renders grouped — lifestyle here, body here — the way Flo groups its tags, and the [catalogue overlay](#catalogue-overlay-snapshot) applies unchanged: users choose which factors show, reorder them, and add their own.
+
+**Factors are how breadth of signal survives the fifteen-second loop.** Correlation needs input signal as much as the mood it explains, and a scored scale is expensive per metric while a tag is nearly free — an untapped tag costs nothing on an ordinary day. This is what lets the check-in carry twenty potential signals without becoming a form, and it is why factors belong in the first release rather than arriving as a later metric drop: mood and energy alone are all output and no input, which starves the product's own engine.
+
+**Resolved: a 5-point scale** for mood and energy. Fast to tap is what the fifteen-second loop needs, and it is what the reference products in this class use; the coarser signal is an accepted cost. The observation snapshots `scaleMin`/`scaleMax` per row regardless — the [snapshot rule](#catalogue-overlay-snapshot) applied to the scale itself — so a later move to ten points is a renormalisation at read time rather than a corrupted series. Mixed-scale history still needs careful rendering, which is why this stays decided rather than revisited casually.
 
 **Lives in `bro.db`.** Replicates.
 
 ### 2. Assessments — wheel of life, values, and periodic review
 
-A structured self-assessment taken every so often: rate satisfaction across the areas of your life, see the shape, decide what to work on. Wheel of Life is the first instrument; values clarification is the obvious second.
+A structured self-assessment taken every so often: rate satisfaction across the areas of your life, see the shape, decide what to work on. Wheel of Life is the first instrument; values clarification is the obvious second; validated clinical screens — PHQ-9, GAD-7 — are a deliberate later third, and they change the rules (see below).
 
 **This is not a check-in, and modelling it as one loses what makes it useful.** Two differences:
 
@@ -212,6 +222,15 @@ Three levels of customisation, and they are not equally expensive:
 | **Add an area of their own** | Real, and worth stating: a custom area gets tracking, trends, and correlation, but no authored content can be tagged to it, so the guided programme has nothing to offer there. |
 
 That last row is an argument for shipping a **broad** catalogue rather than a minimal one — every area we author is one more that can carry challenges and suggestions, and custom areas are a fallback rather than the intended path.
+
+**Validated instruments are the deliberate exception to all of this.** The wheel is ours to author and the user's to edit; PHQ-9 and GAD-7 are neither. A validated instrument is valid only verbatim — exact wording, exact order, exact scale, every item answered — so templates carry a `locked` flag that switches the overlay off wholesale: no relabels, no reordering, no disabled items. This is the one place the customise-everything pattern must *not* apply, and the flag is cheaper to build now than to unpick once overlay code assumes it applies universally. Structurally an instrument costs nothing new — items score 0–3, responses are observations like any other sitting — and **the total score is written as its own observation** (`phq9:total`) rather than derived, because the total *is* the instrument's output and it is what trends and the correlation pool want.
+
+What an instrument costs is not schema, it is responsibility:
+
+- **A high-scoring response needs a designed answer before the template ships.** PHQ-9's ninth item asks about suicidal ideation; an app that asks the question must respond to the answer — crisis resources shown immediately, not a generic results screen. A hard requirement of the template, not polish.
+- **The copy screens, it never diagnoses.** "It may be worth talking to a GP about this" is defensible; "you have moderate depression" is a diagnostic claim that moves the app toward medical-device classification. The discipline the insight layer applies to correlation copy, applied harder — and the claimed purpose in the store listing matters as much as the in-app wording.
+- **Responses are maximally sensitive.** Screening scores set `sensitive: true` throughout — excluded from AI payloads by default, obscured in the app-switcher snapshot, deliberate in export — and they sharpen the encryption-at-rest and platform-backup escalations in [What this changes upstream](#what-this-changes-upstream): this is mental-health data, no longer "health-adjacent".
+- **Licence before coverage.** PHQ-9 and GAD-7 are free to use; many instruments are not. The same rule as the food database: the licence decides the shortlist as much as the clinical fit does.
 
 **The instance is the grouping, and it snapshots what was asked:**
 
@@ -239,7 +258,7 @@ assessments = {
 
 **Onboarding tension, worth naming.** A wheel is the natural "tell us where you are" moment and would make day one feel personal. But onboarding promises *"No account. No sign-up. Nothing to fill in first."* So it belongs in the empty state as an invitation, never as a gate — and it is a strong candidate for what the empty state actually offers, since it gives a new user something to do that produces direction rather than a lonely first data point.
 
-**Free tier.** Consistent with the rule that logging and your own history are never gated, the wheel and its comparisons stay free. Premium sits in the guided programme that follows from it.
+**Free tier.** Consistent with the rule that logging and your own history are never gated, the wheel and its comparisons stay free. Premium sits in the guided programme that follows from it. The same holds for any validated instrument: charging someone to see their own screening score is indefensible.
 
 **Lives in `bro.db`.** Replicates.
 
@@ -251,7 +270,7 @@ The "notes" the copy already promises. One optional note per day, not per check-
 dayNotes = { id, localDay, body, createdAt, updatedAt }
 ```
 
-**Not a column on a check-in.** With observations as the spine there is no row to hang it on, and the day is the better anchor regardless — people remember days, not entries.
+**Not a column on a check-in.** With observations as the spine there is no row to hang it on, and the day is the better anchor regardless — people remember days, not entries. One-per-day is enforced in the UI, like check-ins, so two offline devices can still produce two notes for the same day — the read path shows both rather than silently picking one, per the unique-index rule in [Conventions](#conventions-to-lock-in-now).
 
 **Lives in `bro.db`.** Replicates. This is the most sensitive free text in the product and the strongest argument in the encryption and backup decisions.
 
@@ -270,9 +289,13 @@ Each device re-materialises its own OS notifications from the synced schedule af
 
 ### 5. Health-tracker connections and imports
 
-**Connections** — which sources are authorised, what metric types were granted, the high-water mark per metric for incremental import. Device-local by definition: an authorisation is between this install and this phone's platform.
+**Connections** — which sources are authorised, what metric types were granted, and the platform's anchor or change token per metric for incremental import. Device-local by definition: an authorisation is between this install and this phone's platform.
 
 **Imported observations** — the same shape as domain 1, in `bro-local.db`, with `source` and `sourceRecordId` set. Rolled up into `dailyMetrics` in `bro.db` as part of import, rather than on a schedule — background execution is unreliable enough on both platforms that nothing should depend on it, which is what everything downstream reads. See [Three stores](#three-stores-not-two).
+
+**Incremental import must use the platform's change API, not a timestamp.** Samples do not arrive in time order — a watch syncs hours late, sleep is written the next morning, and a workout deleted in the source app must disappear here too. A high-water mark on sample time misses all three. HealthKit's anchored queries and Health Connect's changes API both return additions *and* deletions since a stored token; keep the token per metric, and on each import recompute the rollup for every `localDay` the batch touched rather than only forward from the newest sample.
+
+**Backfill history on connect — a requirement, not an optimisation.** Correlation needs weeks of varied signal and the platform already holds months of it. Importing history at authorisation means the insight pool is part-full on the day mood logging starts, which is the single biggest lever against the cold-start problem a discovered-rhythm product otherwise has. How far back is an [open decision](#open-decisions); that it happens is not.
 
 **Import must be idempotent**, keyed on `(source, sourceRecordId)`. A unique index here is *safe*, unlike the one warned against in [Conventions](#conventions-to-lock-in-now): it dedupes identical facts, and the losing write is a duplicate rather than a distinct entry. That distinction is the rule — a unique constraint that collapses the same fact is fine; one that collapses two real facts destroys data.
 
@@ -349,6 +372,7 @@ Two things to be careful with, because this is a health product:
 
 - **Correlation is not causation, and the copy must not imply it is.** "Your energy tends to be lower after nights under six hours" is honest. "Sleep more to feel better" is medical advice.
 - **Sample size gates the claim.** An insight from nine days is noise. Define the threshold before building the screen, not after someone screenshots a bad one.
+- **And sample size alone is not enough.** Thirty tracked metrics is four-hundred-odd pairs, and testing them all at conventional thresholds guarantees a couple of dozen spurious correlations — each one a screenshot of the paid feature being wrong. Decide the multiple-comparisons posture before the screen exists: an effect-size floor plus a curated list of pairs worth testing beats a blanket correction, and it makes the copy writable.
 
 ### 10. AI reflection
 
@@ -356,15 +380,17 @@ Premium, and the highest-stakes domain in this document: what could be sent is n
 
 **Recommendation:** the user selects what is sent, per use; nothing retained server-side beyond the request; the reply stored locally against the day it concerns.
 
+**The instrument rules follow the data.** Per-use selection means a user *can* send screening scores here, so a reply engaging with a high PHQ-9 score carries the same duty as the results screen — crisis-aware, never diagnostic. Design that posture into the prompt and the reply handling before the first instrument and AI coexist, not after.
+
 ## Journeys
 
 ### The daily loop
 
-Open, log mood and energy, done — under fifteen seconds, standing up. Everything else is secondary to this not being tedious, because nothing else works if the daily signal stops arriving.
+Open, log mood and energy, tap the factors that apply, done — under fifteen seconds, standing up. Everything else is secondary to this not being tedious, because nothing else works if the daily signal stops arriving. The factor panel keeps its place in the loop only because an untapped tag costs nothing; the moment it demands attention on an ordinary day, it has broken the budget.
 
 ### Connect a tracker
 
-A one-time authorisation, then invisible. The screen has to be honest that data is read *from* the platform and stays on the device, since users have learned to assume the opposite.
+A one-time authorisation, then invisible. Authorisation is also when history backfills — see [domain 5](#5-health-tracker-connections-and-imports) — so the first thing a connecting user sees should be months of their own data appearing, not an empty chart. The screen has to be honest that data is read *from* the platform and stays on the device, since users have learned to assume the opposite.
 
 ### Take stock
 
@@ -384,7 +410,7 @@ The timeline, and a day view. Under a metrics model this is also where provenanc
 
 ### See what's affecting you
 
-The insight surface. Gated on having enough varied data, which means the empty and not-yet states are the ones most users will see first and deserve real design.
+The insight surface. Gated on having enough varied data, which means the empty and not-yet states are the ones most users will see first and deserve real design. The not-yet state is also where a free user learns cross-metric insight exists at all: a gated teaser — patterns found, not yet shown — is the natural conversion moment, and it fires exactly when the insight is real rather than on a timer.
 
 ### Run a challenge
 
@@ -404,13 +430,13 @@ The third of the [four destructive operations](offline-first-identity-onboarding
 
 ### Export
 
-Still absent from every phase, and more clearly needed now: a health record spanning years, some of it imported, is exactly the data a user will one day want out — for a GP, a coach, or another app. Design the serialisation alongside the first schema.
+A health record spanning years, some of it imported, is exactly the data a user will one day want out — for a GP, a coach, or another app. The serialisation is designed alongside the first schema in [sequencing](#sequencing) step 1; the export UI ships no later than insight (step 7), and validated instruments sharpen the case — a PHQ-9 history handed to a GP is one of the most concretely useful things this product can produce.
 
 ## Storage ownership
 
 | Data | Store | Replicates | Why |
 | --- | --- | --- | --- |
-| Check-in observations (mood, energy) | `bro.db` | Yes | User-originated; the core record. |
+| Check-in observations (mood, energy, factor tags) | `bro.db` | Yes | User-originated; the core record. |
 | Day notes | `bro.db` | Yes | The most sensitive text in the product. |
 | Tracked-metric selection | `bro.db` | Yes | What a user chose to check in on; rebuilding it per device would be busywork. |
 | Unit preferences, per dimension | `bro.db` | Yes | Describes the person, not the handset. Cosmetic only — stored values are canonical. |
@@ -437,7 +463,7 @@ Flo's model is free tracking, paid interpretation. That transfers cleanly.
 
 | Tier | Contents |
 | --- | --- |
-| **No account, free, forever** | Unlimited logging of everything — mood, energy, body metrics, habits, food. The wheel of life and its history. Full history everywhere. Tracker import. Basic per-metric trends. Export. |
+| **No account, free, forever** | Unlimited logging of everything — mood, energy, factors, body metrics, habits, food. The wheel of life and its history. Full history everywhere. Tracker import. Basic per-metric trends. Export. |
 | **A free account** | Nothing on its own. The prerequisite for paid server features. |
 | **Premium** | **Cross-metric insight and correlation** — what affects what. AI reflection. The challenge library beyond a starter set. Multi-device sync and backup. |
 
@@ -465,7 +491,7 @@ This does not block AI. It decides its shape: the user picks what is sent, conse
 
 ## Conventions to lock in now
 
-- **`id`:** `TEXT PRIMARY KEY`, client-generated. Prefer UUIDv7 — time-ordered ids give locality on append-heavy series and make "most recent" cheap.
+- **`id`:** `TEXT PRIMARY KEY`, client-generated. Prefer UUIDv7 — time-ordered ids give locality on append-heavy series and make "most recent" cheap. The exception is derived facts that two devices can compute independently — `dailyMetrics` — whose id is derived from the natural key (UUIDv5) so duplicate computes converge on one row instead of colliding.
 - **Timestamps:** `INTEGER` epoch milliseconds UTC, plus `localDay` and `tzOffsetMinutes`. Store the local day rather than deriving it, or the answer changes after travel and differs across devices.
 - **Unique indexes:** safe when they collapse the *same* fact — `(source, sourceRecordId)` on imports. Never when they collapse *distinct* facts: a unique index on `(metricSlug, localDay)` would mean two offline devices logging the same day silently lose one entry at the primary. Enforce one-per-day in the UI, where it can be explained.
 - **Deletes are hard deletes.** Justified above.
@@ -491,13 +517,13 @@ Proposals for the [umbrella plan](offline-first-identity-onboarding-premium.md),
 
 ### Before the first domain
 
-1. **The mood and energy scale** — points and labels. Irreversible across historical data.
+1. **The mood and energy scale** — **resolved: 5 points**, bounds snapshotted per observation so a later change is renormalisation rather than corruption. Labels are still to be written.
 2. **One check-in per day, or several?** Recommendation: several, enforced in UI.
 3. **Is `observations` the spine, or a hybrid?** The recommendation above, confirmed or rejected.
-4. **Does the check-in ship a fixed set of metrics, or a user-chosen one?** A fixed set is simpler for a first release; a chosen one is what keeps the daily loop short as the registry grows, and retrofitting it means migrating everyone's implied selection.
+4. **Does the check-in ship a fixed set of metrics, or a user-chosen one?** A fixed set is simpler for a first release; a chosen one is what keeps the daily loop short as the registry grows, and retrofitting it means migrating everyone's implied selection. The factor panel sharpens this: whatever the answer for scored metrics, factors ship in the first release — correlation needs input signal as much as output, and mood and energy alone starve it.
 5. **Which canonical units,** and kilocalories or kilojoules for energy. Changing this after data exists means rewriting every stored value.
 6. **Do unit preferences sync, or stay device-local?** Recommended syncing; safe either way, and movable later without touching data.
-7. **The shared area vocabulary** for the wheel's items and challenge tags. Cheap now, tedious to retro-fit across authored content — and it wants to be generous, since nothing authored can attach to an area a user invented.
+7. **The shared area vocabulary** for the wheel's items and challenge tags. Cheap now, tedious to retro-fit across authored content — and it wants to be generous, since nothing authored can attach to an area a user invented. The same decision covers **the shipped factor set**: it defines the input half of every curated correlation pair, and it is where "for men" becomes substantive — the factors this product ships that a generic tracker would not say more about who it is for than any customisation feature.
 8. **How far does customisation go at v1?** Relabel, reorder and disable are nearly free and cover most of the need; user-created items cost the guarantee above. Shipping the cheap three first is defensible, provided slugs are namespaced from the start so the fourth can follow without a migration.
 9. **Does the wheel capture a desired score as well as a current one?** Recommended not, in favour of an explicit focus selection.
 10. **What does `sensitive: true` actually change** — snapshot obscuring, notification content, AI payload defaults, export. Cheap to honour from the first metric, expensive to add once several code paths ignore it.
@@ -505,8 +531,8 @@ Proposals for the [umbrella plan](offline-first-identity-onboarding-premium.md),
 ### Before health integration
 
 11. **Which platforms first** — HealthKit, Health Connect, or both together.
-12. **Which metrics to import** at v1, and the precedence rule when user and tracker disagree.
-13. **Which metrics get a daily rollup, and how is each aggregated** — sum for steps, mean for resting heart rate, total for sleep, last-of-day for weight. The rollup rule is per metric and belongs in the metric registry.
+12. **Which metrics to import** at v1, the precedence rule when user and tracker disagree, and how far back history is backfilled on first connect — backfill itself is required, its depth is the decision.
+13. **Which metrics get a daily rollup, and how is each aggregated** — sum for steps, mean for resting heart rate, total for sleep, last-of-day for weight. The rollup rule is per metric and belongs in the metric registry. Alongside it: the raw-sample retention window in `bro-local.db`.
 14. **Is intraday detail ever needed on a screen?** If so, that journey is device-local by design, since raw samples do not replicate.
 
 ### Before challenges
@@ -524,19 +550,25 @@ Proposals for the [umbrella plan](offline-first-identity-onboarding-premium.md),
 19. **Which model provider, on what retention and training terms?** A compliance surface, not a procurement detail.
 20. **Does the trial grant AI only, or AI and sync?** (umbrella decision 7.)
 
+### Before any validated instrument
+
+21. **Which instruments, and when.** PHQ-9 and GAD-7 are the obvious candidates — free to use, short, and screening for the two conditions most correlated with everything else the app tracks. Neither belongs in v1 or the empty state; they arrive once the review habit exists.
+22. **The crisis-response design** for high-scoring responses — what is shown, which resources, per region. Blocks the first instrument, not the schema.
+23. **Positioning and classification** — the in-app and store-listing wording that keeps a screening aid from becoming a claimed diagnostic device. Verify against current FDA/UKCA/CE guidance before shipping, not after.
+
 ### Before the copy reaches more users
 
-21. **Rewrite the privacy screen once, honestly** — platform backup now, third-party food lookup when it ships, AI before it launches.
+24. **Rewrite the privacy screen once, honestly** — platform backup now, third-party food lookup when it ships, AI before it launches.
 
 ## Sequencing
 
 Each step adds exactly one hard thing.
 
-1. **Check-in.** `observations`, the metric registry, a repository, three screens, and **delete local data** with its reserved copy. This is also the first real exercise of the migration pipeline — `migrations` is currently `[]`, so `runMigrations` has never carried DDL onto a device. Converts Phase 2's structural local-data assertions into seeded sentinel rows.
+1. **Check-in.** Detailed delivery plan: [Step 1: Check-in](step-1-check-in.md). `observations`, the metric registry, the factor panel, `dayNotes` — the onboarding copy already promises notes, and it is the cheapest table in the plan — a repository, three screens, and **delete local data** with its reserved copy. This is also the first real exercise of the migration pipeline — `migrations` is currently `[]`, so `runMigrations` has never carried DDL onto a device. Converts Phase 2's structural local-data assertions into seeded sentinel rows. It also includes the first **per-metric trend view**: the tier table promises basic trends free, they appear nowhere else in this sequence, and a mood line after a week is the first time the app shows the user anything back — without it, the early steps are pure data entry. The **export serialisation is designed here** (not necessarily shipped), per the [Export](#export) journey.
 2. **Reminders.** Small, and the thing most likely to decide whether step 1 survives contact with real life. Carries the first native dependency, so it is worth pairing with whichever prebuild regeneration happens first.
-3. **Wheel of life, and goals.** One grouping table over the same observation spine, and it earns its place early: it gives the empty state something to offer, and it produces the focus areas that make everything after it feel chosen rather than generic. Goals follow directly, since a focus area with no goal is a diagnosis with no treatment.
+3. **Wheel of life, and goals.** One grouping table over the same observation spine, and it earns its place early: it gives the empty state something to offer, and it produces the focus areas that make everything after it feel chosen rather than generic. Goals follow directly, since a focus area with no goal is a diagnosis with no treatment — but numeric goals only treat the metric-shaped areas, so this step also carries a **starter challenge set**, roughly one template per shipped area. Without it the focus selection dead-ends until step 6: the user picks "Relationships" and the app has nothing to offer.
 4. **Body metrics, and unit preferences.** The first dimensional metrics, so the first real test of canonical storage with per-dimension display. Cheap now; a mess to introduce after weights exist in an unknown unit.
-5. **Health import.** The third store, native modules, the first prebuild regeneration — best folded in with Phase 3's, which needs one anyway.
+5. **Health import.** The third store, native modules, the first prebuild regeneration — best folded in with Phase 3's, which needs one anyway. With backfill on connect this is also the biggest accelerator of time-to-first-insight, which is a real argument for pulling it earlier than fifth — weigh that deliberately rather than inheriting this order.
 6. **Habits and challenges.** Self-contained, tagged to the step 3 area vocabulary, and the first thing that gives a user a reason to open the app on a day they feel fine.
 7. **Insight.** Needs 1–6 to have accumulated data worth correlating. Also the natural moment to introduce premium.
 8. **Food logging.** Last, because it is the largest, carries the external dependency, and is the easiest to get wrong in a way users abandon.

@@ -5,4 +5,9 @@ export type Migration = {
 	id: string;
 	sql: string;
 };
-export const migrations: Migration[] = [];
+export const migrations: Migration[] = [
+	{
+		id: "0000_check_in",
+		sql: "CREATE TABLE IF NOT EXISTS `day_notes` (\n\t`id` text PRIMARY KEY NOT NULL,\n\t`local_day` text NOT NULL,\n\t`body` text NOT NULL,\n\t`created_at` integer NOT NULL,\n\t`updated_at` integer NOT NULL\n);\n--> statement-breakpoint\nCREATE INDEX IF NOT EXISTS `idx_day_notes_day` ON `day_notes` (`local_day`);--> statement-breakpoint\nCREATE TABLE IF NOT EXISTS `observations` (\n\t`id` text PRIMARY KEY NOT NULL,\n\t`metric_slug` text NOT NULL,\n\t`value` real NOT NULL,\n\t`scale_min` real,\n\t`scale_max` real,\n\t`observed_at` integer NOT NULL,\n\t`local_day` text NOT NULL,\n\t`tz_offset_minutes` integer NOT NULL,\n\t`source` text NOT NULL,\n\t`source_record_id` text,\n\t`assessment_id` text,\n\t`created_at` integer NOT NULL,\n\t`updated_at` integer NOT NULL\n);\n--> statement-breakpoint\nCREATE INDEX IF NOT EXISTS `idx_observations_metric_day` ON `observations` (`metric_slug`,`local_day`);--> statement-breakpoint\nCREATE INDEX IF NOT EXISTS `idx_observations_day` ON `observations` (`local_day`);--> statement-breakpoint\nCREATE TABLE IF NOT EXISTS `tracked_metrics` (\n\t`id` text PRIMARY KEY NOT NULL,\n\t`metric_slug` text NOT NULL,\n\t`position` integer NOT NULL,\n\t`added_at` integer,\n\t`removed_at` integer,\n\t`created_at` integer NOT NULL,\n\t`updated_at` integer NOT NULL\n);\n",
+	},
+];

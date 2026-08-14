@@ -6,8 +6,60 @@
  * src/repositories, so adding a table here is step one of the recipe in
  * src/repositories/README.md.
  *
- * No product domains are defined yet — add `sqliteTable` definitions as the
- * data model takes shape.
+ * Keep the column names here aligned with the hand-written SQL in the runtime
+ * repositories. The generated migrations are the only runtime artefact from
+ * this module.
  */
 
-export {};
+import {
+	index,
+	integer,
+	real,
+	sqliteTable,
+	text,
+} from "drizzle-orm/sqlite-core";
+
+export const observations = sqliteTable(
+	"observations",
+	{
+		id: text("id").primaryKey(),
+		metricSlug: text("metric_slug").notNull(),
+		value: real("value").notNull(),
+		scaleMin: real("scale_min"),
+		scaleMax: real("scale_max"),
+		observedAt: integer("observed_at").notNull(),
+		localDay: text("local_day").notNull(),
+		tzOffsetMinutes: integer("tz_offset_minutes").notNull(),
+		source: text("source").notNull(),
+		sourceRecordId: text("source_record_id"),
+		assessmentId: text("assessment_id"),
+		createdAt: integer("created_at").notNull(),
+		updatedAt: integer("updated_at").notNull(),
+	},
+	(table) => [
+		index("idx_observations_metric_day").on(table.metricSlug, table.localDay),
+		index("idx_observations_day").on(table.localDay),
+	],
+);
+
+export const dayNotes = sqliteTable(
+	"day_notes",
+	{
+		id: text("id").primaryKey(),
+		localDay: text("local_day").notNull(),
+		body: text("body").notNull(),
+		createdAt: integer("created_at").notNull(),
+		updatedAt: integer("updated_at").notNull(),
+	},
+	(table) => [index("idx_day_notes_day").on(table.localDay)],
+);
+
+export const trackedMetrics = sqliteTable("tracked_metrics", {
+	id: text("id").primaryKey(),
+	metricSlug: text("metric_slug").notNull(),
+	position: integer("position").notNull(),
+	addedAt: integer("added_at"),
+	removedAt: integer("removed_at"),
+	createdAt: integer("created_at").notNull(),
+	updatedAt: integer("updated_at").notNull(),
+});
