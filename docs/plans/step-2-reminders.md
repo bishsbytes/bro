@@ -2,7 +2,7 @@
 
 ## Status
 
-Draft, 14 August 2026. This is the delivery plan for [sequencing step 2 of the product domains plan](product-domains-and-data.md#sequencing): the reminders domain — a daily check-in nudge whose schedule survives a phone change but whose OS notifications belong to the install. It assumes [step 1](step-1-check-in.md) code-complete (it is) and carries the product's **first native dependency and first prebuild regeneration**, which also makes it the natural moment to run step 1's still-pending physical-device acceptance checklist: one dev-client build serves both. The [app shell and shared components plan](app-shell-and-components.md) lands first: slice 4 below builds the reminders UI from the shared components inside the settings tab's stack, not from scratch.
+Draft, 14 August 2026. This is the delivery plan for [sequencing step 2 of the product domains plan](product-domains-and-data.md#sequencing): the reminders domain — a daily check-in nudge whose schedule survives a phone change but whose OS notifications belong to the install. It assumes [step 1](step-1-check-in.md) code-complete (it is) and carries the product's **first native dependency and first prebuild regeneration**, which also makes it the natural moment to run step 1's still-pending physical-device acceptance checklist: one dev-client build serves both. The [app shell and shared components plan](app-shell-and-components.md) is complete: slice 4 below builds the reminders UI from the shared components inside the settings tab's stack, not from scratch.
 
 ## Outcome
 
@@ -25,7 +25,7 @@ The step is successful when the daily loop closes from the outside: set a remind
 - `packages/database/app/src/schema.ts` holds the three step-1 tables; `migrations/manifest.ts` has exactly migration 001; `product-tables.ts` is the single shared list that migration verification and `delete-local-product-data.ts` both derive from — a fourth table joins all three by touching one record.
 - The repository recipe is proven three times over (`observation-repository.ts`, `day-note-repository.ts`, `tracked-metrics-repository.ts`); `ObservationRepository` can already answer "any observation for this `localDay`?" cheaply via `idx_observations_day`.
 - `apps/app/src/check-in/check-in-store.ts` owns the transactional `save` — the single choke point where "the user just checked in" is known and today's nudge can be cancelled.
-- Routes are `index` (today), `history` (+ day view), `trends`, `settings`, `account`, and auth/onboarding. `settings.tsx`/`settings-screen.tsx` currently hold only delete-local-data; reminders becomes the screen's second section or a child route.
+- Routes are `index` (today), `history` (+ day view), `trends`, `settings`, `account`, and auth/onboarding. `app/(tabs)/settings/index.tsx` and `settings-screen.tsx` currently hold only delete-local-data; reminders becomes the screen's second section or, preferably, a child route in the existing settings stack.
 - `apps/app/app.json` lists no notification plugin; `apps/app/android/` is a committed prebuild that has never been regenerated; there is no committed `ios/` (iOS builds via EAS/CNG per `eas.json`). `expo-notifications` is not installed anywhere in the workspace.
 - The `@bro/app:test` suite runs the real router with jest-expo; nothing yet mocks a native notifications module.
 - Step 1's native acceptance checklist (airplane-mode relaunch, day boundary, colour schemes, fifteen-second timing) is still pending physical devices.
@@ -136,7 +136,7 @@ Unchanged copy from step 1; the action now also clears `reminders` (via the shar
 | Planner and materialiser | New `apps/app/src/reminders/` — `reminder-planner.ts`, `reminder-materialiser.ts`, `notification-gateway.ts`, day-bitmask helpers |
 | Save hook | `apps/app/src/check-in/check-in-store.ts` |
 | Delete hook | `packages/database/app/src/delete-local-product-data.ts` call site in `settings-screen.tsx` |
-| Routes and screens | `apps/app/src/app/settings/` (menu + `reminders`), new reminders screen under `src/screens/`, `_layout.tsx` (launch trigger, response handler) |
+| Routes and screens | `apps/app/src/app/(tabs)/settings/` (menu + `reminders`), new reminders screen under `src/screens/`, root `_layout.tsx` (launch trigger, response handler) |
 | Native config | `apps/app/app.json`, regenerated `apps/app/android/`, `package.json` (`expo-notifications`) |
 | Theme | `apps/app/src/theme/unistyles.ts` if new tokens are needed |
 | Tests | Extends `@bro/app:test` and the `@bro/database-app` real-SQLite suites |

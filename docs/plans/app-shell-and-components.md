@@ -4,9 +4,9 @@
 
 Implementation complete, 14 August 2026. All four slices are implemented with the JS-tabs fallback described below: tab navigation, a persistent title/action header with account avatar, native pushed-screen headers, and the ten app-local shared components are in place. The eight product/auth screens and onboarding routes consume the shared layer; the former auth/onboarding style modules now contain spacing-only feature layout. Automated acceptance is green. The final light/dark device pass remains folded into step 2's native session as planned.
 
-## Why now
+## Starting point
 
-Eight screens totalling ~2,100 lines share zero components — there is no `components/` directory. Every screen hand-draws its buttons (80 `TouchableOpacity` usages), five screens hand-roll a "Back" button, and each builds headers, section titles, and card surfaces from raw `View`/`Text`. Navigation is a single `Stack` with `headerShown: false`, so History, Trends, and Settings are pushed screens dangling off links on Today. The token layer below all this is solid — parity-tested light/dark themes in `src/theme/unistyles.ts` — and is not the subject; this is the layer between tokens and screens. Step 2 adds a settings child route and step 3 adds assessment screens; every screen written before the shell exists is another screen to retrofit.
+At the start of this work, eight screens totalling ~2,100 lines shared zero components and there was no `components/` directory. Every screen hand-drew its buttons (80 `TouchableOpacity` usages), five screens hand-rolled a "Back" button, and each built headers, section titles, and card surfaces from raw `View`/`Text`. Navigation was a single `Stack` with `headerShown: false`, so History, Trends, and Settings were pushed screens dangling off links on Today. The token layer below all this was already solid — parity-tested light/dark themes in `src/theme/unistyles.ts` — and was not the subject; this plan added the layer between tokens and screens. Step 2 adds a settings child route and step 3 adds assessment screens, so landing the shell first avoided another retrofit.
 
 ## Decisions taken
 
@@ -72,7 +72,7 @@ Extracted, with the screens that currently duplicate them:
 1. Move routes into the structure above; guards to the group; per-tab stacks with native headers themed from tokens.
 2. Delete the five hand-rolled Back buttons and each screen's header scaffolding; expose Account consistently from the common tab header avatar.
 3. Router tests updated where they pressed hand-rolled "Back" text — navigation in tests drives the router (or platform back) rather than header internals, since native-stack header buttons may not render as reachable text under jest. Pathname assertions stay as they are.
-4. Both colour schemes verified for tab bar and headers; new tokens join the parity test.
+4. Automated token parity covers both colour schemes for the tab bar and headers; the physical light/dark device pass remains part of the shared step 2 native session.
 
 ### Slice 3: Component extraction
 

@@ -4,6 +4,8 @@
 
 Code-complete through slices 1–6 on 14 August 2026, with automated acceptance green. The remaining exit item is the native Android/iOS acceptance pass listed in slice 6: airplane-mode relaunch, near-midnight entry, both colour schemes, and the fifteen-second timing require physical devices and are not claimed by Jest. This is the delivery plan for [sequencing step 1 of the product domains plan](product-domains-and-data.md#sequencing): the check-in domain — mood, energy, and the factor panel — plus day notes, the first per-metric trend view, delete local data, and the export serialisation design.
 
+The route locations and navigation descriptions in this plan record the step 1 implementation as it landed; the subsequent [app shell and shared components plan](app-shell-and-components.md) moved the top-level screens into `(tabs)` without changing their public pathnames or product behavior.
+
 Umbrella [Phase 1](offline-first-identity-onboarding-premium.md#phase-1-local-first-app-entry) is complete and [Phase 2](phase-2-optional-accounts.md) is code-complete; this step assumes both and requires neither Phase 3 nor any native dependency.
 
 ## Outcome
