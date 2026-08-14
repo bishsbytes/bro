@@ -153,7 +153,8 @@ describe("product data continuity across optional identity", () => {
 			]);
 		}
 
-		await press(view, "Account");
+		await press(view, "Settings");
+		await fireEvent.press(view.getByLabelText(/^Account/));
 		await press(view, "Sign in");
 		await fireEvent.changeText(
 			view.getByPlaceholderText("Email"),

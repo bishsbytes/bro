@@ -1,5 +1,3 @@
-// Registers themes before any screen renders.
-import "../theme/unistyles";
 import { AuthProvider } from "@bro/auth-app";
 import {
 	closeDb,
@@ -14,11 +12,11 @@ import * as SplashScreen from "expo-splash-screen";
 import { StatusBar } from "expo-status-bar";
 import { useCallback, useEffect, useState } from "react";
 import { ActivityIndicator, Text, TouchableOpacity, View } from "react-native";
-import { StyleSheet } from "react-native-unistyles";
 import {
 	DeviceSettingsProvider,
 	useDeviceSettings,
 } from "../providers/device-settings-provider";
+import { StyleSheet, useUnistyles } from "../theme/unistyles";
 
 void SplashScreen.preventAutoHideAsync();
 
@@ -70,22 +68,27 @@ function AppProviders() {
 
 function RootNavigator() {
 	const { settings } = useDeviceSettings();
+	const { theme } = useUnistyles();
 
 	return (
-		<Stack screenOptions={{ headerShown: false }}>
+		<Stack
+			screenOptions={{
+				headerStyle: { backgroundColor: theme.colors.headerBackground },
+				headerTintColor: theme.colors.text,
+				headerShadowVisible: true,
+				contentStyle: { backgroundColor: theme.colors.background },
+				animation: process.env.NODE_ENV === "test" ? "none" : "default",
+			}}
+		>
 			<Stack.Protected guard={!settings.onboardingComplete}>
-				<Stack.Screen name="onboarding" />
+				<Stack.Screen name="onboarding" options={{ headerShown: false }} />
 			</Stack.Protected>
 			<Stack.Protected guard={settings.onboardingComplete}>
-				<Stack.Screen name="index" />
-				<Stack.Screen name="account" />
-				<Stack.Screen name="history" />
-				<Stack.Screen name="history/[localDay]" />
-				<Stack.Screen name="trends" />
-				<Stack.Screen name="settings" />
+				<Stack.Screen name="(tabs)" options={{ headerShown: false }} />
+				<Stack.Screen name="account" options={{ title: "Account" }} />
 			</Stack.Protected>
-			<Stack.Screen name="sign-in" />
-			<Stack.Screen name="sign-up" />
+			<Stack.Screen name="sign-in" options={{ title: "Sign in" }} />
+			<Stack.Screen name="sign-up" options={{ title: "Create account" }} />
 		</Stack>
 	);
 }

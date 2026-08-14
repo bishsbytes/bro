@@ -1,4 +1,4 @@
-import { StyleSheet } from "react-native-unistyles";
+import { StyleSheet } from "../theme/unistyles";
 
 export const onboardingStyles = StyleSheet.create((theme) => ({
 	container: {

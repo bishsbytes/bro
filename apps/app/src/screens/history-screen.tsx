@@ -7,7 +7,7 @@ import {
 	TouchableOpacity,
 	View,
 } from "react-native";
-import { StyleSheet } from "react-native-unistyles";
+import { StyleSheet } from "../theme/unistyles";
 import {
 	createHistoryStore,
 	type HistoryDaySummary,
@@ -40,74 +40,77 @@ export function HistoryScreen({ store }: HistoryScreenProps) {
 
 	if (!days && !error) {
 		return (
-			<View style={styles.centered}>
-				<ActivityIndicator size="large" />
+			<View style={styles.screen}>
+				<View style={styles.centered}>
+					<ActivityIndicator size="large" />
+				</View>
 			</View>
 		);
 	}
 
 	return (
-		<ScrollView style={styles.container} contentContainerStyle={styles.content}>
-			<View style={styles.header}>
-				<TouchableOpacity onPress={() => router.back()}>
-					<Text style={styles.back}>Back</Text>
-				</TouchableOpacity>
-				<Text style={styles.title}>History</Text>
-			</View>
+		<View style={styles.screen}>
+			<ScrollView
+				style={styles.container}
+				contentContainerStyle={styles.content}
+			>
+				{error ? (
+					<View style={styles.emptyCard}>
+						<Text style={styles.error}>
+							History could not be loaded: {error}
+						</Text>
+						<TouchableOpacity onPress={load}>
+							<Text style={styles.link}>Try again</Text>
+						</TouchableOpacity>
+					</View>
+				) : null}
 
-			{error ? (
-				<View style={styles.emptyCard}>
-					<Text style={styles.error}>History could not be loaded: {error}</Text>
-					<TouchableOpacity onPress={load}>
-						<Text style={styles.link}>Try again</Text>
+				{days?.length === 0 ? (
+					<View style={styles.emptyCard}>
+						<Text style={styles.sectionTitle}>Nothing logged yet</Text>
+						<Text style={styles.body}>Your check-ins will appear here.</Text>
+					</View>
+				) : null}
+
+				{days?.map((day) => (
+					<TouchableOpacity
+						key={day.localDay}
+						accessibilityRole="button"
+						accessibilityLabel={`Open ${day.localDay}`}
+						style={styles.dayCard}
+						onPress={() =>
+							router.push({
+								pathname: "/history/[localDay]",
+								params: { localDay: day.localDay },
+							})
+						}
+					>
+						<Text style={styles.day}>{day.localDay}</Text>
+						{day.moodValues.length > 0 || day.energyValues.length > 0 ? (
+							<Text style={styles.summary}>
+								Mood {day.moodValues.join(", ")} · Energy{" "}
+								{day.energyValues.join(", ")}
+							</Text>
+						) : null}
+						{day.factorLabels.length > 0 ? (
+							<Text style={styles.body}>
+								Factors: {day.factorLabels.join(", ")}
+							</Text>
+						) : null}
+						{day.noteBodies.map((body, index) => (
+							<Text key={`${day.localDay}-note-${index}`} style={styles.note}>
+								{body}
+							</Text>
+						))}
 					</TouchableOpacity>
-				</View>
-			) : null}
-
-			{days?.length === 0 ? (
-				<View style={styles.emptyCard}>
-					<Text style={styles.sectionTitle}>Nothing logged yet</Text>
-					<Text style={styles.body}>Your check-ins will appear here.</Text>
-				</View>
-			) : null}
-
-			{days?.map((day) => (
-				<TouchableOpacity
-					key={day.localDay}
-					accessibilityRole="button"
-					accessibilityLabel={`Open ${day.localDay}`}
-					style={styles.dayCard}
-					onPress={() =>
-						router.push({
-							pathname: "/history/[localDay]",
-							params: { localDay: day.localDay },
-						})
-					}
-				>
-					<Text style={styles.day}>{day.localDay}</Text>
-					{day.moodValues.length > 0 || day.energyValues.length > 0 ? (
-						<Text style={styles.summary}>
-							Mood {day.moodValues.join(", ")} · Energy{" "}
-							{day.energyValues.join(", ")}
-						</Text>
-					) : null}
-					{day.factorLabels.length > 0 ? (
-						<Text style={styles.body}>
-							Factors: {day.factorLabels.join(", ")}
-						</Text>
-					) : null}
-					{day.noteBodies.map((body, index) => (
-						<Text key={`${day.localDay}-note-${index}`} style={styles.note}>
-							{body}
-						</Text>
-					))}
-				</TouchableOpacity>
-			))}
-		</ScrollView>
+				))}
+			</ScrollView>
+		</View>
 	);
 }
 
 const styles = StyleSheet.create((theme) => ({
+	screen: { flex: 1, backgroundColor: theme.colors.background },
 	container: { flex: 1, backgroundColor: theme.colors.background },
 	content: { padding: theme.spacing.xl, gap: theme.spacing.lg },
 	centered: {
@@ -116,9 +119,6 @@ const styles = StyleSheet.create((theme) => ({
 		justifyContent: "center",
 		backgroundColor: theme.colors.background,
 	},
-	header: { gap: theme.spacing.sm },
-	back: { ...theme.typography.label, color: theme.colors.brand },
-	title: { ...theme.typography.title, color: theme.colors.text },
 	dayCard: {
 		padding: theme.spacing.lg,
 		gap: theme.spacing.xs,

@@ -1,4 +1,9 @@
-import { StyleSheet } from "react-native-unistyles";
+import { StyleSheet, useUnistyles } from "react-native-unistyles";
+
+// Import themed APIs from this module rather than directly from Unistyles. Expo
+// Router can evaluate route modules before the root layout, so this module must
+// finish configuring the theme before a route creates a themed stylesheet.
+export { StyleSheet, useUnistyles };
 
 /**
  * Design tokens. Every colour in the app comes from here — a hardcoded hex in a
@@ -32,6 +37,8 @@ const shared = {
 	control: {
 		scoreMinHeight: 58,
 		noteMinHeight: 90,
+		avatarSize: 40,
+		avatarIconSize: 22,
 	},
 	opacity: {
 		disabled: 0.45,
@@ -53,6 +60,11 @@ export const lightTheme = {
 		onBrand: "#ffffff",
 		danger: "#b91c1c",
 		onDanger: "#ffffff",
+		headerBackground: "#ffffff",
+		headerBorder: "#d1d5db",
+		tabBackground: "#ffffff",
+		tabInactive: "#6b7280",
+		tabIndicator: "#dbeafe",
 	},
 } as const;
 
@@ -75,6 +87,11 @@ export const darkTheme = {
 		// which flips what can legibly sit on top of it.
 		danger: "#f87171",
 		onDanger: "#0d1117",
+		headerBackground: "#0d1117",
+		headerBorder: "#2b3440",
+		tabBackground: "#161b22",
+		tabInactive: "#9aa4b2",
+		tabIndicator: "#264b73",
 	},
 } as const;
 

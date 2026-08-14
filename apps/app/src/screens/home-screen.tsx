@@ -1,4 +1,3 @@
-import { router } from "expo-router";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import {
 	ActivityIndicator,
@@ -8,7 +7,7 @@ import {
 	TouchableOpacity,
 	View,
 } from "react-native";
-import { StyleSheet } from "react-native-unistyles";
+import { StyleSheet } from "../theme/unistyles";
 import {
 	type CheckInEntry,
 	type CheckInStore,
@@ -29,12 +28,6 @@ const CATEGORY_LABELS: Record<FactorCategory, string> = {
 	mind: "Mind",
 	social: "Social",
 };
-const NAVIGATION_LINKS = [
-	["History", "/history"],
-	["Trends", "/trends"],
-	["Settings", "/settings"],
-] as const;
-
 export function HomeScreen({ store }: HomeScreenProps) {
 	const checkIns = useMemo(() => store ?? createCheckInStore(), [store]);
 	const [today, setToday] = useState<TodayCheckIn | null>(null);
@@ -116,20 +109,24 @@ export function HomeScreen({ store }: HomeScreenProps) {
 
 	if (!today && !error) {
 		return (
-			<View style={styles.loading}>
-				<ActivityIndicator size="large" />
+			<View style={styles.screen}>
+				<View style={styles.loading}>
+					<ActivityIndicator size="large" />
+				</View>
 			</View>
 		);
 	}
 
 	if (!today) {
 		return (
-			<View style={styles.loading}>
-				<Text style={styles.errorTitle}>Today could not be loaded</Text>
-				<Text style={styles.errorText}>{error}</Text>
-				<TouchableOpacity style={styles.secondaryButton} onPress={load}>
-					<Text style={styles.secondaryButtonText}>Try again</Text>
-				</TouchableOpacity>
+			<View style={styles.screen}>
+				<View style={styles.loading}>
+					<Text style={styles.errorTitle}>Today could not be loaded</Text>
+					<Text style={styles.errorText}>{error}</Text>
+					<TouchableOpacity style={styles.secondaryButton} onPress={load}>
+						<Text style={styles.secondaryButtonText}>Try again</Text>
+					</TouchableOpacity>
+				</View>
 			</View>
 		);
 	}
@@ -149,246 +146,216 @@ export function HomeScreen({ store }: HomeScreenProps) {
 	});
 
 	return (
-		<ScrollView
-			style={styles.container}
-			contentContainerStyle={styles.content}
-			keyboardShouldPersistTaps="handled"
-		>
-			<View style={styles.header}>
-				<View>
-					<Text style={styles.eyebrow}>TODAY</Text>
-					<Text style={styles.title}>How are you?</Text>
-				</View>
-				<TouchableOpacity onPress={() => router.push("/account")}>
-					<Text style={styles.headerLink}>Account</Text>
-				</TouchableOpacity>
-			</View>
-
-			{today.entries.length > 0 ? (
-				<View style={styles.section}>
-					<View style={styles.sectionHeadingRow}>
-						<Text style={styles.sectionTitle}>Logged today</Text>
-						<Text style={styles.count}>
-							{today.entries.length} check-in
-							{today.entries.length === 1 ? "" : "s"}
-						</Text>
-					</View>
-					{today.entries.map((entry) => (
-						<View key={entry.id} style={styles.entryCard}>
-							<View>
-								<Text style={styles.entryValue}>
-									Mood {entry.mood.value} · Energy {entry.energy.value}
-								</Text>
-								<Text style={styles.entryTime}>
-									{new Date(entry.observedAt).toLocaleTimeString([], {
-										hour: "2-digit",
-										minute: "2-digit",
-									})}
-								</Text>
-							</View>
-							<TouchableOpacity onPress={() => startEditing(entry)}>
-								<Text style={styles.editLink}>Edit</Text>
-							</TouchableOpacity>
+		<View style={styles.screen}>
+			<ScrollView
+				style={styles.container}
+				contentContainerStyle={styles.content}
+				keyboardShouldPersistTaps="handled"
+			>
+				<Text style={styles.pageTitle}>How are you?</Text>
+				{today.entries.length > 0 ? (
+					<View style={styles.section}>
+						<View style={styles.sectionHeadingRow}>
+							<Text style={styles.sectionTitle}>Logged today</Text>
+							<Text style={styles.count}>
+								{today.entries.length} check-in
+								{today.entries.length === 1 ? "" : "s"}
+							</Text>
 						</View>
-					))}
-					{selectedFactorLabels.length > 0 ? (
-						<Text style={styles.summaryText}>
-							Factors: {selectedFactorLabels.join(", ")}
+						{today.entries.map((entry) => (
+							<View key={entry.id} style={styles.entryCard}>
+								<View>
+									<Text style={styles.entryValue}>
+										Mood {entry.mood.value} · Energy {entry.energy.value}
+									</Text>
+									<Text style={styles.entryTime}>
+										{new Date(entry.observedAt).toLocaleTimeString([], {
+											hour: "2-digit",
+											minute: "2-digit",
+										})}
+									</Text>
+								</View>
+								<TouchableOpacity onPress={() => startEditing(entry)}>
+									<Text style={styles.editLink}>Edit</Text>
+								</TouchableOpacity>
+							</View>
+						))}
+						{selectedFactorLabels.length > 0 ? (
+							<Text style={styles.summaryText}>
+								Factors: {selectedFactorLabels.join(", ")}
+							</Text>
+						) : null}
+						{today.note ? (
+							<Text style={styles.summaryText}>Note: {today.note}</Text>
+						) : null}
+						{!formOpen ? (
+							<TouchableOpacity
+								style={styles.secondaryButton}
+								onPress={startAnother}
+							>
+								<Text style={styles.secondaryButtonText}>
+									Add another check-in
+								</Text>
+							</TouchableOpacity>
+						) : null}
+					</View>
+				) : null}
+
+				{formOpen ? (
+					<View style={styles.form}>
+						<Text style={styles.sectionTitle}>
+							{editing ? "Edit check-in" : "Check in"}
 						</Text>
-					) : null}
-					{today.note ? (
-						<Text style={styles.summaryText}>Note: {today.note}</Text>
-					) : null}
-					{!formOpen ? (
+
+						<Text style={styles.prompt}>Mood</Text>
+						<View style={styles.scoreRow}>
+							{SCORES.map((score, index) => {
+								const selected = mood === score;
+								return (
+									<TouchableOpacity
+										key={score}
+										accessibilityRole="button"
+										accessibilityLabel={`Mood ${score}`}
+										accessibilityState={{ selected }}
+										style={[
+											styles.scoreButton,
+											selected && styles.choiceSelected,
+										]}
+										onPress={() => setMood(score)}
+									>
+										<Text style={styles.face}>{MOOD_FACES[index]}</Text>
+										<Text
+											style={[
+												styles.scoreLabel,
+												selected && styles.choiceSelectedText,
+											]}
+										>
+											{score}
+										</Text>
+									</TouchableOpacity>
+								);
+							})}
+						</View>
+
+						<Text style={styles.prompt}>Energy</Text>
+						<View style={styles.scoreRow}>
+							{SCORES.map((score) => {
+								const selected = energy === score;
+								return (
+									<TouchableOpacity
+										key={score}
+										accessibilityRole="button"
+										accessibilityLabel={`Energy ${score}`}
+										accessibilityState={{ selected }}
+										style={[
+											styles.scoreButton,
+											selected && styles.choiceSelected,
+										]}
+										onPress={() => setEnergy(score)}
+									>
+										<Text
+											style={[
+												styles.energyValue,
+												selected && styles.choiceSelectedText,
+											]}
+										>
+											{score}
+										</Text>
+									</TouchableOpacity>
+								);
+							})}
+						</View>
+
+						<Text style={styles.prompt}>What applied today?</Text>
+						{groupedFactors.map(({ category, label, factors }) =>
+							factors.length > 0 ? (
+								<View key={category} style={styles.factorGroup}>
+									<Text style={styles.categoryLabel}>{label}</Text>
+									<View style={styles.factorRow}>
+										{factors.map((factor) => {
+											const selected = selectedFactors.includes(factor.slug);
+											return (
+												<TouchableOpacity
+													key={factor.slug}
+													accessibilityRole="button"
+													accessibilityLabel={factor.label}
+													accessibilityState={{ selected }}
+													style={[
+														styles.factorButton,
+														selected && styles.choiceSelected,
+													]}
+													onPress={() => toggleFactor(factor.slug)}
+												>
+													<Text
+														style={[
+															styles.factorText,
+															selected && styles.choiceSelectedText,
+														]}
+													>
+														{factor.label}
+													</Text>
+												</TouchableOpacity>
+											);
+										})}
+									</View>
+								</View>
+							) : null,
+						)}
+
+						<Text style={styles.prompt}>Note (optional)</Text>
+						<TextInput
+							style={styles.noteInput}
+							value={note}
+							onChangeText={setNote}
+							placeholder="Anything worth remembering?"
+							placeholderTextColor={styles.notePlaceholder.color}
+							multiline
+						/>
+
+						{error ? <Text style={styles.errorText}>{error}</Text> : null}
 						<TouchableOpacity
-							style={styles.secondaryButton}
-							onPress={startAnother}
+							accessibilityRole="button"
+							accessibilityState={{
+								disabled: mood === null || energy === null || saving,
+							}}
+							style={[
+								styles.saveButton,
+								(mood === null || energy === null || saving) &&
+									styles.buttonDisabled,
+							]}
+							disabled={mood === null || energy === null || saving}
+							onPress={save}
 						>
-							<Text style={styles.secondaryButtonText}>
-								Add another check-in
+							<Text style={styles.saveButtonText}>
+								{saving
+									? "Saving…"
+									: editing
+										? "Update check-in"
+										: "Save check-in"}
 							</Text>
 						</TouchableOpacity>
-					) : null}
-				</View>
-			) : null}
-
-			{formOpen ? (
-				<View style={styles.form}>
-					<Text style={styles.sectionTitle}>
-						{editing ? "Edit check-in" : "Check in"}
-					</Text>
-
-					<Text style={styles.prompt}>Mood</Text>
-					<View style={styles.scoreRow}>
-						{SCORES.map((score, index) => {
-							const selected = mood === score;
-							return (
-								<TouchableOpacity
-									key={score}
-									accessibilityRole="button"
-									accessibilityLabel={`Mood ${score}`}
-									accessibilityState={{ selected }}
-									style={[
-										styles.scoreButton,
-										selected && styles.choiceSelected,
-									]}
-									onPress={() => setMood(score)}
-								>
-									<Text style={styles.face}>{MOOD_FACES[index]}</Text>
-									<Text
-										style={[
-											styles.scoreLabel,
-											selected && styles.choiceSelectedText,
-										]}
-									>
-										{score}
-									</Text>
-								</TouchableOpacity>
-							);
-						})}
 					</View>
-
-					<Text style={styles.prompt}>Energy</Text>
-					<View style={styles.scoreRow}>
-						{SCORES.map((score) => {
-							const selected = energy === score;
-							return (
-								<TouchableOpacity
-									key={score}
-									accessibilityRole="button"
-									accessibilityLabel={`Energy ${score}`}
-									accessibilityState={{ selected }}
-									style={[
-										styles.scoreButton,
-										selected && styles.choiceSelected,
-									]}
-									onPress={() => setEnergy(score)}
-								>
-									<Text
-										style={[
-											styles.energyValue,
-											selected && styles.choiceSelectedText,
-										]}
-									>
-										{score}
-									</Text>
-								</TouchableOpacity>
-							);
-						})}
-					</View>
-
-					<Text style={styles.prompt}>What applied today?</Text>
-					{groupedFactors.map(({ category, label, factors }) =>
-						factors.length > 0 ? (
-							<View key={category} style={styles.factorGroup}>
-								<Text style={styles.categoryLabel}>{label}</Text>
-								<View style={styles.factorRow}>
-									{factors.map((factor) => {
-										const selected = selectedFactors.includes(factor.slug);
-										return (
-											<TouchableOpacity
-												key={factor.slug}
-												accessibilityRole="button"
-												accessibilityLabel={factor.label}
-												accessibilityState={{ selected }}
-												style={[
-													styles.factorButton,
-													selected && styles.choiceSelected,
-												]}
-												onPress={() => toggleFactor(factor.slug)}
-											>
-												<Text
-													style={[
-														styles.factorText,
-														selected && styles.choiceSelectedText,
-													]}
-												>
-													{factor.label}
-												</Text>
-											</TouchableOpacity>
-										);
-									})}
-								</View>
-							</View>
-						) : null,
-					)}
-
-					<Text style={styles.prompt}>Note (optional)</Text>
-					<TextInput
-						style={styles.noteInput}
-						value={note}
-						onChangeText={setNote}
-						placeholder="Anything worth remembering?"
-						placeholderTextColor={styles.notePlaceholder.color}
-						multiline
-					/>
-
-					{error ? <Text style={styles.errorText}>{error}</Text> : null}
-					<TouchableOpacity
-						accessibilityRole="button"
-						accessibilityState={{
-							disabled: mood === null || energy === null || saving,
-						}}
-						style={[
-							styles.saveButton,
-							(mood === null || energy === null || saving) &&
-								styles.buttonDisabled,
-						]}
-						disabled={mood === null || energy === null || saving}
-						onPress={save}
-					>
-						<Text style={styles.saveButtonText}>
-							{saving
-								? "Saving…"
-								: editing
-									? "Update check-in"
-									: "Save check-in"}
-						</Text>
-					</TouchableOpacity>
-				</View>
-			) : null}
-
-			<View style={styles.navigation}>
-				{NAVIGATION_LINKS.map(([label, path]) => (
-					<TouchableOpacity key={path} onPress={() => router.push(path)}>
-						<Text style={styles.navigationLink}>{label}</Text>
-					</TouchableOpacity>
-				))}
-			</View>
-		</ScrollView>
+				) : null}
+			</ScrollView>
+		</View>
 	);
 }
 
 const styles = StyleSheet.create((theme) => ({
+	screen: { flex: 1, backgroundColor: theme.colors.background },
 	container: { flex: 1, backgroundColor: theme.colors.background },
 	content: { padding: theme.spacing.xl, paddingBottom: theme.spacing.xxl * 2 },
+	pageTitle: {
+		...theme.typography.display,
+		color: theme.colors.text,
+		marginBottom: theme.spacing.xl,
+	},
 	loading: {
 		flex: 1,
 		alignItems: "center",
 		justifyContent: "center",
 		padding: theme.spacing.xl,
 		backgroundColor: theme.colors.background,
-	},
-	header: {
-		flexDirection: "row",
-		justifyContent: "space-between",
-		alignItems: "flex-start",
-		marginBottom: theme.spacing.xl,
-	},
-	eyebrow: {
-		fontSize: theme.typography.caption.fontSize,
-		fontWeight: "600",
-		color: theme.colors.brand,
-		letterSpacing: theme.typography.eyebrow.letterSpacing,
-	},
-	title: {
-		fontSize: theme.typography.title.fontSize,
-		fontWeight: theme.typography.title.fontWeight,
-		color: theme.colors.text,
-	},
-	headerLink: {
-		color: theme.colors.brand,
-		fontSize: theme.typography.label.fontSize,
 	},
 	section: { marginBottom: theme.spacing.xl },
 	sectionHeadingRow: {
@@ -539,16 +506,5 @@ const styles = StyleSheet.create((theme) => ({
 		color: theme.colors.danger,
 		fontSize: theme.typography.caption.fontSize,
 		marginTop: theme.spacing.sm,
-	},
-	navigation: {
-		flexDirection: "row",
-		justifyContent: "space-around",
-		borderTopWidth: 1,
-		borderTopColor: theme.colors.border,
-		paddingTop: theme.spacing.lg,
-	},
-	navigationLink: {
-		color: theme.colors.brand,
-		fontSize: theme.typography.label.fontSize,
 	},
 }));

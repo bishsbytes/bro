@@ -1,6 +1,12 @@
 import { authClient } from "@bro/auth-app";
 import type { DeviceSettingsSnapshot } from "@bro/database-app";
-import { act, fireEvent, renderRouter } from "expo-router/testing-library";
+import { router as expoRouter } from "expo-router";
+import {
+	act,
+	fireEvent,
+	renderRouter,
+	waitFor,
+} from "expo-router/testing-library";
 
 const mockReadDeviceSettings = jest.fn();
 const mockSetOnboardingComplete = jest.fn();
@@ -29,6 +35,23 @@ jest.mock("./check-in/check-in-store", () => ({
 			note: "",
 		}),
 		save: jest.fn(),
+	}),
+}));
+
+jest.mock("./history/history-store", () => ({
+	createHistoryStore: () => ({
+		loadHistory: async () => [],
+	}),
+}));
+
+jest.mock("./trends/trends-store", () => ({
+	createTrendsStore: () => ({
+		load: async (period: number) => ({
+			period,
+			fromLocalDay: "2026-08-08",
+			throughLocalDay: "2026-08-14",
+			metrics: [],
+		}),
 	}),
 }));
 
@@ -75,9 +98,12 @@ const baseSettings: DeviceSettingsSnapshot = {
  * The router helpers live on the returned handle; the queries come from
  * awaiting it, which is how this version of the testing library reports them.
  */
-async function launch(overrides: Partial<DeviceSettingsSnapshot> = {}) {
+async function launch(
+	overrides: Partial<DeviceSettingsSnapshot> = {},
+	initialUrl = "/",
+) {
 	mockReadDeviceSettings.mockReturnValue({ ...baseSettings, ...overrides });
-	const router = renderRouter("src/app", { initialUrl: "/" });
+	const router = renderRouter("src/app", { initialUrl });
 	const view = await router;
 	// Let the startup chain settle: device settings, database open, migrations.
 	await act(async () => undefined);
@@ -89,6 +115,15 @@ async function press(
 	label: string,
 ) {
 	await fireEvent.press(view.getByText(label));
+}
+
+async function openAccount(
+	router: Awaited<ReturnType<typeof launch>>["router"],
+	view: Awaited<ReturnType<typeof launch>>["view"],
+) {
+	await waitFor(() => expect(router.getPathname()).toBe("/settings"));
+	await fireEvent.press(await view.findByLabelText(/^Account/));
+	await waitFor(() => expect(router.getPathname()).toBe("/account"));
 }
 
 describe("app entry", () => {
@@ -115,6 +150,34 @@ describe("app entry", () => {
 		const { router, view } = await launch({ onboardingComplete: true });
 
 		expect(router.getPathname()).toBe("/");
+		expect(await view.findByText("How are you?")).toBeTruthy();
+	});
+
+	it("moves between all four top-level tabs without changing pathnames", async () => {
+		const { router, view } = await launch({ onboardingComplete: true });
+		expect(view.getByLabelText("Account")).toBeTruthy();
+
+		await press(view, "History");
+		await waitFor(() => expect(router.getPathname()).toBe("/history"));
+		expect(await view.findByText("Nothing logged yet")).toBeTruthy();
+		expect(view.getByLabelText("Account")).toBeTruthy();
+
+		await press(view, "Trends");
+		await waitFor(() => expect(router.getPathname()).toBe("/trends"));
+		expect(
+			await view.findByText(
+				"Daily averages; days without a check-in stay as gaps.",
+			),
+		).toBeTruthy();
+		expect(view.getByLabelText("Account")).toBeTruthy();
+
+		await press(view, "Settings");
+		await waitFor(() => expect(router.getPathname()).toBe("/settings"));
+		expect(await view.findByText("Data on this device")).toBeTruthy();
+		expect(view.getByLabelText("Account")).toBeTruthy();
+
+		await press(view, "Today");
+		await waitFor(() => expect(router.getPathname()).toBe("/"));
 		expect(await view.findByText("How are you?")).toBeTruthy();
 	});
 
@@ -151,9 +214,12 @@ describe("app entry", () => {
 	});
 
 	it("keeps account routes reachable from the app, with sign-up offered there", async () => {
-		const { router, view } = await launch({ onboardingComplete: true });
+		const { router, view } = await launch(
+			{ onboardingComplete: true },
+			"/settings",
+		);
 
-		await press(view, "Account");
+		await openAccount(router, view);
 		expect(router.getPathname()).toBe("/account");
 		expect(view.getByText("Using bro without an account")).toBeTruthy();
 		// Opening Account without a stored session is still a local-only act.
@@ -162,7 +228,7 @@ describe("app entry", () => {
 
 		await press(view, "Sign in");
 
-		expect(router.getPathname()).toBe("/sign-in");
+		await waitFor(() => expect(router.getPathname()).toBe("/sign-in"));
 		expect(view.getByText("Need an account? Sign up")).toBeTruthy();
 	});
 
@@ -191,7 +257,7 @@ describe("app entry", () => {
 		expect(router.getPathname()).toBe("/");
 	});
 
-	it("switches from account A to B without closing or replacing local data", async () => {
+	it("switches and deletes accounts without closing or replacing local data", async () => {
 		const refetch = jest.fn();
 		let sessionState: {
 			data: {
@@ -230,14 +296,21 @@ describe("app entry", () => {
 			};
 			return { data: { user }, error: null };
 		});
-
-		const { router, view } = await launch({
-			onboardingComplete: true,
-			hasStoredRemoteSession: true,
-			lastRemoteUserId: "user-a",
+		mockedAuthClient.deleteUser.mockResolvedValue({
+			data: { success: true, message: "User deleted" },
+			error: null,
 		});
 
-		await press(view, "Account");
+		const { router, view } = await launch(
+			{
+				onboardingComplete: true,
+				hasStoredRemoteSession: true,
+				lastRemoteUserId: "user-a",
+			},
+			"/settings",
+		);
+
+		await openAccount(router, view);
 		expect(await view.findByText("ada@example.com")).toBeTruthy();
 		await press(view, "Sign out");
 		await press(view, "Sign out");
@@ -258,50 +331,6 @@ describe("app entry", () => {
 		expect(await view.findByText("bea@example.com")).toBeTruthy();
 		expect(mockInitDb).toHaveBeenCalledTimes(1);
 		expect(mockCloseDb).not.toHaveBeenCalled();
-
-		// Returning from a sign-in entered here dismisses back onto Account
-		// rather than stacking a second copy of it under the first.
-		await press(view, "Back");
-		expect(router.getPathname()).toBe("/");
-	});
-
-	it("deletes the account without closing local data or re-running onboarding", async () => {
-		const refetch = jest.fn();
-		let sessionState: {
-			data: {
-				user: { id: string; name: string; email: string };
-				session: { id: string };
-			} | null;
-			isPending: boolean;
-			error: null;
-			refetch: jest.Mock;
-		} = {
-			data: {
-				user: { id: "user-a", name: "Ada", email: "ada@example.com" },
-				session: { id: "session-user-a" },
-			},
-			isPending: false,
-			error: null,
-			refetch,
-		};
-		mockedAuthClient.useSession.mockImplementation(() => sessionState);
-		mockedAuthClient.deleteUser.mockResolvedValue({
-			data: { success: true, message: "User deleted" },
-			error: null,
-		});
-		mockedAuthClient.signOut.mockImplementation(async () => {
-			sessionState = { data: null, isPending: false, error: null, refetch };
-			return { data: {}, error: null };
-		});
-
-		const { router, view } = await launch({
-			onboardingComplete: true,
-			hasStoredRemoteSession: true,
-			lastRemoteUserId: "user-a",
-		});
-
-		await press(view, "Account");
-		expect(await view.findByText("ada@example.com")).toBeTruthy();
 
 		await press(view, "Delete account");
 		await fireEvent.changeText(
@@ -326,8 +355,10 @@ describe("app entry", () => {
 		expect(mockReadDeviceSettings).toHaveBeenCalledTimes(1);
 		expect(router.getPathname()).toBe("/account");
 
-		await press(view, "Back");
-		expect(router.getPathname()).toBe("/");
-		expect(await view.findByText("How are you?")).toBeTruthy();
+		// Returning from a sign-in entered here dismisses back onto Account
+		// rather than stacking a second copy of it under the first.
+		act(() => expoRouter.back());
+		await waitFor(() => expect(router.getPathname()).toBe("/settings"));
+		expect(await view.findByText("Data on this device")).toBeTruthy();
 	});
 });

@@ -1,5 +1,4 @@
 import type { DayNote, Observation } from "@bro/database-app";
-import { router } from "expo-router";
 import { useEffect, useMemo, useState } from "react";
 import {
 	ActivityIndicator,
@@ -9,7 +8,7 @@ import {
 	TouchableOpacity,
 	View,
 } from "react-native";
-import { StyleSheet } from "react-native-unistyles";
+import { StyleSheet } from "../theme/unistyles";
 import { resolveMetric } from "../content/metric-registry";
 import {
 	createHistoryStore,
@@ -63,10 +62,7 @@ function CheckInEditor({
 					<TouchableOpacity
 						key={`mood-${score}`}
 						accessibilityLabel={`Mood ${score}`}
-						style={[
-							styles.scoreButton,
-							mood === score && styles.selected,
-						]}
+						style={[styles.scoreButton, mood === score && styles.selected]}
 						onPress={() => setMood(score)}
 					>
 						<Text style={styles.scoreText}>{score}</Text>
@@ -79,10 +75,7 @@ function CheckInEditor({
 					<TouchableOpacity
 						key={`energy-${score}`}
 						accessibilityLabel={`Energy ${score}`}
-						style={[
-							styles.scoreButton,
-							energy === score && styles.selected,
-						]}
+						style={[styles.scoreButton, energy === score && styles.selected]}
 						onPress={() => setEnergy(score)}
 					>
 						<Text style={styles.scoreText}>{score}</Text>
@@ -202,10 +195,6 @@ export function HistoryDayScreen({ localDay, store }: HistoryDayScreenProps) {
 			contentContainerStyle={styles.content}
 			keyboardShouldPersistTaps="handled"
 		>
-			<TouchableOpacity onPress={() => router.back()}>
-				<Text style={styles.link}>Back to history</Text>
-			</TouchableOpacity>
-			<Text style={styles.title}>{localDay}</Text>
 			{error ? <Text style={styles.error}>{error}</Text> : null}
 
 			{day ? (
@@ -275,9 +264,7 @@ export function HistoryDayScreen({ localDay, store }: HistoryDayScreenProps) {
 							onSave={(entry, body) =>
 								void mutate(() => history.updateNote(entry, body))
 							}
-							onDelete={(entry) =>
-								void mutate(() => history.deleteNote(entry))
-							}
+							onDelete={(entry) => void mutate(() => history.deleteNote(entry))}
 						/>
 					))}
 				</>
@@ -295,7 +282,6 @@ const styles = StyleSheet.create((theme) => ({
 		justifyContent: "center",
 		backgroundColor: theme.colors.background,
 	},
-	title: { ...theme.typography.title, color: theme.colors.text },
 	sectionTitle: {
 		...theme.typography.section,
 		color: theme.colors.text,

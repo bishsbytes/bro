@@ -102,7 +102,7 @@ describe("delete local data", () => {
 		const router = renderRouter("src/app", { initialUrl: "/settings" });
 		const view = await router;
 		await act(async () => undefined);
-		expect(await view.findByText("Settings")).toBeTruthy();
+		expect(await view.findByText("Data on this device")).toBeTruthy();
 		expect(view.queryByText(DELETE_COPY)).toBeNull();
 
 		await fireEvent.press(view.getByText("Delete local data"));
@@ -137,7 +137,8 @@ describe("delete local data", () => {
 		expect(await view.findByText("How are you?")).toBeTruthy();
 		expect(view.queryByText("Logged today")).toBeNull();
 
-		await fireEvent.press(view.getByText("Account"));
+		await fireEvent.press(view.getByText("Settings"));
+		await fireEvent.press(view.getByLabelText(/^Account/));
 		expect(await view.findByText("ada@example.com")).toBeTruthy();
 		expect(mockedAuthClient.useSession).toHaveBeenCalled();
 		expect(databaseApp.readDeviceSettings()).toEqual(settingsBefore);

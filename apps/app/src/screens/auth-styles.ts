@@ -1,4 +1,4 @@
-import { StyleSheet } from "react-native-unistyles";
+import { StyleSheet } from "../theme/unistyles";
 
 /** Shared by the sign-in and sign-up screens. */
 export const authStyles = StyleSheet.create((theme) => ({

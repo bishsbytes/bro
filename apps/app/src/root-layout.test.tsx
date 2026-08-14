@@ -31,6 +31,23 @@ jest.mock("./check-in/check-in-store", () => ({
 	}),
 }));
 
+jest.mock("./history/history-store", () => ({
+	createHistoryStore: () => ({
+		loadHistory: async () => [],
+	}),
+}));
+
+jest.mock("./trends/trends-store", () => ({
+	createTrendsStore: () => ({
+		load: async (period: number) => ({
+			period,
+			fromLocalDay: "2026-08-08",
+			throughLocalDay: "2026-08-14",
+			metrics: [],
+		}),
+	}),
+}));
+
 // The real auth provider is under test here too: a local-only startup must not
 // mount the session hook, so the client is mocked rather than the package.
 jest.mock("../../../packages/auth/app/src/client", () => ({

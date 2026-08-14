@@ -9,7 +9,7 @@ import {
 	View,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
-import { StyleSheet } from "react-native-unistyles";
+import { StyleSheet } from "../theme/unistyles";
 
 const DELETE_LOCAL_DATA_COPY =
 	"This permanently deletes data stored by bro on this device. It does not delete your account or data stored elsewhere.";
@@ -49,13 +49,8 @@ export function SettingsScreen({
 	}
 
 	return (
-		<SafeAreaView style={styles.safeArea} edges={["top", "bottom"]}>
+		<SafeAreaView style={styles.safeArea} edges={["bottom"]}>
 			<ScrollView contentContainerStyle={styles.container}>
-				<TouchableOpacity onPress={() => router.back()}>
-					<Text style={styles.back}>Back</Text>
-				</TouchableOpacity>
-				<Text style={styles.title}>Settings</Text>
-
 				<View style={styles.section}>
 					<Text style={styles.sectionTitle}>Data on this device</Text>
 					{deleteStep === "idle" ? (
@@ -83,10 +78,7 @@ export function SettingsScreen({
 							{error ? <Text style={styles.error}>{error}</Text> : null}
 							<TouchableOpacity
 								disabled={deleting}
-								style={[
-									styles.dangerButton,
-									deleting && styles.disabled,
-								]}
+								style={[styles.dangerButton, deleting && styles.disabled]}
 								onPress={() => void confirmDelete()}
 							>
 								{deleting ? (
@@ -134,8 +126,6 @@ export function SettingsScreen({
 const styles = StyleSheet.create((theme) => ({
 	safeArea: { flex: 1, backgroundColor: theme.colors.background },
 	container: { padding: theme.spacing.xl, gap: theme.spacing.lg },
-	back: { ...theme.typography.label, color: theme.colors.brand },
-	title: { ...theme.typography.title, color: theme.colors.text },
 	section: {
 		padding: theme.spacing.lg,
 		gap: theme.spacing.md,

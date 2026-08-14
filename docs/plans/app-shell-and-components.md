@@ -2,7 +2,7 @@
 
 ## Status
 
-Draft, 14 August 2026. Infrastructure between [step 1](step-1-check-in.md) and [step 2](step-2-reminders.md), not a product-sequencing step: native tab navigation, native stack headers, and a first shared component layer extracted from the eight screens that exist. Step 2's reminders UI (its slice 4) builds on this shell, so this lands first. Decisions here were taken with Nick on 14 August 2026: four tabs, native tabs, native headers, components in-app.
+In progress, 14 August 2026. Slices 1 and 2 are implemented with the JS-tabs fallback described below; slice 3 is underway with the shared top-level header and account avatar. Infrastructure between [step 1](step-1-check-in.md) and [step 2](step-2-reminders.md), not a product-sequencing step: tab navigation, native stack headers, and a first shared component layer extracted from the eight screens that exist. Step 2's reminders UI (its slice 4) builds on this shell, so this lands first. Decisions here were taken with Nick on 14 August 2026: four tabs, a common tab-root header, native pushed-screen headers, components in-app.
 
 ## Why now
 
@@ -10,9 +10,9 @@ Eight screens totalling ~2,100 lines share zero components — there is no `comp
 
 ## Decisions taken
 
-- **Four bottom tabs: Today (`/`), History, Trends, Settings.** The top-level surfaces stop being pushed screens. Settings as a tab gives step 2's reminders screen and the existing delete-local-data flow a stable home, and the account entry point moves from Today into Settings where it belongs once a settings surface is first-class. Later steps that add surfaces (the wheel, habits) revisit the tab set deliberately rather than growing it by default.
-- **Native tabs, not JavaScript tabs**: expo-router's NativeTabs — a real `UITabBarController` / Material bottom navigation, not a drawn imitation. It rides on `react-native-screens`, already a dependency, so **no new native module and no prebuild regeneration** — this can ship before step 2's. The API surface and import path must be verified against the installed expo-router's docs (SDK 56), not memory: it shipped as unstable and its stability status, styling hooks, and jest behaviour are exactly what slice 1's spike confirms. **Fallback, only if the spike fails hard:** classic JS `Tabs` behind the same route structure, recorded as a revisit — the route tree is identical either way, so the swap stays cheap.
-- **Native stack headers** (`headerShown: true`) everywhere below the tabs: platform back buttons and gestures for free, the five hand-rolled Back buttons deleted. Header colours come from theme tokens. Whether Today shows a header title or owns its top area stays an implementation-time call for that one screen; every pushed screen gets one.
+- **Four bottom tabs: Today (`/`), History, Trends, Settings.** The top-level surfaces stop being pushed screens. Settings as a tab gives step 2's reminders screen and the existing delete-local-data flow a stable home; Account remains consistently reachable from the common header avatar. Later steps that add surfaces (the wheel, habits) revisit the tab set deliberately rather than growing it by default.
+- **JS tabs for now; revisit NativeTabs**: the SDK 56 package still exports NativeTabs from `expo-router/unstable-native-tabs`, with trigger labels/icons/badges and theme hooks for background, tint, labels, icons, indicator, ripple, and shadow. The real-router spike failed hard under `jest-expo`: NativeTabs eagerly mounted all four route trees, initializing inactive repositories and making screen queries ambiguous (16 failures). The planned classic `Tabs` fallback is therefore active behind the same route structure. NativeTabs remains a contained revisit once its Jest/native-screen behaviour supports isolated routes.
+- **One common header across tab roots; native stack headers below them.** `AppHeader` gives Today, History, Trends, and Settings a stable top area containing only the navigation title, actions, and persistent account avatar. Prompts and explanatory copy belong to the page body. The avatar is the Account entry point, showing an initial only when identity is already available and never initiating session work. Every pushed screen uses a native stack header for platform back buttons and gestures; the five hand-rolled Back buttons are deleted. Header colours come from theme tokens.
 - **Components live in `apps/app/src/components/`**, not a workspace package. One app exists; `packages/ui` is structure without a second consumer, and promotion later is mechanical.
 - **Extraction, not redesign.** Every component is pulled from what at least two screens already draw, and screens must look the same after the refactor as before it. Visual change is a different conversation with product stakes; mixing it into a structural refactor would make both unreviewable.
 - **Token discipline is unchanged**: components style exclusively from `unistyles.ts` tokens, and the token-parity test keeps covering any token the shell adds (tab bar and header colours included).
@@ -23,20 +23,20 @@ Eight screens totalling ~2,100 lines share zero components — there is no `comp
 src/app/
   _layout.tsx            — root Stack: startup, providers, guards; hosts (tabs), account, sign-in, sign-up, onboarding
   (tabs)/
-    _layout.tsx          — NativeTabs: index, history, trends, settings
-    index.tsx            — Today
+    _layout.tsx          — classic Tabs plus the persistent shared AppHeader
+    index.tsx            — Today page content
     history/
       _layout.tsx        — Stack, native headers
-      index.tsx
+      index.tsx          — History page content; pushed day uses native header
       [localDay].tsx
-    trends.tsx
+    trends.tsx           — Trends page content
     settings/
       _layout.tsx        — Stack, native headers
-      index.tsx          — menu: account entry, reminders (step 2), delete local data
+      index.tsx          — Settings page content; reminders (step 2), delete local data
       (step 2 adds reminders.tsx here)
 ```
 
-Group segments do not appear in pathnames, so `/`, `/history`, `/history/[localDay]`, `/trends`, and `/settings` all resolve unchanged — the router tests' pathname assertions survive the move. `Stack.Protected` guards move from six individual screens to the `(tabs)` group plus `account`; `sign-in`/`sign-up`/`onboarding` stay where they are. `/account` remains a root-stack route; only its entry point moves from Today to Settings.
+Group segments do not appear in pathnames, so `/`, `/history`, `/history/[localDay]`, `/trends`, and `/settings` all resolve unchanged — the router tests' pathname assertions survive the move. `Stack.Protected` guards move from six individual screens to the `(tabs)` group plus `account`; `sign-in`/`sign-up`/`onboarding` stay where they are. `/account` remains a root-stack route and is opened from the common header avatar.
 
 ## Component set
 
@@ -44,6 +44,8 @@ Extracted, with the screens that currently duplicate them:
 
 | Component | Replaces |
 | --- | --- |
+| `AppHeader` | The stable safe-area header across all four tab roots, with a navigation title and action slots |
+| `AvatarButton` | The persistent Account entry point across all tab roots; registered initial or generic profile icon |
 | `Screen` | Per-screen safe-area + themed background + scroll/padding scaffold (all eight screens) |
 | `AppText` | Raw `Text` styled from `theme.typography` variants everywhere |
 | `Button` | Primary/secondary/danger/text `TouchableOpacity` variants, disabled and busy states (auth, settings, check-in, day view) |
@@ -63,6 +65,8 @@ Extracted, with the screens that currently duplicate them:
 2. A branch with the `(tabs)` skeleton over placeholder screens, run under `@bro/app:test`: the real-router tests must still resolve pathnames and drive navigation with NativeTabs mounted under jest-expo.
 3. Exit: NativeTabs confirmed, or the JS-Tabs fallback invoked and recorded here. This slice is a day, not a week; its output is a decision, not code to keep.
 
+**Result, 14 August 2026:** fallback invoked. The installed API was verified as described above, but the real-router Jest spike eagerly mounted every tab and failed route isolation. Classic `Tabs` passes the same pathname and tab-navigation coverage without changing the public route tree.
+
 ### Slice 2: Route restructure and native headers
 
 1. Move routes into the structure above; guards to the group; per-tab stacks with native headers themed from tokens.
@@ -72,7 +76,7 @@ Extracted, with the screens that currently duplicate them:
 
 ### Slice 3: Component extraction
 
-1. Add the eight components; refactor all eight screens to use them, like-for-like.
+1. Add the ten components; refactor all eight screens to use them, like-for-like. `AppHeader` and `AvatarButton` land first because every tab root consumes them.
 2. Existing screen and flow tests are the harness — they pass unmodified except where they queried style-specific internals. No new snapshot layer; behaviour tests already cover these screens.
 3. Component-level tests only for behaviour a component owns (Button busy/disabled blocking presses, FormField error rendering) — not appearance.
 
@@ -89,6 +93,7 @@ Extracted, with the screens that currently duplicate them:
 | Pathnames | `/`, `/history`, `/history/[localDay]`, `/trends`, `/settings` resolve exactly as before the move. |
 | Guards | Incomplete onboarding still cannot reach any tab; completion lands on Today. |
 | Tab navigation | Each tab reachable and its screen rendered under the real router in jest. |
+| Shared header | Every tab root has its configured header and Account avatar; pushed screens do not render it. |
 | Back navigation | Day view and settings children return correctly with no hand-rolled Back button present. |
 | Account entry | Reachable from Settings; `/account` route unchanged. |
 | Like-for-like | Every pre-existing screen/flow test passes after component extraction. |
@@ -106,7 +111,7 @@ Preserve the complete output of a failing command. A device pass on both colour 
 
 ## Exit criteria
 
-- Four native tabs on device, native headers on every pushed screen, no hand-rolled back affordances left.
+- Four tabs on device, one shared header/account avatar across tab roots, native headers on every pushed screen, no hand-rolled back affordances left.
 - All eight screens composed from shared components with no visual redesign; the two shared style files dissolved or reduced to local remainders.
 - Router tests green with unchanged pathname assertions; token parity holds; no hardcoded colours in the new layer.
 - The NativeTabs-under-jest question answered in writing (this document), whichever way it went.

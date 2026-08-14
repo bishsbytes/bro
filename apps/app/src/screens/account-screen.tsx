@@ -10,7 +10,7 @@ import {
 	View,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
-import { StyleSheet } from "react-native-unistyles";
+import { StyleSheet } from "../theme/unistyles";
 import { useDeviceSettings } from "../providers/device-settings-provider";
 
 type Confirmation = "sign-out" | "delete-account" | null;
@@ -87,20 +87,11 @@ export function AccountScreen() {
 	const isResolving = hasStoredSession && !isRegistered && !error && !isPending;
 
 	return (
-		// The Account screen is the app's first top-anchored screen, so its back
-		// affordance would otherwise sit under the status bar or a notch.
-		<SafeAreaView style={styles.safeArea} edges={["top", "bottom"]}>
+		<SafeAreaView style={styles.safeArea} edges={["bottom"]}>
 			<ScrollView
 				contentContainerStyle={styles.container}
 				keyboardShouldPersistTaps="handled"
 			>
-				<TouchableOpacity
-					style={styles.backButton}
-					onPress={() => router.back()}
-				>
-					<Text style={styles.backButtonText}>Back</Text>
-				</TouchableOpacity>
-				<Text style={styles.title}>Account</Text>
 				{notice ? <Text style={styles.notice}>{notice}</Text> : null}
 
 				{!hasStoredSession && confirmation === null ? (
@@ -311,22 +302,6 @@ const styles = StyleSheet.create((theme) => ({
 		paddingHorizontal: theme.spacing.xl,
 		paddingVertical: theme.spacing.xxl,
 		backgroundColor: theme.colors.background,
-	},
-	backButton: {
-		alignSelf: "flex-start",
-		paddingVertical: theme.spacing.sm,
-		paddingRight: theme.spacing.lg,
-		marginBottom: theme.spacing.lg,
-	},
-	backButtonText: {
-		fontSize: theme.typography.label.fontSize,
-		color: theme.colors.brand,
-	},
-	title: {
-		fontSize: theme.typography.title.fontSize,
-		fontWeight: theme.typography.title.fontWeight,
-		color: theme.colors.text,
-		marginBottom: theme.spacing.xl,
 	},
 	stateTitle: {
 		fontSize: theme.typography.body.fontSize,
