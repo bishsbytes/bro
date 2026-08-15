@@ -1,4 +1,6 @@
-export type MetricKind = "scored" | "factor";
+import { LIFE_AREA_CATALOGUE, type LifeAreaSlug } from "./life-area-catalogue";
+
+export type MetricKind = "scored" | "factor" | "assessment";
 export type MetricAggregation = "mean" | "presence";
 export type FactorCategory = "body" | "lifestyle" | "mind" | "social";
 
@@ -29,7 +31,20 @@ export type FactorMetricDefinition = MetricDefinitionBase & {
 	category: FactorCategory;
 };
 
-export type MetricDefinition = ScoredMetricDefinition | FactorMetricDefinition;
+export type AssessmentMetricDefinition = MetricDefinitionBase & {
+	slug: LifeAreaSlug;
+	kind: "assessment";
+	aggregation: "mean";
+	scaleMin: 1;
+	scaleMax: 10;
+	category: null;
+	userEnterable: false;
+};
+
+export type MetricDefinition =
+	| ScoredMetricDefinition
+	| FactorMetricDefinition
+	| AssessmentMetricDefinition;
 
 export type MetricResolution =
 	| { kind: "known"; metric: MetricDefinition }
@@ -80,6 +95,24 @@ const factor = (
 	defaultPosition,
 });
 
+const assessment = (
+	slug: LifeAreaSlug,
+	label: string,
+	defaultPosition: number,
+): AssessmentMetricDefinition => ({
+	slug,
+	label,
+	kind: "assessment",
+	scaleMin: 1,
+	scaleMax: 10,
+	category: null,
+	aggregation: "mean",
+	sensitive: false,
+	userEnterable: false,
+	deprecated: false,
+	defaultPosition,
+});
+
 /**
  * Permanent authored slugs for the first check-in. Labels and grouping may
  * evolve, but a slug remains resolvable after it has been written.
@@ -99,13 +132,18 @@ export const METRIC_REGISTRY = [
 	factor("social", "Social", "social", 11),
 	factor("sex", "Sex", "social", 12),
 	factor("travel", "Travel", "social", 13),
-] as const satisfies readonly MetricDefinition[];
+	...LIFE_AREA_CATALOGUE.map((area) =>
+		assessment(area.slug, area.label, area.defaultPosition),
+	),
+] satisfies readonly MetricDefinition[];
 
 const metricsBySlug = new Map<string, MetricDefinition>(
 	METRIC_REGISTRY.map((metric) => [metric.slug, metric]),
 );
 
-export const DEFAULT_TRACKED_METRICS = METRIC_REGISTRY.map((metric) => ({
+export const DEFAULT_TRACKED_METRICS = METRIC_REGISTRY.filter(
+	(metric) => metric.userEnterable,
+).map((metric) => ({
 	metricSlug: metric.slug,
 	position: metric.defaultPosition,
 }));
@@ -124,5 +162,12 @@ export function listScoredMetrics(): ScoredMetricDefinition[] {
 export function listFactors(): FactorMetricDefinition[] {
 	return METRIC_REGISTRY.filter(
 		(metric): metric is FactorMetricDefinition => metric.kind === "factor",
+	);
+}
+
+export function listAssessmentMetrics(): AssessmentMetricDefinition[] {
+	return METRIC_REGISTRY.filter(
+		(metric): metric is AssessmentMetricDefinition =>
+			metric.kind === "assessment",
 	);
 }

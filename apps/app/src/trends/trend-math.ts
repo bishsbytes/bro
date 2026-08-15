@@ -51,7 +51,7 @@ function valueOnCurrentScale(
 	metric: MetricDefinition,
 ): number {
 	if (
-		metric.kind !== "scored" ||
+		metric.kind === "factor" ||
 		row.scaleMin === null ||
 		row.scaleMax === null ||
 		row.scaleMax <= row.scaleMin
@@ -131,16 +131,15 @@ export function buildTrendSeries(
 		points.push({ localDay, value: aggregateDay(dayRows, metric) });
 	}
 
-	const observedDayCount = points.filter((point) => point.value !== null).length;
+	const observedDayCount = points.filter(
+		(point) => point.value !== null,
+	).length;
 	const geometry = chartGeometry(points, metric);
 	return {
 		metricSlug: metric.slug,
 		points,
 		...geometry,
 		observedDayCount,
-		daysUntilMeaningful: Math.max(
-			0,
-			MEANINGFUL_DAY_COUNT - observedDayCount,
-		),
+		daysUntilMeaningful: Math.max(0, MEANINGFUL_DAY_COUNT - observedDayCount),
 	};
 }

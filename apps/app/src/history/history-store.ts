@@ -20,6 +20,7 @@ export type HistoryDay = {
 	checkIns: HistoricalCheckIn[];
 	unpairedScored: Observation[];
 	factors: Observation[];
+	assessments: Observation[];
 	unknown: Observation[];
 	notes: DayNote[];
 };
@@ -32,7 +33,9 @@ export type HistoryDaySummary = {
 	noteBodies: string[];
 };
 
-function pairCheckIns(observations: readonly Observation[]): HistoricalCheckIn[] {
+function pairCheckIns(
+	observations: readonly Observation[],
+): HistoricalCheckIn[] {
 	const moods = observations.filter((row) => row.metricSlug === "mood");
 	const energies = observations.filter((row) => row.metricSlug === "energy");
 	const pairCount = Math.min(moods.length, energies.length);
@@ -63,6 +66,7 @@ export function assembleHistoryDay(
 	);
 	const unpairedScored: Observation[] = [];
 	const factors: Observation[] = [];
+	const assessments: Observation[] = [];
 	const unknown: Observation[] = [];
 
 	for (const observation of observations) {
@@ -71,7 +75,12 @@ export function assembleHistoryDay(
 			unknown.push(observation);
 		} else if (resolved.metric.kind === "factor") {
 			factors.push(observation);
-		} else if (!pairedIds.has(observation.id)) {
+		} else if (resolved.metric.kind === "assessment") {
+			assessments.push(observation);
+		} else if (
+			resolved.metric.kind === "scored" &&
+			!pairedIds.has(observation.id)
+		) {
 			unpairedScored.push(observation);
 		}
 	}
@@ -81,6 +90,7 @@ export function assembleHistoryDay(
 		checkIns,
 		unpairedScored,
 		factors,
+		assessments,
 		unknown,
 		notes: [...notes],
 	};

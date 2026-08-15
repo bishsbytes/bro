@@ -1,5 +1,10 @@
 import type * as DatabaseApp from "@bro/database-app";
 import type { SQLiteDatabase } from "expo-sqlite";
+import {
+	DEFAULT_LIFE_AREA_METRICS,
+	listActiveLifeAreas,
+	resolveLifeAreas,
+} from "./content/life-area-catalogue";
 import { DEFAULT_TRACKED_METRICS } from "./content/metric-registry";
 import { createNodeSqliteMock } from "./test-support/node-sqlite";
 
@@ -258,13 +263,17 @@ describe("product repositories", () => {
 			removedAt: 1_000,
 			customLabel: "Business",
 		});
+		const overlays = await repository.listResolved(DEFAULT_LIFE_AREA_METRICS);
+		const resolved = resolveLifeAreas(overlays);
 		expect(
-			(
-				await repository.listResolved([
-					{ metricSlug: "wheel:career", position: 0 },
-				])
-			)[0],
-		).toMatchObject({ enabled: false, customLabel: "Business" });
+			resolved.find((area) => area.slug === "wheel:career"),
+		).toMatchObject({
+			enabled: false,
+			position: 2,
+			label: "Business",
+			customLabel: "Business",
+		});
+		expect(listActiveLifeAreas(overlays)).toHaveLength(7);
 	});
 
 	it("saves an assessment and all of its observations atomically", async () => {

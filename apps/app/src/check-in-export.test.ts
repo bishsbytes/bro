@@ -96,8 +96,12 @@ describe("check-in export", () => {
 	});
 
 	it("includes sensitive metrics by default and can deliberately exclude them", () => {
+		const moodMetric = knownMetric("mood");
+		if (moodMetric.kind !== "scored") {
+			throw new Error("Expected mood to be a scored metric.");
+		}
 		const sensitiveMetric: MetricDefinition = {
-			...knownMetric("mood"),
+			...moodMetric,
 			slug: "libido",
 			label: "Libido",
 			sensitive: true,

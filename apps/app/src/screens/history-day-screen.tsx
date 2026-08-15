@@ -7,7 +7,6 @@ import { Card } from "../components/card";
 import { FormField } from "../components/form-field";
 import { Screen } from "../components/screen";
 import { SectionHeader } from "../components/section-header";
-import { StyleSheet } from "../theme/unistyles";
 import { resolveMetric } from "../content/metric-registry";
 import {
 	createHistoryStore,
@@ -15,6 +14,7 @@ import {
 	type HistoryDay,
 	type HistoryStore,
 } from "../history/history-store";
+import { StyleSheet } from "../theme/unistyles";
 
 const SCORES = [1, 2, 3, 4, 5] as const;
 
@@ -148,9 +148,9 @@ function ObservationRow({
 	const resolved = resolveMetric(observation.metricSlug);
 	const title =
 		resolved.kind === "known"
-			? resolved.metric.kind === "scored"
-				? `${resolved.metric.label}: ${observation.value}`
-				: resolved.metric.label
+			? resolved.metric.kind === "factor"
+				? resolved.metric.label
+				: `${resolved.metric.label}: ${observation.value}`
 			: `${observation.metricSlug}: ${observation.value}`;
 
 	return (
@@ -247,6 +247,19 @@ export function HistoryDayScreen({ localDay, store }: HistoryDayScreenProps) {
 						<ObservationRow
 							key={factor.id}
 							observation={factor}
+							onDelete={(row) =>
+								void mutate(() => history.deleteObservation(row))
+							}
+						/>
+					))}
+
+					{day.assessments.length > 0 ? (
+						<SectionHeader title="Assessment scores" />
+					) : null}
+					{day.assessments.map((assessment) => (
+						<ObservationRow
+							key={assessment.id}
+							observation={assessment}
 							onDelete={(row) =>
 								void mutate(() => history.deleteObservation(row))
 							}

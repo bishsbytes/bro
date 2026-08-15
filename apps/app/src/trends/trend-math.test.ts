@@ -78,6 +78,28 @@ describe("trend math", () => {
 		expect(series.points.at(-1)?.value).toBe(4);
 	});
 
+	it("normalises assessment snapshots onto the current wheel scale", () => {
+		const series = buildTrendSeries(
+			[
+				observation("old-wheel", "2026-08-14", 50, {
+					metricSlug: "wheel:career",
+					scaleMin: 0,
+					scaleMax: 100,
+				}),
+				observation("current-wheel", "2026-08-14", 10, {
+					metricSlug: "wheel:career",
+					scaleMin: 1,
+					scaleMax: 10,
+				}),
+			],
+			knownMetric("wheel:career"),
+			"2026-08-14",
+			7,
+		);
+
+		expect(series.points.at(-1)?.value).toBe(7.75);
+	});
+
 	it("uses presence aggregation and produces inclusive 30-day ranges", () => {
 		const factor = knownMetric("stress");
 		const series = buildTrendSeries(
