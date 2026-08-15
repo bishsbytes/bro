@@ -20,6 +20,8 @@ export type CheckInExportOptions = {
 	excludeSensitiveMetrics?: boolean;
 };
 
+type VersionOneTrackedMetric = Omit<TrackedMetric, "customLabel">;
+
 export type CheckInExport = {
 	metadata: {
 		formatVersion: typeof CHECK_IN_EXPORT_FORMAT_VERSION;
@@ -31,7 +33,7 @@ export type CheckInExport = {
 	};
 	observations: Observation[];
 	dayNotes: DayNote[];
-	trackedMetrics: TrackedMetric[];
+	trackedMetrics: VersionOneTrackedMetric[];
 };
 
 function compareText(left: string, right: string): number {
@@ -73,7 +75,7 @@ function copyDayNote(note: DayNote): DayNote {
 	};
 }
 
-function copyTrackedMetric(metric: TrackedMetric): TrackedMetric {
+function copyTrackedMetric(metric: TrackedMetric): VersionOneTrackedMetric {
 	return {
 		id: metric.id,
 		metricSlug: metric.metricSlug,

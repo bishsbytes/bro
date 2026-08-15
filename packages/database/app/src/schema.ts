@@ -61,6 +61,7 @@ export const trackedMetrics = sqliteTable(PRODUCT_TABLE_NAMES.trackedMetrics, {
 	position: integer("position").notNull(),
 	addedAt: integer("added_at"),
 	removedAt: integer("removed_at"),
+	customLabel: text("custom_label"),
 	createdAt: integer("created_at").notNull(),
 	updatedAt: integer("updated_at").notNull(),
 });
@@ -70,6 +71,31 @@ export const reminders = sqliteTable(PRODUCT_TABLE_NAMES.reminders, {
 	minuteOfDay: integer("minute_of_day").notNull(),
 	daysOfWeek: integer("days_of_week").notNull(),
 	enabled: integer("enabled").notNull(),
+	createdAt: integer("created_at").notNull(),
+	updatedAt: integer("updated_at").notNull(),
+});
+
+export const assessments = sqliteTable(PRODUCT_TABLE_NAMES.assessments, {
+	id: text("id").primaryKey(),
+	templateSlug: text("template_slug").notNull(),
+	templateVersion: integer("template_version").notNull(),
+	startedAt: integer("started_at").notNull(),
+	completedAt: integer("completed_at"),
+	items: text("items").notNull(),
+	focusItemSlugs: text("focus_item_slugs").notNull(),
+	createdAt: integer("created_at").notNull(),
+	updatedAt: integer("updated_at").notNull(),
+});
+
+export const goals = sqliteTable(PRODUCT_TABLE_NAMES.goals, {
+	id: text("id").primaryKey(),
+	metricSlug: text("metric_slug").notNull(),
+	direction: text("direction").notNull(),
+	targetValue: real("target_value").notNull(),
+	targetDate: text("target_date"),
+	startedAt: integer("started_at").notNull(),
+	achievedAt: integer("achieved_at"),
+	abandonedAt: integer("abandoned_at"),
 	createdAt: integer("created_at").notNull(),
 	updatedAt: integer("updated_at").notNull(),
 });

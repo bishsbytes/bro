@@ -15,6 +15,13 @@
       "when": 1786746207763,
       "tag": "0001_odd_lockheed",
       "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "6",
+      "when": 1786833857651,
+      "tag": "0002_square_mikhail_rasputin",
+      "breakpoints": true
     }
   ]
 }

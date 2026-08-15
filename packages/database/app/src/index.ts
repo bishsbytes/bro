@@ -16,6 +16,20 @@ export {
 } from "./device-settings";
 export { type MigrationResult, runMigrations } from "./migrator";
 export {
+	PRODUCT_TABLE_NAMES,
+	PRODUCT_TABLES,
+	type ProductTableName,
+} from "./product-tables";
+export {
+	type Assessment,
+	type AssessmentItemSnapshot,
+	AssessmentRepository,
+	type CreateAssessment,
+	type CreateAssessmentObservation,
+	type CreateAssessmentWithObservations,
+	type SavedAssessment,
+} from "./repositories/assessment-repository";
+export {
 	BaseRepository,
 	type SQLiteParam,
 } from "./repositories/base-repository";
@@ -23,6 +37,12 @@ export {
 	type DayNote,
 	DayNoteRepository,
 } from "./repositories/day-note-repository";
+export {
+	type CreateGoal,
+	type Goal,
+	type GoalDirection,
+	GoalRepository,
+} from "./repositories/goal-repository";
 export {
 	type CreateObservation,
 	type Observation,
@@ -41,8 +61,3 @@ export {
 	TrackedMetricsRepository,
 } from "./repositories/tracked-metrics-repository";
 export { createUuidV7, type RandomBytes } from "./uuid-v7";
-export {
-	PRODUCT_TABLE_NAMES,
-	PRODUCT_TABLES,
-	type ProductTableName,
-} from "./product-tables";

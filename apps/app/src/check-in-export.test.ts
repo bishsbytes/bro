@@ -65,6 +65,7 @@ const trackedAlcohol: TrackedMetric = {
 	position: 6,
 	addedAt: null,
 	removedAt: 1_786_708_800_000,
+	customLabel: null,
 	createdAt: 1_786_708_800_000,
 	updatedAt: 1_786_708_800_000,
 };

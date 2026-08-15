@@ -233,6 +233,164 @@ describe("product repositories", () => {
 		});
 	});
 
+	it("relabels tracked metrics without losing their overlay state", async () => {
+		let now = 1_000;
+		const repository = new databaseApp.TrackedMetricsRepository(db, {
+			now: () => now,
+			createId: () => "tracked-career",
+		});
+
+		await repository.configure("wheel:career", 4, false);
+		now = 2_000;
+		await expect(
+			repository.relabel("wheel:career", "  Business  ", 0),
+		).resolves.toMatchObject({
+			position: 4,
+			removedAt: 1_000,
+			customLabel: "Business",
+			updatedAt: 2_000,
+		});
+
+		now = 3_000;
+		await repository.configure("wheel:career", 2, false);
+		expect((await repository.listAll())[0]).toMatchObject({
+			position: 2,
+			removedAt: 1_000,
+			customLabel: "Business",
+		});
+		expect(
+			(
+				await repository.listResolved([
+					{ metricSlug: "wheel:career", position: 0 },
+				])
+			)[0],
+		).toMatchObject({ enabled: false, customLabel: "Business" });
+	});
+
+	it("saves an assessment and all of its observations atomically", async () => {
+		let nextId = 0;
+		const repository = new databaseApp.AssessmentRepository(db, {
+			now: () => 10_000,
+			createId: () => {
+				nextId += 1;
+				return `assessment-part-${nextId}`;
+			},
+		});
+		const input: DatabaseApp.CreateAssessmentWithObservations = {
+			templateSlug: "wheel-of-life",
+			templateVersion: 1,
+			startedAt: 8_000,
+			completedAt: 9_000,
+			items: [
+				{ slug: "wheel:career", label: "Business", position: 0 },
+				{ slug: "wheel:health", label: "Health & fitness", position: 1 },
+			],
+			focusItemSlugs: ["wheel:career"],
+			observations: [
+				observation({
+					metricSlug: "wheel:career",
+					value: 6,
+					scaleMin: 1,
+					scaleMax: 10,
+				}),
+				observation({
+					metricSlug: "wheel:health",
+					value: 8,
+					scaleMin: 1,
+					scaleMax: 10,
+				}),
+			],
+		};
+
+		const saved = await repository.createWithObservations(input);
+		expect(saved.assessment).toMatchObject({
+			id: "assessment-part-1",
+			items: input.items,
+			focusItemSlugs: ["wheel:career"],
+		});
+		expect(saved.observations).toHaveLength(2);
+		expect(
+			saved.observations.every(
+				(row) => row.assessmentId === saved.assessment.id,
+			),
+		).toBe(true);
+		expect(await repository.findById(saved.assessment.id)).toEqual(
+			saved.assessment,
+		);
+		expect(await repository.listAll()).toEqual([saved.assessment]);
+	});
+
+	it("rolls back the whole assessment when one observation is invalid", async () => {
+		let nextId = 0;
+		const repository = new databaseApp.AssessmentRepository(db, {
+			createId: () => {
+				nextId += 1;
+				return `rollback-part-${nextId}`;
+			},
+		});
+
+		await expect(
+			repository.createWithObservations({
+				templateSlug: "wheel-of-life",
+				templateVersion: 1,
+				startedAt: 8_000,
+				completedAt: 9_000,
+				items: [
+					{ slug: "wheel:career", label: "Work & career", position: 0 },
+					{ slug: "wheel:health", label: "Health & fitness", position: 1 },
+				],
+				focusItemSlugs: [],
+				observations: [
+					observation({
+						metricSlug: "wheel:career",
+						value: 6,
+						scaleMin: 1,
+						scaleMax: 10,
+					}),
+					observation({
+						metricSlug: "wheel:health",
+						value: 11,
+						scaleMin: 1,
+						scaleMax: 10,
+					}),
+				],
+			}),
+		).rejects.toThrow("Observation value must fall within its scale bounds.");
+		expect(await repository.listAll()).toEqual([]);
+		expect(
+			await new databaseApp.ObservationRepository(db).listByDay("2026-08-14"),
+		).toEqual([]);
+	});
+
+	it("creates goals and records mutually exclusive terminal states", async () => {
+		let now = 1_000;
+		const repository = new databaseApp.GoalRepository(db, {
+			now: () => now,
+			createId: () => "goal-1",
+		});
+		const created = await repository.create({
+			metricSlug: "wheel:career",
+			direction: "increase",
+			targetValue: 8,
+			targetDate: "2026-12-01",
+			startedAt: 900,
+		});
+		expect(await repository.listAll()).toEqual([created]);
+
+		now = 2_000;
+		await expect(repository.achieve(created.id)).resolves.toMatchObject({
+			achievedAt: 2_000,
+			abandonedAt: null,
+			updatedAt: 2_000,
+		});
+		now = 3_000;
+		await expect(repository.abandon(created.id)).resolves.toMatchObject({
+			achievedAt: null,
+			abandonedAt: 3_000,
+			updatedAt: 3_000,
+		});
+	});
+
 	it("creates, edits, disables, and hard-deletes reminder schedules", async () => {
 		let now = 1_000;
 		const repository = new databaseApp.ReminderRepository(db, {

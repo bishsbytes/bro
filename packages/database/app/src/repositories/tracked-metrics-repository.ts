@@ -8,6 +8,7 @@ export type TrackedMetric = {
 	position: number;
 	addedAt: number | null;
 	removedAt: number | null;
+	customLabel: string | null;
 	createdAt: number;
 	updatedAt: number;
 };
@@ -15,6 +16,7 @@ export type TrackedMetric = {
 export type TrackedMetricDefault = {
 	metricSlug: string;
 	position: number;
+	enabled?: boolean;
 };
 
 export type ResolvedTrackedMetric = TrackedMetricDefault & {
@@ -22,6 +24,7 @@ export type ResolvedTrackedMetric = TrackedMetricDefault & {
 	overlayId: string | null;
 	addedAt: number | null;
 	removedAt: number | null;
+	customLabel: string | null;
 };
 
 type TrackedMetricRow = {
@@ -30,6 +33,7 @@ type TrackedMetricRow = {
 	position: number;
 	added_at: number | null;
 	removed_at: number | null;
+	custom_label: string | null;
 	created_at: number;
 	updated_at: number;
 };
@@ -46,6 +50,7 @@ function toTrackedMetric(row: TrackedMetricRow): TrackedMetric {
 		position: row.position,
 		addedAt: row.added_at,
 		removedAt: row.removed_at,
+		customLabel: row.custom_label,
 		createdAt: row.created_at,
 		updatedAt: row.updated_at,
 	};
@@ -64,8 +69,8 @@ export class TrackedMetricsRepository extends BaseRepository {
 
 	async listAll(): Promise<TrackedMetric[]> {
 		const rows = await this.all<TrackedMetricRow>(
-			`SELECT id, metric_slug, position, added_at, removed_at, created_at,
-				updated_at
+			`SELECT id, metric_slug, position, added_at, removed_at, custom_label,
+				created_at, updated_at
 			 FROM tracked_metrics
 			 ORDER BY updated_at DESC, id DESC`,
 		);
@@ -88,10 +93,13 @@ export class TrackedMetricsRepository extends BaseRepository {
 				return {
 					metricSlug: fallback.metricSlug,
 					position: overlay?.position ?? fallback.position,
-					enabled: overlay ? overlay.removedAt === null : true,
+					enabled: overlay
+						? overlay.removedAt === null
+						: (fallback.enabled ?? true),
 					overlayId: overlay?.id ?? null,
 					addedAt: overlay?.addedAt ?? null,
 					removedAt: overlay?.removedAt ?? null,
+					customLabel: overlay?.customLabel ?? null,
 				};
 			})
 			.sort(
@@ -114,8 +122,8 @@ export class TrackedMetricsRepository extends BaseRepository {
 
 		return await this.transaction(async () => {
 			const existing = await this.first<TrackedMetricRow>(
-				`SELECT id, metric_slug, position, added_at, removed_at, created_at,
-					updated_at
+				`SELECT id, metric_slug, position, added_at, removed_at, custom_label,
+					created_at, updated_at
 				 FROM tracked_metrics WHERE metric_slug = ?
 				 ORDER BY updated_at DESC, id DESC LIMIT 1`,
 				[metricSlug],
@@ -127,9 +135,12 @@ export class TrackedMetricsRepository extends BaseRepository {
 				// they only move on a disabled<->enabled transition — reordering an
 				// enabled metric must not rewrite when it was enabled.
 				const wasEnabled = existing.removed_at === null;
-				const addedAt =
-					enabled && !wasEnabled ? now : existing.added_at;
-				const removedAt = enabled ? null : wasEnabled ? now : existing.removed_at;
+				const addedAt = enabled && !wasEnabled ? now : existing.added_at;
+				const removedAt = enabled
+					? null
+					: wasEnabled
+						? now
+						: existing.removed_at;
 				await this.run(
 					`UPDATE tracked_metrics
 					 SET position = ?, added_at = ?, removed_at = ?, updated_at = ?
@@ -151,19 +162,89 @@ export class TrackedMetricsRepository extends BaseRepository {
 				position,
 				addedAt: enabled ? now : null,
 				removedAt: enabled ? null : now,
+				customLabel: null,
 				createdAt: now,
 				updatedAt: now,
 			};
 			await this.run(
 				`INSERT INTO tracked_metrics (
-					id, metric_slug, position, added_at, removed_at, created_at, updated_at
-				) VALUES (?, ?, ?, ?, ?, ?, ?)`,
+					id, metric_slug, position, added_at, removed_at, custom_label, created_at,
+					updated_at
+				) VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
 				[
 					tracked.id,
 					tracked.metricSlug,
 					tracked.position,
 					tracked.addedAt,
 					tracked.removedAt,
+					tracked.customLabel,
+					tracked.createdAt,
+					tracked.updatedAt,
+				],
+			);
+			return tracked;
+		});
+	}
+
+	async relabel(
+		metricSlug: string,
+		customLabel: string | null,
+		position: number,
+		enabled = true,
+	): Promise<TrackedMetric> {
+		if (!Number.isInteger(position) || position < 0) {
+			throw new RangeError(
+				"Tracked metric position must be a non-negative integer.",
+			);
+		}
+		const normalizedLabel = customLabel?.trim() || null;
+
+		return await this.transaction(async () => {
+			const existing = await this.first<TrackedMetricRow>(
+				`SELECT id, metric_slug, position, added_at, removed_at, custom_label,
+					created_at, updated_at
+				 FROM tracked_metrics WHERE metric_slug = ?
+				 ORDER BY updated_at DESC, id DESC LIMIT 1`,
+				[metricSlug],
+			);
+			const now = this.now();
+
+			if (existing) {
+				await this.run(
+					`UPDATE tracked_metrics
+					 SET custom_label = ?, updated_at = ?
+					 WHERE id = ?`,
+					[normalizedLabel, now, existing.id],
+				);
+				return toTrackedMetric({
+					...existing,
+					custom_label: normalizedLabel,
+					updated_at: now,
+				});
+			}
+
+			const tracked: TrackedMetric = {
+				id: this.createId(now),
+				metricSlug,
+				position,
+				addedAt: enabled ? now : null,
+				removedAt: enabled ? null : now,
+				customLabel: normalizedLabel,
+				createdAt: now,
+				updatedAt: now,
+			};
+			await this.run(
+				`INSERT INTO tracked_metrics (
+					id, metric_slug, position, added_at, removed_at, custom_label, created_at,
+					updated_at
+				) VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
+				[
+					tracked.id,
+					tracked.metricSlug,
+					tracked.position,
+					tracked.addedAt,
+					tracked.removedAt,
+					tracked.customLabel,
 					tracked.createdAt,
 					tracked.updatedAt,
 				],

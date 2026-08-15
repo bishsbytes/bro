@@ -40,7 +40,11 @@ describe("product database migrations", () => {
 		const { databaseApp, db } = await migratedDatabase("fresh.db");
 
 		await expect(databaseApp.runMigrations(db)).resolves.toEqual({
-			applied: ["0000_check_in", "0001_odd_lockheed"],
+			applied: [
+				"0000_check_in",
+				"0001_odd_lockheed",
+				"0002_square_mikhail_rasputin",
+			],
 			skipped: [],
 		});
 
@@ -51,6 +55,8 @@ describe("product database migrations", () => {
 				'day_notes',
 				'tracked_metrics',
 				'reminders',
+				'assessments',
+				'goals',
 				'idx_observations_metric_day',
 				'idx_observations_day',
 				'idx_day_notes_day'
@@ -59,7 +65,9 @@ describe("product database migrations", () => {
 		);
 
 		expect(objects).toEqual([
+			{ name: "assessments", type: "table" },
 			{ name: "day_notes", type: "table" },
+			{ name: "goals", type: "table" },
 			{ name: "idx_day_notes_day", type: "index" },
 			{ name: "idx_observations_day", type: "index" },
 			{ name: "idx_observations_metric_day", type: "index" },
@@ -73,6 +81,12 @@ describe("product database migrations", () => {
 				.map(({ name }) => name)
 				.sort(),
 		).toEqual([...databaseApp.PRODUCT_TABLES].sort());
+		expect(
+			await db.getFirstAsync<{ name: string }>(
+				`SELECT name FROM pragma_table_info('tracked_metrics')
+				 WHERE name = 'custom_label'`,
+			),
+		).toEqual({ name: "custom_label" });
 	});
 
 	it("is a no-op when the same database is migrated again", async () => {
@@ -81,7 +95,11 @@ describe("product database migrations", () => {
 		await databaseApp.runMigrations(db);
 		await expect(databaseApp.runMigrations(db)).resolves.toEqual({
 			applied: [],
-			skipped: ["0000_check_in", "0001_odd_lockheed"],
+			skipped: [
+				"0000_check_in",
+				"0001_odd_lockheed",
+				"0002_square_mikhail_rasputin",
+			],
 		});
 
 		const markers = await db.getAllAsync<{ id: string }>(
@@ -90,44 +108,54 @@ describe("product database migrations", () => {
 		expect(markers).toEqual([
 			{ id: "0000_check_in" },
 			{ id: "0001_odd_lockheed" },
+			{ id: "0002_square_mikhail_rasputin" },
 		]);
 	});
 
-	it("applies only the reminders migration to a step-1 database", async () => {
-		const { databaseApp, db } = await migratedDatabase("step-one.db");
+	it("applies only migration 003 to a step-2 database", async () => {
+		const { databaseApp, db } = await migratedDatabase("step-two.db");
 		await db.execAsync(`
 			CREATE TABLE IF NOT EXISTS __app_migrations (
 				id TEXT PRIMARY KEY NOT NULL,
 				applied_at INTEGER NOT NULL
 			);
 			INSERT INTO __app_migrations (id, applied_at)
-			VALUES ('0000_check_in', 1);
+			VALUES ('0000_check_in', 1), ('0001_odd_lockheed', 2);
+			CREATE TABLE tracked_metrics (
+				id TEXT PRIMARY KEY NOT NULL,
+				metric_slug TEXT NOT NULL,
+				position INTEGER NOT NULL,
+				added_at INTEGER,
+				removed_at INTEGER,
+				created_at INTEGER NOT NULL,
+				updated_at INTEGER NOT NULL
+			);
 		`);
 
 		await expect(databaseApp.runMigrations(db)).resolves.toEqual({
-			applied: ["0001_odd_lockheed"],
-			skipped: ["0000_check_in"],
+			applied: ["0002_square_mikhail_rasputin"],
+			skipped: ["0000_check_in", "0001_odd_lockheed"],
 		});
 		expect(
-			await db.getFirstAsync<{ name: string }>(
-				"SELECT name FROM sqlite_master WHERE type = 'table' AND name = 'reminders'",
+			await db.getAllAsync<{ name: string }>(
+				`SELECT name FROM sqlite_master
+				 WHERE type = 'table' AND name IN ('assessments', 'goals')
+				 ORDER BY name`,
 			),
-		).toEqual({ name: "reminders" });
+		).toEqual([{ name: "assessments" }, { name: "goals" }]);
+		expect(
+			await db.getFirstAsync<{ name: string }>(
+				`SELECT name FROM pragma_table_info('tracked_metrics')
+				 WHERE name = 'custom_label'`,
+			),
+		).toEqual({ name: "custom_label" });
 	});
 
-	it("tolerates a replicated marker winning the race after startup", async () => {
+	it("tolerates migration statements re-running after a marker race", async () => {
 		const { databaseApp, db } = await migratedDatabase("marker-race.db");
+		await databaseApp.runMigrations(db);
 		const realGetAll = db.getAllAsync.bind(db);
 		let hideMarkerOnce = true;
-
-		await db.execAsync(`
-			CREATE TABLE IF NOT EXISTS __app_migrations (
-				id TEXT PRIMARY KEY NOT NULL,
-				applied_at INTEGER NOT NULL
-			);
-			INSERT INTO __app_migrations (id, applied_at)
-			VALUES ('0000_check_in', 1);
-		`);
 
 		const racingDb = {
 			...db,
@@ -142,14 +170,23 @@ describe("product database migrations", () => {
 		} as SQLiteDatabase;
 
 		await expect(databaseApp.runMigrations(racingDb)).resolves.toEqual({
-			applied: ["0000_check_in", "0001_odd_lockheed"],
+			applied: [
+				"0000_check_in",
+				"0001_odd_lockheed",
+				"0002_square_mikhail_rasputin",
+			],
 			skipped: [],
 		});
 
-		const marker = await db.getFirstAsync<{ count: number }>(
-			"SELECT COUNT(*) AS count FROM __app_migrations WHERE id = ?",
-			["0000_check_in"],
+		const markers = await db.getFirstAsync<{ count: number }>(
+			"SELECT COUNT(*) AS count FROM __app_migrations",
 		);
-		expect(marker?.count).toBe(1);
+		expect(markers?.count).toBe(3);
+		expect(
+			await db.getFirstAsync<{ count: number }>(
+				`SELECT COUNT(*) AS count FROM pragma_table_info('tracked_metrics')
+				 WHERE name = 'custom_label'`,
+			),
+		).toEqual({ count: 1 });
 	});
 });

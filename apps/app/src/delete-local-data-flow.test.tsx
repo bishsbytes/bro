@@ -82,6 +82,8 @@ describe("delete local data", () => {
 		const notes = new databaseApp.DayNoteRepository(db);
 		const trackedMetrics = new databaseApp.TrackedMetricsRepository(db);
 		const reminders = new databaseApp.ReminderRepository(db);
+		const assessments = new databaseApp.AssessmentRepository(db);
+		const goals = new databaseApp.GoalRepository(db);
 		await observations.create({
 			metricSlug: "mood",
 			value: 4,
@@ -97,6 +99,34 @@ describe("delete local data", () => {
 		await notes.create("2026-08-14", "Delete me");
 		await trackedMetrics.configure("alcohol", 6, false);
 		await reminders.create({ minuteOfDay: 1_200, daysOfWeek: 0b111_1111 });
+		await assessments.createWithObservations({
+			templateSlug: "wheel-of-life",
+			templateVersion: 1,
+			startedAt: Date.parse("2026-08-14T11:00:00.000Z"),
+			completedAt: Date.parse("2026-08-14T11:05:00.000Z"),
+			items: [{ slug: "wheel:career", label: "Work & career", position: 0 }],
+			focusItemSlugs: ["wheel:career"],
+			observations: [
+				{
+					metricSlug: "wheel:career",
+					value: 6,
+					scaleMin: 1,
+					scaleMax: 10,
+					observedAt: Date.parse("2026-08-14T11:05:00.000Z"),
+					localDay: "2026-08-14",
+					tzOffsetMinutes: -60,
+					source: "user",
+					sourceRecordId: null,
+				},
+			],
+		});
+		await goals.create({
+			metricSlug: "wheel:career",
+			direction: "increase",
+			targetValue: 8,
+			targetDate: null,
+			startedAt: Date.parse("2026-08-14T11:05:00.000Z"),
+		});
 		(
 			Notifications.getAllScheduledNotificationsAsync as jest.Mock
 		).mockResolvedValue([
@@ -116,13 +146,13 @@ describe("delete local data", () => {
 
 		await fireEvent.press(view.getByText("Delete local data"));
 		expect(view.getByText(DELETE_COPY)).toBeTruthy();
-		expect(await observations.listAll()).toHaveLength(1);
+		expect(await observations.listAll()).toHaveLength(2);
 		expect(await notes.listAll()).toHaveLength(1);
 		expect(await trackedMetrics.listAll()).toHaveLength(1);
 
 		await fireEvent.press(view.getByText("Cancel"));
 		expect(view.queryByText(DELETE_COPY)).toBeNull();
-		expect(await observations.listAll()).toHaveLength(1);
+		expect(await observations.listAll()).toHaveLength(2);
 
 		await fireEvent.press(view.getByText("Delete local data"));
 		await fireEvent.press(view.getByText("Permanently delete local data"));
@@ -132,6 +162,8 @@ describe("delete local data", () => {
 		expect(await notes.listAll()).toEqual([]);
 		expect(await trackedMetrics.listAll()).toEqual([]);
 		expect(await reminders.listAll()).toEqual([]);
+		expect(await assessments.listAll()).toEqual([]);
+		expect(await goals.listAll()).toEqual([]);
 		expect(transaction).toHaveBeenCalledTimes(1);
 		const cancelMock =
 			Notifications.cancelScheduledNotificationAsync as jest.Mock;

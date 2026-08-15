@@ -38,6 +38,27 @@ function statementsOf(migration: Migration): string[] {
 		.filter((statement) => statement.length > 0);
 }
 
+const ADD_COLUMN_STATEMENT =
+	/^ALTER TABLE [`"]?([A-Za-z_][A-Za-z0-9_]*)[`"]? ADD(?: COLUMN)? [`"]?([A-Za-z_][A-Za-z0-9_]*)[`"]?/i;
+
+async function executeStatement(
+	db: SQLiteDatabase,
+	statement: string,
+): Promise<void> {
+	const addColumn = statement.match(ADD_COLUMN_STATEMENT);
+	if (addColumn) {
+		const [, tableName, columnName] = addColumn;
+		const columns = await db.getAllAsync<{ name: string }>(
+			`PRAGMA table_info("${tableName}")`,
+		);
+		if (columns.some(({ name }) => name === columnName)) {
+			return;
+		}
+	}
+
+	await db.execAsync(statement);
+}
+
 /**
  * Applies any migrations that have not run against this device's database.
  *
@@ -64,7 +85,7 @@ export async function runMigrations(
 
 		await db.withTransactionAsync(async () => {
 			for (const statement of statementsOf(migration)) {
-				await db.execAsync(statement);
+				await executeStatement(db, statement);
 			}
 
 			await db.runAsync(
