@@ -143,7 +143,7 @@ function ObservationRow({
 	onDelete,
 }: {
 	observation: Observation;
-	onDelete: (observation: Observation) => void;
+	onDelete?: (observation: Observation) => void;
 }) {
 	const resolved = resolveMetric(observation.metricSlug);
 	const title =
@@ -161,12 +161,14 @@ function ObservationRow({
 					Source: {observation.source}
 				</AppText>
 			</View>
-			<Button
-				label={resolved.kind === "known" ? "Remove" : "Delete"}
-				variant="text"
-				tone="danger"
-				onPress={() => onDelete(observation)}
-			/>
+			{onDelete ? (
+				<Button
+					label={resolved.kind === "known" ? "Remove" : "Delete"}
+					variant="text"
+					tone="danger"
+					onPress={() => onDelete(observation)}
+				/>
+			) : null}
 		</Card>
 	);
 }
@@ -257,13 +259,7 @@ export function HistoryDayScreen({ localDay, store }: HistoryDayScreenProps) {
 						<SectionHeader title="Assessment scores" />
 					) : null}
 					{day.assessments.map((assessment) => (
-						<ObservationRow
-							key={assessment.id}
-							observation={assessment}
-							onDelete={(row) =>
-								void mutate(() => history.deleteObservation(row))
-							}
-						/>
+						<ObservationRow key={assessment.id} observation={assessment} />
 					))}
 
 					{day.unknown.length > 0 ? (

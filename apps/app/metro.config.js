@@ -17,6 +17,16 @@ const { assetExts, sourceExts } = defaultConfig.resolver;
  */
 const customConfig = {
 	cacheVersion: "app",
+	server: {
+		enhanceMiddleware: (metroMiddleware) => (request, response, next) => {
+			// expo-sqlite's web worker uses SharedArrayBuffer for synchronous
+			// operations. Browsers expose it only to cross-origin-isolated pages,
+			// so both the document and worker responses need these headers.
+			response.setHeader("Cross-Origin-Opener-Policy", "same-origin");
+			response.setHeader("Cross-Origin-Embedder-Policy", "require-corp");
+			return metroMiddleware(request, response, next);
+		},
+	},
 	transformer: {
 		babelTransformerPath: require.resolve("react-native-svg-transformer"),
 	},

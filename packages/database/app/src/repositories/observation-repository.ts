@@ -182,6 +182,16 @@ export class ObservationRepository extends BaseRepository {
 		return rows.map(toObservation);
 	}
 
+	async listByAssessmentId(assessmentId: string): Promise<Observation[]> {
+		const rows = await this.all<ObservationRow>(
+			`SELECT ${SELECT_COLUMNS} FROM observations
+			 WHERE assessment_id = ?
+			 ORDER BY observed_at ASC, created_at ASC, id ASC`,
+			[assessmentId],
+		);
+		return rows.map(toObservation);
+	}
+
 	async listByMetricAndDayRange(
 		metricSlug: string,
 		fromLocalDay: string,

@@ -110,15 +110,21 @@ export class HistoryStore {
 			this.observations.listAll(),
 			this.notes.listAll(),
 		]);
+		const dailyObservations = observations.filter((row) => {
+			const resolved = resolveMetric(row.metricSlug);
+			return !(
+				resolved.kind === "known" && resolved.metric.kind === "assessment"
+			);
+		});
 		const localDays = new Set([
-			...observations.map((row) => row.localDay),
+			...dailyObservations.map((row) => row.localDay),
 			...notes.map((note) => note.localDay),
 		]);
 
 		return [...localDays]
 			.sort((left, right) => right.localeCompare(left))
 			.map((localDay) => {
-				const dayObservations = observations.filter(
+				const dayObservations = dailyObservations.filter(
 					(row) => row.localDay === localDay,
 				);
 				const factors = dayObservations.flatMap((row) => {
