@@ -129,7 +129,7 @@ Unchanged copy from step 1; the action now also clears `reminders` (via the shar
 2. **Run step 1's pending native checklist in the same session** — airplane-mode relaunch, near-midnight entry, colour schemes, fifteen-second timing — and mark both plans.
 3. Update the product plan (step 2 status in sequencing; note the resolved storage-ownership deviation for notification ids) and the umbrella plan's prebuild note (first regeneration done, batching outcome recorded).
 
-**Implementation status:** all code, generated migration/native artefacts, automated acceptance, and documentation are complete. Device-only notification delivery, killed-app timing, OS permission recovery, timezone-change behaviour, and the shared step 1 physical checklist remain pending. The first regeneration carried notifications only; Phase 3's local-authentication dependency was not batched into this product step.
+**Implementation status:** all code, generated migration/native artefacts, automated acceptance, and documentation are complete. Device-only notification delivery, killed-app timing, OS permission recovery, timezone-change behaviour, and the shared step 1 physical checklist remain pending. The first regeneration carried notifications only; Phase 3's local-authentication dependency was not batched into this product step. **Recorded deviation:** the regeneration's manifest change landed inside the main feature commit rather than the distinct commit the exit criteria call for; history was not rewritten, so the batching outcome is recorded here instead of being legible from the commit log.
 
 ## Expected touchpoints
 

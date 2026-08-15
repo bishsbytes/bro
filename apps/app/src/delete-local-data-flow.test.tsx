@@ -6,6 +6,7 @@ import {
 	renderRouter,
 	waitFor,
 } from "expo-router/testing-library";
+import * as Notifications from "expo-notifications";
 import { createNodeSqliteMock } from "./test-support/node-sqlite";
 
 const mockSqlite = createNodeSqliteMock();
@@ -96,6 +97,12 @@ describe("delete local data", () => {
 		await notes.create("2026-08-14", "Delete me");
 		await trackedMetrics.configure("alcohol", 6, false);
 		await reminders.create({ minuteOfDay: 1_200, daysOfWeek: 0b111_1111 });
+		(
+			Notifications.getAllScheduledNotificationsAsync as jest.Mock
+		).mockResolvedValue([
+			{ identifier: "checkin-reminder:reminder-1:2026-08-14" },
+			{ identifier: "another-domain:one" },
+		]);
 		const markerBefore = await db.getFirstAsync<{ count: number }>(
 			"SELECT COUNT(*) AS count FROM __app_migrations",
 		);
@@ -126,6 +133,17 @@ describe("delete local data", () => {
 		expect(await trackedMetrics.listAll()).toEqual([]);
 		expect(await reminders.listAll()).toEqual([]);
 		expect(transaction).toHaveBeenCalledTimes(1);
+		const cancelMock =
+			Notifications.cancelScheduledNotificationAsync as jest.Mock;
+		expect(cancelMock).toHaveBeenCalledTimes(1);
+		expect(cancelMock).toHaveBeenCalledWith(
+			"checkin-reminder:reminder-1:2026-08-14",
+		);
+		// Cancel-all is the one side effect the transaction cannot carry; it must
+		// run after the commit so a failed delete never half-silences.
+		expect(cancelMock.mock.invocationCallOrder[0]).toBeGreaterThan(
+			transaction.mock.invocationCallOrder[0] ?? Number.POSITIVE_INFINITY,
+		);
 		expect(
 			await db.getFirstAsync<{ count: number }>(
 				"SELECT COUNT(*) AS count FROM __app_migrations",

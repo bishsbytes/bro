@@ -75,6 +75,26 @@ describe("reminder planner", () => {
 		expect(new Set(planned.map(({ localDay }) => localDay)).size).toBe(11);
 	});
 
+	it("plans a repeated fall-back wall time exactly once", () => {
+		const previousTimezone = process.env.TZ;
+		process.env.TZ = "Europe/London";
+		try {
+			const planned = planReminderNotifications(
+				[reminder({ minuteOfDay: 90 })],
+				new Date(2026, 9, 24, 12),
+				"2026-10-24",
+				false,
+			);
+			const fallBackDay = planned.filter(
+				({ localDay }) => localDay === "2026-10-25",
+			);
+			expect(fallBackDay).toHaveLength(1);
+			expect(Number.isFinite(fallBackDay[0]?.fireAt.getTime())).toBe(true);
+		} finally {
+			process.env.TZ = previousTimezone;
+		}
+	});
+
 	it("resolves a spring-forward wall time without duplicating it", () => {
 		const previousTimezone = process.env.TZ;
 		process.env.TZ = "Europe/London";
