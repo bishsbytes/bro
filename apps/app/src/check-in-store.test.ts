@@ -1,6 +1,9 @@
 import type * as DatabaseApp from "@bro/database-app";
 import type { SQLiteDatabase } from "expo-sqlite";
+import { resolveMetric } from "./content/metric-registry";
 import { createNodeSqliteMock } from "./test-support/node-sqlite";
+import { buildTrendSeries } from "./trends/trend-math";
+import { KILOGRAMS_PER_POUND } from "./units";
 
 const mockSqlite = createNodeSqliteMock();
 let mockRandomSeed = 0;
@@ -79,7 +82,13 @@ describe("check-in store", () => {
 		const store = new CheckInStore(db, () => CAPTURED_AT);
 
 		await store.save(
-			{ mood: 4, energy: 3, selectedFactorSlugs: [], note: "" },
+			{
+				mood: 4,
+				energy: 3,
+				selectedFactorSlugs: [],
+				measurements: [],
+				note: "",
+			},
 			{ id: mood.id, observedAt: mood.observedAt, mood, energy },
 		);
 
@@ -98,7 +107,12 @@ describe("check-in store", () => {
 	it("deletes the day's note when the prefilled field is saved empty", async () => {
 		const notes = new databaseApp.DayNoteRepository(db);
 		const store = new CheckInStore(db, () => CAPTURED_AT);
-		const draft = { mood: 4, energy: 3, selectedFactorSlugs: [] };
+		const draft = {
+			mood: 4,
+			energy: 3,
+			selectedFactorSlugs: [],
+			measurements: [],
+		};
 
 		const saved = await store.save({ ...draft, note: "Keep me" });
 		expect(saved.note).toBe("Keep me");
@@ -116,6 +130,7 @@ describe("check-in store", () => {
 			mood: 4,
 			energy: 3,
 			selectedFactorSlugs: ["alcohol", "training"],
+			measurements: [],
 			note: "",
 		});
 
@@ -126,6 +141,116 @@ describe("check-in store", () => {
 		for (const row of factorRows) {
 			expect(row).toMatchObject({ value: 1, scaleMin: null, scaleMax: null });
 		}
+	});
+
+	it("keeps measurements default-off and resolves enabled units from preference", async () => {
+		const tracked = new databaseApp.TrackedMetricsRepository(db);
+		const preferences = new databaseApp.UnitPreferenceRepository(db);
+		const store = new CheckInStore(
+			db,
+			() => CAPTURED_AT,
+			() => "en-US",
+		);
+
+		expect((await store.loadToday()).availableMeasurements).toEqual([]);
+		await tracked.configure("weight", 0, true);
+		expect((await store.loadToday()).availableMeasurements).toMatchObject([
+			{
+				metricSlug: "weight",
+				label: "Weight",
+				dimension: "mass",
+				displayUnit: "lb",
+			},
+		]);
+
+		await preferences.set("mass", "st");
+		expect((await store.loadToday()).availableMeasurements).toMatchObject([
+			{ metricSlug: "weight", displayUnit: "st" },
+		]);
+	});
+
+	it("writes canonical measurements and exposes the day's last value", async () => {
+		let capturedAt = CAPTURED_AT;
+		const tracked = new databaseApp.TrackedMetricsRepository(db);
+		const preferences = new databaseApp.UnitPreferenceRepository(db);
+		const observations = new databaseApp.ObservationRepository(db);
+		await tracked.configure("weight", 0, true);
+		await preferences.set("mass", "st");
+		const store = new CheckInStore(
+			db,
+			() => capturedAt,
+			() => "en-GB",
+		);
+		const firstValue = 172 * KILOGRAMS_PER_POUND;
+
+		const first = await store.save({
+			mood: 4,
+			energy: 3,
+			selectedFactorSlugs: [],
+			measurements: [{ metricSlug: "weight", value: firstValue }],
+			note: "",
+		});
+		expect(first.loggedMeasurements).toMatchObject([
+			{
+				metricSlug: "weight",
+				formattedValue: "12 st 4 lb",
+				observation: {
+					value: firstValue,
+					scaleMin: null,
+					scaleMax: null,
+					source: "user",
+					sourceRecordId: null,
+					assessmentId: null,
+				},
+			},
+		]);
+
+		capturedAt = new Date(CAPTURED_AT.getTime() + 60_000);
+		const secondValue = 171 * KILOGRAMS_PER_POUND;
+		await store.save({
+			mood: 5,
+			energy: 4,
+			selectedFactorSlugs: [],
+			measurements: [{ metricSlug: "weight", value: secondValue }],
+			note: "",
+		});
+		const weightRows = (await observations.listByDay(LOCAL_DAY)).filter(
+			(row) => row.metricSlug === "weight",
+		);
+		expect(weightRows).toHaveLength(2);
+
+		const resolved = resolveMetric("weight");
+		if (resolved.kind !== "known")
+			throw new Error("Weight must be registered.");
+		const trend = buildTrendSeries(weightRows, resolved.metric, LOCAL_DAY, 7);
+		expect(trend.points.at(-1)?.value).toBe(secondValue);
+
+		await preferences.set("mass", "kg");
+		const kilograms = await store.loadToday();
+		expect(kilograms.loggedMeasurements).toMatchObject([
+			{
+				formattedValue: "77.6 kg",
+				observation: { value: secondValue },
+			},
+		]);
+		expect(weightRows[0]?.value).toBe(firstValue);
+		expect(weightRows[1]?.value).toBe(secondValue);
+	});
+
+	it("rolls back the check-in when a measurement is not active", async () => {
+		const observations = new databaseApp.ObservationRepository(db);
+		const store = new CheckInStore(db, () => CAPTURED_AT);
+
+		await expect(
+			store.save({
+				mood: 4,
+				energy: 3,
+				selectedFactorSlugs: [],
+				measurements: [{ metricSlug: "weight", value: 78 }],
+				note: "",
+			}),
+		).rejects.toThrow("Measurement is not active");
+		expect(await observations.listByDay(LOCAL_DAY)).toEqual([]);
 	});
 
 	it("ignores assessment and measurement overlays as factors", async () => {
@@ -146,6 +271,7 @@ describe("check-in store", () => {
 				mood: 4,
 				energy: 3,
 				selectedFactorSlugs: ["wheel:career"],
+				measurements: [],
 				note: "",
 			}),
 		).rejects.toThrow("Unknown factor slug: wheel:career");
@@ -154,6 +280,7 @@ describe("check-in store", () => {
 				mood: 4,
 				energy: 3,
 				selectedFactorSlugs: ["weight"],
+				measurements: [],
 				note: "",
 			}),
 		).rejects.toThrow("Unknown factor slug: weight");
@@ -162,7 +289,12 @@ describe("check-in store", () => {
 	it("clears only the note the form showed, retaining manufactured duplicates", async () => {
 		const notes = new databaseApp.DayNoteRepository(db);
 		const store = new CheckInStore(db, () => CAPTURED_AT);
-		const draft = { mood: 4, energy: 3, selectedFactorSlugs: [] };
+		const draft = {
+			mood: 4,
+			energy: 3,
+			selectedFactorSlugs: [],
+			measurements: [],
+		};
 
 		await store.save({ ...draft, note: "Shown in the form" });
 		const duplicate = await notes.create(LOCAL_DAY, "Replicated duplicate");

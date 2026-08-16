@@ -2,6 +2,7 @@ import { authClient } from "@bro/auth-app";
 import type * as DatabaseApp from "@bro/database-app";
 import { act, fireEvent, renderRouter } from "expo-router/testing-library";
 import { createNodeSqliteMock } from "./test-support/node-sqlite";
+import { KILOGRAMS_PER_POUND } from "./units";
 
 const mockSqlite = createNodeSqliteMock();
 let mockRandomSeed = 0;
@@ -78,6 +79,12 @@ describe("daily check-in flow", () => {
 		(globalThis.fetch as jest.Mock).mockClear();
 		const db = await databaseApp.initDb();
 		await databaseApp.runMigrations(db);
+		await new databaseApp.TrackedMetricsRepository(db).configure(
+			"weight",
+			0,
+			true,
+		);
+		await new databaseApp.UnitPreferenceRepository(db).set("mass", "st");
 		const transaction = jest.spyOn(db, "withTransactionAsync");
 
 		let router = renderRouter("src/app", { initialUrl: "/" });
@@ -88,6 +95,7 @@ describe("daily check-in flow", () => {
 		await fireEvent.press(view.getByLabelText("Mood 4"));
 		await fireEvent.press(view.getByLabelText("Energy 3"));
 		await fireEvent.press(view.getByLabelText("Alcohol"));
+		await fireEvent.changeText(view.getByLabelText("Weight (st)"), "12 st 4");
 		await fireEvent.changeText(
 			view.getByPlaceholderText("Anything worth remembering?"),
 			"Strong finish",
@@ -104,7 +112,16 @@ describe("daily check-in flow", () => {
 			"alcohol",
 			"energy",
 			"mood",
+			"weight",
 		]);
+		expect(firstDay.find((row) => row.metricSlug === "weight")).toMatchObject({
+			value: 172 * KILOGRAMS_PER_POUND,
+			scaleMin: null,
+			scaleMax: null,
+			source: "user",
+			sourceRecordId: null,
+			assessmentId: null,
+		});
 		expect(await notes.listByDay(firstDay[0].localDay)).toMatchObject([
 			{ body: "Strong finish" },
 		]);
@@ -115,6 +132,7 @@ describe("daily check-in flow", () => {
 		await fireEvent.press(view.getByLabelText("Energy 4"));
 		await fireEvent.press(view.getByLabelText("Alcohol"));
 		await fireEvent.press(view.getByLabelText("Training"));
+		await fireEvent.changeText(view.getByLabelText("Weight (st)"), "12 st 3");
 		await fireEvent.press(view.getByText("Save check-in"));
 
 		expect(await view.findByText("2 check-ins")).toBeTruthy();
@@ -131,6 +149,12 @@ describe("daily check-in flow", () => {
 		expect(
 			secondDay.filter((row) => row.metricSlug === "training"),
 		).toHaveLength(1);
+		expect(secondDay.filter((row) => row.metricSlug === "weight")).toHaveLength(
+			2,
+		);
+		expect(
+			secondDay.filter((row) => row.metricSlug === "weight").at(-1),
+		).toMatchObject({ value: 171 * KILOGRAMS_PER_POUND });
 		expect(transaction).toHaveBeenCalledTimes(2);
 		expect(globalThis.fetch).not.toHaveBeenCalled();
 
@@ -141,6 +165,9 @@ describe("daily check-in flow", () => {
 		await act(async () => undefined);
 
 		expect(await view.findByText("2 check-ins")).toBeTruthy();
+		expect(
+			await view.findByText("Measurements: Weight 12 st 3 lb"),
+		).toBeTruthy();
 		expect(mockSqlite.openDatabaseAsync).toHaveBeenCalledTimes(2);
 		expect(mockedUseSession).not.toHaveBeenCalled();
 		expect(globalThis.fetch).not.toHaveBeenCalled();

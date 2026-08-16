@@ -4,6 +4,7 @@ import {
 	type Observation,
 	ObservationRepository,
 	TrackedMetricsRepository,
+	UnitPreferenceRepository,
 } from "@bro/database-app";
 import type { SQLiteDatabase } from "expo-sqlite";
 import {
@@ -11,9 +12,17 @@ import {
 	FACTOR_PRESENCE_VALUE,
 	type FactorMetricDefinition,
 	listFactors,
+	type MeasurementSlug,
 	resolveMetric,
 } from "../content/metric-registry";
 import { refreshReminderNotifications } from "../reminders/reminder-materialiser";
+import {
+	type Dimension,
+	type DisplayUnit,
+	formatMeasurement,
+	isDisplayUnitForDimension,
+	resolveDisplayUnit,
+} from "../units";
 
 export type CheckInEntry = {
 	id: string;
@@ -27,13 +36,46 @@ export type TodayCheckIn = {
 	entries: CheckInEntry[];
 	selectedFactorSlugs: string[];
 	availableFactors: FactorMetricDefinition[];
+	availableMeasurements: CheckInMeasurement[];
+	loggedMeasurements: LoggedCheckInMeasurement[];
+	inputLocale: string | undefined;
 	note: string;
+};
+
+type CheckInMeasurementBase = {
+	metricSlug: MeasurementSlug;
+	label: string;
+};
+
+export type CheckInMeasurement =
+	| (CheckInMeasurementBase & {
+			dimension: "mass";
+			displayUnit: "kg" | "lb" | "st";
+	  })
+	| (CheckInMeasurementBase & {
+			dimension: "length";
+			displayUnit: "cm" | "in";
+	  })
+	| (CheckInMeasurementBase & {
+			dimension: "fraction";
+			displayUnit: "%";
+	  });
+
+export type LoggedCheckInMeasurement = CheckInMeasurement & {
+	observation: Observation;
+	formattedValue: string;
+};
+
+export type CheckInMeasurementDraft = {
+	metricSlug: string;
+	value: number;
 };
 
 export type CheckInDraft = {
 	mood: number;
 	energy: number;
 	selectedFactorSlugs: readonly string[];
+	measurements: readonly CheckInMeasurementDraft[];
 	note: string;
 };
 
@@ -64,6 +106,73 @@ function pairCheckIns(observations: readonly Observation[]): CheckInEntry[] {
 	return entries.reverse();
 }
 
+function systemLocale(): string | undefined {
+	try {
+		return Intl.DateTimeFormat().resolvedOptions().locale;
+	} catch {
+		return undefined;
+	}
+}
+
+function toCheckInMeasurement(
+	metricSlug: MeasurementSlug,
+	label: string,
+	dimension: Dimension,
+	displayUnit: DisplayUnit,
+): CheckInMeasurement {
+	if (
+		dimension === "mass" &&
+		isDisplayUnitForDimension(dimension, displayUnit)
+	) {
+		return {
+			metricSlug,
+			label,
+			dimension,
+			displayUnit,
+		};
+	}
+	if (
+		dimension === "length" &&
+		isDisplayUnitForDimension(dimension, displayUnit)
+	) {
+		return {
+			metricSlug,
+			label,
+			dimension,
+			displayUnit,
+		};
+	}
+	if (
+		dimension === "fraction" &&
+		isDisplayUnitForDimension(dimension, displayUnit)
+	) {
+		return { metricSlug, label, dimension, displayUnit };
+	}
+	throw new TypeError(`Unit ${displayUnit} does not measure ${dimension}.`);
+}
+
+function latestObservation(
+	rows: readonly Observation[],
+	metricSlug: string,
+): Observation | null {
+	let latest: Observation | null = null;
+	for (const row of rows) {
+		if (row.metricSlug !== metricSlug) continue;
+		if (
+			latest === null ||
+			row.observedAt > latest.observedAt ||
+			(row.observedAt === latest.observedAt &&
+				row.createdAt > latest.createdAt) ||
+			(row.observedAt === latest.observedAt &&
+				row.createdAt === latest.createdAt &&
+				row.id.localeCompare(latest.id) > 0)
+		) {
+			latest = row;
+		}
+	}
+	return latest;
+}
+
 function assertDraft(draft: CheckInDraft): void {
 	for (const [label, value] of [
 		["Mood", draft.mood],
@@ -80,29 +189,63 @@ function assertDraft(draft: CheckInDraft): void {
 			throw new TypeError(`Unknown factor slug: ${slug}`);
 		}
 	}
+
+	const measurementSlugs = new Set<string>();
+	for (const measurement of draft.measurements) {
+		const resolved = resolveMetric(measurement.metricSlug);
+		if (resolved.kind !== "known" || resolved.metric.kind !== "measurement") {
+			throw new TypeError(
+				`Unknown measurement slug: ${measurement.metricSlug}`,
+			);
+		}
+		if (measurementSlugs.has(measurement.metricSlug)) {
+			throw new TypeError(
+				`Measurement appears more than once: ${measurement.metricSlug}`,
+			);
+		}
+		if (!Number.isFinite(measurement.value) || measurement.value < 0) {
+			throw new RangeError(
+				"Measurement values must be finite and non-negative.",
+			);
+		}
+		if (resolved.metric.dimension === "fraction" && measurement.value > 1) {
+			throw new RangeError(
+				"Fraction measurements must be between zero and one.",
+			);
+		}
+		measurementSlugs.add(measurement.metricSlug);
+	}
 }
 
 export class CheckInStore {
 	private readonly observations: ObservationRepository;
 	private readonly notes: DayNoteRepository;
 	private readonly trackedMetrics: TrackedMetricsRepository;
+	private readonly unitPreferences: UnitPreferenceRepository;
 
 	constructor(
 		private readonly db: SQLiteDatabase,
 		private readonly now: () => Date = () => new Date(),
+		private readonly locale: () => string | undefined = systemLocale,
 	) {
 		this.observations = new ObservationRepository(db);
 		this.notes = new DayNoteRepository(db);
 		this.trackedMetrics = new TrackedMetricsRepository(db);
+		this.unitPreferences = new UnitPreferenceRepository(db);
 	}
 
 	async loadToday(date = this.now()): Promise<TodayCheckIn> {
 		const localDay = localDayOf(date);
-		const [observations, notes, tracked] = await Promise.all([
+		const inputLocale = this.locale();
+		const [observations, notes, tracked, preferences] = await Promise.all([
 			this.observations.listByDay(localDay),
 			this.notes.listByDay(localDay),
 			this.trackedMetrics.listResolved(DEFAULT_TRACKED_METRICS),
+			this.unitPreferences.resolveLatestPerDimension(),
 		]);
+		const preferenceByDimension = new Map(
+			preferences.map((preference) => [preference.dimension, preference.unit]),
+		);
 		const enabledSlugs = new Set(
 			tracked
 				.filter((metric) => metric.enabled)
@@ -112,6 +255,50 @@ export class CheckInStore {
 			enabledSlugs.has(factor.slug),
 		);
 		const factorSlugs = new Set(availableFactors.map((factor) => factor.slug));
+		const resolvedMeasurements = tracked.flatMap((overlay) => {
+			const resolved = resolveMetric(overlay.metricSlug);
+			if (resolved.kind !== "known" || resolved.metric.kind !== "measurement") {
+				return [];
+			}
+			const metric = resolved.metric;
+			const displayUnit = resolveDisplayUnit(
+				metric.dimension,
+				preferenceByDimension.get(metric.dimension),
+				inputLocale,
+			);
+			return [
+				{
+					measurement: toCheckInMeasurement(
+						metric.slug,
+						overlay.customLabel ?? metric.label,
+						metric.dimension,
+						displayUnit,
+					),
+					enabled: overlay.enabled,
+				},
+			];
+		});
+		const loggedMeasurements = resolvedMeasurements.flatMap(
+			({ measurement }) => {
+				const observation = latestObservation(
+					observations,
+					measurement.metricSlug,
+				);
+				return observation
+					? [
+							{
+								...measurement,
+								observation,
+								formattedValue: formatMeasurement(
+									observation.value,
+									measurement.dimension,
+									measurement.displayUnit,
+								),
+							},
+						]
+					: [];
+			},
+		);
 
 		return {
 			localDay,
@@ -124,6 +311,11 @@ export class CheckInStore {
 				),
 			],
 			availableFactors,
+			availableMeasurements: resolvedMeasurements.flatMap(
+				({ measurement, enabled }) => (enabled ? [measurement] : []),
+			),
+			loggedMeasurements,
+			inputLocale,
 			note: notes[0]?.body ?? "",
 		};
 	}
@@ -133,11 +325,22 @@ export class CheckInStore {
 		entry: CheckInEntry | null = null,
 	): Promise<TodayCheckIn> {
 		assertDraft(draft);
+		if (entry && draft.measurements.length > 0) {
+			throw new TypeError(
+				"Measurements can only be logged with a new check-in.",
+			);
+		}
 		const capturedAt = this.now();
 		const observedAt = capturedAt.getTime();
 		const localDay = localDayOf(capturedAt);
 		const tzOffsetMinutes = capturedAt.getTimezoneOffset();
 		const selectedFactors = new Set(draft.selectedFactorSlugs);
+		const measurements = new Map(
+			draft.measurements.map((measurement) => [
+				measurement.metricSlug,
+				measurement.value,
+			]),
+		);
 
 		await this.db.withTransactionAsync(async () => {
 			const tracked = await this.trackedMetrics.listResolved(
@@ -155,9 +358,28 @@ export class CheckInStore {
 					})
 					.map((metric) => metric.metricSlug),
 			);
+			const activeMeasurementSlugs = new Set(
+				tracked
+					.filter((metric) => {
+						const resolved = resolveMetric(metric.metricSlug);
+						return (
+							metric.enabled &&
+							resolved.kind === "known" &&
+							resolved.metric.kind === "measurement"
+						);
+					})
+					.map((metric) => metric.metricSlug),
+			);
 			for (const slug of selectedFactors) {
 				if (!activeFactorSlugs.has(slug)) {
 					throw new TypeError(`Factor is not active in this check-in: ${slug}`);
+				}
+			}
+			for (const slug of measurements.keys()) {
+				if (!activeMeasurementSlugs.has(slug)) {
+					throw new TypeError(
+						`Measurement is not active in this check-in: ${slug}`,
+					);
 				}
 			}
 
@@ -215,6 +437,20 @@ export class CheckInStore {
 				activeFactorSlugs,
 				selectedFactors,
 			);
+			for (const [metricSlug, value] of measurements) {
+				await this.observations.create({
+					metricSlug,
+					value,
+					scaleMin: null,
+					scaleMax: null,
+					observedAt,
+					localDay,
+					tzOffsetMinutes,
+					source: "user",
+					sourceRecordId: null,
+					assessmentId: null,
+				});
+			}
 			if (draft.note.trim().length > 0) {
 				await this.notes.upsertForDayInCurrentTransaction(localDay, draft.note);
 			} else {

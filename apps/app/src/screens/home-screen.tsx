@@ -3,6 +3,7 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import { ActivityIndicator, TouchableOpacity, View } from "react-native";
 import {
 	type CheckInEntry,
+	type CheckInMeasurement,
 	type CheckInStore,
 	createCheckInStore,
 	type TodayCheckIn,
@@ -15,6 +16,7 @@ import { Screen } from "../components/screen";
 import { SectionHeader } from "../components/section-header";
 import { type FactorCategory, resolveMetric } from "../content/metric-registry";
 import { StyleSheet } from "../theme/unistyles";
+import { parseMeasurement, type ParsedMeasurement } from "../units";
 
 type HomeScreenProps = {
 	store?: Pick<CheckInStore, "loadToday" | "save">;
@@ -28,6 +30,42 @@ const CATEGORY_LABELS: Record<FactorCategory, string> = {
 	mind: "Mind",
 	social: "Social",
 };
+
+function parseMeasurementInput(
+	input: string,
+	measurement: CheckInMeasurement,
+	locale: string | undefined,
+): ParsedMeasurement {
+	if (measurement.dimension === "mass") {
+		return parseMeasurement(
+			input,
+			measurement.dimension,
+			measurement.displayUnit,
+			locale,
+		);
+	}
+	if (measurement.dimension === "length") {
+		return parseMeasurement(
+			input,
+			measurement.dimension,
+			measurement.displayUnit,
+			locale,
+		);
+	}
+	return parseMeasurement(
+		input,
+		measurement.dimension,
+		measurement.displayUnit,
+		locale,
+	);
+}
+
+function measurementPlaceholder(measurement: CheckInMeasurement): string {
+	return measurement.displayUnit === "st"
+		? "e.g. 12 st 4 lb"
+		: `Enter ${measurement.displayUnit}`;
+}
+
 export function HomeScreen({ store }: HomeScreenProps) {
 	const checkIns = useMemo(() => store ?? createCheckInStore(), [store]);
 	const [today, setToday] = useState<TodayCheckIn | null>(null);
@@ -35,6 +73,12 @@ export function HomeScreen({ store }: HomeScreenProps) {
 	const [energy, setEnergy] = useState<number | null>(null);
 	const [selectedFactors, setSelectedFactors] = useState<string[]>([]);
 	const [note, setNote] = useState("");
+	const [measurementInputs, setMeasurementInputs] = useState<
+		Record<string, string>
+	>({});
+	const [measurementErrors, setMeasurementErrors] = useState<
+		Record<string, string>
+	>({});
 	const [editing, setEditing] = useState<CheckInEntry | null>(null);
 	const [formOpen, setFormOpen] = useState(false);
 	const [saving, setSaving] = useState(false);
@@ -70,6 +114,8 @@ export function HomeScreen({ store }: HomeScreenProps) {
 		setEnergy(null);
 		setEditing(null);
 		setError(null);
+		setMeasurementInputs({});
+		setMeasurementErrors({});
 		setFormOpen(true);
 	}
 
@@ -78,11 +124,48 @@ export function HomeScreen({ store }: HomeScreenProps) {
 		setEnergy(entry.energy.value);
 		setEditing(entry);
 		setError(null);
+		setMeasurementInputs({});
+		setMeasurementErrors({});
 		setFormOpen(true);
 	}
 
+	function updateMeasurementInput(slug: string, value: string) {
+		setMeasurementInputs((current) => ({ ...current, [slug]: value }));
+		setMeasurementErrors((current) => {
+			if (!(slug in current)) return current;
+			const next = { ...current };
+			delete next[slug];
+			return next;
+		});
+	}
+
 	async function save() {
-		if (mood === null || energy === null || saving) {
+		if (!today || mood === null || energy === null || saving) {
+			return;
+		}
+		const measurements: { metricSlug: string; value: number }[] = [];
+		const fieldErrors: Record<string, string> = {};
+		if (!editing) {
+			for (const measurement of today.availableMeasurements) {
+				const input = measurementInputs[measurement.metricSlug]?.trim() ?? "";
+				if (!input) continue;
+				const parsed = parseMeasurementInput(
+					input,
+					measurement,
+					today.inputLocale,
+				);
+				if (!parsed.ok) {
+					fieldErrors[measurement.metricSlug] = parsed.error;
+				} else {
+					measurements.push({
+						metricSlug: measurement.metricSlug,
+						value: parsed.canonicalValue,
+					});
+				}
+			}
+		}
+		if (Object.keys(fieldErrors).length > 0) {
+			setMeasurementErrors(fieldErrors);
 			return;
 		}
 
@@ -90,7 +173,13 @@ export function HomeScreen({ store }: HomeScreenProps) {
 		setError(null);
 		try {
 			const saved = await checkIns.save(
-				{ mood, energy, selectedFactorSlugs: selectedFactors, note },
+				{
+					mood,
+					energy,
+					selectedFactorSlugs: selectedFactors,
+					measurements,
+					note,
+				},
 				editing,
 			);
 			setToday(saved);
@@ -99,6 +188,8 @@ export function HomeScreen({ store }: HomeScreenProps) {
 			setMood(null);
 			setEnergy(null);
 			setEditing(null);
+			setMeasurementInputs({});
+			setMeasurementErrors({});
 			setFormOpen(false);
 		} catch (caught) {
 			setError(caught instanceof Error ? caught.message : String(caught));
@@ -200,6 +291,17 @@ export function HomeScreen({ store }: HomeScreenProps) {
 					{selectedFactorLabels.length > 0 ? (
 						<AppText variant="caption" color="muted">
 							Factors: {selectedFactorLabels.join(", ")}
+						</AppText>
+					) : null}
+					{today.loggedMeasurements.length > 0 ? (
+						<AppText variant="caption" color="muted">
+							Measurements:{" "}
+							{today.loggedMeasurements
+								.map(
+									(measurement) =>
+										`${measurement.label} ${measurement.formattedValue}`,
+								)
+								.join(", ")}
 						</AppText>
 					) : null}
 					{today.note ? (
@@ -324,6 +426,31 @@ export function HomeScreen({ store }: HomeScreenProps) {
 						) : null,
 					)}
 
+					{!editing && today.availableMeasurements.length > 0 ? (
+						<View style={styles.measurementSection}>
+							<AppText variant="label">Measurements</AppText>
+							<AppText variant="caption" color="subtle">
+								Optional — leave a field blank to skip it today.
+							</AppText>
+							{today.availableMeasurements.map((measurement) => (
+								<FormField
+									key={measurement.metricSlug}
+									label={`${measurement.label} (${measurement.displayUnit})`}
+									value={measurementInputs[measurement.metricSlug] ?? ""}
+									onChangeText={(value) =>
+										updateMeasurementInput(measurement.metricSlug, value)
+									}
+									placeholder={measurementPlaceholder(measurement)}
+									keyboardType={
+										measurement.displayUnit === "st" ? "default" : "decimal-pad"
+									}
+									autoCapitalize="none"
+									error={measurementErrors[measurement.metricSlug]}
+								/>
+							))}
+						</View>
+					) : null}
+
 					<FormField
 						label="Note (optional)"
 						containerStyle={styles.noteField}
@@ -395,6 +522,10 @@ const styles = StyleSheet.create((theme) => ({
 		backgroundColor: theme.colors.surface,
 		paddingVertical: theme.spacing.sm,
 		paddingHorizontal: theme.spacing.md,
+	},
+	measurementSection: {
+		marginTop: theme.spacing.lg,
+		gap: theme.spacing.sm,
 	},
 	noteField: { marginTop: theme.spacing.lg, marginBottom: theme.spacing.lg },
 }));
