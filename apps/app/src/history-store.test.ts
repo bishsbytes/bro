@@ -44,6 +44,7 @@ describe("history store", () => {
 				observation("mood", "mood", 4),
 				observation("energy", "energy", 3),
 				observation("stress", "stress", 1),
+				observation("weight", "weight", 78),
 				wheel,
 				unknownWheel,
 			],

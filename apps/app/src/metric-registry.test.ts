@@ -2,6 +2,7 @@ import {
 	DEFAULT_TRACKED_METRICS,
 	listAssessmentMetrics,
 	listFactors,
+	listMeasurements,
 	listScoredMetrics,
 	METRIC_REGISTRY,
 	resolveMetric,
@@ -28,10 +29,17 @@ describe("metric registry", () => {
 				expect(metric.scaleMax).toBeNull();
 				expect(metric.aggregation).toBe("presence");
 				expect(metric.category).toMatch(/^(body|lifestyle|mind|social)$/);
+			} else if (metric.kind === "measurement") {
+				expect(metric.scaleMin).toBeNull();
+				expect(metric.scaleMax).toBeNull();
+				expect(metric.aggregation).toBe("last");
+				expect(metric.category).toBeNull();
+				expect(metric.dimension).toMatch(/^(mass|length|fraction)$/);
 			} else {
 				expect(metric.scaleMin).toBeLessThan(metric.scaleMax);
 				expect(metric.aggregation).toBe("mean");
 				expect(metric.category).toBeNull();
+				expect(metric.dimension).toBeNull();
 			}
 		}
 
@@ -40,6 +48,33 @@ describe("metric registry", () => {
 			"energy",
 		]);
 		expect(listFactors()).toHaveLength(12);
+		expect(listMeasurements()).toEqual([
+			expect.objectContaining({
+				slug: "weight",
+				label: "Weight",
+				dimension: "mass",
+			}),
+			expect.objectContaining({
+				slug: "waist",
+				label: "Waist",
+				dimension: "length",
+			}),
+			expect.objectContaining({
+				slug: "body_fat",
+				label: "Body fat",
+				dimension: "fraction",
+			}),
+		]);
+		for (const metric of listMeasurements()) {
+			expect(metric).toMatchObject({
+				kind: "measurement",
+				scaleMin: null,
+				scaleMax: null,
+				aggregation: "last",
+				userEnterable: true,
+				sensitive: true,
+			});
+		}
 		expect(
 			listAssessmentMetrics().map((metric) => metric.slug),
 		).toEqual([
@@ -90,6 +125,7 @@ describe("metric registry", () => {
 				(metric) => ({
 					metricSlug: metric.slug,
 					position: metric.defaultPosition,
+					...(metric.kind === "measurement" ? { enabled: false } : {}),
 				}),
 			),
 		);
@@ -98,5 +134,14 @@ describe("metric registry", () => {
 				metricSlug.startsWith("wheel:"),
 			),
 		).toBe(false);
+		expect(
+			DEFAULT_TRACKED_METRICS.filter(({ metricSlug }) =>
+				["weight", "waist", "body_fat"].includes(metricSlug),
+			),
+		).toEqual([
+			{ metricSlug: "weight", position: 0, enabled: false },
+			{ metricSlug: "waist", position: 1, enabled: false },
+			{ metricSlug: "body_fat", position: 2, enabled: false },
+		]);
 	});
 });

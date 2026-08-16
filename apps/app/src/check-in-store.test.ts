@@ -128,15 +128,19 @@ describe("check-in store", () => {
 		}
 	});
 
-	it("ignores wheel overlays and rejects assessment slugs as factors", async () => {
+	it("ignores assessment and measurement overlays as factors", async () => {
 		const tracked = new databaseApp.TrackedMetricsRepository(db);
 		await tracked.configure("wheel:career", 0, true);
+		await tracked.configure("weight", 0, true);
 		const store = new CheckInStore(db, () => CAPTURED_AT);
 
 		const today = await store.loadToday();
 		expect(
 			today.availableFactors.some(({ slug }) => slug.startsWith("wheel:")),
 		).toBe(false);
+		expect(today.availableFactors.some(({ slug }) => slug === "weight")).toBe(
+			false,
+		);
 		await expect(
 			store.save({
 				mood: 4,
@@ -145,6 +149,14 @@ describe("check-in store", () => {
 				note: "",
 			}),
 		).rejects.toThrow("Unknown factor slug: wheel:career");
+		await expect(
+			store.save({
+				mood: 4,
+				energy: 3,
+				selectedFactorSlugs: ["weight"],
+				note: "",
+			}),
+		).rejects.toThrow("Unknown factor slug: weight");
 	});
 
 	it("clears only the note the form showed, retaining manufactured duplicates", async () => {

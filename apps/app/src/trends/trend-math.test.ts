@@ -123,6 +123,41 @@ describe("trend math", () => {
 		expect(series.points.at(-1)?.value).toBe(1);
 	});
 
+	it("uses the last observed measurement each day and keeps gaps", () => {
+		const series = buildTrendSeries(
+			[
+				observation("later-created", "2026-08-13", 79, {
+					metricSlug: "weight",
+					scaleMin: null,
+					scaleMax: null,
+					observedAt: Date.parse("2026-08-13T08:00:00.000Z"),
+					createdAt: 2,
+				}),
+				observation("later-observed", "2026-08-13", 78, {
+					metricSlug: "weight",
+					scaleMin: null,
+					scaleMax: null,
+					observedAt: Date.parse("2026-08-13T20:00:00.000Z"),
+					createdAt: 1,
+				}),
+			],
+			knownMetric("weight"),
+			"2026-08-14",
+			7,
+		);
+
+		expect(series.points.at(-2)).toEqual({
+			localDay: "2026-08-13",
+			value: 78,
+		});
+		expect(series.points.at(-1)).toEqual({
+			localDay: "2026-08-14",
+			value: null,
+		});
+		expect(series.markers).toHaveLength(1);
+		expect(series.markers[0]?.y).toBe(60);
+	});
+
 	it("marks a metric meaningful after seven distinct logged days", () => {
 		const rows = Array.from({ length: 7 }, (_, index) =>
 			observation(

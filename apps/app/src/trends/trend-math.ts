@@ -52,6 +52,8 @@ function valueOnCurrentScale(
 ): number {
 	if (
 		metric.kind === "factor" ||
+		metric.scaleMin === null ||
+		metric.scaleMax === null ||
 		row.scaleMin === null ||
 		row.scaleMax === null ||
 		row.scaleMax <= row.scaleMin
@@ -73,6 +75,15 @@ function aggregateDay(
 	if (metric.aggregation === "presence") {
 		return 1;
 	}
+	if (metric.aggregation === "last") {
+		const latest = [...rows].sort(
+			(left, right) =>
+				right.observedAt - left.observedAt ||
+				right.createdAt - left.createdAt ||
+				right.id.localeCompare(left.id),
+		)[0];
+		return latest ? valueOnCurrentScale(latest, metric) : null;
+	}
 
 	const total = rows.reduce(
 		(sum, row) => sum + valueOnCurrentScale(row, metric),
@@ -89,8 +100,15 @@ function chartGeometry(
 	const markers: TrendSeries["markers"] = [];
 	let current: string[] = [];
 	const denominator = Math.max(points.length - 1, 1);
-	const scaleMin = metric.scaleMin ?? 0;
-	const scaleMax = metric.scaleMax ?? 1;
+	const observedValues = points.flatMap((point) =>
+		point.value === null ? [] : [point.value],
+	);
+	const observedMin = Math.min(...observedValues);
+	const observedMax = Math.max(...observedValues);
+	const scaleMin =
+		metric.scaleMin ?? (metric.kind === "measurement" ? observedMin : 0);
+	const scaleMax =
+		metric.scaleMax ?? (metric.kind === "measurement" ? observedMax : 1);
 
 	for (const [index, point] of points.entries()) {
 		if (point.value === null) {
@@ -102,7 +120,10 @@ function chartGeometry(
 		}
 
 		const x = (index / denominator) * CHART_WIDTH;
-		const position = (point.value - scaleMin) / (scaleMax - scaleMin);
+		const position =
+			scaleMax === scaleMin
+				? 0.5
+				: (point.value - scaleMin) / (scaleMax - scaleMin);
 		const y = CHART_TOP + (1 - position) * CHART_HEIGHT;
 		current.push(`${x.toFixed(2)},${y.toFixed(2)}`);
 		markers.push({ localDay: point.localDay, x, y });

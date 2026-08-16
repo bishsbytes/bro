@@ -79,6 +79,15 @@ describe("life-area catalogue", () => {
 			removedAt: null,
 			customLabel: "Future area",
 		});
+		overlays.push({
+			metricSlug: "weight",
+			position: 0,
+			enabled: true,
+			overlayId: "overlay-weight",
+			addedAt: 1,
+			removedAt: null,
+			customLabel: null,
+		});
 
 		const resolved = resolveLifeAreas(overlays);
 		expect(resolved).toHaveLength(13);

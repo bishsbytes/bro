@@ -257,7 +257,21 @@ describe("product repositories", () => {
 
 		const initial = await repository.listResolved(DEFAULT_TRACKED_METRICS);
 		expect(initial).toHaveLength(DEFAULT_TRACKED_METRICS.length);
-		expect(initial.every((metric) => metric.enabled)).toBe(true);
+		expect(
+			initial
+				.filter(({ metricSlug }) =>
+					["weight", "waist", "body_fat"].includes(metricSlug),
+				)
+				.every((metric) => !metric.enabled),
+		).toBe(true);
+		expect(
+			initial
+				.filter(
+					({ metricSlug }) =>
+						!["weight", "waist", "body_fat"].includes(metricSlug),
+				)
+				.every((metric) => metric.enabled),
+		).toBe(true);
 		expect(await repository.listAll()).toEqual([]);
 
 		const alcohol = initial.find((metric) => metric.metricSlug === "alcohol");

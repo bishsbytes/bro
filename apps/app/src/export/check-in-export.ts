@@ -25,6 +25,8 @@ export type CheckInExportOptions = {
 };
 
 type VersionOneTrackedMetric = Omit<TrackedMetric, "customLabel">;
+/** Registry dimensions join the serialized contract with the planned v3 bump. */
+type LegacyMetricDefinition = Omit<MetricDefinition, "dimension">;
 
 type ExportMetadata<Version extends 1 | 2> = {
 	formatVersion: Version;
@@ -39,7 +41,7 @@ export type CheckInExportV1 = {
 		appVersion: string;
 	};
 	registry: {
-		metrics: MetricDefinition[];
+		metrics: LegacyMetricDefinition[];
 	};
 	observations: Observation[];
 	dayNotes: DayNote[];
@@ -49,7 +51,7 @@ export type CheckInExportV1 = {
 export type CheckInExport = {
 	metadata: ExportMetadata<typeof CHECK_IN_EXPORT_FORMAT_VERSION>;
 	registry: {
-		metrics: MetricDefinition[];
+		metrics: LegacyMetricDefinition[];
 	};
 	observations: Observation[];
 	dayNotes: DayNote[];
@@ -67,8 +69,20 @@ function compareText(left: string, right: string): number {
 	return left < right ? -1 : 1;
 }
 
-function copyMetric(metric: MetricDefinition): MetricDefinition {
-	return { ...metric };
+function copyMetric(metric: MetricDefinition): LegacyMetricDefinition {
+	return {
+		slug: metric.slug,
+		label: metric.label,
+		kind: metric.kind,
+		scaleMin: metric.scaleMin,
+		scaleMax: metric.scaleMax,
+		category: metric.category,
+		aggregation: metric.aggregation,
+		sensitive: metric.sensitive,
+		userEnterable: metric.userEnterable,
+		deprecated: metric.deprecated,
+		defaultPosition: metric.defaultPosition,
+	};
 }
 
 function copyObservation(row: Observation): Observation {
