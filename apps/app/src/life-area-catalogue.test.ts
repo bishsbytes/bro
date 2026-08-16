@@ -16,6 +16,7 @@ const PERMANENT_AREAS = [
 	["wheel:friends", "Friends & social", true, false],
 	["wheel:growth", "Learning & growth", true, false],
 	["wheel:fun", "Fun & recreation", true, false],
+	["wheel:environment", "Home & environment", false, false],
 	["wheel:purpose", "Purpose & direction", false, false],
 	["wheel:fatherhood", "Fatherhood", false, false],
 	["wheel:faith", "Faith & spirituality", false, true],
@@ -44,7 +45,7 @@ describe("life-area catalogue", () => {
 			]),
 		).toEqual(PERMANENT_AREAS);
 		expect(LIFE_AREA_CATALOGUE.map((area) => area.defaultPosition)).toEqual(
-			Array.from({ length: 12 }, (_, index) => index),
+			Array.from({ length: 13 }, (_, index) => index),
 		);
 	});
 
@@ -80,7 +81,7 @@ describe("life-area catalogue", () => {
 		});
 
 		const resolved = resolveLifeAreas(overlays);
-		expect(resolved).toHaveLength(12);
+		expect(resolved).toHaveLength(13);
 		expect(resolved.at(-1)).toMatchObject({
 			slug: "wheel:career",
 			label: "Business",

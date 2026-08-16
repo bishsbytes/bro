@@ -74,36 +74,46 @@ export const LIFE_AREA_CATALOGUE = [
 		defaultPosition: 7,
 	},
 	{
+		slug: "wheel:environment",
+		label: "Home & environment",
+		defaultEnabled: false,
+		sensitive: false,
+		defaultPosition: 8,
+	},
+	{
 		slug: "wheel:purpose",
 		label: "Purpose & direction",
 		defaultEnabled: false,
 		sensitive: false,
-		defaultPosition: 8,
+		defaultPosition: 9,
 	},
 	{
 		slug: "wheel:fatherhood",
 		label: "Fatherhood",
 		defaultEnabled: false,
 		sensitive: false,
-		defaultPosition: 9,
+		defaultPosition: 10,
 	},
 	{
 		slug: "wheel:faith",
 		label: "Faith & spirituality",
 		defaultEnabled: false,
 		sensitive: true,
-		defaultPosition: 10,
+		defaultPosition: 11,
 	},
 	{
 		slug: "wheel:sobriety",
 		label: "Sobriety & recovery",
 		defaultEnabled: false,
 		sensitive: true,
-		defaultPosition: 11,
+		defaultPosition: 12,
 	},
 ] as const satisfies readonly LifeAreaDefinition[];
 
 export type LifeAreaSlug = (typeof LIFE_AREA_CATALOGUE)[number]["slug"];
+
+/** A wheel stays readable up to this many segments; settings enforces it. */
+export const MAX_ACTIVE_LIFE_AREAS = 10;
 
 const lifeAreasBySlug = new Map<string, LifeAreaDefinition>(
 	LIFE_AREA_CATALOGUE.map((area) => [area.slug, area]),

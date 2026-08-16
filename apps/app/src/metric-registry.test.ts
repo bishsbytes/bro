@@ -51,6 +51,7 @@ describe("metric registry", () => {
 			"wheel:friends",
 			"wheel:growth",
 			"wheel:fun",
+			"wheel:environment",
 			"wheel:purpose",
 			"wheel:fatherhood",
 			"wheel:faith",

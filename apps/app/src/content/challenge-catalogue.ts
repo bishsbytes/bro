@@ -238,6 +238,34 @@ export const CHALLENGE_CATALOGUE = [
 			},
 		],
 	},
+	{
+		slug: "challenge:calmer-space",
+		title: "Three days to a calmer space",
+		areaSlug: "wheel:environment",
+		durationDays: 3,
+		intro:
+			"Make the space you spend the most time in work for you instead of against you.",
+		days: [
+			{
+				day: 1,
+				title: "Clear the surface you see most",
+				action:
+					"Completely clear the one surface you look at most often, and put back only what belongs there.",
+			},
+			{
+				day: 2,
+				title: "Fix one daily irritation",
+				action:
+					"Repair, replace, or remove one small thing that annoys you every single day.",
+			},
+			{
+				day: 3,
+				title: "Reset one corner",
+				action:
+					"Spend fifteen minutes making one corner of your home somewhere you actually like being.",
+			},
+		],
+	},
 ] as const satisfies readonly ChallengeTemplate[];
 
 const challengesBySlug = new Map<string, ChallengeTemplate>(

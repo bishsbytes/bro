@@ -10,10 +10,15 @@ describe("starter challenge catalogue", () => {
 		const defaultAreas = LIFE_AREA_CATALOGUE.filter(
 			(area) => area.defaultEnabled,
 		);
-		expect(CHALLENGE_CATALOGUE).toHaveLength(defaultAreas.length);
+		const catalogueSlugs = new Set<string>(
+			LIFE_AREA_CATALOGUE.map((area) => area.slug),
+		);
 		expect(new Set(CHALLENGE_CATALOGUE.map(({ slug }) => slug)).size).toBe(
 			CHALLENGE_CATALOGUE.length,
 		);
+		for (const challenge of CHALLENGE_CATALOGUE) {
+			expect(catalogueSlugs.has(challenge.areaSlug)).toBe(true);
+		}
 
 		for (const area of defaultAreas) {
 			const challenge = challengeForArea(area.slug);

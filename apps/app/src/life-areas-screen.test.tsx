@@ -147,4 +147,66 @@ describe("life areas screen", () => {
 		});
 		expect(globalThis.fetch).not.toHaveBeenCalled();
 	});
+
+	it("caps active areas at ten and explains the refusal", async () => {
+		let overlays: ResolvedTrackedMetric[] = DEFAULT_LIFE_AREA_METRICS.map(
+			(area) => ({
+				...area,
+				enabled: area.enabled ?? true,
+				overlayId: null,
+				addedAt: null,
+				removedAt: null,
+				customLabel: null,
+			}),
+		);
+		const repository = {
+			listResolved: jest.fn(async () => overlays),
+			configure: jest.fn(
+				async (metricSlug: string, position: number, enabled: boolean) => {
+					overlays = overlays.map((row) =>
+						row.metricSlug === metricSlug
+							? { ...row, position, enabled }
+							: row,
+					);
+					const updated = overlays.find((row) => row.metricSlug === metricSlug);
+					if (!updated) {
+						throw new Error(`Unknown area: ${metricSlug}`);
+					}
+					return trackedMetric(updated);
+				},
+			),
+			configureMany: jest.fn(),
+			relabel: jest.fn(),
+		};
+		const view = await render(<LifeAreasScreen repository={repository} />);
+
+		await waitFor(() => expect(view.getByText("Home & environment")).toBeTruthy());
+		await fireEvent(
+			view.getByLabelText("Enable Home & environment"),
+			"valueChange",
+			true,
+		);
+		await fireEvent(
+			view.getByLabelText("Enable Purpose & direction"),
+			"valueChange",
+			true,
+		);
+		await waitFor(() =>
+			expect(view.getByLabelText("Disable Purpose & direction")).toBeTruthy(),
+		);
+		expect(repository.configure).toHaveBeenCalledTimes(2);
+
+		await fireEvent(
+			view.getByLabelText("Enable Fatherhood"),
+			"valueChange",
+			true,
+		);
+		expect(
+			view.getByText(
+				"Choose up to 10 active life areas — disable one first.",
+			),
+		).toBeTruthy();
+		expect(repository.configure).toHaveBeenCalledTimes(2);
+		expect(view.getByLabelText("Enable Fatherhood")).toBeTruthy();
+	});
 });

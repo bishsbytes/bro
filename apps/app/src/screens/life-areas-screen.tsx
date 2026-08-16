@@ -15,6 +15,7 @@ import { FormField } from "../components/form-field";
 import { Screen } from "../components/screen";
 import {
 	DEFAULT_LIFE_AREA_METRICS,
+	MAX_ACTIVE_LIFE_AREAS,
 	resolveLifeAreas,
 	type LifeAreaSlug,
 	type ResolvedLifeArea,
@@ -158,11 +159,21 @@ export function LifeAreasScreen({ repository }: LifeAreasScreenProps) {
 								false: theme.colors.border,
 								true: theme.colors.brand,
 							}}
-							onValueChange={(enabled) =>
+							onValueChange={(enabled) => {
+								if (
+									enabled &&
+									areas.filter((candidate) => candidate.enabled).length >=
+										MAX_ACTIVE_LIFE_AREAS
+								) {
+									setError(
+										`Choose up to ${MAX_ACTIVE_LIFE_AREAS} active life areas — disable one first.`,
+									);
+									return;
+								}
 								void mutate(() =>
 									areasRepository.configure(area.slug, area.position, enabled),
-								)
-							}
+								);
+							}}
 						/>
 					</View>
 

@@ -4,7 +4,7 @@
 
 Implementation complete, 16 August 2026. Migration 003 and its real-SQLite upgrade coverage, assessment and goal repositories, the signed-off area vocabulary and 1–10 wheel, snapshot-faithful sitting and comparison flow, focus selection, goals with derived progress, eight authored starter challenges, life-area customisation, and export format v2 are complete. The automated acceptance matrix, tests, typecheck, lint, and migration regeneration are green. The review, goal, catalogue, and settings flows remain offline and issue no backend request. Step 2's physical-device acceptance continues independently; this step added no native dependency, required no prebuild, and has no device-only acceptance item.
 
-Incidental to the plan, this step also landed web-platform support shims — cross-origin-isolation headers in Metro for expo-sqlite's web worker, a no-op web notification gateway, and a localStorage-backed device-settings store — added to exercise the flows in a browser. They change no native behaviour. A post-completion review pass additionally marked the Faith & spirituality and Sobriety & recovery areas sensitive (export's sensitive-exclusion now covers assessment items, focus selections, and goals), made review sittings visible as history-day summaries, made settings reorder swaps atomic, and tightened goal target-date validation to real calendar days.
+Incidental to the plan, this step also landed web-platform support shims — cross-origin-isolation headers in Metro for expo-sqlite's web worker, a no-op web notification gateway, and a localStorage-backed device-settings store — added to exercise the flows in a browser. They change no native behaviour. A post-completion review pass additionally marked the Faith & spirituality and Sobriety & recovery areas sensitive (export's sensitive-exclusion now covers assessment items, focus selections, and goals), made review sittings visible as history-day summaries, made settings reorder swaps atomic, and tightened goal target-date validation to real calendar days. A vocabulary comparison against common wheel-of-life tools then added a thirteenth area, `wheel:environment` (Home & environment) — physical environment appears in every mainstream wheel and was the catalogue's one gap. It ships default-off with its own starter challenge (the one default-off area with authored content), keeping the core at the signed-off eight; settings caps active areas at ten so the wheel stays readable. Community was considered and left to `wheel:friends`.
 
 This is the delivery plan for [sequencing step 3 of the product domains plan](product-domains-and-data.md#sequencing): the assessments domain — the wheel of life over the existing observation spine — plus goals and the authored starter challenge set that keeps a focus selection from dead-ending. It consumes what the [step 2 hand-off](step-2-reminders.md#step-3-hand-off) promised: a proven multi-migration path for migration 003, the `assessment_id` column already waiting on `observations`, the settings child-route precedent, and the registry's typed catalogue pattern to extend to life areas.
 
@@ -35,7 +35,7 @@ The step is successful when the review loop closes twice: a first sitting that e
 
 ## Decisions locked for this step
 
-- **The proposed area vocabulary — the sign-off item.** Twelve authored areas, eight active by default; the same slugs tag challenge templates now and forever. Generosity is deliberate: nothing authored can attach to an area a user invents, so every area we ship is one that can carry content later. Default-off areas exist precisely for the people they matter to — enabling one is a tap, not a custom item.
+- **The proposed area vocabulary — the sign-off item.** Thirteen authored areas, eight active by default and at most ten active at once (the wheel stays readable; settings enforces the cap); the same slugs tag challenge templates now and forever. Generosity is deliberate: nothing authored can attach to an area a user invents, so every area we ship is one that can carry content later. Default-off areas exist precisely for the people they matter to — enabling one is a tap, not a custom item.
 
   | Slug | Default label | Default |
   | --- | --- | --- |
@@ -47,6 +47,7 @@ The step is successful when the review loop closes twice: a first sitting that e
   | `wheel:friends` | Friends & social | on |
   | `wheel:growth` | Learning & growth | on |
   | `wheel:fun` | Fun & recreation | on |
+  | `wheel:environment` | Home & environment | off |
   | `wheel:purpose` | Purpose & direction | off |
   | `wheel:fatherhood` | Fatherhood | off |
   | `wheel:faith` | Faith & spirituality | off |
