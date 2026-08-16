@@ -1,8 +1,9 @@
 import {
 	CANONICAL_STORAGE_UNITS,
-	defaultDisplayUnit,
 	DISPLAY_RESOLUTIONS,
 	DISPLAY_UNITS_BY_DIMENSION,
+	defaultDisplayUnit,
+	formatIntrinsicMeasurement,
 	formatMeasurement,
 	fromCanonical,
 	INVALID_MEASUREMENT_MESSAGE,
@@ -24,6 +25,9 @@ describe("measurement units", () => {
 			mass: "kg",
 			length: "m",
 			fraction: "fraction",
+			time: "s",
+			count: "count",
+			rate_bpm: "bpm",
 		});
 		expect(DISPLAY_UNITS_BY_DIMENSION).toEqual({
 			mass: ["kg", "lb", "st"],
@@ -38,6 +42,14 @@ describe("measurement units", () => {
 			in: 0.25,
 			"%": 0.1,
 		});
+	});
+
+	it("formats fixed health dimensions without creating unit preferences", () => {
+		expect(formatIntrinsicMeasurement(27_720, "time")).toBe("7 h 42 m");
+		expect(formatIntrinsicMeasurement(2_520, "time")).toBe("42 m");
+		expect(formatIntrinsicMeasurement(10_432, "count")).toBe("10432");
+		expect(formatIntrinsicMeasurement(61, "rate_bpm")).toBe("61 bpm");
+		expect(formatIntrinsicMeasurement(61.25, "rate_bpm")).toBe("61.3 bpm");
 	});
 
 	it("uses exact mass and length definitions", () => {

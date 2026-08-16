@@ -1,10 +1,17 @@
-import type { Dimension } from "../units";
+import type { Dimension, IntrinsicDimension, MetricDimension } from "../units";
 import { LIFE_AREA_CATALOGUE, type LifeAreaSlug } from "./life-area-catalogue";
 
 export type MetricKind = "scored" | "factor" | "assessment" | "measurement";
-export type MetricAggregation = "mean" | "presence" | "last";
+export type MetricAggregation = "mean" | "presence" | "last" | "sum";
 export type FactorCategory = "body" | "lifestyle" | "mind" | "social";
-export type MeasurementSlug = "weight" | "waist" | "body_fat";
+export type UserEnterableMeasurementSlug = "weight" | "waist" | "body_fat";
+export type ImportedOnlyMeasurementSlug =
+	| "sleep_duration"
+	| "steps"
+	| "resting_heart_rate";
+export type MeasurementSlug =
+	| UserEnterableMeasurementSlug
+	| ImportedOnlyMeasurementSlug;
 
 type MetricDefinitionBase = {
 	slug: string;
@@ -15,7 +22,7 @@ type MetricDefinitionBase = {
 	userEnterable: boolean;
 	deprecated: boolean;
 	defaultPosition: number;
-	dimension: Dimension | null;
+	dimension: MetricDimension | null;
 };
 
 export type ScoredMetricDefinition = MetricDefinitionBase & {
@@ -47,16 +54,32 @@ export type AssessmentMetricDefinition = MetricDefinitionBase & {
 	dimension: null;
 };
 
-export type MeasurementMetricDefinition = MetricDefinitionBase & {
-	slug: MeasurementSlug;
+type MeasurementMetricDefinitionBase = MetricDefinitionBase & {
 	kind: "measurement";
-	aggregation: "last";
 	scaleMin: null;
 	scaleMax: null;
 	category: null;
-	dimension: Dimension;
-	userEnterable: true;
 };
+
+export type UserEnterableMeasurementMetricDefinition =
+	MeasurementMetricDefinitionBase & {
+		slug: UserEnterableMeasurementSlug;
+		aggregation: "last";
+		dimension: Dimension;
+		userEnterable: true;
+	};
+
+export type ImportedOnlyMeasurementMetricDefinition =
+	MeasurementMetricDefinitionBase & {
+		slug: ImportedOnlyMeasurementSlug;
+		aggregation: "sum" | "mean";
+		dimension: IntrinsicDimension;
+		userEnterable: false;
+	};
+
+export type MeasurementMetricDefinition =
+	| UserEnterableMeasurementMetricDefinition
+	| ImportedOnlyMeasurementMetricDefinition;
 
 export type MetricDefinition =
 	| ScoredMetricDefinition
@@ -136,11 +159,11 @@ const assessment = (
 });
 
 const measurement = (
-	slug: MeasurementSlug,
+	slug: UserEnterableMeasurementSlug,
 	label: string,
 	dimension: Dimension,
 	defaultPosition: number,
-): MeasurementMetricDefinition => ({
+): UserEnterableMeasurementMetricDefinition => ({
 	slug,
 	label,
 	kind: "measurement",
@@ -151,6 +174,28 @@ const measurement = (
 	dimension,
 	sensitive: true,
 	userEnterable: true,
+	deprecated: false,
+	defaultPosition,
+});
+
+const importedMeasurement = (
+	slug: ImportedOnlyMeasurementSlug,
+	label: string,
+	dimension: IntrinsicDimension,
+	aggregation: "sum" | "mean",
+	defaultPosition: number,
+	sensitive: boolean,
+): ImportedOnlyMeasurementMetricDefinition => ({
+	slug,
+	label,
+	kind: "measurement",
+	scaleMin: null,
+	scaleMax: null,
+	category: null,
+	aggregation,
+	dimension,
+	sensitive,
+	userEnterable: false,
 	deprecated: false,
 	defaultPosition,
 });
@@ -177,6 +222,16 @@ export const METRIC_REGISTRY = [
 	measurement("weight", "Weight", "mass", 0),
 	measurement("waist", "Waist", "length", 1),
 	measurement("body_fat", "Body fat", "fraction", 2),
+	importedMeasurement("sleep_duration", "Sleep", "time", "sum", 3, false),
+	importedMeasurement("steps", "Steps", "count", "sum", 4, false),
+	importedMeasurement(
+		"resting_heart_rate",
+		"Resting heart rate",
+		"rate_bpm",
+		"mean",
+		5,
+		true,
+	),
 	...LIFE_AREA_CATALOGUE.map((area) =>
 		assessment(area.slug, area.label, area.defaultPosition, area.sensitive),
 	),
@@ -222,5 +277,19 @@ export function listMeasurements(): MeasurementMetricDefinition[] {
 	return METRIC_REGISTRY.filter(
 		(metric): metric is MeasurementMetricDefinition =>
 			metric.kind === "measurement",
+	);
+}
+
+export function listUserEnterableMeasurements(): UserEnterableMeasurementMetricDefinition[] {
+	return METRIC_REGISTRY.filter(
+		(metric): metric is UserEnterableMeasurementMetricDefinition =>
+			metric.kind === "measurement" && metric.userEnterable,
+	);
+}
+
+export function listImportedOnlyMeasurements(): ImportedOnlyMeasurementMetricDefinition[] {
+	return METRIC_REGISTRY.filter(
+		(metric): metric is ImportedOnlyMeasurementMetricDefinition =>
+			metric.kind === "measurement" && !metric.userEnterable,
 	);
 }

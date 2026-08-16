@@ -4,8 +4,15 @@ import {
 	type Dimension,
 	type DisplayUnit,
 	type DisplayUnitForDimension,
+	type IntrinsicDimension,
 	isDisplayUnitForDimension,
 } from "./dimensions";
+
+function assertCanonicalValue(value: number): void {
+	if (!Number.isFinite(value) || value < 0) {
+		throw new RangeError("Metric values must be finite and non-negative.");
+	}
+}
 
 function roundToResolution(value: number, resolution: number): number {
 	return Math.round((value + Number.EPSILON) / resolution) * resolution;
@@ -49,4 +56,25 @@ export function formatMeasurement<D extends Dimension>(
 		),
 		unit as Exclude<DisplayUnit, "st">,
 	);
+}
+
+/** Formats dimensions that deliberately have no user preference in v1. */
+export function formatIntrinsicMeasurement(
+	canonicalValue: number,
+	dimension: IntrinsicDimension,
+): string {
+	assertCanonicalValue(canonicalValue);
+
+	if (dimension === "time") {
+		const totalMinutes = Math.round(canonicalValue / 60);
+		const hours = Math.floor(totalMinutes / 60);
+		const minutes = totalMinutes % 60;
+		return hours > 0 ? `${hours} h ${minutes} m` : `${minutes} m`;
+	}
+	if (dimension === "count") {
+		return String(Math.round(canonicalValue));
+	}
+
+	const rounded = Math.round((canonicalValue + Number.EPSILON) * 10) / 10;
+	return `${rounded.toFixed(Number.isInteger(rounded) ? 0 : 1)} bpm`;
 }

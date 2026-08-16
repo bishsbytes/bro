@@ -5,13 +5,13 @@ import {
 	UnitPreferenceRepository,
 } from "@bro/database-app";
 import type { SQLiteDatabase } from "expo-sqlite";
-import {
-	listMeasurements,
-	listScoredMetrics,
-	type MeasurementMetricDefinition,
-	type ScoredMetricDefinition,
-} from "../content/metric-registry";
 import { localDayOf } from "../check-in/check-in-store";
+import {
+	listScoredMetrics,
+	listUserEnterableMeasurements,
+	type ScoredMetricDefinition,
+	type UserEnterableMeasurementMetricDefinition,
+} from "../content/metric-registry";
 import {
 	type DisplayUnit,
 	formatMeasurement,
@@ -20,13 +20,13 @@ import {
 } from "../units";
 import {
 	buildTrendSeries,
-	trendRange,
 	type TrendPeriod,
 	type TrendSeries,
+	trendRange,
 } from "./trend-math";
 
 export type MetricTrend = {
-	metric: ScoredMetricDefinition | MeasurementMetricDefinition;
+	metric: ScoredMetricDefinition | UserEnterableMeasurementMetricDefinition;
 	label: string;
 	series: TrendSeries;
 	displayUnit: DisplayUnit | null;
@@ -64,11 +64,13 @@ export class TrendsStore {
 	async load(period: TrendPeriod): Promise<TrendsSnapshot> {
 		const throughLocalDay = localDayOf(this.now());
 		const range = trendRange(throughLocalDay, period);
-		const measurementDefaults = listMeasurements().map((metric) => ({
-			metricSlug: metric.slug,
-			position: metric.defaultPosition,
-			enabled: false,
-		}));
+		const measurementDefaults = listUserEnterableMeasurements().map(
+			(metric) => ({
+				metricSlug: metric.slug,
+				position: metric.defaultPosition,
+				enabled: false,
+			}),
+		);
 		const [overlays, preferences] = await Promise.all([
 			this.trackedMetrics.listResolved(measurementDefaults),
 			this.unitPreferences.resolveLatestPerDimension(),
@@ -85,7 +87,7 @@ export class TrendsStore {
 				label: metric.label,
 				displayUnit: null,
 			})),
-			...listMeasurements().flatMap((metric) => {
+			...listUserEnterableMeasurements().flatMap((metric) => {
 				const overlay = overlayBySlug.get(metric.slug);
 				return overlay?.enabled
 					? [

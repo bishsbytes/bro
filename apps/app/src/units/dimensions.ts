@@ -1,6 +1,17 @@
 export const DIMENSIONS = ["mass", "length", "fraction"] as const;
 
+/** Dimensions with a user-selectable display unit. */
 export type Dimension = (typeof DIMENSIONS)[number];
+
+/** Dimensions whose canonical unit is also their fixed v1 display form. */
+export const INTRINSIC_DIMENSIONS = ["time", "count", "rate_bpm"] as const;
+export type IntrinsicDimension = (typeof INTRINSIC_DIMENSIONS)[number];
+
+export const METRIC_DIMENSIONS = [
+	...DIMENSIONS,
+	...INTRINSIC_DIMENSIONS,
+] as const;
+export type MetricDimension = (typeof METRIC_DIMENSIONS)[number];
 
 export type MassDisplayUnit = "kg" | "lb" | "st";
 export type LengthDisplayUnit = "cm" | "in";
@@ -23,7 +34,10 @@ export const CANONICAL_STORAGE_UNITS = {
 	mass: "kg",
 	length: "m",
 	fraction: "fraction",
-} as const;
+	time: "s",
+	count: "count",
+	rate_bpm: "bpm",
+} as const satisfies Record<MetricDimension, string>;
 
 export const DISPLAY_UNITS_BY_DIMENSION = {
 	mass: ["kg", "lb", "st"],

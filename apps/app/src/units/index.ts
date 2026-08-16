@@ -15,17 +15,21 @@ export {
 	type DisplayUnitForDimension,
 	FALLBACK_DISPLAY_UNITS,
 	type FractionDisplayUnit,
+	INTRINSIC_DIMENSIONS,
+	type IntrinsicDimension,
 	isDisplayUnitForDimension,
 	type LengthDisplayUnit,
 	type MassDisplayUnit,
+	METRIC_DIMENSIONS,
+	type MetricDimension,
 } from "./dimensions";
-export { formatMeasurement } from "./formatting";
+export { formatIntrinsicMeasurement, formatMeasurement } from "./formatting";
 export {
 	defaultDisplayUnit,
 	resolveDisplayUnit,
 } from "./locale-defaults";
 export {
 	INVALID_MEASUREMENT_MESSAGE,
-	parseMeasurement,
 	type ParsedMeasurement,
+	parseMeasurement,
 } from "./parsing";

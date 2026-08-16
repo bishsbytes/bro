@@ -89,4 +89,17 @@ describe("trends store", () => {
 		});
 		expect(weight?.series.points.at(-1)?.value).toBe(77.56429527);
 	});
+
+	it("does not expose imported-only overlays before daily rollups are wired", async () => {
+		await new databaseApp.TrackedMetricsRepository(db).configure(
+			"sleep_duration",
+			3,
+			true,
+		);
+		const store = new TrendsStore(db);
+
+		expect(
+			(await store.load(7)).metrics.map(({ metric }) => metric.slug),
+		).toEqual(["mood", "energy"]);
+	});
 });

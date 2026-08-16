@@ -89,6 +89,9 @@ function aggregateDay(
 		(sum, row) => sum + valueOnCurrentScale(row, metric),
 		0,
 	);
+	if (metric.aggregation === "sum") {
+		return total;
+	}
 	return total / rows.length;
 }
 

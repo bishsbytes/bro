@@ -50,6 +50,11 @@ describe("body store", () => {
 		);
 
 		const fresh = await store.loadOverview();
+		expect(fresh.metrics.map(({ metricSlug }) => metricSlug)).toEqual([
+			"weight",
+			"waist",
+			"body_fat",
+		]);
 		expect(fresh.metrics).toMatchObject([
 			{ metricSlug: "weight", tracked: false, displayUnit: "st" },
 			{ metricSlug: "waist", tracked: false, displayUnit: "cm" },
@@ -65,6 +70,18 @@ describe("body store", () => {
 			db,
 		).listResolved([{ metricSlug: "weight", position: 0, enabled: false }]);
 		expect(overlays[0]?.enabled).toBe(true);
+	});
+
+	it("does not expose imported-only metrics before the resolved read side lands", async () => {
+		await new databaseApp.TrackedMetricsRepository(db).configure(
+			"resting_heart_rate",
+			5,
+			true,
+		);
+		const store = new BodyStore(db);
+
+		expect(await store.loadMetric("resting_heart_rate")).toBeNull();
+		expect((await store.loadOverview()).metrics).toHaveLength(3);
 	});
 
 	it("derives decreasing goal progress from canonical history across unit changes", async () => {

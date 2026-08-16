@@ -73,9 +73,7 @@ describe("check-in store", () => {
 
 	it("preserves a row's scale snapshot when an entry is edited", async () => {
 		const observations = new databaseApp.ObservationRepository(db);
-		const mood = await observations.create(
-			scoredObservation("mood", 7, 0, 10),
-		);
+		const mood = await observations.create(scoredObservation("mood", 7, 0, 10));
 		const energy = await observations.create(
 			scoredObservation("energy", 2, 0, 10),
 		);
@@ -167,6 +165,23 @@ describe("check-in store", () => {
 		expect((await store.loadToday()).availableMeasurements).toMatchObject([
 			{ metricSlug: "weight", displayUnit: "st" },
 		]);
+	});
+
+	it("ignores imported-only metrics even if an overlay is manufactured", async () => {
+		const tracked = new databaseApp.TrackedMetricsRepository(db);
+		const store = new CheckInStore(db, () => CAPTURED_AT);
+		await tracked.configure("steps", 99, true);
+
+		expect((await store.loadToday()).availableMeasurements).toEqual([]);
+		await expect(
+			store.save({
+				mood: 4,
+				energy: 3,
+				selectedFactorSlugs: [],
+				measurements: [{ metricSlug: "steps", value: 10_000 }],
+				note: "",
+			}),
+		).rejects.toThrow("Unknown measurement slug: steps");
 	});
 
 	it("writes canonical measurements and exposes the day's last value", async () => {

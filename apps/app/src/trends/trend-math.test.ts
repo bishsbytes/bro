@@ -158,6 +158,28 @@ describe("trend math", () => {
 		expect(series.markers[0]?.y).toBe(60);
 	});
 
+	it("supports registry-driven sum aggregation", () => {
+		const series = buildTrendSeries(
+			[
+				observation("morning", "2026-08-14", 4_000, {
+					metricSlug: "steps",
+					scaleMin: null,
+					scaleMax: null,
+				}),
+				observation("evening", "2026-08-14", 6_000, {
+					metricSlug: "steps",
+					scaleMin: null,
+					scaleMax: null,
+				}),
+			],
+			knownMetric("steps"),
+			"2026-08-14",
+			7,
+		);
+
+		expect(series.points.at(-1)?.value).toBe(10_000);
+	});
+
 	it("marks a metric meaningful after seven distinct logged days", () => {
 		const rows = Array.from({ length: 7 }, (_, index) =>
 			observation(
@@ -166,12 +188,7 @@ describe("trend math", () => {
 				3,
 			),
 		);
-		const series = buildTrendSeries(
-			rows,
-			knownMetric("mood"),
-			"2026-08-14",
-			7,
-		);
+		const series = buildTrendSeries(rows, knownMetric("mood"), "2026-08-14", 7);
 
 		expect(series.observedDayCount).toBe(7);
 		expect(series.daysUntilMeaningful).toBe(0);

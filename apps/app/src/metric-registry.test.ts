@@ -2,8 +2,10 @@ import {
 	DEFAULT_TRACKED_METRICS,
 	listAssessmentMetrics,
 	listFactors,
+	listImportedOnlyMeasurements,
 	listMeasurements,
 	listScoredMetrics,
+	listUserEnterableMeasurements,
 	METRIC_REGISTRY,
 	resolveMetric,
 } from "./content/metric-registry";
@@ -32,9 +34,11 @@ describe("metric registry", () => {
 			} else if (metric.kind === "measurement") {
 				expect(metric.scaleMin).toBeNull();
 				expect(metric.scaleMax).toBeNull();
-				expect(metric.aggregation).toBe("last");
+				expect(["last", "mean", "sum"]).toContain(metric.aggregation);
 				expect(metric.category).toBeNull();
-				expect(metric.dimension).toMatch(/^(mass|length|fraction)$/);
+				expect(metric.dimension).toMatch(
+					/^(mass|length|fraction|time|count|rate_bpm)$/,
+				);
 			} else {
 				expect(metric.scaleMin).toBeLessThan(metric.scaleMax);
 				expect(metric.aggregation).toBe("mean");
@@ -64,8 +68,23 @@ describe("metric registry", () => {
 				label: "Body fat",
 				dimension: "fraction",
 			}),
+			expect.objectContaining({
+				slug: "sleep_duration",
+				dimension: "time",
+				aggregation: "sum",
+			}),
+			expect.objectContaining({
+				slug: "steps",
+				dimension: "count",
+				aggregation: "sum",
+			}),
+			expect.objectContaining({
+				slug: "resting_heart_rate",
+				dimension: "rate_bpm",
+				aggregation: "mean",
+			}),
 		]);
-		for (const metric of listMeasurements()) {
+		for (const metric of listUserEnterableMeasurements()) {
 			expect(metric).toMatchObject({
 				kind: "measurement",
 				scaleMin: null,
@@ -75,9 +94,24 @@ describe("metric registry", () => {
 				sensitive: true,
 			});
 		}
-		expect(
-			listAssessmentMetrics().map((metric) => metric.slug),
-		).toEqual([
+		expect(listImportedOnlyMeasurements()).toEqual([
+			expect.objectContaining({
+				slug: "sleep_duration",
+				userEnterable: false,
+				sensitive: false,
+			}),
+			expect.objectContaining({
+				slug: "steps",
+				userEnterable: false,
+				sensitive: false,
+			}),
+			expect.objectContaining({
+				slug: "resting_heart_rate",
+				userEnterable: false,
+				sensitive: true,
+			}),
+		]);
+		expect(listAssessmentMetrics().map((metric) => metric.slug)).toEqual([
 			"wheel:career",
 			"wheel:money",
 			"wheel:health",
@@ -143,5 +177,19 @@ describe("metric registry", () => {
 			{ metricSlug: "waist", position: 1, enabled: false },
 			{ metricSlug: "body_fat", position: 2, enabled: false },
 		]);
+		for (const imported of ["sleep_duration", "steps", "resting_heart_rate"]) {
+			expect(
+				DEFAULT_TRACKED_METRICS.some(
+					({ metricSlug }) => metricSlug === imported,
+				),
+			).toBe(false);
+			expect(listScoredMetrics().some(({ slug }) => slug === imported)).toBe(
+				false,
+			);
+			expect(listFactors().some(({ slug }) => slug === imported)).toBe(false);
+			expect(
+				listAssessmentMetrics().some(({ slug }) => slug === imported),
+			).toBe(false);
+		}
 	});
 });

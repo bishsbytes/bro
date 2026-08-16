@@ -1,7 +1,7 @@
 import {
-	getDb,
 	type Goal,
 	GoalRepository,
+	getDb,
 	type Observation,
 	ObservationRepository,
 	TrackedMetricsRepository,
@@ -10,15 +10,15 @@ import {
 import type { SQLiteDatabase } from "expo-sqlite";
 import { localDayOf } from "../check-in/check-in-store";
 import {
-	listMeasurements,
-	type MeasurementMetricDefinition,
-	type MeasurementSlug,
+	listUserEnterableMeasurements,
 	resolveMetric,
+	type UserEnterableMeasurementMetricDefinition,
+	type UserEnterableMeasurementSlug,
 } from "../content/metric-registry";
 import {
+	type GoalStatus,
 	goalProgressPercent,
 	goalStatus,
-	type GoalStatus,
 } from "../goals/goal-progress";
 import { buildTrendSeries, type TrendSeries } from "../trends/trend-math";
 import {
@@ -29,7 +29,7 @@ import {
 } from "../units";
 
 type MeasurementPresentationBase = {
-	metricSlug: MeasurementSlug;
+	metricSlug: UserEnterableMeasurementSlug;
 	label: string;
 };
 
@@ -93,7 +93,7 @@ function systemLocale(): string | undefined {
 }
 
 function measurementDefaults() {
-	return listMeasurements().map((metric) => ({
+	return listUserEnterableMeasurements().map((metric) => ({
 		metricSlug: metric.slug,
 		position: metric.defaultPosition,
 		enabled: false,
@@ -101,7 +101,7 @@ function measurementDefaults() {
 }
 
 function toPresentation(
-	metric: MeasurementMetricDefinition,
+	metric: UserEnterableMeasurementMetricDefinition,
 	label: string,
 	displayUnit: DisplayUnit,
 ): MeasurementPresentation {
@@ -197,7 +197,7 @@ function progressFor(
 }
 
 function assertCanonicalValue(
-	metric: MeasurementMetricDefinition,
+	metric: UserEnterableMeasurementMetricDefinition,
 	value: number,
 ): void {
 	if (!Number.isFinite(value) || value < 0) {
@@ -208,9 +208,15 @@ function assertCanonicalValue(
 	}
 }
 
-function resolveMeasurement(metricSlug: string): MeasurementMetricDefinition {
+function resolveMeasurement(
+	metricSlug: string,
+): UserEnterableMeasurementMetricDefinition {
 	const resolved = resolveMetric(metricSlug);
-	if (resolved.kind !== "known" || resolved.metric.kind !== "measurement") {
+	if (
+		resolved.kind !== "known" ||
+		resolved.metric.kind !== "measurement" ||
+		!resolved.metric.userEnterable
+	) {
 		throw new TypeError(`Unknown measurement slug: ${metricSlug}`);
 	}
 	return resolved.metric;
@@ -239,7 +245,11 @@ export class BodyStore {
 
 	async loadMetric(metricSlug: string): Promise<BodyMetricDetail | null> {
 		const metric = resolveMetric(metricSlug);
-		if (metric.kind !== "known" || metric.metric.kind !== "measurement") {
+		if (
+			metric.kind !== "known" ||
+			metric.metric.kind !== "measurement" ||
+			!metric.metric.userEnterable
+		) {
 			return null;
 		}
 		const summaries = await this.loadSummaries();
@@ -387,7 +397,7 @@ export class BodyStore {
 		);
 		const throughLocalDay = localDayOf(this.now());
 
-		return listMeasurements()
+		return listUserEnterableMeasurements()
 			.map((metric) => {
 				const overlay = overlayBySlug.get(metric.slug);
 				const presentation = toPresentation(

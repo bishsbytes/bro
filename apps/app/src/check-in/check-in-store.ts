@@ -12,8 +12,8 @@ import {
 	FACTOR_PRESENCE_VALUE,
 	type FactorMetricDefinition,
 	listFactors,
-	type MeasurementSlug,
 	resolveMetric,
+	type UserEnterableMeasurementSlug,
 } from "../content/metric-registry";
 import { refreshReminderNotifications } from "../reminders/reminder-materialiser";
 import {
@@ -43,7 +43,7 @@ export type TodayCheckIn = {
 };
 
 type CheckInMeasurementBase = {
-	metricSlug: MeasurementSlug;
+	metricSlug: UserEnterableMeasurementSlug;
 	label: string;
 };
 
@@ -115,7 +115,7 @@ function systemLocale(): string | undefined {
 }
 
 function toCheckInMeasurement(
-	metricSlug: MeasurementSlug,
+	metricSlug: UserEnterableMeasurementSlug,
 	label: string,
 	dimension: Dimension,
 	displayUnit: DisplayUnit,
@@ -193,7 +193,11 @@ function assertDraft(draft: CheckInDraft): void {
 	const measurementSlugs = new Set<string>();
 	for (const measurement of draft.measurements) {
 		const resolved = resolveMetric(measurement.metricSlug);
-		if (resolved.kind !== "known" || resolved.metric.kind !== "measurement") {
+		if (
+			resolved.kind !== "known" ||
+			resolved.metric.kind !== "measurement" ||
+			!resolved.metric.userEnterable
+		) {
 			throw new TypeError(
 				`Unknown measurement slug: ${measurement.metricSlug}`,
 			);
@@ -257,7 +261,11 @@ export class CheckInStore {
 		const factorSlugs = new Set(availableFactors.map((factor) => factor.slug));
 		const resolvedMeasurements = tracked.flatMap((overlay) => {
 			const resolved = resolveMetric(overlay.metricSlug);
-			if (resolved.kind !== "known" || resolved.metric.kind !== "measurement") {
+			if (
+				resolved.kind !== "known" ||
+				resolved.metric.kind !== "measurement" ||
+				!resolved.metric.userEnterable
+			) {
 				return [];
 			}
 			const metric = resolved.metric;
@@ -365,7 +373,8 @@ export class CheckInStore {
 						return (
 							metric.enabled &&
 							resolved.kind === "known" &&
-							resolved.metric.kind === "measurement"
+							resolved.metric.kind === "measurement" &&
+							resolved.metric.userEnterable
 						);
 					})
 					.map((metric) => metric.metricSlug),
