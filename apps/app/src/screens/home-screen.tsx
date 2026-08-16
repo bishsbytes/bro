@@ -1,19 +1,20 @@
+import { router } from "expo-router";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { ActivityIndicator, TouchableOpacity, View } from "react-native";
-import { AppText } from "../components/app-text";
-import { Button } from "../components/button";
-import { Card } from "../components/card";
-import { FormField } from "../components/form-field";
-import { Screen } from "../components/screen";
-import { SectionHeader } from "../components/section-header";
-import { StyleSheet } from "../theme/unistyles";
 import {
 	type CheckInEntry,
 	type CheckInStore,
 	createCheckInStore,
 	type TodayCheckIn,
 } from "../check-in/check-in-store";
+import { AppText } from "../components/app-text";
+import { Button } from "../components/button";
+import { Card } from "../components/card";
+import { FormField } from "../components/form-field";
+import { Screen } from "../components/screen";
+import { SectionHeader } from "../components/section-header";
 import { type FactorCategory, resolveMetric } from "../content/metric-registry";
+import { StyleSheet } from "../theme/unistyles";
 
 type HomeScreenProps = {
 	store?: Pick<CheckInStore, "loadToday" | "save">;
@@ -152,6 +153,19 @@ export function HomeScreen({ store }: HomeScreenProps) {
 			<AppText variant="display" style={styles.pageTitle}>
 				How are you?
 			</AppText>
+			{today.entries.length === 0 ? (
+				<Card style={styles.stockCard}>
+					<AppText variant="section">Take stock of the bigger picture</AppText>
+					<AppText color="muted">
+						Rate the areas of your life and choose where to focus next.
+					</AppText>
+					<Button
+						label="Take stock"
+						variant="secondary"
+						onPress={() => router.push("/review/new")}
+					/>
+				</Card>
+			) : null}
 			{today.entries.length > 0 ? (
 				<View style={styles.section}>
 					<SectionHeader
@@ -338,6 +352,7 @@ const styles = StyleSheet.create((theme) => ({
 	loading: {
 		gap: theme.spacing.md,
 	},
+	stockCard: { gap: theme.spacing.sm, marginBottom: theme.spacing.xl },
 	section: { marginBottom: theme.spacing.xl, gap: theme.spacing.md },
 	entryCard: {
 		flexDirection: "row",

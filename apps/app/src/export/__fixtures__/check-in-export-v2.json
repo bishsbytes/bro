@@ -1,0 +1,163 @@
+{
+  "metadata": {
+    "formatVersion": 2,
+    "exportedAt": "2026-08-14T12:00:00.000Z",
+    "appVersion": "1.0.0"
+  },
+  "registry": {
+    "metrics": [
+      {
+        "slug": "mood",
+        "label": "Mood",
+        "kind": "scored",
+        "scaleMin": 1,
+        "scaleMax": 5,
+        "category": null,
+        "aggregation": "mean",
+        "sensitive": false,
+        "userEnterable": true,
+        "deprecated": false,
+        "defaultPosition": 0
+      },
+      {
+        "slug": "wheel:career",
+        "label": "Work & career",
+        "kind": "assessment",
+        "scaleMin": 1,
+        "scaleMax": 10,
+        "category": null,
+        "aggregation": "mean",
+        "sensitive": false,
+        "userEnterable": false,
+        "deprecated": false,
+        "defaultPosition": 0
+      },
+      {
+        "slug": "alcohol",
+        "label": "Alcohol",
+        "kind": "factor",
+        "scaleMin": null,
+        "scaleMax": null,
+        "category": "lifestyle",
+        "aggregation": "presence",
+        "sensitive": false,
+        "userEnterable": true,
+        "deprecated": false,
+        "defaultPosition": 6
+      }
+    ]
+  },
+  "observations": [
+    {
+      "id": "observation-mood",
+      "metricSlug": "mood",
+      "value": 4,
+      "scaleMin": 1,
+      "scaleMax": 5,
+      "observedAt": 1786701600000,
+      "localDay": "2026-08-14",
+      "tzOffsetMinutes": -60,
+      "source": "user",
+      "sourceRecordId": null,
+      "assessmentId": null,
+      "createdAt": 1786701600100,
+      "updatedAt": 1786701600100
+    },
+    {
+      "id": "observation-alcohol",
+      "metricSlug": "alcohol",
+      "value": 1,
+      "scaleMin": null,
+      "scaleMax": null,
+      "observedAt": 1786705200000,
+      "localDay": "2026-08-14",
+      "tzOffsetMinutes": -60,
+      "source": "user",
+      "sourceRecordId": null,
+      "assessmentId": null,
+      "createdAt": 1786705200100,
+      "updatedAt": 1786705200100
+    },
+    {
+      "id": "observation-career",
+      "metricSlug": "wheel:career",
+      "value": 6,
+      "scaleMin": 1,
+      "scaleMax": 10,
+      "observedAt": 1786707400000,
+      "localDay": "2026-08-14",
+      "tzOffsetMinutes": -60,
+      "source": "user",
+      "sourceRecordId": null,
+      "assessmentId": "assessment-1",
+      "createdAt": 1786707400100,
+      "updatedAt": 1786707400100
+    }
+  ],
+  "dayNotes": [
+    {
+      "id": "note-1",
+      "localDay": "2026-08-14",
+      "body": "A useful day",
+      "createdAt": 1786708800000,
+      "updatedAt": 1786708800000
+    }
+  ],
+  "trackedMetrics": [
+    {
+      "id": "tracked-career",
+      "metricSlug": "wheel:career",
+      "position": 0,
+      "addedAt": 1786700000000,
+      "removedAt": null,
+      "customLabel": "Business",
+      "createdAt": 1786708800000,
+      "updatedAt": 1786708800000
+    },
+    {
+      "id": "tracked-alcohol",
+      "metricSlug": "alcohol",
+      "position": 6,
+      "addedAt": null,
+      "removedAt": 1786708800000,
+      "customLabel": null,
+      "createdAt": 1786708800000,
+      "updatedAt": 1786708800000
+    }
+  ],
+  "assessments": [
+    {
+      "id": "assessment-1",
+      "templateSlug": "wheel-of-life",
+      "templateVersion": 1,
+      "startedAt": 1786707100000,
+      "completedAt": 1786707400000,
+      "items": [
+        {
+          "slug": "wheel:career",
+          "label": "Business",
+          "position": 0
+        }
+      ],
+      "focusItemSlugs": [
+        "wheel:career"
+      ],
+      "createdAt": 1786707400100,
+      "updatedAt": 1786707400100
+    }
+  ],
+  "goals": [
+    {
+      "id": "goal-1",
+      "metricSlug": "wheel:career",
+      "direction": "increase",
+      "targetValue": 8,
+      "targetDate": "2026-12-01",
+      "startedAt": 1786708000000,
+      "achievedAt": null,
+      "abandonedAt": null,
+      "createdAt": 1786708000000,
+      "updatedAt": 1786708000000
+    }
+  ]
+}

@@ -53,7 +53,7 @@ describe("wheel-of-life review flow", () => {
 		mockSqlite.cleanup();
 	});
 
-	it("saves a whole sitting, survives relaunch, and abandons without writing", async () => {
+	it("closes the review, focus, goal, and starter-content loop offline", async () => {
 		databaseApp.readDeviceSettings();
 		databaseApp.setOnboardingComplete(true);
 
@@ -68,7 +68,10 @@ describe("wheel-of-life review flow", () => {
 		)) {
 			await fireEvent.press(firstRun.getByLabelText(`${area.label} 6`));
 		}
-		await fireEvent.press(firstRun.getByText("Save wheel"));
+		await fireEvent.press(firstRun.getByText("Choose focus areas"));
+		expect(await firstRun.findByText("Choose your focus")).toBeTruthy();
+		await fireEvent.press(firstRun.getByLabelText("Focus on Work & career"));
+		await fireEvent.press(firstRun.getByText("Save review"));
 
 		expect(await firstRun.findByLabelText("Wheel of life chart")).toBeTruthy();
 		expect(firstRun.getAllByText("Your wheel").length).toBeGreaterThan(0);
@@ -77,6 +80,29 @@ describe("wheel-of-life review flow", () => {
 				"This is your first snapshot. Your next review will show what moved.",
 			),
 		).toBeTruthy();
+		expect(firstRun.getByText("Focus")).toBeTruthy();
+
+		await fireEvent.press(firstRun.getByText("Read “A clearer working week”"));
+		expect(await firstRun.findByText("DAY 1")).toBeTruthy();
+		expect(firstRun.getByText("Name what matters")).toBeTruthy();
+		await fireEvent.press(firstRun.getByText("Back to my wheel"));
+
+		await fireEvent.press(
+			await firstRun.findByText("Set a goal for Work & career"),
+		);
+		expect(
+			await firstRun.findByText("Your current wheel score is 6/10."),
+		).toBeTruthy();
+		await fireEvent.changeText(firstRun.getByLabelText("Target score"), "8");
+		await fireEvent.changeText(
+			firstRun.getByLabelText("Target date (optional)"),
+			"2026-12-01",
+		);
+		await fireEvent.press(firstRun.getByText("Save goal"));
+		expect(
+			await firstRun.findByText("Started at 6/10 · Latest 6/10 · Target 8/10"),
+		).toBeTruthy();
+		expect(firstRun.getByText("Target date 2026-12-01")).toBeTruthy();
 		expect(globalThis.fetch).not.toHaveBeenCalled();
 
 		firstRun.unmount();
@@ -86,6 +112,11 @@ describe("wheel-of-life review flow", () => {
 		await act(async () => undefined);
 		expect(await secondRun.findByText("8 life areas")).toBeTruthy();
 		expect(secondRun.getAllByLabelText(/^Open review /)).toHaveLength(1);
+		expect(
+			secondRun.getByText("Started at 6/10 · Latest 6/10 · Target 8/10"),
+		).toBeTruthy();
+		await fireEvent.press(secondRun.getByText("Mark Work & career achieved"));
+		expect(await secondRun.findByText("Achieved")).toBeTruthy();
 
 		await fireEvent.press(secondRun.getByText("Take stock"));
 		expect(
@@ -99,6 +130,20 @@ describe("wheel-of-life review flow", () => {
 			databaseApp.getDb(),
 		);
 		expect(await assessments.listAll()).toHaveLength(1);
+
+		await act(async () => expoRouter.replace("/"));
+		expect(
+			await secondRun.findByText("Take stock of the bigger picture"),
+		).toBeTruthy();
+		await fireEvent.press(secondRun.getByText("Take stock"));
+		expect(
+			await secondRun.findByText("Nothing is saved until you finish."),
+		).toBeTruthy();
+		await act(async () => expoRouter.back());
+
+		await act(async () => expoRouter.replace("/trends"));
+		await fireEvent.press(await secondRun.findByText("Open wheel reviews"));
+		expect(await secondRun.findByText("Review history")).toBeTruthy();
 		expect(globalThis.fetch).not.toHaveBeenCalled();
 	});
 });

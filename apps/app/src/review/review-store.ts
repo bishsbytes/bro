@@ -2,6 +2,8 @@ import {
 	type Assessment,
 	type AssessmentItemSnapshot,
 	AssessmentRepository,
+	type Goal,
+	GoalRepository,
 	getDb,
 	type Observation,
 	ObservationRepository,
@@ -11,6 +13,7 @@ import type { SQLiteDatabase } from "expo-sqlite";
 import {
 	DEFAULT_LIFE_AREA_METRICS,
 	listActiveLifeAreas,
+	resolveLifeAreas,
 } from "../content/life-area-catalogue";
 import { WHEEL_OF_LIFE_TEMPLATE } from "../content/wheel-template";
 
@@ -39,6 +42,29 @@ export type ReviewResult = {
 	previousAssessment: Assessment | null;
 	previousScores: WheelScore[];
 	comparisons: WheelComparison[];
+};
+
+export type GoalStatus = "active" | "achieved" | "abandoned";
+
+export type GoalProgress = {
+	goal: Goal;
+	label: string;
+	status: GoalStatus;
+	startValue: number | null;
+	currentValue: number | null;
+	progressPercent: number | null;
+};
+
+export type ReviewOverview = {
+	sittings: Assessment[];
+	goals: GoalProgress[];
+};
+
+export type GoalSetup = {
+	assessmentId: string;
+	metricSlug: string;
+	label: string;
+	currentValue: number;
 };
 
 function localDayOf(date: Date): string {
@@ -137,8 +163,57 @@ function assertScores(
 	}
 }
 
+function assertFocusItems(
+	draft: ReviewDraft,
+	focusItemSlugs: readonly string[],
+): void {
+	const itemSlugs = new Set(draft.items.map((item) => item.slug));
+	if (
+		focusItemSlugs.length > 3 ||
+		new Set(focusItemSlugs).size !== focusItemSlugs.length ||
+		focusItemSlugs.some((slug) => !itemSlugs.has(slug))
+	) {
+		throw new TypeError(
+			"Choose no more than three unique focus areas from this wheel.",
+		);
+	}
+}
+
+function goalStatus(goal: Goal): GoalStatus {
+	if (goal.achievedAt !== null) {
+		return "achieved";
+	}
+	if (goal.abandonedAt !== null) {
+		return "abandoned";
+	}
+	return "active";
+}
+
+function goalProgressPercent(
+	goal: Goal,
+	startValue: number | null,
+	currentValue: number | null,
+): number | null {
+	if (startValue === null || currentValue === null) {
+		return null;
+	}
+	const distance =
+		goal.direction === "increase"
+			? goal.targetValue - startValue
+			: startValue - goal.targetValue;
+	if (distance <= 0) {
+		return null;
+	}
+	const travelled =
+		goal.direction === "increase"
+			? currentValue - startValue
+			: startValue - currentValue;
+	return Math.round(Math.max(0, Math.min(1, travelled / distance)) * 100);
+}
+
 export class ReviewStore {
 	private readonly assessments: AssessmentRepository;
+	private readonly goals: GoalRepository;
 	private readonly observations: ObservationRepository;
 	private readonly trackedMetrics: TrackedMetricsRepository;
 
@@ -147,6 +222,7 @@ export class ReviewStore {
 		private readonly now: () => Date = () => new Date(),
 	) {
 		this.assessments = new AssessmentRepository(db);
+		this.goals = new GoalRepository(db);
 		this.observations = new ObservationRepository(db);
 		this.trackedMetrics = new TrackedMetricsRepository(db);
 	}
@@ -155,6 +231,61 @@ export class ReviewStore {
 		return (await this.assessments.listAll()).filter(
 			(assessment) => assessment.completedAt !== null,
 		);
+	}
+
+	async loadOverview(): Promise<ReviewOverview> {
+		const [sittings, goals, observations, overlays] = await Promise.all([
+			this.listSittings(),
+			this.goals.listAll(),
+			this.observations.listAll(),
+			this.trackedMetrics.listResolved(DEFAULT_LIFE_AREA_METRICS),
+		]);
+		const labels = new Map<string, string>(
+			resolveLifeAreas(overlays).map((area) => [area.slug, area.label]),
+		);
+		const observationsByMetric = new Map<string, Observation[]>();
+		for (const observation of observations) {
+			const metricObservations =
+				observationsByMetric.get(observation.metricSlug) ?? [];
+			metricObservations.push(observation);
+			observationsByMetric.set(observation.metricSlug, metricObservations);
+		}
+
+		return {
+			sittings,
+			goals: goals.map((goal) => {
+				const metricObservations = [
+					...(observationsByMetric.get(goal.metricSlug) ?? []),
+				].sort(
+					(left, right) =>
+						left.observedAt - right.observedAt ||
+						left.createdAt - right.createdAt ||
+						left.id.localeCompare(right.id),
+				);
+				const startObservation = metricObservations
+					.filter((observation) => observation.observedAt <= goal.startedAt)
+					.at(-1);
+				const currentObservation = metricObservations.at(-1);
+				const goalValue = (observation: Observation) =>
+					goal.metricSlug.startsWith("wheel:")
+						? valueOnWheelScale(observation)
+						: observation.value;
+				const startValue = startObservation
+					? goalValue(startObservation)
+					: null;
+				const currentValue = currentObservation
+					? goalValue(currentObservation)
+					: null;
+				return {
+					goal,
+					label: labels.get(goal.metricSlug) ?? goal.metricSlug,
+					status: goalStatus(goal),
+					startValue,
+					currentValue,
+					progressPercent: goalProgressPercent(goal, startValue, currentValue),
+				};
+			}),
+		};
 	}
 
 	async beginSitting(): Promise<ReviewDraft> {
@@ -178,8 +309,10 @@ export class ReviewStore {
 	async completeSitting(
 		draft: ReviewDraft,
 		scores: Readonly<Record<string, number>>,
+		focusItemSlugs: readonly string[] = [],
 	): Promise<ReviewResult> {
 		assertScores(draft, scores);
+		assertFocusItems(draft, focusItemSlugs);
 		const completed = this.now();
 		const completedAt = completed.getTime();
 		const saved = await this.assessments.createWithObservations({
@@ -188,7 +321,7 @@ export class ReviewStore {
 			startedAt: draft.startedAt,
 			completedAt,
 			items: draft.items,
-			focusItemSlugs: [],
+			focusItemSlugs: [...focusItemSlugs],
 			observations: draft.items.map((item) => ({
 				metricSlug: item.slug,
 				value: scores[item.slug],
@@ -202,6 +335,70 @@ export class ReviewStore {
 			})),
 		});
 		return await this.loadSavedResult(saved.assessment, saved.observations);
+	}
+
+	async loadGoalSetup(
+		assessmentId: string,
+		metricSlug: string,
+	): Promise<GoalSetup | null> {
+		const assessment = await this.assessments.findById(assessmentId);
+		if (
+			!assessment ||
+			assessment.completedAt === null ||
+			!assessment.focusItemSlugs.includes(metricSlug)
+		) {
+			return null;
+		}
+		const item = assessment.items.find(
+			(candidate) => candidate.slug === metricSlug,
+		);
+		const observation = (
+			await this.observations.listByAssessmentId(assessmentId)
+		).find((candidate) => candidate.metricSlug === metricSlug);
+		if (!item || !observation) {
+			return null;
+		}
+		return {
+			assessmentId,
+			metricSlug,
+			label: item.label,
+			currentValue: valueOnWheelScale(observation),
+		};
+	}
+
+	async createGoal(
+		assessmentId: string,
+		metricSlug: string,
+		targetValue: number,
+		targetDate: string | null,
+	): Promise<Goal> {
+		const setup = await this.loadGoalSetup(assessmentId, metricSlug);
+		if (!setup) {
+			throw new TypeError("Goals can only be created from a saved focus area.");
+		}
+		if (!Number.isInteger(targetValue) || targetValue < 1 || targetValue > 10) {
+			throw new RangeError("Choose a whole-number target from 1 to 10.");
+		}
+		if (targetValue === setup.currentValue) {
+			throw new RangeError(
+				"Choose a target different from your current score.",
+			);
+		}
+		return await this.goals.create({
+			metricSlug,
+			direction: targetValue > setup.currentValue ? "increase" : "decrease",
+			targetValue,
+			targetDate,
+			startedAt: this.now().getTime(),
+		});
+	}
+
+	async achieveGoal(id: string): Promise<Goal | null> {
+		return await this.goals.achieve(id);
+	}
+
+	async abandonGoal(id: string): Promise<Goal | null> {
+		return await this.goals.abandon(id);
 	}
 
 	async loadResult(id: string): Promise<ReviewResult | null> {

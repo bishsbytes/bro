@@ -53,6 +53,17 @@ export function SettingsScreen({
 	return (
 		<Screen scroll padded edges={["bottom"]}>
 			<Card style={styles.section}>
+				<SectionHeader title="Life areas" />
+				<AppText color="muted">
+					Choose, order, and rename the areas shown in your wheel of life.
+				</AppText>
+				<Button
+					label="Manage life areas"
+					variant="secondary"
+					onPress={() => router.push("/settings/life-areas")}
+				/>
+			</Card>
+			<Card style={styles.section}>
 				<SectionHeader title="Reminders" />
 				<AppText color="muted">
 					Choose when this device nudges you to check in.

@@ -18,6 +18,7 @@ export default function SettingsLayout() {
 				options={{ title: "Settings", headerShown: false }}
 			/>
 			<Stack.Screen name="reminders" options={{ title: "Reminders" }} />
+			<Stack.Screen name="life-areas" options={{ title: "Life areas" }} />
 		</Stack>
 	);
 }

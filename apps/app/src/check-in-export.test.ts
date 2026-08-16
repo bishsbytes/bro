@@ -1,5 +1,7 @@
 import type {
+	Assessment,
 	DayNote,
+	Goal,
 	Observation,
 	TrackedMetric,
 } from "@bro/database-app";
@@ -12,6 +14,7 @@ import {
 import {
 	buildCheckInExport,
 	CHECK_IN_EXPORT_FORMAT_VERSION,
+	parseCheckInExport,
 	serializeCheckInExport,
 } from "./export/check-in-export";
 
@@ -70,14 +73,67 @@ const trackedAlcohol: TrackedMetric = {
 	updatedAt: 1_786_708_800_000,
 };
 
+const wheelObservation: Observation = {
+	...moodObservation,
+	id: "observation-career",
+	metricSlug: "wheel:career",
+	value: 6,
+	scaleMax: 10,
+	observedAt: 1_786_707_400_000,
+	assessmentId: "assessment-1",
+	createdAt: 1_786_707_400_100,
+	updatedAt: 1_786_707_400_100,
+};
+
+const trackedCareer: TrackedMetric = {
+	...trackedAlcohol,
+	id: "tracked-career",
+	metricSlug: "wheel:career",
+	position: 0,
+	addedAt: 1_786_700_000_000,
+	removedAt: null,
+	customLabel: "Business",
+};
+
+const assessment: Assessment = {
+	id: "assessment-1",
+	templateSlug: "wheel-of-life",
+	templateVersion: 1,
+	startedAt: 1_786_707_100_000,
+	completedAt: 1_786_707_400_000,
+	items: [{ slug: "wheel:career", label: "Business", position: 0 }],
+	focusItemSlugs: ["wheel:career"],
+	createdAt: 1_786_707_400_100,
+	updatedAt: 1_786_707_400_100,
+};
+
+const goal: Goal = {
+	id: "goal-1",
+	metricSlug: "wheel:career",
+	direction: "increase",
+	targetValue: 8,
+	targetDate: "2026-12-01",
+	startedAt: 1_786_708_000_000,
+	achievedAt: null,
+	abandonedAt: null,
+	createdAt: 1_786_708_000_000,
+	updatedAt: 1_786_708_000_000,
+};
+
 describe("check-in export", () => {
-	it("matches the version 1 golden file with stable ordering", () => {
+	it("matches the version 2 golden file with stable ordering", () => {
 		const serialized = serializeCheckInExport(
 			{
-				observations: [alcoholObservation, moodObservation],
+				observations: [alcoholObservation, wheelObservation, moodObservation],
 				dayNotes: [note],
-				trackedMetrics: [trackedAlcohol],
-				registry: [knownMetric("alcohol"), knownMetric("mood")],
+				trackedMetrics: [trackedAlcohol, trackedCareer],
+				assessments: [assessment],
+				goals: [goal],
+				registry: [
+					knownMetric("alcohol"),
+					knownMetric("wheel:career"),
+					knownMetric("mood"),
+				],
 			},
 			{
 				appVersion: "1.0.0",
@@ -85,7 +141,7 @@ describe("check-in export", () => {
 			},
 		);
 		const golden = readFileSync(
-			join(__dirname, "export", "__fixtures__", "check-in-export-v1.json"),
+			join(__dirname, "export", "__fixtures__", "check-in-export-v2.json"),
 			"utf8",
 		);
 
@@ -93,6 +149,38 @@ describe("check-in export", () => {
 		expect(JSON.parse(serialized).metadata.formatVersion).toBe(
 			CHECK_IN_EXPORT_FORMAT_VERSION,
 		);
+		expect(parseCheckInExport(serialized)).toEqual(
+			buildCheckInExport(
+				{
+					observations: [alcoholObservation, wheelObservation, moodObservation],
+					dayNotes: [note],
+					trackedMetrics: [trackedAlcohol, trackedCareer],
+					assessments: [assessment],
+					goals: [goal],
+					registry: [
+						knownMetric("alcohol"),
+						knownMetric("wheel:career"),
+						knownMetric("mood"),
+					],
+				},
+				{
+					appVersion: "1.0.0",
+					exportedAt: 1_786_708_800_000,
+				},
+			),
+		);
+	});
+
+	it("continues to parse the committed version 1 fixture", () => {
+		const fixture = readFileSync(
+			join(__dirname, "export", "__fixtures__", "check-in-export-v1.json"),
+			"utf8",
+		);
+
+		const parsed = parseCheckInExport(fixture);
+		expect(parsed.metadata.formatVersion).toBe(1);
+		expect(parsed.observations).toHaveLength(2);
+		expect("assessments" in parsed).toBe(false);
 	});
 
 	it("includes sensitive metrics by default and can deliberately exclude them", () => {
@@ -128,13 +216,11 @@ describe("check-in export", () => {
 		};
 
 		const input = {
-			observations: [
-				moodObservation,
-				sensitiveObservation,
-				unknownObservation,
-			],
+			observations: [moodObservation, sensitiveObservation, unknownObservation],
 			dayNotes: [note],
 			trackedMetrics: [sensitiveOverlay, unknownOverlay],
+			assessments: [],
+			goals: [],
 			registry: [knownMetric("mood"), sensitiveMetric],
 		};
 		const included = buildCheckInExport(input, {
@@ -170,6 +256,8 @@ describe("check-in export", () => {
 				observations: [],
 				dayNotes: [],
 				trackedMetrics: [],
+				assessments: [],
+				goals: [],
 				registry: [knownMetric("mood")],
 			},
 			{ appVersion: "1.0.0", exportedAt: 0 },
@@ -177,13 +265,15 @@ describe("check-in export", () => {
 
 		expect(exported).toMatchObject({
 			metadata: {
-				formatVersion: 1,
+				formatVersion: 2,
 				exportedAt: "1970-01-01T00:00:00.000Z",
 				appVersion: "1.0.0",
 			},
 			observations: [],
 			dayNotes: [],
 			trackedMetrics: [],
+			assessments: [],
+			goals: [],
 		});
 		expect(exported.registry.metrics).toHaveLength(1);
 	});

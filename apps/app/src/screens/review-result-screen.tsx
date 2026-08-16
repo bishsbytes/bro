@@ -8,6 +8,7 @@ import { EmptyState } from "../components/empty-state";
 import { Screen } from "../components/screen";
 import { SectionHeader } from "../components/section-header";
 import { WheelChart } from "../components/wheel-chart";
+import { challengeForArea } from "../content/challenge-catalogue";
 import {
 	createReviewStore,
 	type ReviewResult,
@@ -111,6 +112,7 @@ export function ReviewResultScreen({
 
 			{result.scores.map((score) => {
 				const comparison = comparisonBySlug.get(score.slug);
+				const challenge = challengeForArea(score.slug);
 				return (
 					<Card key={score.slug} style={styles.scoreCard}>
 						<View style={styles.scoreHeading}>
@@ -146,6 +148,35 @@ export function ReviewResultScreen({
 								Not rated in your previous review
 							</AppText>
 						) : null}
+						{score.focused ? (
+							<View style={styles.nextActions}>
+								<Button
+									label={`Set a goal for ${score.label}`}
+									variant="secondary"
+									onPress={() =>
+										router.push({
+											pathname: "/review/goal",
+											params: {
+												assessmentId: result.assessment.id,
+												metricSlug: score.slug,
+											},
+										})
+									}
+								/>
+								{challenge ? (
+									<Button
+										label={`Read “${challenge.title}”`}
+										variant="text"
+										onPress={() =>
+											router.push({
+												pathname: "/review/challenge/[slug]",
+												params: { slug: challenge.slug },
+											})
+										}
+									/>
+								) : null}
+							</View>
+						) : null}
 					</Card>
 				);
 			})}
@@ -180,4 +211,5 @@ const styles = StyleSheet.create((theme) => ({
 	},
 	labelGroup: { flex: 1, gap: theme.spacing.xs },
 	label: { fontWeight: "600" },
+	nextActions: { gap: theme.spacing.sm, marginTop: theme.spacing.sm },
 }));

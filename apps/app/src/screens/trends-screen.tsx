@@ -1,21 +1,23 @@
+import { router } from "expo-router";
 import { useEffect, useMemo, useState } from "react";
 import { ActivityIndicator, TouchableOpacity, View } from "react-native";
 import Svg, { Circle, Line, Polyline } from "react-native-svg";
 import { AppText } from "../components/app-text";
+import { Button } from "../components/button";
 import { Card } from "../components/card";
 import { Screen } from "../components/screen";
 import { SectionHeader } from "../components/section-header";
 import { StyleSheet, useUnistyles } from "../theme/unistyles";
 import {
-	createTrendsStore,
-	type TrendsSnapshot,
-	type TrendsStore,
-} from "../trends/trends-store";
-import {
 	TREND_PERIODS,
 	type TrendPeriod,
 	type TrendSeries,
 } from "../trends/trend-math";
+import {
+	createTrendsStore,
+	type TrendsSnapshot,
+	type TrendsStore,
+} from "../trends/trends-store";
 
 type TrendsScreenProps = {
 	store?: Pick<TrendsStore, "load">;
@@ -76,6 +78,17 @@ export function TrendsScreen({ store }: TrendsScreenProps) {
 
 	return (
 		<Screen scroll padded contentContainerStyle={styles.content}>
+			<Card style={styles.reviewCard}>
+				<SectionHeader title="Wheel of life" eyebrow="PERIODIC REVIEW" />
+				<AppText color="muted">
+					Take a wider view, compare your latest wheel, and revisit your goals.
+				</AppText>
+				<Button
+					label="Open wheel reviews"
+					variant="secondary"
+					onPress={() => router.push("/review")}
+				/>
+			</Card>
 			<AppText color="muted">
 				Daily averages; days without a check-in stay as gaps.
 			</AppText>
@@ -134,6 +147,7 @@ export function TrendsScreen({ store }: TrendsScreenProps) {
 
 const styles = StyleSheet.create((theme) => ({
 	content: { gap: theme.spacing.lg },
+	reviewCard: { gap: theme.spacing.sm },
 	periodRow: { flexDirection: "row", gap: theme.spacing.sm },
 	periodButton: {
 		paddingHorizontal: theme.spacing.lg,
