@@ -1,0 +1,162 @@
+import { authClient } from "@bro/auth-app";
+import type * as DatabaseApp from "@bro/database-app";
+import { router as expoRouter } from "expo-router";
+import {
+	act,
+	fireEvent,
+	renderRouter,
+	waitFor,
+} from "expo-router/testing-library";
+import { createNodeSqliteMock } from "./test-support/node-sqlite";
+import { KILOGRAMS_PER_POUND } from "./units";
+
+const mockSqlite = createNodeSqliteMock();
+let mockRandomSeed = 0;
+
+jest.mock("expo-sqlite", () => ({
+	openDatabaseSync: mockSqlite.openDatabaseSync,
+	openDatabaseAsync: mockSqlite.openDatabaseAsync,
+}));
+jest.mock("expo-crypto", () => ({
+	getRandomBytes: jest.fn((length: number) => {
+		const bytes = new Uint8Array(length);
+		mockRandomSeed += 1;
+		bytes[length - 1] = mockRandomSeed;
+		return bytes;
+	}),
+}));
+
+const settings: DatabaseApp.DeviceSettingsSnapshot = {
+	installationId: "install-1",
+	onboardingComplete: true,
+	appLockEnabled: false,
+	appLockTimeoutSeconds: null,
+	hasStoredRemoteSession: false,
+	lastRemoteUserId: null,
+};
+
+jest.mock("@bro/database-app", () => {
+	const actual = jest.requireActual("@bro/database-app");
+	return {
+		...actual,
+		readDeviceSettings: () => settings,
+		setOnboardingComplete: jest.fn(),
+		setRemoteSessionMarker: jest.fn(),
+		closeDeviceSettings: jest.fn(),
+	};
+});
+
+jest.mock("../../../packages/auth/app/src/client", () => ({
+	assertRemoteAuthConfigured: jest.fn(),
+	authClient: {
+		useSession: jest.fn(() => ({
+			data: null,
+			isPending: false,
+			error: null,
+			refetch: jest.fn(),
+		})),
+		signIn: { email: jest.fn() },
+		signUp: { email: jest.fn() },
+		signOut: jest.fn(),
+		deleteUser: jest.fn(),
+	},
+}));
+
+jest.mock("expo-splash-screen", () => ({
+	preventAutoHideAsync: jest.fn(async () => true),
+	hideAsync: jest.fn(async () => true),
+}));
+
+const databaseApp: typeof DatabaseApp = jest.requireActual("@bro/database-app");
+const mockedUseSession = (authClient as unknown as { useSession: jest.Mock })
+	.useSession;
+
+describe("body metrics flow", () => {
+	afterAll(async () => {
+		await databaseApp.closeDb();
+		mockSqlite.cleanup();
+	});
+
+	it("tracks, logs, charts, edits, and goals a measurement offline", async () => {
+		mockedUseSession.mockClear();
+		(globalThis.fetch as jest.Mock).mockClear();
+		const db = await databaseApp.initDb();
+		await databaseApp.runMigrations(db);
+		await new databaseApp.UnitPreferenceRepository(db).set("mass", "st");
+
+		const router = renderRouter("src/app", { initialUrl: "/body" });
+		const view = await router;
+		await act(async () => undefined);
+		expect(await view.findByText("No body metrics tracked")).toBeTruthy();
+
+		await fireEvent(view.getByLabelText("Track Weight"), "valueChange", true);
+		expect(await view.findByText("Nothing logged yet")).toBeTruthy();
+
+		await act(async () => expoRouter.replace("/"));
+		await fireEvent.press(await view.findByLabelText("Mood 4"));
+		await fireEvent.press(view.getByLabelText("Energy 3"));
+		await fireEvent.changeText(view.getByLabelText("Weight (st)"), "12 st 4");
+		await fireEvent.press(view.getByText("Save check-in"));
+		expect(await view.findByText("1 check-in")).toBeTruthy();
+
+		await act(async () => expoRouter.replace("/trends"));
+		expect(await view.findByText("Latest 12 st 4 lb")).toBeTruthy();
+		expect(view.getByLabelText("weight trend chart")).toBeTruthy();
+		await fireEvent.press(view.getByText("Open Body"));
+		expect(await view.findByText(/Latest 12 st 4 lb/)).toBeTruthy();
+		await fireEvent.press(view.getByText("Open Weight"));
+		expect(await view.findByText("12 st 4 lb")).toBeTruthy();
+
+		await fireEvent.changeText(view.getByLabelText("Target (st)"), "12 st 0");
+		await fireEvent.changeText(
+			view.getByLabelText("Target date (optional)"),
+			"2026-12-25",
+		);
+		await fireEvent.press(view.getByText("Save goal"));
+		expect(await view.findByText("Target 12 st 0 lb")).toBeTruthy();
+		expect(
+			view.getByText("Started at 12 st 4 lb · Latest 12 st 4 lb"),
+		).toBeTruthy();
+
+		const goals = await new databaseApp.GoalRepository(db).listAll();
+		expect(goals[0]).toMatchObject({
+			metricSlug: "weight",
+			direction: "decrease",
+			targetValue: 168 * KILOGRAMS_PER_POUND,
+		});
+
+		await act(async () => expoRouter.replace("/"));
+		await fireEvent.press(await view.findByText("Add another check-in"));
+		await fireEvent.press(view.getByLabelText("Mood 5"));
+		await fireEvent.press(view.getByLabelText("Energy 4"));
+		await fireEvent.changeText(view.getByLabelText("Weight (st)"), "12 st 3");
+		await fireEvent.press(view.getByText("Save check-in"));
+		expect(await view.findByText("2 check-ins")).toBeTruthy();
+
+		await act(async () => expoRouter.replace("/body/weight"));
+		expect(await view.findByText("12 st 3 lb")).toBeTruthy();
+		const observation = (
+			await new databaseApp.ObservationRepository(db).listAll()
+		)
+			.filter((row) => row.metricSlug === "weight")
+			.at(-1);
+		if (!observation) throw new Error("Expected a saved weight observation.");
+		await fireEvent.changeText(
+			view.getByLabelText(`Edit Weight ${observation.id}`),
+			"12 st 2",
+		);
+		await fireEvent.press(
+			view.getByLabelText(`Save measurement ${observation.id}`),
+		);
+		await waitFor(() => expect(view.getByText("12 st 2 lb")).toBeTruthy());
+		expect(
+			(await new databaseApp.ObservationRepository(db).findById(observation.id))
+				?.value,
+		).toBe(170 * KILOGRAMS_PER_POUND);
+
+		await fireEvent.press(view.getByText("Mark goal achieved"));
+		expect(await view.findByText(/Achieved: target 12 st 0 lb/)).toBeTruthy();
+		expect(globalThis.fetch).not.toHaveBeenCalled();
+		expect(mockedUseSession).not.toHaveBeenCalled();
+	});
+});

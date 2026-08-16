@@ -169,7 +169,7 @@ describe("app entry", () => {
 		await waitFor(() => expect(router.getPathname()).toBe("/trends"));
 		expect(
 			await view.findByText(
-				"Daily averages; days without a check-in stay as gaps.",
+				"Daily summaries; scored metrics use averages and measurements use the last reading. Missing days stay as gaps.",
 			),
 		).toBeTruthy();
 		expect(view.getByLabelText("Account")).toBeTruthy();

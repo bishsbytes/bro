@@ -17,6 +17,11 @@ import {
 } from "../content/life-area-catalogue";
 import { resolveMetric } from "../content/metric-registry";
 import { WHEEL_OF_LIFE_TEMPLATE } from "../content/wheel-template";
+import {
+	goalProgressPercent,
+	goalStatus,
+	type GoalStatus,
+} from "../goals/goal-progress";
 
 export type ReviewDraft = {
 	startedAt: number;
@@ -44,8 +49,6 @@ export type ReviewResult = {
 	previousScores: WheelScore[];
 	comparisons: WheelComparison[];
 };
-
-export type GoalStatus = "active" | "achieved" | "abandoned";
 
 export type GoalProgress = {
 	goal: Goal;
@@ -178,38 +181,6 @@ function assertFocusItems(
 			"Choose no more than three unique focus areas from this wheel.",
 		);
 	}
-}
-
-function goalStatus(goal: Goal): GoalStatus {
-	if (goal.achievedAt !== null) {
-		return "achieved";
-	}
-	if (goal.abandonedAt !== null) {
-		return "abandoned";
-	}
-	return "active";
-}
-
-function goalProgressPercent(
-	goal: Goal,
-	startValue: number | null,
-	currentValue: number | null,
-): number | null {
-	if (startValue === null || currentValue === null) {
-		return null;
-	}
-	const distance =
-		goal.direction === "increase"
-			? goal.targetValue - startValue
-			: startValue - goal.targetValue;
-	if (distance <= 0) {
-		return null;
-	}
-	const travelled =
-		goal.direction === "increase"
-			? currentValue - startValue
-			: startValue - currentValue;
-	return Math.round(Math.max(0, Math.min(1, travelled / distance)) * 100);
 }
 
 export class ReviewStore {

@@ -1,18 +1,14 @@
-import { router } from "expo-router";
-import { useEffect, useMemo, useState } from "react";
+import { router, useFocusEffect } from "expo-router";
+import { useCallback, useMemo, useState } from "react";
 import { ActivityIndicator, TouchableOpacity, View } from "react-native";
-import Svg, { Circle, Line, Polyline } from "react-native-svg";
 import { AppText } from "../components/app-text";
 import { Button } from "../components/button";
 import { Card } from "../components/card";
 import { Screen } from "../components/screen";
 import { SectionHeader } from "../components/section-header";
-import { StyleSheet, useUnistyles } from "../theme/unistyles";
-import {
-	TREND_PERIODS,
-	type TrendPeriod,
-	type TrendSeries,
-} from "../trends/trend-math";
+import { TrendChart } from "../components/trend-chart";
+import { StyleSheet } from "../theme/unistyles";
+import { TREND_PERIODS, type TrendPeriod } from "../trends/trend-math";
 import {
 	createTrendsStore,
 	type TrendsSnapshot,
@@ -23,74 +19,58 @@ type TrendsScreenProps = {
 	store?: Pick<TrendsStore, "load">;
 };
 
-function TrendChart({ series }: { series: TrendSeries }) {
-	const { theme } = useUnistyles();
-	return (
-		<Svg
-			accessibilityLabel={`${series.metricSlug} trend chart`}
-			viewBox="0 0 300 120"
-			height={150}
-			width="100%"
-		>
-			<Line x1="0" y1="10" x2="300" y2="10" stroke={theme.colors.border} />
-			<Line x1="0" y1="60" x2="300" y2="60" stroke={theme.colors.border} />
-			<Line x1="0" y1="110" x2="300" y2="110" stroke={theme.colors.border} />
-			{series.segments.map((points) => (
-				<Polyline
-					key={points}
-					points={points}
-					fill="none"
-					stroke={theme.colors.brand}
-					strokeWidth="4"
-					strokeLinecap="round"
-					strokeLinejoin="round"
-				/>
-			))}
-			{series.markers.map((marker) => (
-				<Circle
-					key={marker.localDay}
-					cx={marker.x}
-					cy={marker.y}
-					r="4"
-					fill={theme.colors.brand}
-				/>
-			))}
-		</Svg>
-	);
-}
-
 export function TrendsScreen({ store }: TrendsScreenProps) {
 	const trends = useMemo(() => store ?? createTrendsStore(), [store]);
 	const [period, setPeriod] = useState<TrendPeriod>(7);
 	const [snapshot, setSnapshot] = useState<TrendsSnapshot | null>(null);
 	const [error, setError] = useState<string | null>(null);
 
-	useEffect(() => {
-		setSnapshot(null);
-		setError(null);
-		void trends
-			.load(period)
-			.then(setSnapshot)
-			.catch((caught: unknown) =>
-				setError(caught instanceof Error ? caught.message : String(caught)),
-			);
-	}, [period, trends]);
+	useFocusEffect(
+		useCallback(() => {
+			let active = true;
+			setSnapshot(null);
+			setError(null);
+			void trends
+				.load(period)
+				.then((nextSnapshot) => {
+					if (active) setSnapshot(nextSnapshot);
+				})
+				.catch((caught: unknown) => {
+					if (active) {
+						setError(caught instanceof Error ? caught.message : String(caught));
+					}
+				});
+			return () => {
+				active = false;
+			};
+		}, [period, trends]),
+	);
 
 	return (
 		<Screen scroll padded contentContainerStyle={styles.content}>
-			<Card style={styles.reviewCard}>
-				<SectionHeader title="Wheel of life" eyebrow="PERIODIC REVIEW" />
-				<AppText color="muted">
-					Take a wider view, compare your latest wheel, and revisit your goals.
-				</AppText>
-				<Button
-					label="Open wheel reviews"
-					variant="secondary"
-					onPress={() => router.push("/review")}
-				/>
-			</Card>
+			<View style={styles.destinationRow}>
+				<Card style={styles.destinationCard}>
+					<SectionHeader title="Wheel of life" eyebrow="PERIODIC REVIEW" />
+					<AppText color="muted">Compare your wheel and revisit goals.</AppText>
+					<Button
+						label="Open wheel reviews"
+						variant="secondary"
+						onPress={() => router.push("/review")}
+					/>
+				</Card>
+				<Card style={styles.destinationCard}>
+					<SectionHeader title="Body" eyebrow="MEASUREMENTS" />
+					<AppText color="muted">See body history and manage targets.</AppText>
+					<Button
+						label="Open Body"
+						variant="secondary"
+						onPress={() => router.push("/body")}
+					/>
+				</Card>
+			</View>
 			<AppText color="muted">
-				Daily averages; days without a check-in stay as gaps.
+				Daily summaries; scored metrics use averages and measurements use the
+				last reading. Missing days stay as gaps.
 			</AppText>
 			<View style={styles.periodRow}>
 				{TREND_PERIODS.map((option) => (
@@ -119,16 +99,19 @@ export function TrendsScreen({ store }: TrendsScreenProps) {
 					{snapshot.fromLocalDay} to {snapshot.throughLocalDay}
 				</AppText>
 			) : null}
-			{snapshot?.metrics.map(({ metric, series }) => (
+			{snapshot?.metrics.map(({ metric, label, series, latestFormatted }) => (
 				<Card key={metric.slug} style={styles.card}>
 					<SectionHeader
-						title={metric.label}
+						title={label}
 						action={
 							<AppText variant="caption" color="muted">
 								{series.observedDayCount} logged days
 							</AppText>
 						}
 					/>
+					{latestFormatted ? (
+						<AppText color="muted">Latest {latestFormatted}</AppText>
+					) : null}
 					<TrendChart series={series} />
 					{series.daysUntilMeaningful > 0 ? (
 						<AppText color="muted">
@@ -147,7 +130,8 @@ export function TrendsScreen({ store }: TrendsScreenProps) {
 
 const styles = StyleSheet.create((theme) => ({
 	content: { gap: theme.spacing.lg },
-	reviewCard: { gap: theme.spacing.sm },
+	destinationRow: { flexDirection: "row", gap: theme.spacing.md },
+	destinationCard: { flex: 1, gap: theme.spacing.sm },
 	periodRow: { flexDirection: "row", gap: theme.spacing.sm },
 	periodButton: {
 		paddingHorizontal: theme.spacing.lg,
