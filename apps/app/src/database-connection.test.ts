@@ -41,4 +41,22 @@ describe("product database startup", () => {
 		await expect(first).resolves.toBe(db);
 		expect(mockOpenDatabaseAsync).toHaveBeenCalledTimes(1);
 	});
+
+	it("opens the disposable local store independently from the product store", async () => {
+		const productDb = { closeAsync: jest.fn() };
+		const localDb = { closeAsync: jest.fn() };
+		mockOpenDatabaseAsync
+			.mockResolvedValueOnce(productDb)
+			.mockResolvedValueOnce(localDb);
+		let initDb = null as unknown as typeof DatabaseApp.initDb;
+		let initLocalDb = null as unknown as typeof DatabaseApp.initLocalDb;
+		jest.isolateModules(() => {
+			({ initDb, initLocalDb } = jest.requireActual("@bro/database-app"));
+		});
+
+		await expect(initDb()).resolves.toBe(productDb);
+		await expect(initLocalDb()).resolves.toBe(localDb);
+		expect(mockOpenDatabaseAsync).toHaveBeenNthCalledWith(1, "bro.db");
+		expect(mockOpenDatabaseAsync).toHaveBeenNthCalledWith(2, "bro-local.db");
+	});
 });

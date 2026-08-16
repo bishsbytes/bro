@@ -14,6 +14,7 @@ export const PRODUCT_TABLE_NAMES = {
 	assessments: "assessments",
 	goals: "goals",
 	unitPreferences: "unit_preferences",
+	dailyMetrics: "daily_metrics",
 } as const;
 
 export type ProductTableName =

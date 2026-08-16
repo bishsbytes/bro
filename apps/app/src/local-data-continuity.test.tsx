@@ -199,7 +199,8 @@ describe("product data continuity across optional identity", () => {
 		).toBeTruthy();
 		await expectSentinels();
 
-		expect(mockSqlite.openDatabaseAsync).toHaveBeenCalledTimes(1);
+		// Product data and disposable health-import state live in separate files.
+		expect(mockSqlite.openDatabaseAsync).toHaveBeenCalledTimes(2);
 		expect(mockSetRemoteSessionMarker).toHaveBeenCalled();
 	});
 });

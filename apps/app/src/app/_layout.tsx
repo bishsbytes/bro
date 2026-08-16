@@ -2,9 +2,12 @@ import { AuthProvider } from "@bro/auth-app";
 import {
 	closeDb,
 	closeDeviceSettings,
+	closeLocalDb,
 	type DeviceSettingsSnapshot,
 	initDb,
+	initLocalDb,
 	readDeviceSettings,
+	runLocalMigrations,
 	runMigrations,
 } from "@bro/database-app";
 import { Stack } from "expo-router";
@@ -108,11 +111,11 @@ export default function RootLayout() {
 		setStartup({ kind: "loading" });
 
 		try {
-			// Device settings read synchronously; only the product database and its
-			// migrations are I/O the startup screen has to wait on.
+			// Device settings read synchronously; both relational stores and their
+			// independent migrations are I/O the startup screen has to wait on.
 			const settings = readDeviceSettings();
-			const db = await initDb();
-			await runMigrations(db);
+			const [db, localDb] = await Promise.all([initDb(), initLocalDb()]);
+			await Promise.all([runMigrations(db), runLocalMigrations(localDb)]);
 			setStartup({ kind: "ready", settings });
 		} catch (caught) {
 			setStartup({
@@ -130,10 +133,13 @@ export default function RootLayout() {
 
 	const retry = useCallback(() => {
 		void (async () => {
-			// Release both handles first: runMigrations throws without closing, so a
-			// retry would otherwise reopen against a half-known schema. Failures
+			// Release both database handles first: a migrator throws without closing,
+			// so a retry would otherwise reopen against a half-known schema. Failures
 			// closing are irrelevant here — reopening is what has to work.
-			await closeDb().catch(() => undefined);
+			await Promise.all([
+				closeDb().catch(() => undefined),
+				closeLocalDb().catch(() => undefined),
+			]);
 			try {
 				closeDeviceSettings();
 			} catch {

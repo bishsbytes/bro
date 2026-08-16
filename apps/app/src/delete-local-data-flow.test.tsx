@@ -1,12 +1,12 @@
 import { authClient } from "@bro/auth-app";
 import type * as DatabaseApp from "@bro/database-app";
+import * as Notifications from "expo-notifications";
 import {
 	act,
 	fireEvent,
 	renderRouter,
 	waitFor,
 } from "expo-router/testing-library";
-import * as Notifications from "expo-notifications";
 import { createNodeSqliteMock } from "./test-support/node-sqlite";
 
 const mockSqlite = createNodeSqliteMock();
@@ -65,7 +65,7 @@ const DELETE_COPY =
 
 describe("delete local data", () => {
 	afterAll(async () => {
-		await databaseApp.closeDb();
+		await Promise.all([databaseApp.closeDb(), databaseApp.closeLocalDb()]);
 		databaseApp.closeDeviceSettings();
 		mockSqlite.cleanup();
 	});
@@ -77,7 +77,11 @@ describe("delete local data", () => {
 		const settingsBefore = databaseApp.readDeviceSettings();
 
 		const db = await databaseApp.initDb();
-		await databaseApp.runMigrations(db);
+		const localDb = await databaseApp.initLocalDb();
+		await Promise.all([
+			databaseApp.runMigrations(db),
+			databaseApp.runLocalMigrations(localDb),
+		]);
 		const observations = new databaseApp.ObservationRepository(db);
 		const notes = new databaseApp.DayNoteRepository(db);
 		const trackedMetrics = new databaseApp.TrackedMetricsRepository(db);
@@ -85,6 +89,7 @@ describe("delete local data", () => {
 		const assessments = new databaseApp.AssessmentRepository(db);
 		const goals = new databaseApp.GoalRepository(db);
 		const unitPreferences = new databaseApp.UnitPreferenceRepository(db);
+		const dailyMetrics = new databaseApp.DailyMetricRepository(db);
 		await observations.create({
 			metricSlug: "mood",
 			value: 4,
@@ -129,6 +134,26 @@ describe("delete local data", () => {
 			startedAt: Date.parse("2026-08-14T11:05:00.000Z"),
 		});
 		await unitPreferences.set("mass", "st");
+		await dailyMetrics.upsert({
+			metricSlug: "weight",
+			localDay: "2026-08-14",
+			value: 80,
+			source: "health_connect",
+		});
+		const healthConnections = new databaseApp.HealthConnectionRepository(
+			localDb,
+		);
+		const rawSamples = new databaseApp.RawSampleRepository(localDb);
+		await healthConnections.connect("health_connect", "weight");
+		await rawSamples.upsert({
+			metricSlug: "weight",
+			value: 80,
+			startedAt: Date.parse("2026-08-14T07:00:00.000Z"),
+			endedAt: Date.parse("2026-08-14T07:00:00.000Z"),
+			localDay: "2026-08-14",
+			source: "health_connect",
+			sourceRecordId: "scale-1",
+		});
 		(
 			Notifications.getAllScheduledNotificationsAsync as jest.Mock
 		).mockResolvedValue([
@@ -139,6 +164,7 @@ describe("delete local data", () => {
 			"SELECT COUNT(*) AS count FROM __app_migrations",
 		);
 		const transaction = jest.spyOn(db, "withTransactionAsync");
+		const localTransaction = jest.spyOn(localDb, "withTransactionAsync");
 
 		const router = renderRouter("src/app", { initialUrl: "/settings" });
 		const view = await router;
@@ -167,7 +193,13 @@ describe("delete local data", () => {
 		expect(await assessments.listAll()).toEqual([]);
 		expect(await goals.listAll()).toEqual([]);
 		expect(await unitPreferences.list()).toEqual([]);
+		expect(await dailyMetrics.listByMetric("weight")).toEqual([]);
+		expect(await healthConnections.list()).toEqual([]);
+		expect(await rawSamples.listByMetricDay("weight", "2026-08-14")).toEqual(
+			[],
+		);
 		expect(transaction).toHaveBeenCalledTimes(1);
+		expect(localTransaction).toHaveBeenCalledTimes(1);
 		const cancelMock =
 			Notifications.cancelScheduledNotificationAsync as jest.Mock;
 		expect(cancelMock).toHaveBeenCalledTimes(1);
@@ -184,6 +216,11 @@ describe("delete local data", () => {
 				"SELECT COUNT(*) AS count FROM __app_migrations",
 			),
 		).toEqual(markerBefore);
+		expect(
+			await localDb.getFirstAsync<{ count: number }>(
+				"SELECT COUNT(*) AS count FROM __local_migrations",
+			),
+		).toEqual({ count: 1 });
 		expect(databaseApp.readDeviceSettings()).toEqual(settingsBefore);
 		expect(mockedAuthClient.signOut).not.toHaveBeenCalled();
 		expect(mockedAuthClient.deleteUser).not.toHaveBeenCalled();

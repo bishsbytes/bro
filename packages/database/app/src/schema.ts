@@ -17,6 +17,7 @@ import {
 	real,
 	sqliteTable,
 	text,
+	uniqueIndex,
 } from "drizzle-orm/sqlite-core";
 import { PRODUCT_TABLE_NAMES } from "./product-tables";
 
@@ -109,4 +110,25 @@ export const unitPreferences = sqliteTable(
 		createdAt: integer("created_at").notNull(),
 		updatedAt: integer("updated_at").notNull(),
 	},
+);
+
+export const dailyMetrics = sqliteTable(
+	PRODUCT_TABLE_NAMES.dailyMetrics,
+	{
+		id: text("id").primaryKey(),
+		metricSlug: text("metric_slug").notNull(),
+		localDay: text("local_day").notNull(),
+		value: real("value").notNull(),
+		source: text("source").notNull(),
+		computedAt: integer("computed_at").notNull(),
+		createdAt: integer("created_at").notNull(),
+		updatedAt: integer("updated_at").notNull(),
+	},
+	(table) => [
+		uniqueIndex("idx_daily_metrics_natural").on(
+			table.metricSlug,
+			table.localDay,
+			table.source,
+		),
+	],
 );

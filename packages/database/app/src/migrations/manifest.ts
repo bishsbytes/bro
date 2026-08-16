@@ -22,4 +22,8 @@ export const migrations: Migration[] = [
 		id: "0003_curly_tinkerer",
 		sql: "CREATE TABLE IF NOT EXISTS `unit_preferences` (\n\t`id` text PRIMARY KEY NOT NULL,\n\t`dimension` text NOT NULL,\n\t`unit` text NOT NULL,\n\t`created_at` integer NOT NULL,\n\t`updated_at` integer NOT NULL\n);\n",
 	},
+	{
+		id: "0004_brainy_maggott",
+		sql: "CREATE TABLE IF NOT EXISTS `daily_metrics` (\n\t`id` text PRIMARY KEY NOT NULL,\n\t`metric_slug` text NOT NULL,\n\t`local_day` text NOT NULL,\n\t`value` real NOT NULL,\n\t`source` text NOT NULL,\n\t`computed_at` integer NOT NULL,\n\t`created_at` integer NOT NULL,\n\t`updated_at` integer NOT NULL\n);\n--> statement-breakpoint\nCREATE UNIQUE INDEX IF NOT EXISTS `idx_daily_metrics_natural` ON `daily_metrics` (`metric_slug`,`local_day`,`source`);\n",
+	},
 ];

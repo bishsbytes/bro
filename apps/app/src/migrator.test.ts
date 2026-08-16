@@ -28,7 +28,10 @@ describe("product database migrations", () => {
 	});
 
 	afterEach(async () => {
-		await activeDatabaseApp?.closeDb();
+		await Promise.all([
+			activeDatabaseApp?.closeDb(),
+			activeDatabaseApp?.closeLocalDb(),
+		]);
 		activeDatabaseApp = undefined;
 	});
 
@@ -45,6 +48,7 @@ describe("product database migrations", () => {
 				"0001_odd_lockheed",
 				"0002_square_mikhail_rasputin",
 				"0003_curly_tinkerer",
+				"0004_brainy_maggott",
 			],
 			skipped: [],
 		});
@@ -59,17 +63,21 @@ describe("product database migrations", () => {
 				'assessments',
 				'goals',
 				'unit_preferences',
+				'daily_metrics',
 				'idx_observations_metric_day',
 				'idx_observations_day',
-				'idx_day_notes_day'
+				'idx_day_notes_day',
+				'idx_daily_metrics_natural'
 			 )
 			 ORDER BY name`,
 		);
 
 		expect(objects).toEqual([
 			{ name: "assessments", type: "table" },
+			{ name: "daily_metrics", type: "table" },
 			{ name: "day_notes", type: "table" },
 			{ name: "goals", type: "table" },
+			{ name: "idx_daily_metrics_natural", type: "index" },
 			{ name: "idx_day_notes_day", type: "index" },
 			{ name: "idx_observations_day", type: "index" },
 			{ name: "idx_observations_metric_day", type: "index" },
@@ -103,6 +111,7 @@ describe("product database migrations", () => {
 				"0001_odd_lockheed",
 				"0002_square_mikhail_rasputin",
 				"0003_curly_tinkerer",
+				"0004_brainy_maggott",
 			],
 		});
 
@@ -114,10 +123,11 @@ describe("product database migrations", () => {
 			{ id: "0001_odd_lockheed" },
 			{ id: "0002_square_mikhail_rasputin" },
 			{ id: "0003_curly_tinkerer" },
+			{ id: "0004_brainy_maggott" },
 		]);
 	});
 
-	it("applies migrations 003 and 004 to a step-2 database", async () => {
+	it("applies migrations 003 through 005 to a step-2 database", async () => {
 		const { databaseApp, db } = await migratedDatabase("step-two.db");
 		await db.execAsync(`
 			CREATE TABLE IF NOT EXISTS __app_migrations (
@@ -138,18 +148,23 @@ describe("product database migrations", () => {
 		`);
 
 		await expect(databaseApp.runMigrations(db)).resolves.toEqual({
-			applied: ["0002_square_mikhail_rasputin", "0003_curly_tinkerer"],
+			applied: [
+				"0002_square_mikhail_rasputin",
+				"0003_curly_tinkerer",
+				"0004_brainy_maggott",
+			],
 			skipped: ["0000_check_in", "0001_odd_lockheed"],
 		});
 		expect(
 			await db.getAllAsync<{ name: string }>(
 				`SELECT name FROM sqlite_master
 				 WHERE type = 'table'
-				 AND name IN ('assessments', 'goals', 'unit_preferences')
+				 AND name IN ('assessments', 'daily_metrics', 'goals', 'unit_preferences')
 				 ORDER BY name`,
 			),
 		).toEqual([
 			{ name: "assessments" },
+			{ name: "daily_metrics" },
 			{ name: "goals" },
 			{ name: "unit_preferences" },
 		]);
@@ -175,6 +190,7 @@ describe("product database migrations", () => {
 				"0000_check_in",
 				"0001_odd_lockheed",
 				"0002_square_mikhail_rasputin",
+				"0004_brainy_maggott",
 			],
 		});
 		expect(
@@ -209,6 +225,7 @@ describe("product database migrations", () => {
 				"0001_odd_lockheed",
 				"0002_square_mikhail_rasputin",
 				"0003_curly_tinkerer",
+				"0004_brainy_maggott",
 			],
 			skipped: [],
 		});
@@ -216,12 +233,74 @@ describe("product database migrations", () => {
 		const markers = await db.getFirstAsync<{ count: number }>(
 			"SELECT COUNT(*) AS count FROM __app_migrations",
 		);
-		expect(markers?.count).toBe(4);
+		expect(markers?.count).toBe(5);
 		expect(
 			await db.getFirstAsync<{ count: number }>(
 				`SELECT COUNT(*) AS count FROM pragma_table_info('tracked_metrics')
 				 WHERE name = 'custom_label'`,
 			),
 		).toEqual({ count: 1 });
+	});
+
+	it("applies migration 005 to a step-4 database", async () => {
+		const { databaseApp, db } = await migratedDatabase("step-four.db");
+		await databaseApp.runMigrations(db);
+		await db.execAsync(`
+			DROP TABLE daily_metrics;
+			DELETE FROM __app_migrations WHERE id = '0004_brainy_maggott';
+		`);
+
+		await expect(databaseApp.runMigrations(db)).resolves.toEqual({
+			applied: ["0004_brainy_maggott"],
+			skipped: [
+				"0000_check_in",
+				"0001_odd_lockheed",
+				"0002_square_mikhail_rasputin",
+				"0003_curly_tinkerer",
+			],
+		});
+		expect(
+			await db.getFirstAsync<{ name: string }>(
+				`SELECT name FROM sqlite_master
+				 WHERE type = 'table' AND name = 'daily_metrics'`,
+			),
+		).toEqual({ name: "daily_metrics" });
+	});
+
+	it("creates and safely re-runs the independent local-store manifest", async () => {
+		const databaseApp = loadDatabaseApp();
+		activeDatabaseApp = databaseApp;
+		const db = await databaseApp.initLocalDb("fresh-local.db");
+
+		await expect(databaseApp.runLocalMigrations(db)).resolves.toEqual({
+			applied: ["L001_health_import"],
+			skipped: [],
+		});
+		expect(await databaseApp.runLocalMigrations(db)).toEqual({
+			applied: [],
+			skipped: ["L001_health_import"],
+		});
+
+		const objects = await db.getAllAsync<{ name: string; type: string }>(
+			`SELECT name, type FROM sqlite_master
+			 WHERE name IN (
+				'health_connections', 'raw_samples',
+				'idx_health_connections_platform_metric',
+				'idx_raw_samples_identity', 'idx_raw_samples_metric_day'
+			 ) ORDER BY name`,
+		);
+		expect(objects).toEqual([
+			{ name: "health_connections", type: "table" },
+			{ name: "idx_health_connections_platform_metric", type: "index" },
+			{ name: "idx_raw_samples_identity", type: "index" },
+			{ name: "idx_raw_samples_metric_day", type: "index" },
+			{ name: "raw_samples", type: "table" },
+		]);
+		expect(
+			objects
+				.filter(({ type }) => type === "table")
+				.map(({ name }) => name)
+				.sort(),
+		).toEqual([...databaseApp.LOCAL_TABLES].sort());
 	});
 });

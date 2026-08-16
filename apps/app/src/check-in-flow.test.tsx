@@ -168,7 +168,8 @@ describe("daily check-in flow", () => {
 		expect(
 			await view.findByText("Measurements: Weight 12 st 3 lb"),
 		).toBeTruthy();
-		expect(mockSqlite.openDatabaseAsync).toHaveBeenCalledTimes(2);
+		// Two product opens across the cold relaunch plus one local-store open.
+		expect(mockSqlite.openDatabaseAsync).toHaveBeenCalledTimes(3);
 		expect(mockedUseSession).not.toHaveBeenCalled();
 		expect(globalThis.fetch).not.toHaveBeenCalled();
 	});

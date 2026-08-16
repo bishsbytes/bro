@@ -4,15 +4,21 @@ import { act, fireEvent, renderRouter } from "expo-router/testing-library";
 
 const mockReadDeviceSettings = jest.fn();
 const mockInitDb = jest.fn();
+const mockInitLocalDb = jest.fn();
 const mockRunMigrations = jest.fn();
+const mockRunLocalMigrations = jest.fn();
 const mockCloseDb = jest.fn();
+const mockCloseLocalDb = jest.fn();
 const mockCloseDeviceSettings = jest.fn();
 
 jest.mock("@bro/database-app", () => ({
 	readDeviceSettings: () => mockReadDeviceSettings(),
 	initDb: (...args: unknown[]) => mockInitDb(...args),
+	initLocalDb: (...args: unknown[]) => mockInitLocalDb(...args),
 	runMigrations: (...args: unknown[]) => mockRunMigrations(...args),
+	runLocalMigrations: (...args: unknown[]) => mockRunLocalMigrations(...args),
 	closeDb: () => mockCloseDb(),
+	closeLocalDb: () => mockCloseLocalDb(),
 	closeDeviceSettings: () => mockCloseDeviceSettings(),
 	setOnboardingComplete: jest.fn(),
 	setRemoteSessionMarker: jest.fn(),
@@ -104,8 +110,11 @@ describe("startup", () => {
 			refetch: jest.fn(),
 		});
 		mockInitDb.mockResolvedValue({ handle: true });
+		mockInitLocalDb.mockResolvedValue({ localHandle: true });
 		mockRunMigrations.mockResolvedValue({ applied: [] });
+		mockRunLocalMigrations.mockResolvedValue({ applied: [] });
 		mockCloseDb.mockResolvedValue(undefined);
+		mockCloseLocalDb.mockResolvedValue(undefined);
 	});
 
 	it("opens and migrates the product database before showing the app", async () => {
@@ -113,6 +122,8 @@ describe("startup", () => {
 
 		expect(mockInitDb).toHaveBeenCalledWith();
 		expect(mockRunMigrations).toHaveBeenCalledWith({ handle: true });
+		expect(mockInitLocalDb).toHaveBeenCalledWith();
+		expect(mockRunLocalMigrations).toHaveBeenCalledWith({ localHandle: true });
 		expect(await view.findByText("How are you?")).toBeTruthy();
 	});
 
@@ -151,6 +162,7 @@ describe("startup", () => {
 		// Both handles must be released, or the retry reopens against a half-known
 		// schema rather than a clean one.
 		expect(mockCloseDb).toHaveBeenCalledTimes(1);
+		expect(mockCloseLocalDb).toHaveBeenCalledTimes(1);
 		expect(mockCloseDeviceSettings).toHaveBeenCalledTimes(1);
 	});
 

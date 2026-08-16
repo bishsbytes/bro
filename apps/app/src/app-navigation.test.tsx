@@ -11,14 +11,19 @@ import {
 const mockReadDeviceSettings = jest.fn();
 const mockSetOnboardingComplete = jest.fn();
 const mockInitDb = jest.fn(async () => ({ handle: true }));
+const mockInitLocalDb = jest.fn(async () => ({ localHandle: true }));
 const mockCloseDb = jest.fn(async () => undefined);
+const mockCloseLocalDb = jest.fn(async () => undefined);
 const mockCloseDeviceSettings = jest.fn();
 
 jest.mock("@bro/database-app", () => ({
 	readDeviceSettings: () => mockReadDeviceSettings(),
 	initDb: () => mockInitDb(),
+	initLocalDb: () => mockInitLocalDb(),
 	runMigrations: jest.fn(async () => ({ applied: [] })),
+	runLocalMigrations: jest.fn(async () => ({ applied: [] })),
 	closeDb: () => mockCloseDb(),
+	closeLocalDb: () => mockCloseLocalDb(),
 	closeDeviceSettings: () => mockCloseDeviceSettings(),
 	setOnboardingComplete: (complete: boolean) =>
 		mockSetOnboardingComplete(complete),

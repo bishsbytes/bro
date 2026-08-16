@@ -1,7 +1,9 @@
 import type { SQLiteDatabase } from "expo-sqlite";
+import { localMigrations } from "./migrations/local-manifest";
 import { type Migration, migrations } from "./migrations/manifest";
 
 const MIGRATIONS_TABLE = "__app_migrations";
+const LOCAL_MIGRATIONS_TABLE = "__local_migrations";
 
 /**
  * drizzle-kit splits a migration into statements with this marker. Each
@@ -15,18 +17,24 @@ export type MigrationResult = {
 	skipped: string[];
 };
 
-async function ensureMigrationsTable(db: SQLiteDatabase): Promise<void> {
+async function ensureMigrationsTable(
+	db: SQLiteDatabase,
+	tableName: string,
+): Promise<void> {
 	await db.execAsync(
-		`CREATE TABLE IF NOT EXISTS ${MIGRATIONS_TABLE} (
+		`CREATE TABLE IF NOT EXISTS ${tableName} (
 			id TEXT PRIMARY KEY NOT NULL,
 			applied_at INTEGER NOT NULL
 		)`,
 	);
 }
 
-async function readAppliedIds(db: SQLiteDatabase): Promise<Set<string>> {
+async function readAppliedIds(
+	db: SQLiteDatabase,
+	tableName: string,
+): Promise<Set<string>> {
 	const rows = await db.getAllAsync<{ id: string }>(
-		`SELECT id FROM ${MIGRATIONS_TABLE}`,
+		`SELECT id FROM ${tableName}`,
 	);
 	return new Set(rows.map((row) => row.id));
 }
@@ -69,15 +77,17 @@ async function executeStatement(
  * Throws on the first failing migration — a database in an unknown shape should
  * stop startup rather than let the app run against it.
  */
-export async function runMigrations(
+async function runMigrationManifest(
 	db: SQLiteDatabase,
+	manifest: Migration[],
+	tableName: string,
 ): Promise<MigrationResult> {
-	await ensureMigrationsTable(db);
+	await ensureMigrationsTable(db, tableName);
 
-	const applied = await readAppliedIds(db);
+	const applied = await readAppliedIds(db, tableName);
 	const result: MigrationResult = { applied: [], skipped: [] };
 
-	for (const migration of migrations) {
+	for (const migration of manifest) {
 		if (applied.has(migration.id)) {
 			result.skipped.push(migration.id);
 			continue;
@@ -89,7 +99,7 @@ export async function runMigrations(
 			}
 
 			await db.runAsync(
-				`INSERT INTO ${MIGRATIONS_TABLE} (id, applied_at) VALUES (?, ?)
+				`INSERT INTO ${tableName} (id, applied_at) VALUES (?, ?)
 				 ON CONFLICT (id) DO NOTHING`,
 				[migration.id, Date.now()],
 			);
@@ -99,4 +109,21 @@ export async function runMigrations(
 	}
 
 	return result;
+}
+
+export async function runMigrations(
+	db: SQLiteDatabase,
+): Promise<MigrationResult> {
+	return await runMigrationManifest(db, migrations, MIGRATIONS_TABLE);
+}
+
+/** Applies the independent bro-local.db migration manifest. */
+export async function runLocalMigrations(
+	db: SQLiteDatabase,
+): Promise<MigrationResult> {
+	return await runMigrationManifest(
+		db,
+		localMigrations,
+		LOCAL_MIGRATIONS_TABLE,
+	);
 }
