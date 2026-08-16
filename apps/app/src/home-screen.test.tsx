@@ -3,6 +3,14 @@ import { listFactors } from "./content/metric-registry";
 import { HomeScreen } from "./screens/home-screen";
 import { KILOGRAMS_PER_POUND } from "./units";
 
+jest.mock("expo-router", () => ({
+	router: { push: jest.fn() },
+	useFocusEffect: (effect: () => void | (() => void)) => {
+		const React = jest.requireActual("react");
+		React.useEffect(effect, [effect]);
+	},
+}));
+
 const emptyToday = {
 	localDay: "2026-08-14",
 	entries: [],
@@ -74,8 +82,8 @@ describe("home screen", () => {
 	});
 
 	it("parses an enabled measurement into a canonical draft value", async () => {
-		const save = jest.fn(async (_draft: unknown, _entry: unknown) =>
-			measurementToday,
+		const save = jest.fn(
+			async (_draft: unknown, _entry: unknown) => measurementToday,
 		);
 		const screen = await render(
 			<HomeScreen

@@ -156,6 +156,38 @@ describe("body metrics flow", () => {
 
 		await fireEvent.press(view.getByText("Mark goal achieved"));
 		expect(await view.findByText(/Achieved: target 12 st 0 lb/)).toBeTruthy();
+
+		const canonicalObservation = (
+			await new databaseApp.ObservationRepository(db).findById(observation.id)
+		)?.value;
+		const canonicalGoal = (
+			await new databaseApp.GoalRepository(db).listAll()
+		)[0]?.targetValue;
+		await act(async () => expoRouter.replace("/settings/units"));
+		expect(await view.findByText("Example: 12 st 4 lb")).toBeTruthy();
+		await fireEvent.press(view.getByLabelText("Use Kilograms for Weight"));
+		expect(await view.findByText("Example: 78.0 kg")).toBeTruthy();
+		expect(
+			await new databaseApp.UnitPreferenceRepository(
+				db,
+			).resolveLatestPerDimension(),
+		).toMatchObject([{ dimension: "mass", unit: "kg" }]);
+		expect(
+			(await new databaseApp.ObservationRepository(db).findById(observation.id))
+				?.value,
+		).toBe(canonicalObservation);
+		expect(
+			(await new databaseApp.GoalRepository(db).listAll())[0]?.targetValue,
+		).toBe(canonicalGoal);
+
+		await act(async () => expoRouter.replace("/"));
+		expect(await view.findByText("Measurements: Weight 77.1 kg")).toBeTruthy();
+		await act(async () => expoRouter.replace("/body"));
+		expect(await view.findByText(/Latest 77.1 kg/)).toBeTruthy();
+		await act(async () => expoRouter.replace("/body/weight"));
+		expect(await view.findByText(/Achieved: target 76.2 kg/)).toBeTruthy();
+		await act(async () => expoRouter.replace("/trends"));
+		expect(await view.findByText("Latest 77.1 kg")).toBeTruthy();
 		expect(globalThis.fetch).not.toHaveBeenCalled();
 		expect(mockedUseSession).not.toHaveBeenCalled();
 	});

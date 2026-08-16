@@ -4,10 +4,11 @@ import type {
 	Goal,
 	Observation,
 	TrackedMetric,
+	UnitPreference,
 } from "@bro/database-app";
 import type { MetricDefinition } from "../content/metric-registry";
 
-export const CHECK_IN_EXPORT_FORMAT_VERSION = 2 as const;
+export const CHECK_IN_EXPORT_FORMAT_VERSION = 3 as const;
 
 export type CheckInExportInput = {
 	observations: readonly Observation[];
@@ -15,6 +16,7 @@ export type CheckInExportInput = {
 	trackedMetrics: readonly TrackedMetric[];
 	assessments: readonly Assessment[];
 	goals: readonly Goal[];
+	unitPreferences: readonly UnitPreference[];
 	registry: readonly MetricDefinition[];
 };
 
@@ -28,7 +30,7 @@ type VersionOneTrackedMetric = Omit<TrackedMetric, "customLabel">;
 /** Registry dimensions join the serialized contract with the planned v3 bump. */
 type LegacyMetricDefinition = Omit<MetricDefinition, "dimension">;
 
-type ExportMetadata<Version extends 1 | 2> = {
+type ExportMetadata<Version extends 1 | 2 | 3> = {
 	formatVersion: Version;
 	exportedAt: string;
 	appVersion: string;
@@ -48,8 +50,8 @@ export type CheckInExportV1 = {
 	trackedMetrics: VersionOneTrackedMetric[];
 };
 
-export type CheckInExport = {
-	metadata: ExportMetadata<typeof CHECK_IN_EXPORT_FORMAT_VERSION>;
+export type CheckInExportV2 = {
+	metadata: ExportMetadata<2>;
 	registry: {
 		metrics: LegacyMetricDefinition[];
 	};
@@ -60,7 +62,23 @@ export type CheckInExport = {
 	goals: Goal[];
 };
 
-export type ParsedCheckInExport = CheckInExportV1 | CheckInExport;
+export type CheckInExport = {
+	metadata: ExportMetadata<typeof CHECK_IN_EXPORT_FORMAT_VERSION>;
+	registry: {
+		metrics: MetricDefinition[];
+	};
+	observations: Observation[];
+	dayNotes: DayNote[];
+	trackedMetrics: TrackedMetric[];
+	assessments: Assessment[];
+	goals: Goal[];
+	unitPreferences: UnitPreference[];
+};
+
+export type ParsedCheckInExport =
+	| CheckInExportV1
+	| CheckInExportV2
+	| CheckInExport;
 
 function compareText(left: string, right: string): number {
 	if (left === right) {
@@ -69,20 +87,8 @@ function compareText(left: string, right: string): number {
 	return left < right ? -1 : 1;
 }
 
-function copyMetric(metric: MetricDefinition): LegacyMetricDefinition {
-	return {
-		slug: metric.slug,
-		label: metric.label,
-		kind: metric.kind,
-		scaleMin: metric.scaleMin,
-		scaleMax: metric.scaleMax,
-		category: metric.category,
-		aggregation: metric.aggregation,
-		sensitive: metric.sensitive,
-		userEnterable: metric.userEnterable,
-		deprecated: metric.deprecated,
-		defaultPosition: metric.defaultPosition,
-	};
+function copyMetric(metric: MetricDefinition): MetricDefinition {
+	return { ...metric };
 }
 
 function copyObservation(row: Observation): Observation {
@@ -152,6 +158,16 @@ function copyGoal(goal: Goal): Goal {
 		abandonedAt: goal.abandonedAt,
 		createdAt: goal.createdAt,
 		updatedAt: goal.updatedAt,
+	};
+}
+
+function copyUnitPreference(preference: UnitPreference): UnitPreference {
+	return {
+		id: preference.id,
+		dimension: preference.dimension,
+		unit: preference.unit,
+		createdAt: preference.createdAt,
+		updatedAt: preference.updatedAt,
 	};
 }
 
@@ -247,6 +263,14 @@ export function buildCheckInExport(
 					left.createdAt - right.createdAt ||
 					compareText(left.id, right.id),
 			),
+		unitPreferences: input.unitPreferences
+			.map(copyUnitPreference)
+			.sort(
+				(left, right) =>
+					compareText(left.dimension, right.dimension) ||
+					left.updatedAt - right.updatedAt ||
+					compareText(left.id, right.id),
+			),
 	};
 }
 
@@ -288,9 +312,15 @@ export function parseCheckInExport(serialized: string): ParsedCheckInExport {
 	if (parsed.metadata.formatVersion === 1) {
 		return parsed as CheckInExportV1;
 	}
+	if (parsed.metadata.formatVersion === 2) {
+		requireArray(parsed, "assessments");
+		requireArray(parsed, "goals");
+		return parsed as CheckInExportV2;
+	}
 	if (parsed.metadata.formatVersion === CHECK_IN_EXPORT_FORMAT_VERSION) {
 		requireArray(parsed, "assessments");
 		requireArray(parsed, "goals");
+		requireArray(parsed, "unitPreferences");
 		return parsed as CheckInExport;
 	}
 	throw new RangeError(

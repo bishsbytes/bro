@@ -1,5 +1,5 @@
-import { router } from "expo-router";
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { router, useFocusEffect } from "expo-router";
+import { useCallback, useMemo, useState } from "react";
 import { ActivityIndicator, TouchableOpacity, View } from "react-native";
 import {
 	type CheckInEntry,
@@ -97,9 +97,11 @@ export function HomeScreen({ store }: HomeScreenProps) {
 		}
 	}, [checkIns]);
 
-	useEffect(() => {
-		void load();
-	}, [load]);
+	useFocusEffect(
+		useCallback(() => {
+			void load();
+		}, [load]),
+	);
 
 	function toggleFactor(slug: string) {
 		setSelectedFactors((current) =>

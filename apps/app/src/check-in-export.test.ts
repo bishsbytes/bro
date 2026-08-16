@@ -4,6 +4,7 @@ import type {
 	Goal,
 	Observation,
 	TrackedMetric,
+	UnitPreference,
 } from "@bro/database-app";
 import { readFileSync } from "node:fs";
 import { join } from "node:path";
@@ -120,8 +121,25 @@ const goal: Goal = {
 	updatedAt: 1_786_708_000_000,
 };
 
+const unitPreferences: UnitPreference[] = [
+	{
+		id: "unit-length",
+		dimension: "length",
+		unit: "cm",
+		createdAt: 1_786_708_100_000,
+		updatedAt: 1_786_708_100_000,
+	},
+	{
+		id: "unit-mass",
+		dimension: "mass",
+		unit: "st",
+		createdAt: 1_786_708_000_000,
+		updatedAt: 1_786_708_000_000,
+	},
+];
+
 describe("check-in export", () => {
-	it("matches the version 2 golden file with stable ordering", () => {
+	it("matches the version 3 golden file with stable ordering", () => {
 		const serialized = serializeCheckInExport(
 			{
 				observations: [alcoholObservation, wheelObservation, moodObservation],
@@ -129,6 +147,7 @@ describe("check-in export", () => {
 				trackedMetrics: [trackedAlcohol, trackedCareer],
 				assessments: [assessment],
 				goals: [goal],
+				unitPreferences: [...unitPreferences].reverse(),
 				registry: [
 					knownMetric("alcohol"),
 					knownMetric("wheel:career"),
@@ -141,7 +160,7 @@ describe("check-in export", () => {
 			},
 		);
 		const golden = readFileSync(
-			join(__dirname, "export", "__fixtures__", "check-in-export-v2.json"),
+			join(__dirname, "export", "__fixtures__", "check-in-export-v3.json"),
 			"utf8",
 		);
 
@@ -157,6 +176,7 @@ describe("check-in export", () => {
 					trackedMetrics: [trackedAlcohol, trackedCareer],
 					assessments: [assessment],
 					goals: [goal],
+					unitPreferences: [...unitPreferences].reverse(),
 					registry: [
 						knownMetric("alcohol"),
 						knownMetric("wheel:career"),
@@ -169,6 +189,18 @@ describe("check-in export", () => {
 				},
 			),
 		);
+	});
+
+	it("continues to parse the committed version 2 fixture", () => {
+		const fixture = readFileSync(
+			join(__dirname, "export", "__fixtures__", "check-in-export-v2.json"),
+			"utf8",
+		);
+
+		const parsed = parseCheckInExport(fixture);
+		expect(parsed.metadata.formatVersion).toBe(2);
+		expect(parsed.observations).toHaveLength(3);
+		expect("unitPreferences" in parsed).toBe(false);
 	});
 
 	it("continues to parse the committed version 1 fixture", () => {
@@ -236,6 +268,7 @@ describe("check-in export", () => {
 			trackedMetrics: [sensitiveOverlay, unknownOverlay],
 			assessments: [sensitiveWheelAssessment],
 			goals: [sensitiveWheelGoal],
+			unitPreferences,
 			registry: [
 				knownMetric("mood"),
 				sensitiveMetric,
@@ -282,6 +315,7 @@ describe("check-in export", () => {
 		]);
 		expect(exported.assessments[0]?.focusItemSlugs).toEqual([]);
 		expect(exported.goals).toEqual([]);
+		expect(exported.unitPreferences).toEqual(unitPreferences);
 	});
 
 	it("produces a valid versioned export for an empty database", () => {
@@ -292,6 +326,7 @@ describe("check-in export", () => {
 				trackedMetrics: [],
 				assessments: [],
 				goals: [],
+				unitPreferences: [],
 				registry: [knownMetric("mood")],
 			},
 			{ appVersion: "1.0.0", exportedAt: 0 },
@@ -299,7 +334,7 @@ describe("check-in export", () => {
 
 		expect(exported).toMatchObject({
 			metadata: {
-				formatVersion: 2,
+				formatVersion: 3,
 				exportedAt: "1970-01-01T00:00:00.000Z",
 				appVersion: "1.0.0",
 			},
@@ -308,6 +343,7 @@ describe("check-in export", () => {
 			trackedMetrics: [],
 			assessments: [],
 			goals: [],
+			unitPreferences: [],
 		});
 		expect(exported.registry.metrics).toHaveLength(1);
 	});

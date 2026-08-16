@@ -64,6 +64,17 @@ export function SettingsScreen({
 				/>
 			</Card>
 			<Card style={styles.section}>
+				<SectionHeader title="Units" />
+				<AppText color="muted">
+					Choose how weight, length, and body fat measurements appear.
+				</AppText>
+				<Button
+					label="Manage units"
+					variant="secondary"
+					onPress={() => router.push("/settings/units")}
+				/>
+			</Card>
+			<Card style={styles.section}>
 				<SectionHeader title="Reminders" />
 				<AppText color="muted">
 					Choose when this device nudges you to check in.
