@@ -21,10 +21,16 @@ export type PlatformHealthSample = {
 	endedAt: number;
 	source: HealthPlatform;
 	sourceRecordId: string;
+	/** Recording app/device within the platform (package or bundle id). */
+	origin?: string | null;
 };
 
-export type CanonicalHealthSample = Omit<PlatformHealthSample, "unit"> & {
+export type CanonicalHealthSample = Omit<
+	PlatformHealthSample,
+	"unit" | "origin"
+> & {
 	localDay: string;
+	origin: string | null;
 };
 
 function assertFiniteNonNegative(value: number): void {
@@ -136,5 +142,6 @@ export function mapPlatformSample(
 		),
 		source: sample.source,
 		sourceRecordId: sample.sourceRecordId.trim(),
+		origin: sample.origin?.trim() || null,
 	};
 }

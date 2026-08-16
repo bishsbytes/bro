@@ -161,6 +161,12 @@ export function HealthSettingsScreen({ store }: HealthSettingsScreenProps) {
 								</AppText>
 							</Card>
 						))}
+						{snapshot.platform === "healthkit" ? (
+							<AppText variant="caption" color="subtle">
+								Apple Health does not reveal which data types you allowed.
+								Anything you declined simply stays empty here.
+							</AppText>
+						) : null}
 					</View>
 					<View style={styles.section}>
 						<Button

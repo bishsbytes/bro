@@ -66,6 +66,7 @@ function mapQuantitySample(
 		...sampleTimes(sample),
 		source: PLATFORM,
 		sourceRecordId: sample.uuid,
+		origin: sample.sourceRevision?.source.bundleIdentifier ?? null,
 	};
 }
 
@@ -87,6 +88,7 @@ function mapSleepSample(sample: CategorySample): PlatformHealthSample {
 		...times,
 		source: PLATFORM,
 		sourceRecordId: sample.uuid,
+		origin: sample.sourceRevision?.source.bundleIdentifier ?? null,
 	};
 }
 

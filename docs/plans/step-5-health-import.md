@@ -44,6 +44,7 @@ The step is successful when a fresh connect on a phone with months of platform h
 - **Three stores, as designed.** Raw samples and connection state land in a new **`bro-local.db`** — never syncs, never backed up, explicitly disposable. Daily rollups land in **`daily_metrics` in `bro.db`** (migration 005) and are what every downstream surface reads. The rollup is computed as part of import, in the same pass, never on a schedule.
 - **`daily_metrics` ids are UUIDv5 over `(metricSlug, localDay, source)`** with a fixed app namespace — deterministic by construction, so two devices importing the same platform data write the same row and the duplicate compute is an idempotent last-writer-wins update. A unique index on the natural key is safe here: it collapses the same fact, not two facts.
 - **Per-metric rollup rules live in the registry**, reusing the `aggregation` field ([open decision 13](product-domains-and-data.md#open-decisions)): `sum` (new) for `steps` and `sleep_duration`, `mean` for `resting_heart_rate`, `last` for `weight` and `body_fat`. One rule per metric drives both the import rollup and any trend math that ever needs it.
+- **`sum` metrics roll up the dominant recording origin, not every raw sample.** A phone and a watch both record the same walk and the same night; summing all origins double counts, which is why the platforms' own aggregate APIs deduplicate by origin priority. Raw samples carry the recording origin (Health Connect `dataOrigin`, HealthKit source bundle id), and a day's `sum` takes the single origin with the largest total. The accepted trade-off: a day genuinely split across devices with no overlap undercounts to its larger half — preferable to systematic inflation, and revisitable with interval splicing if device acceptance demands it. `mean` and `last` are unaffected. Sign-off item.
 - **A sleep that crosses midnight belongs to the day it ended** — the wake day, which is the day the user asks "how did I sleep" about. Local-day attribution otherwise follows the sample's start in the device's zone at import time. Sign-off item alongside the canonical units.
 - **Incremental import uses the platform's change API, never a timestamp** — HealthKit anchored queries, Health Connect changes API — with the anchor/token stored per `(platform, metricSlug)` in `bro-local.db`. Each batch applies additions and deletions, then **recomputes the rollup for every `localDay` the batch touched**, so late-arriving watch syncs and source-app deletions both converge.
 - **Import is idempotent, keyed on `(source, sourceRecordId)`** with a unique index in `bro-local.db` — the second safe unique constraint, same rule.
@@ -100,6 +101,7 @@ CREATE TABLE IF NOT EXISTS raw_samples (
   local_day TEXT NOT NULL,        -- attribution rule applied at import
   source TEXT NOT NULL,
   source_record_id TEXT NOT NULL,
+  origin TEXT,                    -- recording app/device (L002); drives sum dedup
   imported_at INTEGER NOT NULL
 );
 CREATE UNIQUE INDEX IF NOT EXISTS idx_raw_samples_identity
@@ -181,6 +183,18 @@ Disconnect stops imports and clears tokens; copy states plainly that already-imp
 - The existing focused suites cover migrations, repository idempotence, UUIDv5 ids, mapping and rollup rules, deletion-aware recomputation, precedence/provenance, surface isolation, token failure discipline, pruning, delete-local-data across both stores, and the settings disconnect journey. Together with the new backfill/recovery seam, every automated row in the matrix below is covered.
 - The product-domain plan now records decisions 11–14 and marks step 5 code-complete; the umbrella plan records all five native integrations that should share regeneration work where sequencing allows. Step 6 inherits objective daily series, the resolved-day merge, and registry-owned `sum` aggregation without new health-import work.
 - Physical HealthKit/Health Connect grant, denial, real-history, deletion, timezone, killed-app, and backup-exclusion checks remain device work; EAS authentication and Play Console declaration remain external gates rather than automated claims.
+
+#### Post-review corrections — 16 August 2026
+
+A code review of the five implementation commits produced four corrections, all landed with automated coverage:
+
+- **Multi-origin double counting** (the dominant-origin decision above): raw samples gained an `origin` column via local migration L002, both gateways populate it, and `sum` rollups take the largest single origin's total. Days with one recording origin are byte-for-byte unchanged.
+- **A change touching a pruned day now forces a replacement snapshot.** Previously an addition or edit delivered for a day older than the 90-day raw window would have recomputed that day's rollup from the one changed sample, silently corrupting the durable value; deletions already had this guard, additions now share it.
+- **Connect queues behind an in-flight import instead of coalescing into it.** The launch/foreground refresh and a user's Connect tap raced: single-flight previously returned the running refresh to the connect caller, skipping authorization entirely. Refreshes still coalesce; connects queue.
+- **Backfill and prune windows use fixed 24-hour days**, removing a dependency on the JS runtime's own timezone; the device's named zone matters only for day attribution, as designed.
+- The iOS settings journey states that Apple Health does not reveal read denials, so declined metrics appear connected but empty — new copy, added to the sign-off list.
+
+One process deviation is recorded rather than repaired: the Android prebuild regeneration landed inside the gateway commit instead of as its own commit, against this plan's stated convention.
 
 ## Expected touchpoints
 

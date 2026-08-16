@@ -273,13 +273,18 @@ describe("product database migrations", () => {
 		const db = await databaseApp.initLocalDb("fresh-local.db");
 
 		await expect(databaseApp.runLocalMigrations(db)).resolves.toEqual({
-			applied: ["L001_health_import"],
+			applied: ["L001_health_import", "L002_raw_sample_origin"],
 			skipped: [],
 		});
 		expect(await databaseApp.runLocalMigrations(db)).toEqual({
 			applied: [],
-			skipped: ["L001_health_import"],
+			skipped: ["L001_health_import", "L002_raw_sample_origin"],
 		});
+		expect(
+			await db.getAllAsync<{ name: string }>(
+				"SELECT name FROM pragma_table_info('raw_samples') WHERE name = 'origin'",
+			),
+		).toEqual([{ name: "origin" }]);
 
 		const objects = await db.getAllAsync<{ name: string; type: string }>(
 			`SELECT name, type FROM sqlite_master

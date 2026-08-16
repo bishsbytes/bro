@@ -53,6 +53,7 @@ function intervalSeconds(start: string, end: string): number {
 
 function mapRecord(record: HealthConnectRecordResult): PlatformHealthSample {
 	const sourceRecordId = recordIdentity(record);
+	const origin = record.metadata?.dataOrigin?.trim() || null;
 	if (record.recordType === "SleepSession") {
 		const sleepingStages = record.stages?.filter((stage) =>
 			[
@@ -77,6 +78,7 @@ function mapRecord(record: HealthConnectRecordResult): PlatformHealthSample {
 			endedAt: timestamp(record.endTime),
 			source: PLATFORM,
 			sourceRecordId,
+			origin,
 		};
 	}
 	if (record.recordType === "Steps") {
@@ -88,6 +90,7 @@ function mapRecord(record: HealthConnectRecordResult): PlatformHealthSample {
 			endedAt: timestamp(record.endTime),
 			source: PLATFORM,
 			sourceRecordId,
+			origin,
 		};
 	}
 	if (record.recordType === "RestingHeartRate") {
@@ -100,6 +103,7 @@ function mapRecord(record: HealthConnectRecordResult): PlatformHealthSample {
 			endedAt: at,
 			source: PLATFORM,
 			sourceRecordId,
+			origin,
 		};
 	}
 	if (record.recordType === "Weight") {
@@ -112,6 +116,7 @@ function mapRecord(record: HealthConnectRecordResult): PlatformHealthSample {
 			endedAt: at,
 			source: PLATFORM,
 			sourceRecordId,
+			origin,
 		};
 	}
 	if (record.recordType === "BodyFat") {
@@ -124,6 +129,7 @@ function mapRecord(record: HealthConnectRecordResult): PlatformHealthSample {
 			endedAt: at,
 			source: PLATFORM,
 			sourceRecordId,
+			origin,
 		};
 	}
 	throw new TypeError(

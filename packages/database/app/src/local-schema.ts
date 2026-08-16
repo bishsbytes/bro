@@ -43,6 +43,7 @@ export const rawSamples = sqliteTable(
 		localDay: text("local_day").notNull(),
 		source: text("source").notNull(),
 		sourceRecordId: text("source_record_id").notNull(),
+		origin: text("origin"),
 		importedAt: integer("imported_at").notNull(),
 	},
 	(table) => [

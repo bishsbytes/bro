@@ -36,4 +36,10 @@ CREATE UNIQUE INDEX IF NOT EXISTS \`idx_raw_samples_identity\` ON \`raw_samples\
 --> statement-breakpoint
 CREATE INDEX IF NOT EXISTS \`idx_raw_samples_metric_day\` ON \`raw_samples\` (\`metric_slug\`,\`local_day\`);`,
 	},
+	{
+		// The recording origin (app package / bundle id) lets sum rollups collapse
+		// the same activity recorded by two devices instead of double counting it.
+		id: "L002_raw_sample_origin",
+		sql: "ALTER TABLE `raw_samples` ADD COLUMN `origin` text;",
+	},
 ];

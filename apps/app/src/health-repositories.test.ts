@@ -92,8 +92,13 @@ describe("health import repositories", () => {
 			sourceRecordId: "record-1",
 		};
 		const first = await repository.upsert(base);
-		const updated = await repository.upsert({ ...base, value: 450 });
-		expect(updated).toEqual({ ...first, value: 450 });
+		expect(first.origin).toBeNull();
+		const updated = await repository.upsert({
+			...base,
+			value: 450,
+			origin: "com.watch",
+		});
+		expect(updated).toEqual({ ...first, value: 450, origin: "com.watch" });
 		expect(await repository.listByMetricDay("steps", "2026-08-16")).toEqual([
 			updated,
 		]);

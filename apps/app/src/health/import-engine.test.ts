@@ -304,6 +304,88 @@ describe("health import engine", () => {
 		]);
 	});
 
+	it("queues a connect behind an in-flight refresh instead of swallowing it", async () => {
+		const gateway = new FakeGateway();
+		gateway.fetchChanges.mockResolvedValue({
+			mode: "snapshot",
+			additions: [steps("first", 1_000, "2026-08-15T09:00:00.000Z")],
+			deletions: [],
+			nextToken: "token-1",
+		});
+		let releaseAvailability = () => {};
+		const gate = new Promise<void>((resolve) => {
+			releaseAvailability = resolve;
+		});
+		gateway.availability = async () => {
+			await gate;
+			return { available: true, platform: "health_connect" } as const;
+		};
+
+		const subject = engine(gateway);
+		const refreshing = subject.refresh();
+		const connecting = subject.connect(["steps"]);
+		releaseAvailability();
+
+		await expect(refreshing).resolves.toEqual({
+			platform: "health_connect",
+			importedMetrics: [],
+			importedSamples: 0,
+		});
+		await expect(connecting).resolves.toEqual({
+			platform: "health_connect",
+			importedMetrics: ["steps"],
+			importedSamples: 1,
+		});
+		expect(
+			await new databaseApp.HealthConnectionRepository(importDb).find(
+				"health_connect",
+				"steps",
+			),
+		).toMatchObject({ changeToken: "token-1" });
+	});
+
+	it("replaces the snapshot when a change touches a day the retention window pruned", async () => {
+		const gateway = new FakeGateway();
+		gateway.fetchChanges
+			.mockResolvedValueOnce({
+				mode: "snapshot",
+				additions: [steps("recent", 2_000, "2026-08-15T09:00:00.000Z")],
+				deletions: [],
+				nextToken: "token-1",
+			})
+			.mockResolvedValueOnce({
+				mode: "changes",
+				additions: [steps("stale-edit", 700, "2026-02-01T09:00:00.000Z")],
+				deletions: [],
+				nextToken: "token-2",
+			})
+			.mockResolvedValueOnce({
+				mode: "snapshot",
+				additions: [
+					steps("stale-edit", 700, "2026-02-01T09:00:00.000Z"),
+					steps("stale-peer", 5_300, "2026-02-01T10:00:00.000Z"),
+					steps("recent", 2_000, "2026-08-15T09:00:00.000Z"),
+				],
+				deletions: [],
+				nextToken: "token-3",
+			});
+		const subject = engine(gateway);
+		await subject.connect(["steps"]);
+		await subject.refresh();
+
+		// Rolling up the pruned day from the lone changed sample would have
+		// recorded 700; the replacement snapshot restores the full 6,000.
+		const daily = await new databaseApp.DailyMetricRepository(
+			productDb,
+		).listByMetric("steps");
+		expect(daily.map(({ localDay, value }) => ({ localDay, value }))).toEqual([
+			{ localDay: "2026-02-01", value: 6_000 },
+			{ localDay: "2026-08-15", value: 2_000 },
+		]);
+		expect(gateway.fetchChanges).toHaveBeenCalledTimes(3);
+		expect(gateway.fetchChanges.mock.calls[2]?.[1]).toBeNull();
+	});
+
 	it("preserves durable history older than a reconnected snapshot window", async () => {
 		await new databaseApp.DailyMetricRepository(productDb).upsert({
 			metricSlug: "steps",

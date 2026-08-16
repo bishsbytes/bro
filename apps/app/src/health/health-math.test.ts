@@ -24,6 +24,7 @@ function sample(
 		localDay: "2026-08-16",
 		source: "health_connect",
 		sourceRecordId: `${metricSlug}-${value}`,
+		origin: null,
 		...overrides,
 	};
 }
@@ -171,6 +172,49 @@ describe("health import policy and pure math", () => {
 				sample("weight", 79, { endedAt: 200, sourceRecordId: "late" }),
 			]),
 		).toBe(79);
+	});
+
+	it("sums only the dominant recording origin so two devices never double count", () => {
+		expect(
+			rollupHealthSamples("steps", [
+				sample("steps", 3_000, { origin: "com.phone", sourceRecordId: "p-1" }),
+				sample("steps", 2_000, { origin: "com.phone", sourceRecordId: "p-2" }),
+				sample("steps", 7_000, { origin: "com.watch", sourceRecordId: "w-1" }),
+			]),
+		).toBe(7_000);
+		// Origin-less samples share one bucket, so single-source days are unchanged.
+		expect(
+			rollupHealthSamples("steps", [
+				sample("steps", 400),
+				sample("steps", 600),
+			]),
+		).toBe(1_000);
+		// Ties resolve deterministically to the lexicographically first origin.
+		expect(
+			rollupHealthSamples("sleep_duration", [
+				sample("sleep_duration", 25_200, {
+					origin: "b.app",
+					sourceRecordId: "b",
+				}),
+				sample("sleep_duration", 25_200, {
+					origin: "a.app",
+					sourceRecordId: "a",
+				}),
+			]),
+		).toBe(25_200);
+		// Mean metrics still average every origin's samples.
+		expect(
+			rollupHealthSamples("resting_heart_rate", [
+				sample("resting_heart_rate", 60, {
+					origin: "com.watch",
+					sourceRecordId: "rhr-w",
+				}),
+				sample("resting_heart_rate", 66, {
+					origin: "com.phone",
+					sourceRecordId: "rhr-p",
+				}),
+			]),
+		).toBe(63);
 	});
 
 	it("recomputes both old and new days when an identity moves", () => {

@@ -220,7 +220,7 @@ describe("delete local data", () => {
 			await localDb.getFirstAsync<{ count: number }>(
 				"SELECT COUNT(*) AS count FROM __local_migrations",
 			),
-		).toEqual({ count: 1 });
+		).toEqual({ count: 2 });
 		expect(databaseApp.readDeviceSettings()).toEqual(settingsBefore);
 		expect(mockedAuthClient.signOut).not.toHaveBeenCalled();
 		expect(mockedAuthClient.deleteUser).not.toHaveBeenCalled();

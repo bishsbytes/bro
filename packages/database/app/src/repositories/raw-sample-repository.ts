@@ -11,10 +11,16 @@ export type RawSample = {
 	localDay: string;
 	source: string;
 	sourceRecordId: string;
+	/** Recording app/device identity within the platform; null when unknown. */
+	origin: string | null;
 	importedAt: number;
 };
 
-export type UpsertRawSample = Omit<RawSample, "id" | "importedAt"> & {
+export type UpsertRawSample = Omit<
+	RawSample,
+	"id" | "origin" | "importedAt"
+> & {
+	origin?: string | null;
 	importedAt?: number;
 };
 
@@ -27,6 +33,7 @@ type RawSampleRow = {
 	local_day: string;
 	source: string;
 	source_record_id: string;
+	origin: string | null;
 	imported_at: number;
 };
 
@@ -36,7 +43,7 @@ type RepositoryOptions = {
 };
 
 const SELECT_COLUMNS =
-	"id, metric_slug, value, started_at, ended_at, local_day, source, source_record_id, imported_at";
+	"id, metric_slug, value, started_at, ended_at, local_day, source, source_record_id, origin, imported_at";
 const LOCAL_DAY_PATTERN = /^\d{4}-\d{2}-\d{2}$/;
 
 function toRawSample(row: RawSampleRow): RawSample {
@@ -49,6 +56,7 @@ function toRawSample(row: RawSampleRow): RawSample {
 		localDay: row.local_day,
 		source: row.source,
 		sourceRecordId: row.source_record_id,
+		origin: row.origin,
 		importedAt: row.imported_at,
 	};
 }
@@ -95,19 +103,21 @@ export class RawSampleRepository extends BaseRepository {
 		const importedAt = input.importedAt ?? this.now();
 		const source = input.source.trim();
 		const sourceRecordId = input.sourceRecordId.trim();
+		const origin = input.origin?.trim() || null;
 		const id = this.createId(importedAt);
 
 		await this.run(
 			`INSERT INTO raw_samples (
 				id, metric_slug, value, started_at, ended_at, local_day,
-				source, source_record_id, imported_at
-			) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+				source, source_record_id, origin, imported_at
+			) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
 			ON CONFLICT (source, source_record_id) DO UPDATE SET
 				metric_slug = excluded.metric_slug,
 				value = excluded.value,
 				started_at = excluded.started_at,
 				ended_at = excluded.ended_at,
 				local_day = excluded.local_day,
+				origin = excluded.origin,
 				imported_at = excluded.imported_at`,
 			[
 				id,
@@ -118,6 +128,7 @@ export class RawSampleRepository extends BaseRepository {
 				input.localDay,
 				source,
 				sourceRecordId,
+				origin,
 				importedAt,
 			],
 		);

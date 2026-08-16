@@ -41,10 +41,14 @@ type EngineDependencies = {
 	timeZone?: () => string;
 };
 
-function calendarDaysBefore(timestamp: number, days: number): number {
-	const date = new Date(timestamp);
-	date.setDate(date.getDate() - days);
-	return date.getTime();
+const DAY_MS = 86_400_000;
+
+/**
+ * Fixed 24-hour days keep the window independent of the runtime's own zone;
+ * day attribution is the only place the device's named zone matters.
+ */
+function daysBefore(timestamp: number, days: number): number {
+	return timestamp - days * DAY_MS;
 }
 
 function rawToCanonical(sample: RawSample): CanonicalHealthSample {
@@ -64,6 +68,7 @@ function rawToCanonical(sample: RawSample): CanonicalHealthSample {
 		localDay: sample.localDay,
 		source: sample.source,
 		sourceRecordId: sample.sourceRecordId,
+		origin: sample.origin,
 	};
 }
 
@@ -112,7 +117,7 @@ export class HealthImportEngine {
 				);
 			}
 			return await this.importMetrics(granted);
-		});
+		}, "queue");
 	}
 
 	async refresh(): Promise<HealthImportSummary> {
@@ -139,7 +144,7 @@ export class HealthImportEngine {
 			return await this.importMetrics(
 				connected.filter((metricSlug) => granted.has(metricSlug)),
 			);
-		});
+		}, "coalesce");
 	}
 
 	async disconnect(): Promise<number> {
@@ -154,14 +159,24 @@ export class HealthImportEngine {
 		await this.dependencies.gateway.openSettings();
 	}
 
+	/**
+	 * Refreshes coalesce into whatever run is already in flight — any full run
+	 * covers a refresh. A connect must never be swallowed that way (the user
+	 * tapped it expecting the grant sheet), so it queues behind the current run
+	 * and then performs its own work.
+	 */
 	private async singleFlight(
 		work: () => Promise<HealthImportSummary>,
+		mode: "coalesce" | "queue",
 	): Promise<HealthImportSummary> {
-		if (this.running) return await this.running;
-		this.running = work().finally(() => {
-			this.running = null;
-		});
-		return await this.running;
+		if (this.running && mode === "coalesce") return await this.running;
+		const run = this.running ? this.running.then(work, work) : work();
+		this.running = run;
+		try {
+			return await run;
+		} finally {
+			if (this.running === run) this.running = null;
+		}
 	}
 
 	private async importMetrics(
@@ -180,6 +195,48 @@ export class HealthImportEngine {
 		};
 	}
 
+	/**
+	 * A change batch can only be re-rolled-up from retained raw samples. An
+	 * addition on a day the retention window has already pruned would recompute
+	 * that day from partial data and silently corrupt its durable rollup, and a
+	 * deletion whose identity is no longer retained cannot be applied at all.
+	 * Both cases need a fresh snapshot instead.
+	 */
+	private async changesTouchPrunedData(
+		rawRepository: RawSampleRepository,
+		metricSlug: HealthMetricSlug,
+		batch: HealthGatewayBatch,
+		additions: readonly CanonicalHealthSample[],
+		importedAt: number,
+		timeZone: string,
+	): Promise<boolean> {
+		const platform = this.dependencies.gateway.platform;
+		if (!platform) return false;
+		const prunedDayCutoff = localDayAt(
+			daysBefore(importedAt, RAW_SAMPLE_RETENTION_DAYS),
+			timeZone,
+		);
+		if (additions.some((sample) => sample.localDay <= prunedDayCutoff)) {
+			return true;
+		}
+		if (batch.deletions.length === 0) return false;
+
+		const retained = await rawRepository.listByMetricSource(
+			metricSlug,
+			platform,
+		);
+		const known = new Set(
+			retained.map((sample) => identity(platform, sample.sourceRecordId)),
+		);
+		for (const addition of batch.additions) {
+			known.add(identity(platform, addition.sourceRecordId));
+		}
+		return batch.deletions.some(
+			(deletion) =>
+				!known.has(identity(deletion.source, deletion.sourceRecordId)),
+		);
+	}
+
 	private async importMetric(metricSlug: HealthMetricSlug): Promise<number> {
 		const platform = this.dependencies.gateway.platform;
 		if (!platform) return 0;
@@ -189,14 +246,15 @@ export class HealthImportEngine {
 		if (!connection) return 0;
 
 		const importedAt = this.now();
+		const timeZone = this.timeZone();
 		const backfill = {
 			// A replacement snapshot must cover everything this connection could
 			// previously have imported, not just today's trailing year. This preserves
 			// durable history while still allowing expired tokens and pruned deletion
 			// identities to reconcile exactly.
 			from: Math.min(
-				calendarDaysBefore(importedAt, HEALTH_BACKFILL_DAYS),
-				calendarDaysBefore(connection.connectedAt, HEALTH_BACKFILL_DAYS),
+				daysBefore(importedAt, HEALTH_BACKFILL_DAYS),
+				daysBefore(connection.connectedAt, HEALTH_BACKFILL_DAYS),
 			),
 			through: importedAt,
 		};
@@ -217,38 +275,32 @@ export class HealthImportEngine {
 		}
 
 		const rawRepository = new RawSampleRepository(importDb);
-		if (batch.mode === "changes" && batch.deletions.length > 0) {
-			const retained = await rawRepository.listByMetricSource(
+		const mapAdditions = (fetched: HealthGatewayBatch) =>
+			fetched.additions.map((sample) => {
+				if (sample.metricSlug !== metricSlug || sample.source !== platform) {
+					throw new TypeError("A health gateway returned a mismatched sample.");
+				}
+				return mapPlatformSample(sample, timeZone);
+			});
+		let additions = mapAdditions(batch);
+		if (
+			batch.mode === "changes" &&
+			(await this.changesTouchPrunedData(
+				rawRepository,
 				metricSlug,
-				platform,
+				batch,
+				additions,
+				importedAt,
+				timeZone,
+			))
+		) {
+			batch = await this.dependencies.gateway.fetchChanges(
+				metricSlug,
+				null,
+				backfill,
 			);
-			const known = new Set(
-				retained.map((sample) => identity(platform, sample.sourceRecordId)),
-			);
-			for (const addition of batch.additions) {
-				known.add(identity(platform, addition.sourceRecordId));
-			}
-			if (
-				batch.deletions.some(
-					(deletion) =>
-						!known.has(identity(deletion.source, deletion.sourceRecordId)),
-				)
-			) {
-				batch = await this.dependencies.gateway.fetchChanges(
-					metricSlug,
-					null,
-					backfill,
-				);
-			}
+			additions = mapAdditions(batch);
 		}
-
-		const timeZone = this.timeZone();
-		const additions = batch.additions.map((sample) => {
-			if (sample.metricSlug !== metricSlug || sample.source !== platform) {
-				throw new TypeError("A health gateway returned a mismatched sample.");
-			}
-			return mapPlatformSample(sample, timeZone);
-		});
 		const productDb = this.getProductDb();
 		const dailyRepository = new DailyMetricRepository(productDb, {
 			now: () => importedAt,
@@ -303,7 +355,7 @@ export class HealthImportEngine {
 			});
 
 			await rawRepository.pruneEndedBefore(
-				calendarDaysBefore(importedAt, RAW_SAMPLE_RETENTION_DAYS),
+				daysBefore(importedAt, RAW_SAMPLE_RETENTION_DAYS),
 			);
 			// Advance only after the durable rollup transaction commits. A failure
 			// above rolls back both the raw writes and token so replay stays safe.

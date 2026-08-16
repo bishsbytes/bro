@@ -49,6 +49,26 @@ function compareSamples(
 	);
 }
 
+/**
+ * A phone and a watch typically both record the same walking and the same
+ * sleep, so summing every raw sample double counts whenever two recording
+ * origins overlap. The platforms' own aggregate APIs deduplicate by origin
+ * priority; the equivalent here is taking the single origin with the largest
+ * daily total. Days recorded by one origin are unaffected, and origin-less
+ * samples share one bucket.
+ */
+function dominantOriginTotal(samples: readonly CanonicalHealthSample[]): number {
+	const totals = new Map<string, number>();
+	for (const sample of samples) {
+		const origin = sample.origin ?? "";
+		totals.set(origin, (totals.get(origin) ?? 0) + sample.value);
+	}
+	const dominant = [...totals.entries()].sort(
+		(left, right) => right[1] - left[1] || left[0].localeCompare(right[0]),
+	)[0];
+	return dominant ? dominant[1] : 0;
+}
+
 export function rollupHealthSamples(
 	metricSlug: HealthMetricSlug,
 	samples: readonly CanonicalHealthSample[],
@@ -76,8 +96,10 @@ export function rollupHealthSamples(
 	if (resolved.metric.aggregation === "last") {
 		return [...samples].sort(compareSamples).at(-1)?.value ?? null;
 	}
+	if (resolved.metric.aggregation === "sum") {
+		return dominantOriginTotal(samples);
+	}
 	const total = samples.reduce((sum, sample) => sum + sample.value, 0);
-	if (resolved.metric.aggregation === "sum") return total;
 	if (resolved.metric.aggregation === "mean") return total / samples.length;
 	throw new TypeError(
 		`Aggregation ${resolved.metric.aggregation} cannot roll up health samples.`,
