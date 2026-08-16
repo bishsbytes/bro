@@ -1,5 +1,6 @@
 import type {
 	Assessment,
+	DailyMetric,
 	DayNote,
 	Goal,
 	Observation,
@@ -8,7 +9,7 @@ import type {
 } from "@bro/database-app";
 import type { MetricDefinition } from "../content/metric-registry";
 
-export const CHECK_IN_EXPORT_FORMAT_VERSION = 3 as const;
+export const CHECK_IN_EXPORT_FORMAT_VERSION = 4 as const;
 
 export type CheckInExportInput = {
 	observations: readonly Observation[];
@@ -17,6 +18,7 @@ export type CheckInExportInput = {
 	assessments: readonly Assessment[];
 	goals: readonly Goal[];
 	unitPreferences: readonly UnitPreference[];
+	dailyMetrics: readonly DailyMetric[];
 	registry: readonly MetricDefinition[];
 };
 
@@ -30,7 +32,7 @@ type VersionOneTrackedMetric = Omit<TrackedMetric, "customLabel">;
 /** Registry dimensions join the serialized contract with the planned v3 bump. */
 type LegacyMetricDefinition = Omit<MetricDefinition, "dimension">;
 
-type ExportMetadata<Version extends 1 | 2 | 3> = {
+type ExportMetadata<Version extends 1 | 2 | 3 | 4> = {
 	formatVersion: Version;
 	exportedAt: string;
 	appVersion: string;
@@ -62,8 +64,8 @@ export type CheckInExportV2 = {
 	goals: Goal[];
 };
 
-export type CheckInExport = {
-	metadata: ExportMetadata<typeof CHECK_IN_EXPORT_FORMAT_VERSION>;
+export type CheckInExportV3 = {
+	metadata: ExportMetadata<3>;
 	registry: {
 		metrics: MetricDefinition[];
 	};
@@ -75,9 +77,15 @@ export type CheckInExport = {
 	unitPreferences: UnitPreference[];
 };
 
+export type CheckInExport = Omit<CheckInExportV3, "metadata"> & {
+	metadata: ExportMetadata<typeof CHECK_IN_EXPORT_FORMAT_VERSION>;
+	dailyMetrics: DailyMetric[];
+};
+
 export type ParsedCheckInExport =
 	| CheckInExportV1
 	| CheckInExportV2
+	| CheckInExportV3
 	| CheckInExport;
 
 function compareText(left: string, right: string): number {
@@ -168,6 +176,19 @@ function copyUnitPreference(preference: UnitPreference): UnitPreference {
 		unit: preference.unit,
 		createdAt: preference.createdAt,
 		updatedAt: preference.updatedAt,
+	};
+}
+
+function copyDailyMetric(metric: DailyMetric): DailyMetric {
+	return {
+		id: metric.id,
+		metricSlug: metric.metricSlug,
+		localDay: metric.localDay,
+		value: metric.value,
+		source: metric.source,
+		computedAt: metric.computedAt,
+		createdAt: metric.createdAt,
+		updatedAt: metric.updatedAt,
 	};
 }
 
@@ -271,6 +292,16 @@ export function buildCheckInExport(
 					left.updatedAt - right.updatedAt ||
 					compareText(left.id, right.id),
 			),
+		dailyMetrics: input.dailyMetrics
+			.filter((row) => includeSlug(row.metricSlug))
+			.map(copyDailyMetric)
+			.sort(
+				(left, right) =>
+					compareText(left.localDay, right.localDay) ||
+					compareText(left.metricSlug, right.metricSlug) ||
+					compareText(left.source, right.source) ||
+					compareText(left.id, right.id),
+			),
 	};
 }
 
@@ -317,10 +348,17 @@ export function parseCheckInExport(serialized: string): ParsedCheckInExport {
 		requireArray(parsed, "goals");
 		return parsed as CheckInExportV2;
 	}
+	if (parsed.metadata.formatVersion === 3) {
+		requireArray(parsed, "assessments");
+		requireArray(parsed, "goals");
+		requireArray(parsed, "unitPreferences");
+		return parsed as CheckInExportV3;
+	}
 	if (parsed.metadata.formatVersion === CHECK_IN_EXPORT_FORMAT_VERSION) {
 		requireArray(parsed, "assessments");
 		requireArray(parsed, "goals");
 		requireArray(parsed, "unitPreferences");
+		requireArray(parsed, "dailyMetrics");
 		return parsed as CheckInExport;
 	}
 	throw new RangeError(

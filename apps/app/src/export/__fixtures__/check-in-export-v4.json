@@ -1,0 +1,67 @@
+{
+  "metadata": {
+    "formatVersion": 4,
+    "exportedAt": "2026-08-14T12:00:00.000Z",
+    "appVersion": "1.0.0"
+  },
+  "registry": {
+    "metrics": [
+      {
+        "slug": "steps",
+        "label": "Steps",
+        "kind": "measurement",
+        "scaleMin": null,
+        "scaleMax": null,
+        "category": null,
+        "aggregation": "sum",
+        "dimension": "count",
+        "sensitive": false,
+        "userEnterable": false,
+        "deprecated": false,
+        "defaultPosition": 4
+      },
+      {
+        "slug": "resting_heart_rate",
+        "label": "Resting heart rate",
+        "kind": "measurement",
+        "scaleMin": null,
+        "scaleMax": null,
+        "category": null,
+        "aggregation": "mean",
+        "dimension": "rate_bpm",
+        "sensitive": true,
+        "userEnterable": false,
+        "deprecated": false,
+        "defaultPosition": 5
+      }
+    ]
+  },
+  "observations": [],
+  "dayNotes": [],
+  "trackedMetrics": [],
+  "assessments": [],
+  "goals": [],
+  "unitPreferences": [],
+  "dailyMetrics": [
+    {
+      "id": "daily-resting-heart-rate",
+      "metricSlug": "resting_heart_rate",
+      "localDay": "2026-08-13",
+      "value": 58,
+      "source": "health_connect",
+      "computedAt": 1786621200000,
+      "createdAt": 1786621200100,
+      "updatedAt": 1786621200100
+    },
+    {
+      "id": "daily-steps",
+      "metricSlug": "steps",
+      "localDay": "2026-08-13",
+      "value": 12345,
+      "source": "health_connect",
+      "computedAt": 1786621200000,
+      "createdAt": 1786621200100,
+      "updatedAt": 1786621200100
+    }
+  ]
+}

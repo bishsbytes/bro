@@ -19,7 +19,10 @@ jest.mock("expo-sqlite", () => ({
 jest.mock("expo-crypto", () => ({
 	getRandomBytes: jest.fn((length: number) => {
 		const bytes = new Uint8Array(length);
-		bytes.fill(++mockRandomByte);
+		mockRandomByte += 1;
+		for (let index = 0; index < Math.min(length, 4); index += 1) {
+			bytes[length - index - 1] = (mockRandomByte >>> (index * 8)) & 0xff;
+		}
 		return bytes;
 	}),
 }));
@@ -27,7 +30,10 @@ jest.mock("expo-crypto", () => ({
 const databaseApp: typeof DatabaseApp = jest.requireActual("@bro/database-app");
 const { HealthImportEngine }: typeof import("./import-engine") =
 	jest.requireActual("./import-engine");
+const { TrendsStore }: typeof import("../trends/trends-store") =
+	jest.requireActual("../trends/trends-store");
 const NOW = Date.parse("2026-08-16T12:00:00.000Z");
+const DAY_MS = 86_400_000;
 
 function steps(id: string, value: number, at: string): PlatformHealthSample {
 	const startedAt = Date.parse(at);
@@ -132,6 +138,74 @@ describe("health import engine", () => {
 			),
 		).toMatchObject({ changeToken: "token-1", lastImportedAt: NOW });
 		expect(gateway.fetchChanges.mock.calls[0]?.[2].through).toBe(NOW);
+	});
+
+	it("backfills 365 durable days and exposes the imported series in Trends", async () => {
+		const gateway = new FakeGateway();
+		gateway.fetchChanges.mockResolvedValue({
+			mode: "snapshot",
+			additions: Array.from({ length: 365 }, (_, index) =>
+				steps(
+					`day-${index}`,
+					index + 1,
+					new Date(NOW - index * DAY_MS - 3 * 60 * 60 * 1_000).toISOString(),
+				),
+			),
+			deletions: [],
+			nextToken: "token-365",
+		});
+
+		await engine(gateway).connect(["steps"]);
+
+		const daily = await new databaseApp.DailyMetricRepository(
+			productDb,
+		).listByMetric("steps");
+		expect(daily).toHaveLength(365);
+		expect(new Set(daily.map((row) => row.id))).toHaveProperty("size", 365);
+		const stepsTrend = (
+			await new TrendsStore(productDb, () => new Date(NOW), () => "en-GB").load(
+				30,
+			)
+		).metrics.find(({ metric }) => metric.slug === "steps");
+		expect(stepsTrend?.series.points.filter((point) => point.value !== null)).toHaveLength(
+			30,
+		);
+		expect(globalThis.fetch).not.toHaveBeenCalled();
+	});
+
+	it("recreates a lost disposable import store and converges to identical rollups", async () => {
+		const gateway = new FakeGateway();
+		gateway.fetchChanges.mockResolvedValue({
+			mode: "snapshot",
+			additions: [
+				steps("day-one", 4_000, "2026-08-14T09:00:00.000Z"),
+				steps("day-two", 5_000, "2026-08-15T09:00:00.000Z"),
+			],
+			deletions: [],
+			nextToken: "fresh-token",
+		});
+
+		await engine(gateway).connect(["steps"]);
+		const daily = new databaseApp.DailyMetricRepository(productDb);
+		const beforeLoss = await daily.listByMetric("steps");
+
+		await importDb.closeAsync();
+		importDb = await mockSqlite.openDatabaseAsync("engine-import-recreated.db");
+		await databaseApp.runLocalMigrations(importDb);
+		await engine(gateway).connect(["steps"]);
+
+		expect(await daily.listByMetric("steps")).toEqual(beforeLoss);
+		expect(
+			await new databaseApp.RawSampleRepository(importDb).listByMetricSource(
+				"steps",
+				"health_connect",
+			),
+		).toHaveLength(2);
+		expect(gateway.fetchChanges).toHaveBeenLastCalledWith(
+			"steps",
+			null,
+			expect.any(Object),
+		);
 	});
 
 	it("applies an incremental deletion and removes an empty daily rollup", async () => {

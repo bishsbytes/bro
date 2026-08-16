@@ -1,5 +1,6 @@
 import type {
 	Assessment,
+	DailyMetric,
 	DayNote,
 	Goal,
 	Observation,
@@ -43,18 +44,6 @@ const moodObservation: Observation = {
 	updatedAt: 1_786_701_600_100,
 };
 
-const alcoholObservation: Observation = {
-	...moodObservation,
-	id: "observation-alcohol",
-	metricSlug: "alcohol",
-	value: 1,
-	scaleMin: null,
-	scaleMax: null,
-	observedAt: 1_786_705_200_000,
-	createdAt: 1_786_705_200_100,
-	updatedAt: 1_786_705_200_100,
-};
-
 const note: DayNote = {
 	id: "note-1",
 	localDay: "2026-08-14",
@@ -72,28 +61,6 @@ const trackedAlcohol: TrackedMetric = {
 	customLabel: null,
 	createdAt: 1_786_708_800_000,
 	updatedAt: 1_786_708_800_000,
-};
-
-const wheelObservation: Observation = {
-	...moodObservation,
-	id: "observation-career",
-	metricSlug: "wheel:career",
-	value: 6,
-	scaleMax: 10,
-	observedAt: 1_786_707_400_000,
-	assessmentId: "assessment-1",
-	createdAt: 1_786_707_400_100,
-	updatedAt: 1_786_707_400_100,
-};
-
-const trackedCareer: TrackedMetric = {
-	...trackedAlcohol,
-	id: "tracked-career",
-	metricSlug: "wheel:career",
-	position: 0,
-	addedAt: 1_786_700_000_000,
-	removedAt: null,
-	customLabel: "Business",
 };
 
 const assessment: Assessment = {
@@ -138,29 +105,48 @@ const unitPreferences: UnitPreference[] = [
 	},
 ];
 
+const stepsDailyMetric: DailyMetric = {
+	id: "daily-steps",
+	metricSlug: "steps",
+	localDay: "2026-08-13",
+	value: 12_345,
+	source: "health_connect",
+	computedAt: 1_786_621_200_000,
+	createdAt: 1_786_621_200_100,
+	updatedAt: 1_786_621_200_100,
+};
+
+const restingHeartRateDailyMetric: DailyMetric = {
+	...stepsDailyMetric,
+	id: "daily-resting-heart-rate",
+	metricSlug: "resting_heart_rate",
+	value: 58,
+};
+
 describe("check-in export", () => {
-	it("matches the version 3 golden file with stable ordering", () => {
+	it("matches the version 4 golden file and round-trips daily metrics", () => {
+		const input = {
+			observations: [],
+			dayNotes: [],
+			trackedMetrics: [],
+			assessments: [],
+			goals: [],
+			unitPreferences: [],
+			dailyMetrics: [stepsDailyMetric, restingHeartRateDailyMetric],
+			registry: [
+				knownMetric("resting_heart_rate"),
+				knownMetric("steps"),
+			],
+		};
 		const serialized = serializeCheckInExport(
-			{
-				observations: [alcoholObservation, wheelObservation, moodObservation],
-				dayNotes: [note],
-				trackedMetrics: [trackedAlcohol, trackedCareer],
-				assessments: [assessment],
-				goals: [goal],
-				unitPreferences: [...unitPreferences].reverse(),
-				registry: [
-					knownMetric("alcohol"),
-					knownMetric("wheel:career"),
-					knownMetric("mood"),
-				],
-			},
+			input,
 			{
 				appVersion: "1.0.0",
 				exportedAt: 1_786_708_800_000,
 			},
 		);
 		const golden = readFileSync(
-			join(__dirname, "export", "__fixtures__", "check-in-export-v3.json"),
+			join(__dirname, "export", "__fixtures__", "check-in-export-v4.json"),
 			"utf8",
 		);
 
@@ -170,25 +156,25 @@ describe("check-in export", () => {
 		);
 		expect(parseCheckInExport(serialized)).toEqual(
 			buildCheckInExport(
-				{
-					observations: [alcoholObservation, wheelObservation, moodObservation],
-					dayNotes: [note],
-					trackedMetrics: [trackedAlcohol, trackedCareer],
-					assessments: [assessment],
-					goals: [goal],
-					unitPreferences: [...unitPreferences].reverse(),
-					registry: [
-						knownMetric("alcohol"),
-						knownMetric("wheel:career"),
-						knownMetric("mood"),
-					],
-				},
+				input,
 				{
 					appVersion: "1.0.0",
 					exportedAt: 1_786_708_800_000,
 				},
 			),
 		);
+	});
+
+	it("continues to parse the committed version 3 fixture", () => {
+		const fixture = readFileSync(
+			join(__dirname, "export", "__fixtures__", "check-in-export-v3.json"),
+			"utf8",
+		);
+
+		const parsed = parseCheckInExport(fixture);
+		expect(parsed.metadata.formatVersion).toBe(3);
+		expect(parsed.observations).toHaveLength(3);
+		expect("dailyMetrics" in parsed).toBe(false);
 	});
 
 	it("continues to parse the committed version 2 fixture", () => {
@@ -269,11 +255,13 @@ describe("check-in export", () => {
 			assessments: [sensitiveWheelAssessment],
 			goals: [sensitiveWheelGoal],
 			unitPreferences,
+			dailyMetrics: [restingHeartRateDailyMetric, stepsDailyMetric],
 			registry: [
 				knownMetric("mood"),
 				sensitiveMetric,
 				knownMetric("wheel:career"),
 				knownMetric("wheel:sobriety"),
+				knownMetric("resting_heart_rate"),
 			],
 		};
 		const included = buildCheckInExport(input, {
@@ -289,6 +277,10 @@ describe("check-in export", () => {
 		]);
 		expect(included.goals.map((row) => row.metricSlug)).toEqual([
 			"wheel:sobriety",
+		]);
+		expect(included.dailyMetrics.map((row) => row.metricSlug)).toEqual([
+			"resting_heart_rate",
+			"steps",
 		]);
 
 		const exported = buildCheckInExport(input, {
@@ -316,6 +308,7 @@ describe("check-in export", () => {
 		expect(exported.assessments[0]?.focusItemSlugs).toEqual([]);
 		expect(exported.goals).toEqual([]);
 		expect(exported.unitPreferences).toEqual(unitPreferences);
+		expect(exported.dailyMetrics).toEqual([stepsDailyMetric]);
 	});
 
 	it("produces a valid versioned export for an empty database", () => {
@@ -327,6 +320,7 @@ describe("check-in export", () => {
 				assessments: [],
 				goals: [],
 				unitPreferences: [],
+				dailyMetrics: [],
 				registry: [knownMetric("mood")],
 			},
 			{ appVersion: "1.0.0", exportedAt: 0 },
@@ -334,7 +328,7 @@ describe("check-in export", () => {
 
 		expect(exported).toMatchObject({
 			metadata: {
-				formatVersion: 3,
+				formatVersion: 4,
 				exportedAt: "1970-01-01T00:00:00.000Z",
 				appVersion: "1.0.0",
 			},
@@ -344,6 +338,7 @@ describe("check-in export", () => {
 			assessments: [],
 			goals: [],
 			unitPreferences: [],
+			dailyMetrics: [],
 		});
 		expect(exported.registry.metrics).toHaveLength(1);
 	});

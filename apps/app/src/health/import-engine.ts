@@ -250,7 +250,9 @@ export class HealthImportEngine {
 			return mapPlatformSample(sample, timeZone);
 		});
 		const productDb = this.getProductDb();
-		const dailyRepository = new DailyMetricRepository(productDb);
+		const dailyRepository = new DailyMetricRepository(productDb, {
+			now: () => importedAt,
+		});
 
 		await importDb.withTransactionAsync(async () => {
 			const existingRows =

@@ -2,7 +2,7 @@
 
 ## Status
 
-**In progress, 16 August 2026.** Slices 1–4 are implemented: storage and rollups; registry and pure import math; both native gateways and the transactional engine; and the resolved read side, Health settings journey, imported Trends/Body series, goal progress, and provenance. The Android RN 0.85/new-architecture build gate passed locally. iOS configuration introspection passed, but the real EAS dev-client gate remains pending because this machine is not authenticated with EAS. Physical-device acceptance and the Play Console health-apps declaration also remain external sign-off work. Slice 5 (export v4, acceptance, and product-plan hand-off) is next. Written to be corrected — the store split and pipeline shape follow the product plan; the field-level specifics are a starting position.
+**Code-complete, native acceptance pending, 16 August 2026.** Slices 1–5 are implemented: storage and rollups; registry and pure import math; both native gateways and the transactional engine; the resolved read side and Health settings journey; and export format v4 with the automated acceptance hand-off. The Android RN 0.85/new-architecture build gate passed locally. iOS configuration introspection passed, but the real EAS dev-client gate remains pending because this machine is not authenticated with EAS. Physical-device acceptance, backup-exclusion inspection, and the Play Console health-apps declaration remain external sign-off work. Written to be corrected — the store split and pipeline shape follow the product plan; the field-level specifics are a starting position.
 
 This is the delivery plan for [sequencing step 5 of the product domains plan](product-domains-and-data.md#sequencing): health-tracker import — the first objective signal, the third store, and the step that makes the [three-store split](product-domains-and-data.md#three-stores-not-two) real. It is the biggest accelerator of time-to-first-insight the roadmap has: backfill on connect means the correlation pool is part-full on the day mood logging starts. It is also the step sync must not land before, or the raw-versus-rolled-up boundary gets retrofitted under a running replica. It consumes step 4's hand-off whole: canonical units already decided for mass, length, and fraction; the `dimension` concept typed into the registry; aggregation `"last"` proven; and a Body view ready to show imported series beside user-entered ones.
 
@@ -172,6 +172,15 @@ Disconnect stops imports and clears tokens; copy states plainly that already-imp
 1. Export format v4 with `dailyMetrics`, new fixture, v1–v3 fixtures still parsing, sensitive exclusion covering the new section.
 2. The automated acceptance matrix below; physical-device import checks on both platforms.
 3. Product plan updates (step 5 status; open decisions 11–14 resolved; the shared-prerequisites count) and the step 6 hand-off.
+
+#### Slice 5 implementation record — 16 August 2026
+
+- Export format v4 adds stable, canonical `dailyMetrics` ordering while deliberately excluding raw samples and connection tokens. Sensitive exclusion now applies to durable imported rows, including `resting_heart_rate`; the committed v4 fixture round-trips and v1–v3 fixtures continue to parse.
+- The real-SQLite engine acceptance seam now imports 365 daily step samples, retains all 365 durable rollups after raw pruning, and renders the imported series through Trends without a backend request.
+- Disposable-store recovery is proven by replacing the migrated local import database and reconnecting from a gateway snapshot: deterministic daily ids and values converge without duplicate durable rows.
+- The existing focused suites cover migrations, repository idempotence, UUIDv5 ids, mapping and rollup rules, deletion-aware recomputation, precedence/provenance, surface isolation, token failure discipline, pruning, delete-local-data across both stores, and the settings disconnect journey. Together with the new backfill/recovery seam, every automated row in the matrix below is covered.
+- The product-domain plan now records decisions 11–14 and marks step 5 code-complete; the umbrella plan records all five native integrations that should share regeneration work where sequencing allows. Step 6 inherits objective daily series, the resolved-day merge, and registry-owned `sum` aggregation without new health-import work.
+- Physical HealthKit/Health Connect grant, denial, real-history, deletion, timezone, killed-app, and backup-exclusion checks remain device work; EAS authentication and Play Console declaration remain external gates rather than automated claims.
 
 ## Expected touchpoints
 
