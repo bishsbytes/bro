@@ -15,10 +15,7 @@ export type ChallengeTemplate = {
 	days: readonly ChallengeDay[];
 };
 
-/**
- * Small, read-only starting points. They deliberately require no enrolment or
- * progress state: a person can read one and follow it by hand.
- */
+/** Authored programme content; enrolment rows snapshot identity, not this copy. */
 export const CHALLENGE_CATALOGUE = [
 	{
 		slug: "challenge:work-reset",
@@ -266,14 +263,320 @@ export const CHALLENGE_CATALOGUE = [
 			},
 		],
 	},
+	{
+		slug: "challenge:purpose-compass",
+		title: "Find your next true direction",
+		areaSlug: "wheel:purpose",
+		durationDays: 3,
+		intro: "Turn a broad search for purpose into one direction you can test.",
+		days: [
+			{
+				day: 1,
+				title: "Notice what pulls you",
+				action:
+					"Write down three moments when you felt useful, absorbed, or proud of how you showed up.",
+			},
+			{
+				day: 2,
+				title: "Name the thread",
+				action:
+					"Look across those moments and name the value or contribution they have in common.",
+			},
+			{
+				day: 3,
+				title: "Test one direction",
+				action:
+					"Choose one small action this week that puts that value into practice in real life.",
+			},
+		],
+	},
+	{
+		slug: "challenge:fatherhood-presence",
+		title: "Three days of present fatherhood",
+		areaSlug: "wheel:fatherhood",
+		durationDays: 3,
+		intro:
+			"Create a little more attention, curiosity, and steadiness as a dad.",
+		days: [
+			{
+				day: 1,
+				title: "Follow their lead",
+				action:
+					"Give your child ten minutes of full attention and let them choose what you do together.",
+			},
+			{
+				day: 2,
+				title: "Ask one real question",
+				action:
+					"Ask about something that matters in their world and listen without correcting or teaching.",
+			},
+			{
+				day: 3,
+				title: "Make one moment easier",
+				action:
+					"Prepare one small thing that will make tomorrow calmer or more connected for both of you.",
+			},
+		],
+	},
+	{
+		slug: "challenge:quiet-reflection",
+		title: "Three quiet points of reflection",
+		areaSlug: "wheel:faith",
+		durationDays: 3,
+		intro:
+			"Make private space for faith, spirituality, or the questions that matter most to you.",
+		days: [
+			{
+				day: 1,
+				title: "Become still",
+				action:
+					"Spend five quiet minutes in prayer, meditation, contemplation, or simple stillness.",
+			},
+			{
+				day: 2,
+				title: "Return to a source",
+				action:
+					"Read or listen to a short passage that helps you see your life from a wider perspective.",
+			},
+			{
+				day: 3,
+				title: "Live one value",
+				action:
+					"Choose one value your beliefs call you toward and practise it deliberately today.",
+			},
+		],
+	},
+	{
+		slug: "challenge:sobriety-support",
+		title: "Strengthen your recovery support",
+		areaSlug: "wheel:sobriety",
+		durationDays: 3,
+		intro:
+			"Reinforce the people, places, and choices that support your sobriety or recovery.",
+		days: [
+			{
+				day: 1,
+				title: "Name today's support",
+				action:
+					"Write down the person, practice, or place you can turn to if today becomes difficult.",
+			},
+			{
+				day: 2,
+				title: "Make contact",
+				action:
+					"Contact someone safe in your support network, even if you only say that you are checking in.",
+			},
+			{
+				day: 3,
+				title: "Protect the next choice",
+				action:
+					"Remove one avoidable risk and make your next supportive choice easier to follow through.",
+			},
+		],
+	},
+	{
+		slug: "challenge:thirty-day-strength-block",
+		title: "Thirty-day strength block",
+		areaSlug: "wheel:health",
+		durationDays: 30,
+		intro:
+			"Build a repeatable strength practice over thirty completed steps, at your pace and with movements that suit your body.",
+		days: [
+			{
+				day: 1,
+				title: "Choose your movements",
+				action:
+					"Choose one push, pull, squat, hinge, and carry or core movement that feel safe and accessible.",
+			},
+			{
+				day: 2,
+				title: "Set your starting point",
+				action:
+					"Do one comfortable set of each movement and record the weight or variation you used.",
+			},
+			{
+				day: 3,
+				title: "Practise control",
+				action:
+					"Repeat your movements slowly, stopping each set while you could still do two good repetitions.",
+			},
+			{
+				day: 4,
+				title: "Recover on purpose",
+				action:
+					"Take an easy walk or mobility break and notice which areas would benefit from more recovery.",
+			},
+			{
+				day: 5,
+				title: "Add a second set",
+				action:
+					"Complete two comfortable sets of each movement, keeping the same controlled form.",
+			},
+			{
+				day: 6,
+				title: "Make the setup easier",
+				action:
+					"Prepare your space, clothes, and equipment so the next session has less friction.",
+			},
+			{
+				day: 7,
+				title: "Review week one",
+				action:
+					"Write down what felt strong, what felt awkward, and one adjustment for next week.",
+			},
+			{
+				day: 8,
+				title: "Begin the second week",
+				action:
+					"Complete two sets and improve one small detail of your position or range of motion.",
+			},
+			{
+				day: 9,
+				title: "Brace and breathe",
+				action:
+					"Practise a steady brace and deliberate breathing through each movement today.",
+			},
+			{
+				day: 10,
+				title: "Progress one movement",
+				action:
+					"Add a small amount of weight, one repetition, or a slightly harder variation to one movement.",
+			},
+			{
+				day: 11,
+				title: "Restore your range",
+				action:
+					"Spend ten easy minutes moving the joints and muscles you have trained most.",
+			},
+			{
+				day: 12,
+				title: "Repeat the stronger session",
+				action:
+					"Repeat your two-set session and keep the progress you made on day ten if form stays sound.",
+			},
+			{
+				day: 13,
+				title: "Carry something well",
+				action:
+					"Practise a loaded carry or steady core hold with tall posture and calm breathing.",
+			},
+			{
+				day: 14,
+				title: "Review week two",
+				action:
+					"Check your notes and choose the one movement you most want to improve next week.",
+			},
+			{
+				day: 15,
+				title: "Start the middle strong",
+				action:
+					"Complete your session with extra attention on the movement you chose to improve.",
+			},
+			{
+				day: 16,
+				title: "Own the lowering phase",
+				action:
+					"Lower each repetition under control for a slow count before moving with intent.",
+			},
+			{
+				day: 17,
+				title: "Add useful volume",
+				action:
+					"Add a third set to one or two movements while leaving the others unchanged.",
+			},
+			{
+				day: 18,
+				title: "Recover and refuel",
+				action:
+					"Take an easy movement break and make one meal choice that supports your recovery.",
+			},
+			{
+				day: 19,
+				title: "Keep the third set",
+				action:
+					"Repeat day seventeen's structure if you feel recovered, or return to two sound sets if not.",
+			},
+			{
+				day: 20,
+				title: "Train your grip",
+				action:
+					"Give your carry, hang, or grip work a little focused practice without straining.",
+			},
+			{
+				day: 21,
+				title: "Review week three",
+				action:
+					"Compare your starting notes with today and record one concrete sign of progress.",
+			},
+			{
+				day: 22,
+				title: "Begin the final build",
+				action:
+					"Complete your best repeatable session: challenging enough to matter, controlled enough to repeat.",
+			},
+			{
+				day: 23,
+				title: "Strengthen the weak link",
+				action:
+					"Choose one movement that lags behind and practise a simpler, cleaner version of it.",
+			},
+			{
+				day: 24,
+				title: "Make one final progression",
+				action:
+					"Progress one movement by the smallest sensible step and record exactly what changed.",
+			},
+			{
+				day: 25,
+				title: "Move to recover",
+				action:
+					"Use an easy walk, mobility, or light technique practice to arrive fresher tomorrow.",
+			},
+			{
+				day: 26,
+				title: "Repeat with confidence",
+				action:
+					"Repeat your progressed session without adding more, aiming for calm and consistent repetitions.",
+			},
+			{
+				day: 27,
+				title: "Choose your keepers",
+				action:
+					"Pick the movements and session length you would genuinely continue after this block.",
+			},
+			{
+				day: 28,
+				title: "Practise the future session",
+				action:
+					"Do the shorter, sustainable session you want to carry into your normal week.",
+			},
+			{
+				day: 29,
+				title: "Retest your start",
+				action:
+					"Repeat your day-two starting session and compare the control, repetitions, or load.",
+			},
+			{
+				day: 30,
+				title: "Finish and continue",
+				action:
+					"Record what changed, celebrate finishing, and choose the first day of your next strength week.",
+			},
+		],
+	},
 ] as const satisfies readonly ChallengeTemplate[];
 
 const challengesBySlug = new Map<string, ChallengeTemplate>(
 	CHALLENGE_CATALOGUE.map((challenge) => [challenge.slug, challenge]),
 );
-const challengesByArea = new Map<string, ChallengeTemplate>(
-	CHALLENGE_CATALOGUE.map((challenge) => [challenge.areaSlug, challenge]),
-);
+const challengesByArea = new Map<string, ChallengeTemplate>();
+for (const challenge of CHALLENGE_CATALOGUE) {
+	// A short starter remains the default review suggestion when an area also has
+	// a longer programme. Longer programmes are resolved directly by slug.
+	if (!challengesByArea.has(challenge.areaSlug)) {
+		challengesByArea.set(challenge.areaSlug, challenge);
+	}
+}
 
 export function resolveChallenge(slug: string): ChallengeTemplate | null {
 	return challengesBySlug.get(slug) ?? null;
