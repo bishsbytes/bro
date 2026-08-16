@@ -99,6 +99,7 @@ const assessment = (
 	slug: LifeAreaSlug,
 	label: string,
 	defaultPosition: number,
+	sensitive: boolean,
 ): AssessmentMetricDefinition => ({
 	slug,
 	label,
@@ -107,7 +108,7 @@ const assessment = (
 	scaleMax: 10,
 	category: null,
 	aggregation: "mean",
-	sensitive: false,
+	sensitive,
 	userEnterable: false,
 	deprecated: false,
 	defaultPosition,
@@ -133,9 +134,9 @@ export const METRIC_REGISTRY = [
 	factor("sex", "Sex", "social", 12),
 	factor("travel", "Travel", "social", 13),
 	...LIFE_AREA_CATALOGUE.map((area) =>
-		assessment(area.slug, area.label, area.defaultPosition),
+		assessment(area.slug, area.label, area.defaultPosition, area.sensitive),
 	),
-] satisfies readonly MetricDefinition[];
+] as const satisfies readonly MetricDefinition[];
 
 const metricsBySlug = new Map<string, MetricDefinition>(
 	METRIC_REGISTRY.map((metric) => [metric.slug, metric]),

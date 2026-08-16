@@ -208,6 +208,46 @@ describe("product repositories", () => {
 		});
 	});
 
+	it("swaps two overlay positions atomically with configureMany", async () => {
+		let nextId = 0;
+		let now = 1_000;
+		const repository = new databaseApp.TrackedMetricsRepository(db, {
+			now: () => now,
+			createId: () => {
+				nextId += 1;
+				return `tracked-${nextId}`;
+			},
+		});
+
+		await repository.configure("wheel:career", 0, true);
+		await repository.configure("wheel:money", 1, false);
+
+		now = 2_000;
+		const swapped = await repository.configureMany([
+			{ metricSlug: "wheel:career", position: 1, enabled: true },
+			{ metricSlug: "wheel:money", position: 0, enabled: false },
+		]);
+		expect(swapped.map(({ metricSlug, position }) => [metricSlug, position]))
+			.toEqual([
+				["wheel:career", 1],
+				["wheel:money", 0],
+			]);
+
+		const overlays = await repository.listResolved(DEFAULT_LIFE_AREA_METRICS);
+		expect(
+			overlays.find((metric) => metric.metricSlug === "wheel:career"),
+		).toMatchObject({ position: 1, enabled: true });
+		expect(
+			overlays.find((metric) => metric.metricSlug === "wheel:money"),
+		).toMatchObject({ position: 0, enabled: false, removedAt: 1_000 });
+
+		await expect(
+			repository.configureMany([
+				{ metricSlug: "wheel:career", position: -1, enabled: true },
+			]),
+		).rejects.toThrow("non-negative integer");
+	});
+
 	it("materialises defaults lazily and persists a disabled overlay", async () => {
 		let now = 1_000;
 		const repository = new databaseApp.TrackedMetricsRepository(db, {
@@ -248,7 +288,7 @@ describe("product repositories", () => {
 		await repository.configure("wheel:career", 4, false);
 		now = 2_000;
 		await expect(
-			repository.relabel("wheel:career", "  Business  ", 0),
+			repository.relabel("wheel:career", "  Business  ", { position: 0 }),
 		).resolves.toMatchObject({
 			position: 4,
 			removedAt: 1_000,
@@ -398,6 +438,16 @@ describe("product repositories", () => {
 			abandonedAt: 3_000,
 			updatedAt: 3_000,
 		});
+
+		await expect(
+			repository.create({
+				metricSlug: "wheel:career",
+				direction: "increase",
+				targetValue: 8,
+				targetDate: "2026-13-40",
+				startedAt: 900,
+			}),
+		).rejects.toThrow("real YYYY-MM-DD date");
 	});
 
 	it("creates, edits, disables, and hard-deletes reminder schedules", async () => {

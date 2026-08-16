@@ -31,6 +31,8 @@ export type HistoryDaySummary = {
 	energyValues: number[];
 	factorLabels: string[];
 	noteBodies: string[];
+	/** Distinct wheel sittings whose scores landed on this day. */
+	assessmentCount: number;
 };
 
 function pairCheckIns(
@@ -110,14 +112,18 @@ export class HistoryStore {
 			this.observations.listAll(),
 			this.notes.listAll(),
 		]);
-		const dailyObservations = observations.filter((row) => {
+		const assessmentObservations: Observation[] = [];
+		const dailyObservations: Observation[] = [];
+		for (const row of observations) {
 			const resolved = resolveMetric(row.metricSlug);
-			return !(
-				resolved.kind === "known" && resolved.metric.kind === "assessment"
-			);
-		});
+			if (resolved.kind === "known" && resolved.metric.kind === "assessment") {
+				assessmentObservations.push(row);
+			} else {
+				dailyObservations.push(row);
+			}
+		}
 		const localDays = new Set([
-			...dailyObservations.map((row) => row.localDay),
+			...observations.map((row) => row.localDay),
 			...notes.map((note) => note.localDay),
 		]);
 
@@ -126,6 +132,11 @@ export class HistoryStore {
 			.map((localDay) => {
 				const dayObservations = dailyObservations.filter(
 					(row) => row.localDay === localDay,
+				);
+				const assessmentIds = new Set(
+					assessmentObservations
+						.filter((row) => row.localDay === localDay)
+						.map((row) => row.assessmentId ?? row.id),
 				);
 				const factors = dayObservations.flatMap((row) => {
 					const resolved = resolveMetric(row.metricSlug);
@@ -146,6 +157,7 @@ export class HistoryStore {
 					noteBodies: notes
 						.filter((note) => note.localDay === localDay)
 						.map((note) => note.body),
+					assessmentCount: assessmentIds.size,
 				};
 			});
 	}

@@ -15,6 +15,7 @@ import {
 	listActiveLifeAreas,
 	resolveLifeAreas,
 } from "../content/life-area-catalogue";
+import { resolveMetric } from "../content/metric-registry";
 import { WHEEL_OF_LIFE_TEMPLATE } from "../content/wheel-template";
 
 export type ReviewDraft = {
@@ -243,6 +244,14 @@ export class ReviewStore {
 		const labels = new Map<string, string>(
 			resolveLifeAreas(overlays).map((area) => [area.slug, area.label]),
 		);
+		const labelFor = (metricSlug: string): string => {
+			const overlayLabel = labels.get(metricSlug);
+			if (overlayLabel) {
+				return overlayLabel;
+			}
+			const resolved = resolveMetric(metricSlug);
+			return resolved.kind === "known" ? resolved.metric.label : metricSlug;
+		};
 		const observationsByMetric = new Map<string, Observation[]>();
 		for (const observation of observations) {
 			const metricObservations =
@@ -278,7 +287,7 @@ export class ReviewStore {
 					: null;
 				return {
 					goal,
-					label: labels.get(goal.metricSlug) ?? goal.metricSlug,
+					label: labelFor(goal.metricSlug),
 					status: goalStatus(goal),
 					startValue,
 					currentValue,

@@ -8,18 +8,18 @@ import {
 import { WHEEL_OF_LIFE_TEMPLATE } from "./content/wheel-template";
 
 const PERMANENT_AREAS = [
-	["wheel:career", "Work & career", true],
-	["wheel:money", "Money & finances", true],
-	["wheel:health", "Health & fitness", true],
-	["wheel:partner", "Partner & love", true],
-	["wheel:family", "Family", true],
-	["wheel:friends", "Friends & social", true],
-	["wheel:growth", "Learning & growth", true],
-	["wheel:fun", "Fun & recreation", true],
-	["wheel:purpose", "Purpose & direction", false],
-	["wheel:fatherhood", "Fatherhood", false],
-	["wheel:faith", "Faith & spirituality", false],
-	["wheel:sobriety", "Sobriety & recovery", false],
+	["wheel:career", "Work & career", true, false],
+	["wheel:money", "Money & finances", true, false],
+	["wheel:health", "Health & fitness", true, false],
+	["wheel:partner", "Partner & love", true, false],
+	["wheel:family", "Family", true, false],
+	["wheel:friends", "Friends & social", true, false],
+	["wheel:growth", "Learning & growth", true, false],
+	["wheel:fun", "Fun & recreation", true, false],
+	["wheel:purpose", "Purpose & direction", false, false],
+	["wheel:fatherhood", "Fatherhood", false, false],
+	["wheel:faith", "Faith & spirituality", false, true],
+	["wheel:sobriety", "Sobriety & recovery", false, true],
 ] as const;
 
 function defaultOverlays(): ResolvedTrackedMetric[] {
@@ -40,6 +40,7 @@ describe("life-area catalogue", () => {
 				area.slug,
 				area.label,
 				area.defaultEnabled,
+				area.sensitive,
 			]),
 		).toEqual(PERMANENT_AREAS);
 		expect(LIFE_AREA_CATALOGUE.map((area) => area.defaultPosition)).toEqual(

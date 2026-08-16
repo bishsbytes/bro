@@ -215,13 +215,33 @@ describe("check-in export", () => {
 			metricSlug: "future_metric",
 		};
 
+		const sensitiveWheelAssessment: Assessment = {
+			...assessment,
+			id: "assessment-2",
+			items: [
+				{ slug: "wheel:career", label: "Business", position: 0 },
+				{ slug: "wheel:sobriety", label: "Sobriety & recovery", position: 1 },
+			],
+			focusItemSlugs: ["wheel:sobriety"],
+		};
+		const sensitiveWheelGoal: Goal = {
+			...goal,
+			id: "goal-2",
+			metricSlug: "wheel:sobriety",
+		};
+
 		const input = {
 			observations: [moodObservation, sensitiveObservation, unknownObservation],
 			dayNotes: [note],
 			trackedMetrics: [sensitiveOverlay, unknownOverlay],
-			assessments: [],
-			goals: [],
-			registry: [knownMetric("mood"), sensitiveMetric],
+			assessments: [sensitiveWheelAssessment],
+			goals: [sensitiveWheelGoal],
+			registry: [
+				knownMetric("mood"),
+				sensitiveMetric,
+				knownMetric("wheel:career"),
+				knownMetric("wheel:sobriety"),
+			],
 		};
 		const included = buildCheckInExport(input, {
 			appVersion: "1.0.0",
@@ -230,6 +250,13 @@ describe("check-in export", () => {
 		expect(included.observations.map((row) => row.metricSlug)).toContain(
 			"libido",
 		);
+		expect(included.assessments[0]?.items.map((item) => item.slug)).toEqual([
+			"wheel:career",
+			"wheel:sobriety",
+		]);
+		expect(included.goals.map((row) => row.metricSlug)).toEqual([
+			"wheel:sobriety",
+		]);
 
 		const exported = buildCheckInExport(input, {
 			appVersion: "1.0.0",
@@ -239,6 +266,7 @@ describe("check-in export", () => {
 
 		expect(exported.registry.metrics.map((metric) => metric.slug)).toEqual([
 			"mood",
+			"wheel:career",
 		]);
 		expect(exported.observations.map((row) => row.metricSlug)).toEqual([
 			"future_metric",
@@ -248,6 +276,12 @@ describe("check-in export", () => {
 			"future_metric",
 		]);
 		expect(exported.dayNotes).toEqual([note]);
+		expect(exported.assessments).toHaveLength(1);
+		expect(exported.assessments[0]?.items.map((item) => item.slug)).toEqual([
+			"wheel:career",
+		]);
+		expect(exported.assessments[0]?.focusItemSlugs).toEqual([]);
+		expect(exported.goals).toEqual([]);
 	});
 
 	it("produces a valid versioned export for an empty database", () => {

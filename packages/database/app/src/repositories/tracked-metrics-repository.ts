@@ -19,6 +19,12 @@ export type TrackedMetricDefault = {
 	enabled?: boolean;
 };
 
+export type TrackedMetricConfiguration = {
+	metricSlug: string;
+	position: number;
+	enabled: boolean;
+};
+
 export type ResolvedTrackedMetric = TrackedMetricDefault & {
 	enabled: boolean;
 	overlayId: string | null;
@@ -42,6 +48,14 @@ type RepositoryOptions = {
 	now?: () => number;
 	createId?: (timestamp: number) => string;
 };
+
+function assertPosition(position: number): void {
+	if (!Number.isInteger(position) || position < 0) {
+		throw new RangeError(
+			"Tracked metric position must be a non-negative integer.",
+		);
+	}
+}
 
 function toTrackedMetric(row: TrackedMetricRow): TrackedMetric {
 	return {
@@ -114,89 +128,111 @@ export class TrackedMetricsRepository extends BaseRepository {
 		position: number,
 		enabled: boolean,
 	): Promise<TrackedMetric> {
-		if (!Number.isInteger(position) || position < 0) {
-			throw new RangeError(
-				"Tracked metric position must be a non-negative integer.",
-			);
+		assertPosition(position);
+		return await this.transaction(async () =>
+			this.configureWithin(metricSlug, position, enabled),
+		);
+	}
+
+	/** Applies several overlay changes atomically, e.g. a reorder swap. */
+	async configureMany(
+		entries: readonly TrackedMetricConfiguration[],
+	): Promise<TrackedMetric[]> {
+		for (const entry of entries) {
+			assertPosition(entry.position);
 		}
-
 		return await this.transaction(async () => {
-			const existing = await this.first<TrackedMetricRow>(
-				`SELECT id, metric_slug, position, added_at, removed_at, custom_label,
-					created_at, updated_at
-				 FROM tracked_metrics WHERE metric_slug = ?
-				 ORDER BY updated_at DESC, id DESC LIMIT 1`,
-				[metricSlug],
-			);
-			const now = this.now();
-
-			if (existing) {
-				// added_at/removed_at record when the metric last changed state, so
-				// they only move on a disabled<->enabled transition — reordering an
-				// enabled metric must not rewrite when it was enabled.
-				const wasEnabled = existing.removed_at === null;
-				const addedAt = enabled && !wasEnabled ? now : existing.added_at;
-				const removedAt = enabled
-					? null
-					: wasEnabled
-						? now
-						: existing.removed_at;
-				await this.run(
-					`UPDATE tracked_metrics
-					 SET position = ?, added_at = ?, removed_at = ?, updated_at = ?
-					 WHERE id = ?`,
-					[position, addedAt, removedAt, now, existing.id],
+			const configured: TrackedMetric[] = [];
+			for (const entry of entries) {
+				configured.push(
+					await this.configureWithin(
+						entry.metricSlug,
+						entry.position,
+						entry.enabled,
+					),
 				);
-				return toTrackedMetric({
-					...existing,
-					position,
-					added_at: addedAt,
-					removed_at: removedAt,
-					updated_at: now,
-				});
 			}
-
-			const tracked: TrackedMetric = {
-				id: this.createId(now),
-				metricSlug,
-				position,
-				addedAt: enabled ? now : null,
-				removedAt: enabled ? null : now,
-				customLabel: null,
-				createdAt: now,
-				updatedAt: now,
-			};
-			await this.run(
-				`INSERT INTO tracked_metrics (
-					id, metric_slug, position, added_at, removed_at, custom_label, created_at,
-					updated_at
-				) VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
-				[
-					tracked.id,
-					tracked.metricSlug,
-					tracked.position,
-					tracked.addedAt,
-					tracked.removedAt,
-					tracked.customLabel,
-					tracked.createdAt,
-					tracked.updatedAt,
-				],
-			);
-			return tracked;
+			return configured;
 		});
 	}
 
+	private async configureWithin(
+		metricSlug: string,
+		position: number,
+		enabled: boolean,
+	): Promise<TrackedMetric> {
+		const existing = await this.first<TrackedMetricRow>(
+			`SELECT id, metric_slug, position, added_at, removed_at, custom_label,
+				created_at, updated_at
+			 FROM tracked_metrics WHERE metric_slug = ?
+			 ORDER BY updated_at DESC, id DESC LIMIT 1`,
+			[metricSlug],
+		);
+		const now = this.now();
+
+		if (existing) {
+			// added_at/removed_at record when the metric last changed state, so
+			// they only move on a disabled<->enabled transition — reordering an
+			// enabled metric must not rewrite when it was enabled.
+			const wasEnabled = existing.removed_at === null;
+			const addedAt = enabled && !wasEnabled ? now : existing.added_at;
+			const removedAt = enabled ? null : wasEnabled ? now : existing.removed_at;
+			await this.run(
+				`UPDATE tracked_metrics
+				 SET position = ?, added_at = ?, removed_at = ?, updated_at = ?
+				 WHERE id = ?`,
+				[position, addedAt, removedAt, now, existing.id],
+			);
+			return toTrackedMetric({
+				...existing,
+				position,
+				added_at: addedAt,
+				removed_at: removedAt,
+				updated_at: now,
+			});
+		}
+
+		const tracked: TrackedMetric = {
+			id: this.createId(now),
+			metricSlug,
+			position,
+			addedAt: enabled ? now : null,
+			removedAt: enabled ? null : now,
+			customLabel: null,
+			createdAt: now,
+			updatedAt: now,
+		};
+		await this.run(
+			`INSERT INTO tracked_metrics (
+				id, metric_slug, position, added_at, removed_at, custom_label, created_at,
+				updated_at
+			) VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
+			[
+				tracked.id,
+				tracked.metricSlug,
+				tracked.position,
+				tracked.addedAt,
+				tracked.removedAt,
+				tracked.customLabel,
+				tracked.createdAt,
+				tracked.updatedAt,
+			],
+		);
+		return tracked;
+	}
+
+	/**
+	 * Sets or clears a metric's custom label. An existing overlay row keeps its
+	 * position and enabled state untouched; `fallback` seeds those fields only
+	 * when the overlay row is materialised by this call.
+	 */
 	async relabel(
 		metricSlug: string,
 		customLabel: string | null,
-		position: number,
-		enabled = true,
+		fallback: { position: number; enabled?: boolean },
 	): Promise<TrackedMetric> {
-		if (!Number.isInteger(position) || position < 0) {
-			throw new RangeError(
-				"Tracked metric position must be a non-negative integer.",
-			);
-		}
+		const { position, enabled = true } = fallback;
+		assertPosition(position);
 		const normalizedLabel = customLabel?.trim() || null;
 
 		return await this.transaction(async () => {

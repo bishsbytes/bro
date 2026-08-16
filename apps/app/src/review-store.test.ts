@@ -62,7 +62,7 @@ describe("review store", () => {
 		const tracked = new databaseApp.TrackedMetricsRepository(db);
 		await tracked.configure("wheel:career", 1, false);
 		await tracked.configure("wheel:money", 0, true);
-		await tracked.relabel("wheel:money", "Financial security", 0, true);
+		await tracked.relabel("wheel:money", "Financial security", { position: 0 });
 
 		const store = new ReviewStore(
 			db,
@@ -81,7 +81,7 @@ describe("review store", () => {
 
 	it("keeps snapshots immutable and compares a second sitting by slug", async () => {
 		const tracked = new databaseApp.TrackedMetricsRepository(db);
-		await tracked.relabel("wheel:career", "Business", 0, true);
+		await tracked.relabel("wheel:career", "Business", { position: 0 });
 		let now = new Date("2026-08-14T12:00:00.000Z");
 		const store = new ReviewStore(db, () => now);
 
@@ -108,9 +108,18 @@ describe("review store", () => {
 		expect(
 			first.scores.find(({ slug }) => slug === "wheel:career")?.focused,
 		).toBe(true);
-		expect(await new HistoryStore(db).loadHistory()).toEqual([]);
+		expect(await new HistoryStore(db).loadHistory()).toEqual([
+			{
+				localDay: "2026-08-14",
+				moodValues: [],
+				energyValues: [],
+				factorLabels: [],
+				noteBodies: [],
+				assessmentCount: 1,
+			},
+		]);
 
-		await tracked.relabel("wheel:career", "Founder life", 0, true);
+		await tracked.relabel("wheel:career", "Founder life", { position: 0 });
 		now = new Date("2026-09-14T12:00:00.000Z");
 		const secondDraft = await store.beginSitting();
 		expect(secondDraft.items[0]?.label).toBe("Founder life");

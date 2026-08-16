@@ -63,6 +63,20 @@ function toGoal(row: GoalRow): Goal {
 	};
 }
 
+function isCalendarDay(value: string): boolean {
+	const match = /^([0-9]{4})-([0-9]{2})-([0-9]{2})$/.exec(value);
+	if (!match) {
+		return false;
+	}
+	const [, year, month, day] = match;
+	const date = new Date(Date.UTC(Number(year), Number(month) - 1, Number(day)));
+	return (
+		date.getUTCFullYear() === Number(year) &&
+		date.getUTCMonth() === Number(month) - 1 &&
+		date.getUTCDate() === Number(day)
+	);
+}
+
 function assertGoal(input: CreateGoal): void {
 	if (!input.metricSlug.trim()) {
 		throw new TypeError("Goal metricSlug must not be empty.");
@@ -73,11 +87,8 @@ function assertGoal(input: CreateGoal): void {
 	if (!Number.isFinite(input.targetValue)) {
 		throw new RangeError("Goal targetValue must be finite.");
 	}
-	if (
-		input.targetDate !== null &&
-		!/^[0-9]{4}-[0-9]{2}-[0-9]{2}$/.test(input.targetDate)
-	) {
-		throw new TypeError("Goal targetDate must use YYYY-MM-DD format.");
+	if (input.targetDate !== null && !isCalendarDay(input.targetDate)) {
+		throw new TypeError("Goal targetDate must be a real YYYY-MM-DD date.");
 	}
 	if (!Number.isInteger(input.startedAt)) {
 		throw new TypeError("Goal startedAt must be epoch milliseconds.");

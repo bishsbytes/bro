@@ -8,6 +8,8 @@ export type LifeAreaDefinition = {
 	label: string;
 	defaultEnabled: boolean;
 	defaultPosition: number;
+	/** Scores here are a disclosure; export honours this like any sensitive metric. */
+	sensitive: boolean;
 };
 
 /**
@@ -19,72 +21,84 @@ export const LIFE_AREA_CATALOGUE = [
 		slug: "wheel:career",
 		label: "Work & career",
 		defaultEnabled: true,
+		sensitive: false,
 		defaultPosition: 0,
 	},
 	{
 		slug: "wheel:money",
 		label: "Money & finances",
 		defaultEnabled: true,
+		sensitive: false,
 		defaultPosition: 1,
 	},
 	{
 		slug: "wheel:health",
 		label: "Health & fitness",
 		defaultEnabled: true,
+		sensitive: false,
 		defaultPosition: 2,
 	},
 	{
 		slug: "wheel:partner",
 		label: "Partner & love",
 		defaultEnabled: true,
+		sensitive: false,
 		defaultPosition: 3,
 	},
 	{
 		slug: "wheel:family",
 		label: "Family",
 		defaultEnabled: true,
+		sensitive: false,
 		defaultPosition: 4,
 	},
 	{
 		slug: "wheel:friends",
 		label: "Friends & social",
 		defaultEnabled: true,
+		sensitive: false,
 		defaultPosition: 5,
 	},
 	{
 		slug: "wheel:growth",
 		label: "Learning & growth",
 		defaultEnabled: true,
+		sensitive: false,
 		defaultPosition: 6,
 	},
 	{
 		slug: "wheel:fun",
 		label: "Fun & recreation",
 		defaultEnabled: true,
+		sensitive: false,
 		defaultPosition: 7,
 	},
 	{
 		slug: "wheel:purpose",
 		label: "Purpose & direction",
 		defaultEnabled: false,
+		sensitive: false,
 		defaultPosition: 8,
 	},
 	{
 		slug: "wheel:fatherhood",
 		label: "Fatherhood",
 		defaultEnabled: false,
+		sensitive: false,
 		defaultPosition: 9,
 	},
 	{
 		slug: "wheel:faith",
 		label: "Faith & spirituality",
 		defaultEnabled: false,
+		sensitive: true,
 		defaultPosition: 10,
 	},
 	{
 		slug: "wheel:sobriety",
 		label: "Sobriety & recovery",
 		defaultEnabled: false,
+		sensitive: true,
 		defaultPosition: 11,
 	},
 ] as const satisfies readonly LifeAreaDefinition[];

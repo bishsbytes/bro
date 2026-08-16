@@ -23,7 +23,7 @@ import { StyleSheet, useUnistyles } from "../theme/unistyles";
 
 type LifeAreaRepository = Pick<
 	TrackedMetricsRepository,
-	"listResolved" | "configure" | "relabel"
+	"listResolved" | "configure" | "configureMany" | "relabel"
 >;
 
 type LifeAreasScreenProps = {
@@ -92,18 +92,20 @@ export function LifeAreasScreen({ repository }: LifeAreasScreenProps) {
 		if (!area || !neighbour) {
 			return;
 		}
-		await mutate(async () => {
-			await areasRepository.configure(
-				area.slug,
-				neighbour.position,
-				area.enabled,
-			);
-			await areasRepository.configure(
-				neighbour.slug,
-				area.position,
-				neighbour.enabled,
-			);
-		});
+		await mutate(() =>
+			areasRepository.configureMany([
+				{
+					metricSlug: area.slug,
+					position: neighbour.position,
+					enabled: area.enabled,
+				},
+				{
+					metricSlug: neighbour.slug,
+					position: area.position,
+					enabled: neighbour.enabled,
+				},
+			]),
+		);
 	}
 
 	if (!areas && !error) {
@@ -205,8 +207,7 @@ export function LifeAreasScreen({ repository }: LifeAreasScreenProps) {
 												labelDraft.trim() === area.defaultLabel
 													? null
 													: labelDraft,
-												area.position,
-												area.enabled,
+												{ position: area.position, enabled: area.enabled },
 											),
 										)
 									}

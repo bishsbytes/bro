@@ -56,12 +56,42 @@ describe("life areas screen", () => {
 					return trackedMetric(updated);
 				},
 			),
+			configureMany: jest.fn(
+				async (
+					entries: readonly {
+						metricSlug: string;
+						position: number;
+						enabled: boolean;
+					}[],
+				) => {
+					const configured: TrackedMetric[] = [];
+					for (const entry of entries) {
+						overlays = overlays.map((row) =>
+							row.metricSlug === entry.metricSlug
+								? {
+										...row,
+										position: entry.position,
+										enabled: entry.enabled,
+										overlayId: row.overlayId ?? `overlay-${entry.metricSlug}`,
+									}
+								: row,
+						);
+						const updated = overlays.find(
+							(row) => row.metricSlug === entry.metricSlug,
+						);
+						if (!updated) {
+							throw new Error(`Unknown area: ${entry.metricSlug}`);
+						}
+						configured.push(trackedMetric(updated));
+					}
+					return configured;
+				},
+			),
 			relabel: jest.fn(
 				async (
 					metricSlug: string,
 					customLabel: string | null,
-					_position: number,
-					_enabled?: boolean,
+					_fallback: { position: number; enabled?: boolean },
 				) => {
 					const normalizedLabel = customLabel?.trim() || null;
 					overlays = overlays.map((row) =>
@@ -95,11 +125,10 @@ describe("life areas screen", () => {
 
 		await fireEvent.press(view.getByLabelText("Move Work & career down"));
 		await waitFor(() =>
-			expect(repository.configure).toHaveBeenLastCalledWith(
-				"wheel:money",
-				0,
-				true,
-			),
+			expect(repository.configureMany).toHaveBeenLastCalledWith([
+				{ metricSlug: "wheel:career", position: 1, enabled: false },
+				{ metricSlug: "wheel:money", position: 0, enabled: true },
+			]),
 		);
 
 		await fireEvent.press(
@@ -112,12 +141,10 @@ describe("life areas screen", () => {
 		await fireEvent.press(view.getByText("Save label"));
 		await waitFor(() => expect(view.getByText("Business")).toBeTruthy());
 		expect(view.getByText("Default: Work & career")).toBeTruthy();
-		expect(repository.relabel).toHaveBeenCalledWith(
-			"wheel:career",
-			"Business",
-			1,
-			false,
-		);
+		expect(repository.relabel).toHaveBeenCalledWith("wheel:career", "Business", {
+			position: 1,
+			enabled: false,
+		});
 		expect(globalThis.fetch).not.toHaveBeenCalled();
 	});
 });

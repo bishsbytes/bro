@@ -57,6 +57,7 @@ export {
 export {
 	type ResolvedTrackedMetric,
 	type TrackedMetric,
+	type TrackedMetricConfiguration,
 	type TrackedMetricDefault,
 	TrackedMetricsRepository,
 } from "./repositories/tracked-metrics-repository";

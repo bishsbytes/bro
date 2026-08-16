@@ -65,6 +65,11 @@ describe("metric registry", () => {
 				userEnterable: false,
 			});
 		}
+		expect(
+			listAssessmentMetrics()
+				.filter((metric) => metric.sensitive)
+				.map((metric) => metric.slug),
+		).toEqual(["wheel:faith", "wheel:sobriety"]);
 	});
 
 	it("returns a typed unknown result instead of throwing for future slugs", () => {
