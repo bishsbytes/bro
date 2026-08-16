@@ -36,6 +36,13 @@
       "when": 1786879777358,
       "tag": "0004_brainy_maggott",
       "breakpoints": true
+    },
+    {
+      "idx": 5,
+      "version": "6",
+      "when": 1786913572956,
+      "tag": "0005_red_wolfsbane",
+      "breakpoints": true
     }
   ]
 }

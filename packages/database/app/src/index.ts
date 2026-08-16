@@ -49,6 +49,15 @@ export {
 	type SQLiteParam,
 } from "./repositories/base-repository";
 export {
+	type ChallengeEnrolment,
+	ChallengeEnrolmentRepository,
+	type CreateChallengeEnrolment,
+} from "./repositories/challenge-enrolment-repository";
+export {
+	type ChallengeProgress,
+	ChallengeProgressRepository,
+} from "./repositories/challenge-progress-repository";
+export {
 	type DailyMetric,
 	DailyMetricRepository,
 	type UpsertDailyMetric,
@@ -63,6 +72,18 @@ export {
 	type GoalDirection,
 	GoalRepository,
 } from "./repositories/goal-repository";
+export {
+	type HabitCompletion,
+	HabitCompletionRepository,
+} from "./repositories/habit-completion-repository";
+export {
+	type CreateHabit,
+	type Habit,
+	type HabitDirection,
+	type HabitKind,
+	HabitRepository,
+	type UpdateHabit,
+} from "./repositories/habit-repository";
 export {
 	type HealthConnection,
 	HealthConnectionRepository,

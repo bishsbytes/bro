@@ -132,3 +132,72 @@ export const dailyMetrics = sqliteTable(
 		),
 	],
 );
+
+export const habits = sqliteTable(PRODUCT_TABLE_NAMES.habits, {
+	id: text("id").primaryKey(),
+	slug: text("slug").notNull(),
+	customLabel: text("custom_label"),
+	kind: text("kind").notNull(),
+	metricSlug: text("metric_slug"),
+	direction: text("direction"),
+	targetValue: real("target_value"),
+	daysOfWeek: integer("days_of_week").notNull(),
+	position: integer("position").notNull(),
+	addedAt: integer("added_at").notNull(),
+	removedAt: integer("removed_at"),
+	createdAt: integer("created_at").notNull(),
+	updatedAt: integer("updated_at").notNull(),
+});
+
+export const habitCompletions = sqliteTable(
+	PRODUCT_TABLE_NAMES.habitCompletions,
+	{
+		id: text("id").primaryKey(),
+		habitId: text("habit_id").notNull(),
+		localDay: text("local_day").notNull(),
+		completedAt: integer("completed_at").notNull(),
+		createdAt: integer("created_at").notNull(),
+		updatedAt: integer("updated_at").notNull(),
+	},
+	(table) => [
+		uniqueIndex("idx_habit_completions_natural").on(
+			table.habitId,
+			table.localDay,
+		),
+	],
+);
+
+export const challengeEnrolments = sqliteTable(
+	PRODUCT_TABLE_NAMES.challengeEnrolments,
+	{
+		id: text("id").primaryKey(),
+		challengeSlug: text("challenge_slug").notNull(),
+		title: text("title").notNull(),
+		durationDays: integer("duration_days").notNull(),
+		areaSlug: text("area_slug").notNull(),
+		startedOn: text("started_on").notNull(),
+		completedAt: integer("completed_at"),
+		abandonedAt: integer("abandoned_at"),
+		createdAt: integer("created_at").notNull(),
+		updatedAt: integer("updated_at").notNull(),
+	},
+);
+
+export const challengeProgress = sqliteTable(
+	PRODUCT_TABLE_NAMES.challengeProgress,
+	{
+		id: text("id").primaryKey(),
+		enrolmentId: text("enrolment_id").notNull(),
+		dayIndex: integer("day_index").notNull(),
+		localDay: text("local_day").notNull(),
+		completedAt: integer("completed_at").notNull(),
+		createdAt: integer("created_at").notNull(),
+		updatedAt: integer("updated_at").notNull(),
+	},
+	(table) => [
+		uniqueIndex("idx_challenge_progress_natural").on(
+			table.enrolmentId,
+			table.dayIndex,
+		),
+	],
+);

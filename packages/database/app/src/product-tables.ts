@@ -15,6 +15,10 @@ export const PRODUCT_TABLE_NAMES = {
 	goals: "goals",
 	unitPreferences: "unit_preferences",
 	dailyMetrics: "daily_metrics",
+	habits: "habits",
+	habitCompletions: "habit_completions",
+	challengeEnrolments: "challenge_enrolments",
+	challengeProgress: "challenge_progress",
 } as const;
 
 export type ProductTableName =

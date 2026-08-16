@@ -49,6 +49,7 @@ describe("product database migrations", () => {
 				"0002_square_mikhail_rasputin",
 				"0003_curly_tinkerer",
 				"0004_brainy_maggott",
+				"0005_red_wolfsbane",
 			],
 			skipped: [],
 		});
@@ -67,18 +68,30 @@ describe("product database migrations", () => {
 				'idx_observations_metric_day',
 				'idx_observations_day',
 				'idx_day_notes_day',
-				'idx_daily_metrics_natural'
+				'idx_daily_metrics_natural',
+				'habits',
+				'habit_completions',
+				'challenge_enrolments',
+				'challenge_progress',
+				'idx_habit_completions_natural',
+				'idx_challenge_progress_natural'
 			 )
 			 ORDER BY name`,
 		);
 
 		expect(objects).toEqual([
 			{ name: "assessments", type: "table" },
+			{ name: "challenge_enrolments", type: "table" },
+			{ name: "challenge_progress", type: "table" },
 			{ name: "daily_metrics", type: "table" },
 			{ name: "day_notes", type: "table" },
 			{ name: "goals", type: "table" },
+			{ name: "habit_completions", type: "table" },
+			{ name: "habits", type: "table" },
+			{ name: "idx_challenge_progress_natural", type: "index" },
 			{ name: "idx_daily_metrics_natural", type: "index" },
 			{ name: "idx_day_notes_day", type: "index" },
+			{ name: "idx_habit_completions_natural", type: "index" },
 			{ name: "idx_observations_day", type: "index" },
 			{ name: "idx_observations_metric_day", type: "index" },
 			{ name: "observations", type: "table" },
@@ -112,6 +125,7 @@ describe("product database migrations", () => {
 				"0002_square_mikhail_rasputin",
 				"0003_curly_tinkerer",
 				"0004_brainy_maggott",
+				"0005_red_wolfsbane",
 			],
 		});
 
@@ -124,10 +138,11 @@ describe("product database migrations", () => {
 			{ id: "0002_square_mikhail_rasputin" },
 			{ id: "0003_curly_tinkerer" },
 			{ id: "0004_brainy_maggott" },
+			{ id: "0005_red_wolfsbane" },
 		]);
 	});
 
-	it("applies migrations 003 through 005 to a step-2 database", async () => {
+	it("applies migrations 003 through 006 to a step-2 database", async () => {
 		const { databaseApp, db } = await migratedDatabase("step-two.db");
 		await db.execAsync(`
 			CREATE TABLE IF NOT EXISTS __app_migrations (
@@ -152,6 +167,7 @@ describe("product database migrations", () => {
 				"0002_square_mikhail_rasputin",
 				"0003_curly_tinkerer",
 				"0004_brainy_maggott",
+				"0005_red_wolfsbane",
 			],
 			skipped: ["0000_check_in", "0001_odd_lockheed"],
 		});
@@ -191,6 +207,7 @@ describe("product database migrations", () => {
 				"0001_odd_lockheed",
 				"0002_square_mikhail_rasputin",
 				"0004_brainy_maggott",
+				"0005_red_wolfsbane",
 			],
 		});
 		expect(
@@ -226,6 +243,7 @@ describe("product database migrations", () => {
 				"0002_square_mikhail_rasputin",
 				"0003_curly_tinkerer",
 				"0004_brainy_maggott",
+				"0005_red_wolfsbane",
 			],
 			skipped: [],
 		});
@@ -233,7 +251,7 @@ describe("product database migrations", () => {
 		const markers = await db.getFirstAsync<{ count: number }>(
 			"SELECT COUNT(*) AS count FROM __app_migrations",
 		);
-		expect(markers?.count).toBe(5);
+		expect(markers?.count).toBe(6);
 		expect(
 			await db.getFirstAsync<{ count: number }>(
 				`SELECT COUNT(*) AS count FROM pragma_table_info('tracked_metrics')
@@ -257,6 +275,7 @@ describe("product database migrations", () => {
 				"0001_odd_lockheed",
 				"0002_square_mikhail_rasputin",
 				"0003_curly_tinkerer",
+				"0005_red_wolfsbane",
 			],
 		});
 		expect(
@@ -265,6 +284,44 @@ describe("product database migrations", () => {
 				 WHERE type = 'table' AND name = 'daily_metrics'`,
 			),
 		).toEqual({ name: "daily_metrics" });
+	});
+
+	it("applies only migration 006 to a step-5 database", async () => {
+		const { databaseApp, db } = await migratedDatabase("step-five.db");
+		await databaseApp.runMigrations(db);
+		await db.execAsync(`
+			DROP TABLE challenge_progress;
+			DROP TABLE challenge_enrolments;
+			DROP TABLE habit_completions;
+			DROP TABLE habits;
+			DELETE FROM __app_migrations WHERE id = '0005_red_wolfsbane';
+		`);
+
+		await expect(databaseApp.runMigrations(db)).resolves.toEqual({
+			applied: ["0005_red_wolfsbane"],
+			skipped: [
+				"0000_check_in",
+				"0001_odd_lockheed",
+				"0002_square_mikhail_rasputin",
+				"0003_curly_tinkerer",
+				"0004_brainy_maggott",
+			],
+		});
+		expect(
+			await db.getAllAsync<{ name: string }>(
+				`SELECT name FROM sqlite_master
+				 WHERE type = 'table'
+				 AND name IN (
+					'habits', 'habit_completions',
+					'challenge_enrolments', 'challenge_progress'
+				 ) ORDER BY name`,
+			),
+		).toEqual([
+			{ name: "challenge_enrolments" },
+			{ name: "challenge_progress" },
+			{ name: "habit_completions" },
+			{ name: "habits" },
+		]);
 	});
 
 	it("creates and safely re-runs the independent local-store manifest", async () => {

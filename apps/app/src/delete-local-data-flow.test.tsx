@@ -90,6 +90,12 @@ describe("delete local data", () => {
 		const goals = new databaseApp.GoalRepository(db);
 		const unitPreferences = new databaseApp.UnitPreferenceRepository(db);
 		const dailyMetrics = new databaseApp.DailyMetricRepository(db);
+		const habits = new databaseApp.HabitRepository(db);
+		const habitCompletions = new databaseApp.HabitCompletionRepository(db);
+		const challengeEnrolments = new databaseApp.ChallengeEnrolmentRepository(
+			db,
+		);
+		const challengeProgress = new databaseApp.ChallengeProgressRepository(db);
 		await observations.create({
 			metricSlug: "mood",
 			value: 4,
@@ -140,6 +146,25 @@ describe("delete local data", () => {
 			value: 80,
 			source: "health_connect",
 		});
+		const habit = await habits.create({
+			slug: "habit:reading",
+			customLabel: null,
+			kind: "manual",
+			metricSlug: null,
+			direction: null,
+			targetValue: null,
+			daysOfWeek: 0b111_1111,
+			position: 0,
+		});
+		await habitCompletions.complete(habit.id, "2026-08-14");
+		const enrolment = await challengeEnrolments.enrol({
+			challengeSlug: "challenge:health-intro",
+			title: "Health reset",
+			durationDays: 3,
+			areaSlug: "wheel:health",
+			startedOn: "2026-08-14",
+		});
+		await challengeProgress.completeDay(enrolment.id, 1, "2026-08-14");
 		const healthConnections = new databaseApp.HealthConnectionRepository(
 			localDb,
 		);
@@ -194,6 +219,10 @@ describe("delete local data", () => {
 		expect(await goals.listAll()).toEqual([]);
 		expect(await unitPreferences.list()).toEqual([]);
 		expect(await dailyMetrics.listByMetric("weight")).toEqual([]);
+		expect(await habits.listAll()).toEqual([]);
+		expect(await habitCompletions.listByDay("2026-08-14")).toEqual([]);
+		expect(await challengeEnrolments.listAll()).toEqual([]);
+		expect(await challengeProgress.listByDay("2026-08-14")).toEqual([]);
 		expect(await healthConnections.list()).toEqual([]);
 		expect(await rawSamples.listByMetricDay("weight", "2026-08-14")).toEqual(
 			[],
