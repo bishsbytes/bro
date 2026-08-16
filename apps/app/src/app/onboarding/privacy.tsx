@@ -17,6 +17,11 @@ export default function PrivacyRoute() {
 			<AppText color="muted" style={styles.body}>
 				Works offline, on a plane, in a tunnel, with no signal at all.
 			</AppText>
+			<AppText color="muted" style={styles.body}>
+				Health data you choose to import is read directly from Apple Health or
+				Health Connect and stays on this device. It is never sent to bro's
+				servers.
+			</AppText>
 			<Button
 				label="Continue"
 				style={styles.primaryButton}

@@ -3,6 +3,17 @@ globalThis.fetch = jest.fn(async () => {
 	throw new Error("Unexpected network request in test.");
 }) as typeof fetch;
 
+// Expo Crypto 56 exposes native AES classes that are unavailable in Jest's
+// native-module shim. The app only consumes random bytes for UUIDv7 ids.
+let mockRandomByte = 0;
+jest.mock("expo-crypto", () => ({
+	getRandomBytes: jest.fn((length: number) => {
+		const bytes = new Uint8Array(length);
+		bytes.fill((mockRandomByte = (mockRandomByte + 1) % 256));
+		return bytes;
+	}),
+}));
+
 // Unistyles ships this mock; it stands in for the Nitro native module and
 // resolves theme callbacks against whatever StyleSheet.configure registered.
 require("react-native-unistyles/mocks");

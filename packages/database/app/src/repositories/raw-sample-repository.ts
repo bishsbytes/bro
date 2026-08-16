@@ -149,7 +149,37 @@ export class RawSampleRepository extends BaseRepository {
 		return rows.map(toRawSample);
 	}
 
+	async listByMetricSource(
+		metricSlug: string,
+		source: string,
+	): Promise<RawSample[]> {
+		const rows = await this.all<RawSampleRow>(
+			`SELECT ${SELECT_COLUMNS} FROM raw_samples
+			 WHERE metric_slug = ? AND source = ?
+			 ORDER BY local_day ASC, ended_at ASC, started_at ASC, source_record_id ASC`,
+			[
+				required(metricSlug, "Raw sample metric slug"),
+				required(source, "Raw sample source"),
+			],
+		);
+		return rows.map(toRawSample);
+	}
+
 	async deleteBySourceRecord(
+		source: string,
+		sourceRecordId: string,
+	): Promise<RawSample | null> {
+		return await this.transaction(
+			async () =>
+				await this.deleteBySourceRecordInCurrentTransaction(
+					source,
+					sourceRecordId,
+				),
+		);
+	}
+
+	/** Used by import orchestration that already owns the local-store transaction. */
+	async deleteBySourceRecordInCurrentTransaction(
 		source: string,
 		sourceRecordId: string,
 	): Promise<RawSample | null> {
@@ -158,21 +188,34 @@ export class RawSampleRepository extends BaseRepository {
 			sourceRecordId,
 			"Raw sample source record id",
 		);
-		return await this.transaction(async () => {
-			const row = await this.first<RawSampleRow>(
-				`SELECT ${SELECT_COLUMNS} FROM raw_samples
-				 WHERE source = ? AND source_record_id = ?`,
-				[normalizedSource, normalizedRecordId],
-			);
-			if (!row) {
-				return null;
-			}
-			await this.run(
-				"DELETE FROM raw_samples WHERE source = ? AND source_record_id = ?",
-				[normalizedSource, normalizedRecordId],
-			);
-			return toRawSample(row);
-		});
+		const row = await this.first<RawSampleRow>(
+			`SELECT ${SELECT_COLUMNS} FROM raw_samples
+			 WHERE source = ? AND source_record_id = ?`,
+			[normalizedSource, normalizedRecordId],
+		);
+		if (!row) {
+			return null;
+		}
+		await this.run(
+			"DELETE FROM raw_samples WHERE source = ? AND source_record_id = ?",
+			[normalizedSource, normalizedRecordId],
+		);
+		return toRawSample(row);
+	}
+
+	/** Used before a fresh platform snapshot is applied. */
+	async deleteByMetricSourceInCurrentTransaction(
+		metricSlug: string,
+		source: string,
+	): Promise<number> {
+		const result = await this.run(
+			"DELETE FROM raw_samples WHERE metric_slug = ? AND source = ?",
+			[
+				required(metricSlug, "Raw sample metric slug"),
+				required(source, "Raw sample source"),
+			],
+		);
+		return result.changes;
 	}
 
 	async pruneEndedBefore(cutoff: number): Promise<number> {

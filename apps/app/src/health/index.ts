@@ -1,4 +1,16 @@
 export {
+	HealthChangeTokenExpiredError,
+	type HealthBackfillRange,
+	type HealthGateway,
+	type HealthGatewayAvailability,
+	type HealthGatewayBatch,
+	UnsupportedHealthGateway,
+} from "./gateway";
+export {
+	HealthImportEngine,
+	type HealthImportSummary,
+} from "./import-engine";
+export {
 	type CanonicalHealthSample,
 	type HealthSampleUnit,
 	localDayAt,

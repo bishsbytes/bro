@@ -37,11 +37,13 @@
 	},
 	"peerDependencies": {
 		"expo-crypto": "~56.0.4",
+		"expo-file-system": "~56.0.9",
 		"expo-sqlite": "*"
 	},
 	"devDependencies": {
 		"drizzle-kit": "^0.31.10",
 		"expo-crypto": "~56.0.4",
+		"expo-file-system": "~56.0.9",
 		"expo-sqlite": "~56.0.5",
 		"tsx": "^4.23.12"
 	}

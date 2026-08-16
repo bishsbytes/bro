@@ -19,6 +19,7 @@ import {
 	DeviceSettingsProvider,
 	useDeviceSettings,
 } from "../providers/device-settings-provider";
+import { HealthImportEffects } from "../health/health-import-effects";
 import { ReminderNotificationEffects } from "../reminders/reminder-notification-effects";
 import { StyleSheet, useUnistyles } from "../theme/unistyles";
 
@@ -61,6 +62,7 @@ function AppProviders() {
 
 	return (
 		<>
+			<HealthImportEffects />
 			<ReminderNotificationEffects
 				onboardingComplete={settings.onboardingComplete}
 			/>

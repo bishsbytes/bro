@@ -1,4 +1,5 @@
 import { openDatabaseAsync, type SQLiteDatabase } from "expo-sqlite";
+import { LOCAL_DATABASE_DIRECTORY } from "./local-database-directory";
 
 export const LOCAL_DATABASE_NAME = "bro-local.db";
 
@@ -20,7 +21,11 @@ export async function initLocalDb(
 	}
 
 	openDatabaseName = databaseName;
-	opening ??= openDatabaseAsync(databaseName)
+	opening ??= (
+		LOCAL_DATABASE_DIRECTORY && process.env.NODE_ENV !== "test"
+			? openDatabaseAsync(databaseName, undefined, LOCAL_DATABASE_DIRECTORY)
+			: openDatabaseAsync(databaseName)
+	)
 		.then((db) => {
 			database = db;
 			return db;

@@ -173,4 +173,24 @@ export class DailyMetricRepository extends BaseRepository {
 		);
 		return result.changes > 0;
 	}
+
+	async deleteByMetricSourceFromDay(
+		metricSlug: string,
+		source: string,
+		fromLocalDay: string,
+	): Promise<number> {
+		if (!LOCAL_DAY_PATTERN.test(fromLocalDay)) {
+			throw new TypeError("Daily metric local day must use YYYY-MM-DD.");
+		}
+		const result = await this.run(
+			`DELETE FROM daily_metrics
+			 WHERE metric_slug = ? AND source = ? AND local_day >= ?`,
+			[
+				required(metricSlug, "Daily metric slug"),
+				required(source, "Daily metric source"),
+				fromLocalDay,
+			],
+		);
+		return result.changes;
+	}
 }
