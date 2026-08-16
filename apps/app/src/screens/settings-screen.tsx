@@ -1,12 +1,14 @@
 import { deleteLocalProductData } from "@bro/database-app";
 import { router } from "expo-router";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { View } from "react-native";
 import { AppText } from "../components/app-text";
 import { Button } from "../components/button";
 import { Card } from "../components/card";
 import { Screen } from "../components/screen";
 import { SectionHeader } from "../components/section-header";
+import type { HealthGatewayAvailability } from "../health/gateway";
+import { healthImportEngine } from "../health/import-service";
 import { cancelAllReminderNotifications } from "../reminders/reminder-materialiser";
 import { StyleSheet } from "../theme/unistyles";
 
@@ -16,13 +18,54 @@ const DELETE_LOCAL_DATA_COPY =
 type SettingsScreenProps = {
 	deleteProductData?: () => Promise<void>;
 	cancelReminderNotifications?: () => Promise<unknown>;
+	healthAvailability?: () => Promise<HealthGatewayAvailability>;
 };
 
 type DeleteStep = "idle" | "confirm" | "complete";
 
+const defaultHealthAvailability = () => healthImportEngine.availability();
+
+function HealthSettingsEntry({
+	availability = defaultHealthAvailability,
+}: {
+	availability?: () => Promise<HealthGatewayAvailability>;
+}) {
+	const [health, setHealth] = useState<HealthGatewayAvailability | null>(null);
+
+	useEffect(() => {
+		let active = true;
+		void availability()
+			.then((next) => {
+				if (active) setHealth(next);
+			})
+			.catch(() => undefined);
+		return () => {
+			active = false;
+		};
+	}, [availability]);
+
+	if (!health?.platform) return null;
+	const label =
+		health.platform === "healthkit" ? "Apple Health" : "Health Connect";
+	return (
+		<Card style={styles.section}>
+			<SectionHeader title="Health data" />
+			<AppText color="muted">
+				Import health history from {label}. Your data stays on this device.
+			</AppText>
+			<Button
+				label="Manage health data"
+				variant="secondary"
+				onPress={() => router.push("/settings/health")}
+			/>
+		</Card>
+	);
+}
+
 export function SettingsScreen({
 	deleteProductData = deleteLocalProductData,
 	cancelReminderNotifications = cancelAllReminderNotifications,
+	healthAvailability = defaultHealthAvailability,
 }: SettingsScreenProps) {
 	const [deleteStep, setDeleteStep] = useState<DeleteStep>("idle");
 	const [deleting, setDeleting] = useState(false);
@@ -52,6 +95,7 @@ export function SettingsScreen({
 
 	return (
 		<Screen scroll padded edges={["bottom"]}>
+			<HealthSettingsEntry availability={healthAvailability} />
 			<Card style={styles.section}>
 				<SectionHeader title="Life areas" />
 				<AppText color="muted">

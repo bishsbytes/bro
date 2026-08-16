@@ -1,4 +1,5 @@
 import {
+	DailyMetricRepository,
 	type Goal,
 	GoalRepository,
 	getDb,
@@ -12,6 +13,8 @@ import { localDayOf } from "../check-in/check-in-store";
 import {
 	listUserEnterableMeasurements,
 	resolveMetric,
+	type MeasurementMetricDefinition,
+	type MeasurementSlug,
 	type UserEnterableMeasurementMetricDefinition,
 	type UserEnterableMeasurementSlug,
 } from "../content/metric-registry";
@@ -20,13 +23,17 @@ import {
 	goalProgressPercent,
 	goalStatus,
 } from "../goals/goal-progress";
-import { buildTrendSeries, type TrendSeries } from "../trends/trend-math";
 import {
-	type DisplayUnit,
-	formatMeasurement,
-	isDisplayUnitForDimension,
-	resolveDisplayUnit,
-} from "../units";
+	formatMetricValue,
+	metricDisplayUnit,
+} from "../health/metric-presentation";
+import { isHealthMetricSlug } from "../health/policy";
+import {
+	importedDailyMetricAsObservation,
+	resolveMetricObservations,
+} from "../health/resolved-series";
+import { buildTrendSeries, type TrendSeries } from "../trends/trend-math";
+import { type DisplayUnit, isDisplayUnitForDimension } from "../units";
 
 type MeasurementPresentationBase = {
 	metricSlug: UserEnterableMeasurementSlug;
@@ -47,6 +54,13 @@ export type MeasurementPresentation =
 			displayUnit: "%";
 	  });
 
+export type BodyMetricPresentation = {
+	metricSlug: MeasurementSlug;
+	label: string;
+	dimension: MeasurementMetricDefinition["dimension"];
+	displayUnit: DisplayUnit | null;
+};
+
 export type BodyGoalProgress = {
 	goal: Goal;
 	status: GoalStatus;
@@ -58,8 +72,12 @@ export type BodyGoalProgress = {
 	currentFormatted: string | null;
 };
 
-export type BodyMetricSummary = MeasurementPresentation & {
+export type BodyMetricSummary = BodyMetricPresentation & {
+	userEnterable: boolean;
+	editablePresentation: MeasurementPresentation | null;
 	tracked: boolean;
+	visible: boolean;
+	hasImportedData: boolean;
 	position: number;
 	latest: Observation | null;
 	latestFormatted: string | null;
@@ -74,6 +92,8 @@ export type BodyOverview = {
 export type BodyHistoryEntry = {
 	observation: Observation;
 	formattedValue: string;
+	selected: boolean;
+	editable: boolean;
 };
 
 export type BodyMetricDetail = BodyMetricSummary & {
@@ -145,13 +165,13 @@ function toPresentation(
 
 export function formatPresentedMeasurement(
 	value: number,
-	presentation: MeasurementPresentation,
+	presentation: BodyMetricPresentation,
 ): string {
-	return formatMeasurement(
-		value,
-		presentation.dimension,
-		presentation.displayUnit,
-	);
+	const resolved = resolveMetric(presentation.metricSlug);
+	if (resolved.kind !== "known" || resolved.metric.kind !== "measurement") {
+		throw new TypeError(`Unknown measurement slug: ${presentation.metricSlug}`);
+	}
+	return formatMetricValue(resolved.metric, value, presentation.displayUnit);
 }
 
 function ascendingObservations(rows: readonly Observation[]): Observation[] {
@@ -170,7 +190,7 @@ function latestObservation(rows: readonly Observation[]): Observation | null {
 function progressFor(
 	goal: Goal,
 	rows: readonly Observation[],
-	presentation: MeasurementPresentation,
+	presentation: BodyMetricPresentation,
 ): BodyGoalProgress {
 	const ordered = ascendingObservations(rows);
 	const startValue =
@@ -224,6 +244,7 @@ function resolveMeasurement(
 
 export class BodyStore {
 	private readonly goals: GoalRepository;
+	private readonly dailyMetrics: DailyMetricRepository;
 	private readonly observations: ObservationRepository;
 	private readonly trackedMetrics: TrackedMetricsRepository;
 	private readonly unitPreferences: UnitPreferenceRepository;
@@ -234,6 +255,7 @@ export class BodyStore {
 		private readonly locale: () => string | undefined = systemLocale,
 	) {
 		this.goals = new GoalRepository(db);
+		this.dailyMetrics = new DailyMetricRepository(db);
 		this.observations = new ObservationRepository(db);
 		this.trackedMetrics = new TrackedMetricsRepository(db);
 		this.unitPreferences = new UnitPreferenceRepository(db);
@@ -245,11 +267,7 @@ export class BodyStore {
 
 	async loadMetric(metricSlug: string): Promise<BodyMetricDetail | null> {
 		const metric = resolveMetric(metricSlug);
-		if (
-			metric.kind !== "known" ||
-			metric.metric.kind !== "measurement" ||
-			!metric.metric.userEnterable
-		) {
+		if (metric.kind !== "known" || metric.metric.kind !== "measurement") {
 			return null;
 		}
 		const summaries = await this.loadSummaries();
@@ -259,19 +277,32 @@ export class BodyStore {
 		if (!summary) {
 			return null;
 		}
-		const [observations, goals] = await Promise.all([
+		const [observations, dailyMetrics, goals] = await Promise.all([
 			this.observations.listAll(),
+			this.dailyMetrics.listAll(),
 			this.goals.listAll(),
 		]);
 		const metricRows = observations.filter(
 			(row) => row.metricSlug === metricSlug,
 		);
+		const importedRows = dailyMetrics.filter(
+			(row) => row.metricSlug === metricSlug,
+		);
+		const resolvedRows = isHealthMetricSlug(metricSlug)
+			? resolveMetricObservations(metricSlug, metricRows, importedRows)
+			: metricRows;
+		const selectedIds = new Set(resolvedRows.map((row) => row.id));
 		return {
 			...summary,
-			history: ascendingObservations(metricRows)
+			history: ascendingObservations([
+				...metricRows,
+				...importedRows.map(importedDailyMetricAsObservation),
+			])
 				.reverse()
 				.map((observation) => ({
 					observation,
+					selected: selectedIds.has(observation.id),
+					editable: observation.source === "user",
 					formattedValue: formatPresentedMeasurement(
 						observation.value,
 						summary,
@@ -279,7 +310,7 @@ export class BodyStore {
 				})),
 			goals: goals
 				.filter((goal) => goal.metricSlug === metricSlug)
-				.map((goal) => progressFor(goal, metricRows, summary)),
+				.map((goal) => progressFor(goal, resolvedRows, summary)),
 			inputLocale: this.locale(),
 		};
 	}
@@ -341,12 +372,22 @@ export class BodyStore {
 	): Promise<Goal> {
 		const metric = resolveMeasurement(metricSlug);
 		assertCanonicalValue(metric, targetValue);
-		const [observations, goals] = await Promise.all([
+		const [observations, dailyMetrics, goals] = await Promise.all([
 			this.observations.listAll(),
+			this.dailyMetrics.listAll(),
 			this.goals.listAll(),
 		]);
+		const metricRows = observations.filter(
+			(row) => row.metricSlug === metric.slug,
+		);
 		const latest = latestObservation(
-			observations.filter((row) => row.metricSlug === metric.slug),
+			isHealthMetricSlug(metric.slug)
+				? resolveMetricObservations(
+						metric.slug,
+						metricRows,
+						dailyMetrics.filter((row) => row.metricSlug === metric.slug),
+					)
+				: metricRows,
 		);
 		if (!latest) {
 			throw new TypeError("Log a measurement before setting a goal.");
@@ -383,12 +424,14 @@ export class BodyStore {
 
 	private async loadSummaries(): Promise<BodyMetricSummary[]> {
 		const inputLocale = this.locale();
-		const [overlays, preferences, observations, goals] = await Promise.all([
-			this.trackedMetrics.listResolved(measurementDefaults()),
-			this.unitPreferences.resolveLatestPerDimension(),
-			this.observations.listAll(),
-			this.goals.listAll(),
-		]);
+		const [overlays, preferences, observations, dailyMetrics, goals] =
+			await Promise.all([
+				this.trackedMetrics.listResolved(measurementDefaults()),
+				this.unitPreferences.resolveLatestPerDimension(),
+				this.observations.listAll(),
+				this.dailyMetrics.listAll(),
+				this.goals.listAll(),
+			]);
 		const preferenceByDimension = new Map(
 			preferences.map((preference) => [preference.dimension, preference.unit]),
 		);
@@ -397,35 +440,67 @@ export class BodyStore {
 		);
 		const throughLocalDay = localDayOf(this.now());
 
-		return listUserEnterableMeasurements()
+		const importedSlugs = new Set(dailyMetrics.map((row) => row.metricSlug));
+		const restingHeartRate = resolveMetric("resting_heart_rate");
+		const metrics: MeasurementMetricDefinition[] = [
+			...listUserEnterableMeasurements(),
+			...(restingHeartRate.kind === "known" &&
+			restingHeartRate.metric.kind === "measurement" &&
+			importedSlugs.has(restingHeartRate.metric.slug)
+				? [restingHeartRate.metric]
+				: []),
+		];
+
+		return metrics
 			.map((metric) => {
 				const overlay = overlayBySlug.get(metric.slug);
-				const presentation = toPresentation(
+				const displayUnit = metricDisplayUnit(
 					metric,
-					overlay?.customLabel ?? metric.label,
-					resolveDisplayUnit(
-						metric.dimension,
-						preferenceByDimension.get(metric.dimension),
-						inputLocale,
-					),
+					preferenceByDimension,
+					inputLocale,
 				);
+				const editablePresentation = metric.userEnterable
+					? toPresentation(
+							metric,
+							overlay?.customLabel ?? metric.label,
+							displayUnit as DisplayUnit,
+						)
+					: null;
+				const presentation: BodyMetricPresentation = {
+					metricSlug: metric.slug,
+					label: overlay?.customLabel ?? metric.label,
+					dimension: metric.dimension,
+					displayUnit,
+				};
 				const metricRows = observations.filter(
 					(row) => row.metricSlug === metric.slug,
 				);
-				const latest = latestObservation(metricRows);
+				const importedRows = dailyMetrics.filter(
+					(row) => row.metricSlug === metric.slug,
+				);
+				const resolvedRows = isHealthMetricSlug(metric.slug)
+					? resolveMetricObservations(metric.slug, metricRows, importedRows)
+					: metricRows;
+				const latest = latestObservation(resolvedRows);
 				const metricGoals = goals
 					.filter((goal) => goal.metricSlug === metric.slug)
-					.map((goal) => progressFor(goal, metricRows, presentation));
+					.map((goal) => progressFor(goal, resolvedRows, presentation));
+				const tracked = overlay?.enabled ?? false;
+				const hasImportedData = importedRows.length > 0;
 				return {
 					...presentation,
-					tracked: overlay?.enabled ?? false,
+					userEnterable: metric.userEnterable,
+					editablePresentation,
+					tracked,
+					visible: tracked || hasImportedData || !metric.userEnterable,
+					hasImportedData,
 					position: overlay?.position ?? metric.defaultPosition,
 					latest,
 					latestFormatted: latest
 						? formatPresentedMeasurement(latest.value, presentation)
 						: null,
 					series: buildTrendSeries(
-						metricRows,
+						resolvedRows,
 						metric,
 						throughLocalDay,
 						BODY_TREND_PERIOD,

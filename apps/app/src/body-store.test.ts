@@ -72,7 +72,7 @@ describe("body store", () => {
 		expect(overlays[0]?.enabled).toBe(true);
 	});
 
-	it("does not expose imported-only metrics before the resolved read side lands", async () => {
+	it("keeps imported-only metrics hidden when there is no imported data", async () => {
 		await new databaseApp.TrackedMetricsRepository(db).configure(
 			"resting_heart_rate",
 			5,
@@ -82,6 +82,103 @@ describe("body store", () => {
 
 		expect(await store.loadMetric("resting_heart_rate")).toBeNull();
 		expect((await store.loadOverview()).metrics).toHaveLength(3);
+	});
+
+	it("merges imported body values, exposes resting heart rate read-only, and resolves goals", async () => {
+		let now = new Date("2026-08-16T12:00:00.000Z");
+		const observations = new databaseApp.ObservationRepository(db);
+		const daily = new databaseApp.DailyMetricRepository(db);
+		const preferences = new databaseApp.UnitPreferenceRepository(db);
+		await preferences.set("mass", "kg");
+		const manual = await observations.create({
+			metricSlug: "weight",
+			value: 80,
+			scaleMin: null,
+			scaleMax: null,
+			observedAt: Date.parse("2026-08-15T08:00:00.000Z"),
+			localDay: "2026-08-15",
+			tzOffsetMinutes: 0,
+			source: "user",
+			sourceRecordId: null,
+			assessmentId: null,
+		});
+		await daily.upsert({
+			metricSlug: "weight",
+			localDay: "2026-08-15",
+			value: 79,
+			source: "health_connect",
+		});
+		await daily.upsert({
+			metricSlug: "resting_heart_rate",
+			localDay: "2026-08-15",
+			value: 62,
+			source: "health_connect",
+		});
+		const store = new BodyStore(
+			db,
+			() => now,
+			() => "en-GB",
+		);
+
+		const overview = await store.loadOverview();
+		expect(overview.metrics.map(({ metricSlug }) => metricSlug)).toEqual([
+			"weight",
+			"waist",
+			"body_fat",
+			"resting_heart_rate",
+		]);
+		expect(overview.metrics[0]).toMatchObject({
+			metricSlug: "weight",
+			tracked: false,
+			visible: true,
+			hasImportedData: true,
+			latestFormatted: "79.0 kg",
+			latest: { source: "health_connect", value: 79 },
+		});
+		expect(overview.metrics.at(-1)).toMatchObject({
+			metricSlug: "resting_heart_rate",
+			userEnterable: false,
+			visible: true,
+			latestFormatted: "62 bpm",
+		});
+
+		const weight = await store.loadMetric("weight");
+		expect(weight?.history).toHaveLength(2);
+		expect(weight?.history).toEqual(
+			expect.arrayContaining([
+				expect.objectContaining({
+					selected: true,
+					editable: false,
+					observation: expect.objectContaining({ source: "health_connect" }),
+				}),
+				expect.objectContaining({
+					selected: false,
+					editable: true,
+					observation: expect.objectContaining({
+						id: manual.id,
+						source: "user",
+					}),
+				}),
+			]),
+		);
+		expect(
+			(await store.loadMetric("resting_heart_rate"))?.editablePresentation,
+		).toBeNull();
+
+		const goal = await store.createGoal("weight", 70, null);
+		expect(goal).toMatchObject({ direction: "decrease" });
+		now = new Date("2026-08-17T18:00:00.000Z");
+		await daily.upsert({
+			metricSlug: "weight",
+			localDay: "2026-08-17",
+			value: 77,
+			source: "health_connect",
+		});
+		expect((await store.loadMetric("weight"))?.goals[0]).toMatchObject({
+			startValue: 79,
+			currentValue: 77,
+			progressPercent: 22,
+		});
 	});
 
 	it("derives decreasing goal progress from canonical history across unit changes", async () => {

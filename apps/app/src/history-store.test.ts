@@ -1,4 +1,4 @@
-import type { Observation } from "@bro/database-app";
+import type { DailyMetric, Observation } from "@bro/database-app";
 import { assembleHistoryDay } from "./history/history-store";
 
 function observation(
@@ -56,5 +56,42 @@ describe("history store", () => {
 		expect(day.assessments).toEqual([wheel]);
 		expect(day.unpairedScored).toEqual([]);
 		expect(day.unknown).toEqual([unknownWheel]);
+	});
+
+	it("retains manual and imported measurement provenance while selecting the import", () => {
+		const manual = observation("manual-weight", "weight", 80);
+		const imported: DailyMetric = {
+			id: "imported-weight",
+			metricSlug: "weight",
+			localDay: "2026-08-14",
+			value: 79,
+			source: "health_connect",
+			computedAt: 2_000,
+			createdAt: 2_000,
+			updatedAt: 2_000,
+		};
+		const day = assembleHistoryDay(
+			"2026-08-14",
+			[manual],
+			[],
+			[imported],
+			new Map([["mass", "kg"]]),
+			"en-GB",
+		);
+
+		expect(day.measurements).toEqual([
+			expect.objectContaining({
+				id: manual.id,
+				formattedValue: "80.0 kg",
+				source: "user",
+				selected: false,
+			}),
+			expect.objectContaining({
+				id: imported.id,
+				formattedValue: "79.0 kg",
+				source: "health_connect",
+				selected: true,
+			}),
+		]);
 	});
 });

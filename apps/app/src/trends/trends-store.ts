@@ -1,4 +1,5 @@
 import {
+	DailyMetricRepository,
 	getDb,
 	ObservationRepository,
 	TrackedMetricsRepository,
@@ -8,16 +9,18 @@ import type { SQLiteDatabase } from "expo-sqlite";
 import { localDayOf } from "../check-in/check-in-store";
 import {
 	listScoredMetrics,
+	listMeasurements,
 	listUserEnterableMeasurements,
+	type MeasurementMetricDefinition,
 	type ScoredMetricDefinition,
-	type UserEnterableMeasurementMetricDefinition,
 } from "../content/metric-registry";
 import {
-	type DisplayUnit,
-	formatMeasurement,
-	isDisplayUnitForDimension,
-	resolveDisplayUnit,
-} from "../units";
+	formatMetricValue,
+	metricDisplayUnit,
+} from "../health/metric-presentation";
+import { isHealthMetricSlug } from "../health/policy";
+import { resolveMetricObservations } from "../health/resolved-series";
+import type { DisplayUnit } from "../units";
 import {
 	buildTrendSeries,
 	type TrendPeriod,
@@ -26,7 +29,7 @@ import {
 } from "./trend-math";
 
 export type MetricTrend = {
-	metric: ScoredMetricDefinition | UserEnterableMeasurementMetricDefinition;
+	metric: ScoredMetricDefinition | MeasurementMetricDefinition;
 	label: string;
 	series: TrendSeries;
 	displayUnit: DisplayUnit | null;
@@ -42,6 +45,7 @@ export type TrendsSnapshot = {
 
 export class TrendsStore {
 	private readonly observations: ObservationRepository;
+	private readonly dailyMetrics: DailyMetricRepository;
 	private readonly trackedMetrics: TrackedMetricsRepository;
 	private readonly unitPreferences: UnitPreferenceRepository;
 
@@ -57,6 +61,7 @@ export class TrendsStore {
 		},
 	) {
 		this.observations = new ObservationRepository(db);
+		this.dailyMetrics = new DailyMetricRepository(db);
 		this.trackedMetrics = new TrackedMetricsRepository(db);
 		this.unitPreferences = new UnitPreferenceRepository(db);
 	}
@@ -71,9 +76,10 @@ export class TrendsStore {
 				enabled: false,
 			}),
 		);
-		const [overlays, preferences] = await Promise.all([
+		const [overlays, preferences, dailyMetrics] = await Promise.all([
 			this.trackedMetrics.listResolved(measurementDefaults),
 			this.unitPreferences.resolveLatestPerDimension(),
+			this.dailyMetrics.listAll(),
 		]);
 		const overlayBySlug = new Map(
 			overlays.map((overlay) => [overlay.metricSlug, overlay]),
@@ -81,24 +87,29 @@ export class TrendsStore {
 		const preferenceByDimension = new Map(
 			preferences.map((preference) => [preference.dimension, preference.unit]),
 		);
-		const metrics = [
+		const importedSlugs = new Set(dailyMetrics.map((row) => row.metricSlug));
+		const metrics: Array<{
+			metric: ScoredMetricDefinition | MeasurementMetricDefinition;
+			label: string;
+			displayUnit: DisplayUnit | null;
+		}> = [
 			...listScoredMetrics().map((metric) => ({
 				metric,
 				label: metric.label,
 				displayUnit: null,
 			})),
-			...listUserEnterableMeasurements().flatMap((metric) => {
+			...listMeasurements().flatMap((metric) => {
 				const overlay = overlayBySlug.get(metric.slug);
-				return overlay?.enabled
+				return overlay?.enabled || importedSlugs.has(metric.slug)
 					? [
 							{
 								metric,
-								label: overlay.customLabel ?? metric.label,
-								displayUnit: resolveDisplayUnit(
-									metric.dimension,
-									preferenceByDimension.get(metric.dimension),
+								label: overlay?.customLabel ?? metric.label,
+								displayUnit: metricDisplayUnit(
+									metric,
+									preferenceByDimension,
 									this.locale(),
-								) as DisplayUnit,
+								),
 							},
 						]
 					: [];
@@ -118,8 +129,13 @@ export class TrendsStore {
 			period,
 			...range,
 			metrics: metrics.map(({ metric, label, displayUnit }, index) => {
+				const metricRows = rows[index] ?? [];
+				const resolvedRows =
+					metric.kind === "measurement" && isHealthMetricSlug(metric.slug)
+						? resolveMetricObservations(metric.slug, metricRows, dailyMetrics)
+						: metricRows;
 				const series = buildTrendSeries(
-					rows[index] ?? [],
+					resolvedRows,
 					metric,
 					throughLocalDay,
 					period,
@@ -130,16 +146,10 @@ export class TrendsStore {
 				let latestFormatted: string | null = null;
 				if (
 					metric.kind === "measurement" &&
-					displayUnit !== null &&
 					latestValue !== null &&
-					latestValue !== undefined &&
-					isDisplayUnitForDimension(metric.dimension, displayUnit)
+					latestValue !== undefined
 				) {
-					latestFormatted = formatMeasurement(
-						latestValue,
-						metric.dimension,
-						displayUnit,
-					);
+					latestFormatted = formatMetricValue(metric, latestValue, displayUnit);
 				}
 				return { metric, label, series, displayUnit, latestFormatted };
 			}),

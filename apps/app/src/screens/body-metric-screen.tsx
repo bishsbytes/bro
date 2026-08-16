@@ -62,6 +62,7 @@ function parsePresentedMeasurement(
 }
 
 function dateTimeLabel(observation: Observation): string {
+	if (observation.source !== "user") return observation.localDay;
 	return new Date(observation.observedAt).toLocaleString(undefined, {
 		day: "numeric",
 		month: "short",
@@ -69,6 +70,12 @@ function dateTimeLabel(observation: Observation): string {
 		hour: "2-digit",
 		minute: "2-digit",
 	});
+}
+
+function sourceLabel(source: string): string {
+	if (source === "healthkit") return "Apple Health";
+	if (source === "health_connect") return "Health Connect";
+	return "You";
 }
 
 function HistoryEditor({
@@ -141,6 +148,27 @@ function HistoryEditor({
 	);
 }
 
+function ImportedHistoryRow({
+	entry,
+}: {
+	entry: BodyMetricDetail["history"][number];
+}) {
+	return (
+		<Card style={styles.historyCard}>
+			<AppText variant="section">{entry.formattedValue}</AppText>
+			<AppText variant="caption" color="muted">
+				{dateTimeLabel(entry.observation)} · Source:{" "}
+				{sourceLabel(entry.observation.source)}
+			</AppText>
+			{entry.selected ? (
+				<AppText variant="micro" color="brand">
+					Used for this day's value
+				</AppText>
+			) : null}
+		</Card>
+	);
+}
+
 export function BodyMetricScreen({ metricSlug, store }: BodyMetricScreenProps) {
 	const body = useMemo(() => store ?? createBodyStore(), [store]);
 	const [detail, setDetail] = useState<BodyMetricDetail | null | undefined>(
@@ -197,10 +225,10 @@ export function BodyMetricScreen({ metricSlug, store }: BodyMetricScreenProps) {
 	}
 
 	async function saveGoal() {
-		if (!detail || busy) return;
+		if (!detail?.editablePresentation || busy) return;
 		const parsed = parsePresentedMeasurement(
 			target,
-			detail,
+			detail.editablePresentation,
 			detail.inputLocale,
 		);
 		if (!parsed.ok) {
@@ -256,8 +284,12 @@ export function BodyMetricScreen({ metricSlug, store }: BodyMetricScreenProps) {
 				<AppText variant="display">{detail.latestFormatted ?? "—"}</AppText>
 				<AppText color="muted">
 					{detail.latest
-						? dateTimeLabel(detail.latest)
-						: "Log this measurement from your daily check-in."}
+						? detail.hasImportedData
+							? `${dateTimeLabel(detail.latest)} · Source: ${sourceLabel(detail.latest.source)}`
+							: dateTimeLabel(detail.latest)
+						: detail.userEnterable
+							? "Log this measurement from your daily check-in."
+							: "No imported measurements yet."}
 				</AppText>
 				{detail.series.observedDayCount > 0 ? (
 					<TrendChart series={detail.series} />
@@ -266,114 +298,128 @@ export function BodyMetricScreen({ metricSlug, store }: BodyMetricScreenProps) {
 
 			{error ? <AppText color="danger">{error}</AppText> : null}
 
-			<View style={styles.section}>
-				<SectionHeader title="Goal" />
-				{activeGoal ? (
-					<Card style={styles.goalCard}>
-						<AppText variant="section">
-							Target {activeGoal.targetFormatted}
-						</AppText>
+			{detail.editablePresentation ? (
+				<View style={styles.section}>
+					<SectionHeader title="Goal" />
+					{activeGoal ? (
+						<Card style={styles.goalCard}>
+							<AppText variant="section">
+								Target {activeGoal.targetFormatted}
+							</AppText>
+							<AppText color="muted">
+								{activeGoal.startFormatted
+									? `Started at ${activeGoal.startFormatted}`
+									: "No starting measurement"}
+								{" · "}
+								{activeGoal.currentFormatted
+									? `Latest ${activeGoal.currentFormatted}`
+									: "No current measurement"}
+							</AppText>
+							{activeGoal.goal.targetDate ? (
+								<AppText variant="caption" color="subtle">
+									Target date {activeGoal.goal.targetDate}
+								</AppText>
+							) : null}
+							{activeGoal.progressPercent !== null ? (
+								<AppText variant="caption" color="brand">
+									{activeGoal.progressPercent}% of the way
+								</AppText>
+							) : null}
+							<View style={styles.actions}>
+								<Button
+									label="Mark goal achieved"
+									variant="secondary"
+									disabled={busy}
+									style={styles.actionButton}
+									onPress={() => void updateGoal(activeGoal.goal.id, "achieve")}
+								/>
+								<Button
+									label="Stop goal"
+									variant="text"
+									disabled={busy}
+									style={styles.actionButton}
+									onPress={() => void updateGoal(activeGoal.goal.id, "abandon")}
+								/>
+							</View>
+						</Card>
+					) : detail.latest ? (
+						<Card style={styles.goalCard}>
+							<FormField
+								label={`Target (${detail.displayUnit})`}
+								value={target}
+								error={targetError}
+								placeholder={
+									detail.displayUnit === "st" ? "e.g. 12 st 0 lb" : undefined
+								}
+								keyboardType={
+									detail.displayUnit === "st" ? "default" : "decimal-pad"
+								}
+								onChangeText={setTarget}
+							/>
+							<FormField
+								label="Target date (optional)"
+								value={targetDate}
+								placeholder="YYYY-MM-DD"
+								autoCapitalize="none"
+								onChangeText={setTargetDate}
+							/>
+							<Button
+								label="Save goal"
+								loading={busy}
+								onPress={() => void saveGoal()}
+							/>
+						</Card>
+					) : (
 						<AppText color="muted">
-							{activeGoal.startFormatted
-								? `Started at ${activeGoal.startFormatted}`
-								: "No starting measurement"}
-							{" · "}
-							{activeGoal.currentFormatted
-								? `Latest ${activeGoal.currentFormatted}`
-								: "No current measurement"}
+							Log a measurement before setting a goal.
 						</AppText>
-						{activeGoal.goal.targetDate ? (
-							<AppText variant="caption" color="subtle">
-								Target date {activeGoal.goal.targetDate}
-							</AppText>
-						) : null}
-						{activeGoal.progressPercent !== null ? (
-							<AppText variant="caption" color="brand">
-								{activeGoal.progressPercent}% of the way
-							</AppText>
-						) : null}
-						<View style={styles.actions}>
-							<Button
-								label="Mark goal achieved"
-								variant="secondary"
-								disabled={busy}
-								style={styles.actionButton}
-								onPress={() => void updateGoal(activeGoal.goal.id, "achieve")}
-							/>
-							<Button
-								label="Stop goal"
-								variant="text"
-								disabled={busy}
-								style={styles.actionButton}
-								onPress={() => void updateGoal(activeGoal.goal.id, "abandon")}
-							/>
-						</View>
-					</Card>
-				) : detail.latest ? (
-					<Card style={styles.goalCard}>
-						<FormField
-							label={`Target (${detail.displayUnit})`}
-							value={target}
-							error={targetError}
-							placeholder={
-								detail.displayUnit === "st" ? "e.g. 12 st 0 lb" : undefined
-							}
-							keyboardType={
-								detail.displayUnit === "st" ? "default" : "decimal-pad"
-							}
-							onChangeText={setTarget}
-						/>
-						<FormField
-							label="Target date (optional)"
-							value={targetDate}
-							placeholder="YYYY-MM-DD"
-							autoCapitalize="none"
-							onChangeText={setTargetDate}
-						/>
-						<Button
-							label="Save goal"
-							loading={busy}
-							onPress={() => void saveGoal()}
-						/>
-					</Card>
-				) : (
-					<AppText color="muted">
-						Log a measurement before setting a goal.
-					</AppText>
-				)}
+					)}
 
-				{detail.goals
-					.filter((goal) => goal.status !== "active")
-					.map((goal) => (
-						<AppText key={goal.goal.id} variant="caption" color="muted">
-							{goal.status === "achieved" ? "Achieved" : "Stopped"}: target{" "}
-							{goal.targetFormatted}
-						</AppText>
-					))}
-			</View>
+					{detail.goals
+						.filter((goal) => goal.status !== "active")
+						.map((goal) => (
+							<AppText key={goal.goal.id} variant="caption" color="muted">
+								{goal.status === "achieved" ? "Achieved" : "Stopped"}: target{" "}
+								{goal.targetFormatted}
+							</AppText>
+						))}
+				</View>
+			) : (
+				<AppText color="muted">
+					Imported measurements are read-only in bro. Manage access in your
+					health platform settings.
+				</AppText>
+			)}
 
 			<View style={styles.section}>
 				<SectionHeader title="History" />
 				{detail.history.length === 0 ? (
 					<AppText color="muted">No measurements logged yet.</AppText>
 				) : null}
-				{detail.history.map((entry) => (
-					<HistoryEditor
-						key={`${entry.observation.id}:${entry.observation.updatedAt}`}
-						entry={entry}
-						presentation={detail}
-						inputLocale={detail.inputLocale}
-						busy={busy}
-						onSave={(canonicalValue) =>
-							void mutate(() =>
-								body.updateMeasurement(entry.observation.id, canonicalValue),
-							)
-						}
-						onDelete={() =>
-							void mutate(() => body.deleteMeasurement(entry.observation.id))
-						}
-					/>
-				))}
+				{detail.history.map((entry) =>
+					entry.editable && detail.editablePresentation ? (
+						<HistoryEditor
+							key={`${entry.observation.id}:${entry.observation.updatedAt}`}
+							entry={entry}
+							presentation={detail.editablePresentation}
+							inputLocale={detail.inputLocale}
+							busy={busy}
+							onSave={(canonicalValue) =>
+								void mutate(() =>
+									body.updateMeasurement(entry.observation.id, canonicalValue),
+								)
+							}
+							onDelete={() =>
+								void mutate(() => body.deleteMeasurement(entry.observation.id))
+							}
+						/>
+					) : (
+						<ImportedHistoryRow
+							key={`${entry.observation.id}:${entry.observation.updatedAt}`}
+							entry={entry}
+						/>
+					),
+				)}
 			</View>
 		</Screen>
 	);

@@ -90,7 +90,7 @@ describe("trends store", () => {
 		expect(weight?.series.points.at(-1)?.value).toBe(77.56429527);
 	});
 
-	it("does not expose imported-only overlays before daily rollups are wired", async () => {
+	it("keeps the no-connection trends snapshot unchanged", async () => {
 		await new databaseApp.TrackedMetricsRepository(db).configure(
 			"sleep_duration",
 			3,
@@ -101,5 +101,72 @@ describe("trends store", () => {
 		expect(
 			(await store.load(7)).metrics.map(({ metric }) => metric.slug),
 		).toEqual(["mood", "energy"]);
+	});
+
+	it("adds imported metrics and resolves tracker values over manual values", async () => {
+		const now = new Date("2026-08-14T22:00:00.000Z");
+		const daily = new databaseApp.DailyMetricRepository(db);
+		const observations = new databaseApp.ObservationRepository(db);
+		const preferences = new databaseApp.UnitPreferenceRepository(db);
+		await preferences.set("mass", "kg");
+		await observations.create({
+			metricSlug: "weight",
+			value: 80,
+			scaleMin: null,
+			scaleMax: null,
+			observedAt: Date.parse("2026-08-14T08:00:00.000Z"),
+			localDay: "2026-08-14",
+			tzOffsetMinutes: 0,
+			source: "user",
+			sourceRecordId: null,
+			assessmentId: null,
+		});
+		await daily.upsert({
+			metricSlug: "weight",
+			localDay: "2026-08-14",
+			value: 79,
+			source: "health_connect",
+		});
+		await daily.upsert({
+			metricSlug: "sleep_duration",
+			localDay: "2026-08-14",
+			value: 25_200,
+			source: "health_connect",
+		});
+		await daily.upsert({
+			metricSlug: "resting_heart_rate",
+			localDay: "2026-08-14",
+			value: 61.5,
+			source: "health_connect",
+		});
+
+		const snapshot = await new TrendsStore(
+			db,
+			() => now,
+			() => "en-GB",
+		).load(7);
+		expect(snapshot.metrics.map(({ metric }) => metric.slug)).toEqual([
+			"mood",
+			"energy",
+			"weight",
+			"sleep_duration",
+			"resting_heart_rate",
+		]);
+		expect(
+			snapshot.metrics.find(({ metric }) => metric.slug === "weight"),
+		).toMatchObject({ latestFormatted: "79.0 kg" });
+		expect(
+			snapshot.metrics
+				.find(({ metric }) => metric.slug === "weight")
+				?.series.points.at(-1)?.value,
+		).toBe(79);
+		expect(
+			snapshot.metrics.find(({ metric }) => metric.slug === "sleep_duration"),
+		).toMatchObject({ latestFormatted: "7 h 0 m" });
+		expect(
+			snapshot.metrics.find(
+				({ metric }) => metric.slug === "resting_heart_rate",
+			),
+		).toMatchObject({ latestFormatted: "61.5 bpm" });
 	});
 });

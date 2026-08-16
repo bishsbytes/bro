@@ -27,6 +27,12 @@ function observedLabel(observedAt: number): string {
 	});
 }
 
+function sourceLabel(source: string): string {
+	if (source === "healthkit") return "Apple Health";
+	if (source === "health_connect") return "Health Connect";
+	return "You";
+}
+
 export function BodyScreen({ store }: BodyScreenProps) {
 	const body = useMemo(() => store ?? createBodyStore(), [store]);
 	const { theme } = useUnistyles();
@@ -83,8 +89,8 @@ export function BodyScreen({ store }: BodyScreenProps) {
 		);
 	}
 
-	const tracked = overview.metrics.filter((metric) => metric.tracked);
-	const untracked = overview.metrics.filter((metric) => !metric.tracked);
+	const visible = overview.metrics.filter((metric) => metric.visible);
+	const untracked = overview.metrics.filter((metric) => !metric.visible);
 
 	return (
 		<Screen scroll padded gap="lg">
@@ -95,39 +101,50 @@ export function BodyScreen({ store }: BodyScreenProps) {
 
 			{error ? <AppText color="danger">{error}</AppText> : null}
 
-			{tracked.length === 0 ? (
+			{visible.length === 0 ? (
 				<EmptyState
 					title="No body metrics tracked"
 					body="Turn on a measurement below to add it to your daily check-in and Body view."
 				/>
 			) : null}
 
-			{tracked.map((metric) => (
+			{visible.map((metric) => (
 				<Card key={metric.metricSlug} style={styles.metricCard}>
 					<View style={styles.heading}>
 						<View style={styles.grow}>
 							<AppText variant="section">{metric.label}</AppText>
 							{metric.latest ? (
-								<AppText color="muted">
-									Latest {metric.latestFormatted} ·{" "}
-									{observedLabel(metric.latest.observedAt)}
-								</AppText>
+								<>
+									<AppText color="muted">
+										Latest {metric.latestFormatted} ·{" "}
+										{metric.latest.source === "user"
+											? observedLabel(metric.latest.observedAt)
+											: metric.latest.localDay}
+									</AppText>
+									{metric.hasImportedData ? (
+										<AppText variant="micro" color="subtle">
+											Source: {sourceLabel(metric.latest.source)}
+										</AppText>
+									) : null}
+								</>
 							) : (
 								<AppText color="muted">Nothing logged yet</AppText>
 							)}
 						</View>
-						<Switch
-							accessibilityLabel={`Stop tracking ${metric.label}`}
-							value
-							disabled={busySlug !== null}
-							trackColor={{
-								false: theme.colors.border,
-								true: theme.colors.brand,
-							}}
-							onValueChange={(enabled) =>
-								void setTracked(metric.metricSlug, enabled)
-							}
-						/>
+						{metric.userEnterable ? (
+							<Switch
+								accessibilityLabel={`${metric.tracked ? "Stop tracking" : "Track"} ${metric.label}`}
+								value={metric.tracked}
+								disabled={busySlug !== null}
+								trackColor={{
+									false: theme.colors.border,
+									true: theme.colors.brand,
+								}}
+								onValueChange={(enabled) =>
+									void setTracked(metric.metricSlug, enabled)
+								}
+							/>
+						) : null}
 					</View>
 
 					{metric.series.observedDayCount > 0 ? (

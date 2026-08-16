@@ -141,6 +141,14 @@ export class DailyMetricRepository extends BaseRepository {
 		return rows.map(toDailyMetric);
 	}
 
+	async listAll(): Promise<DailyMetric[]> {
+		const rows = await this.all<DailyMetricRow>(
+			`SELECT ${SELECT_COLUMNS} FROM daily_metrics
+			 ORDER BY local_day ASC, metric_slug ASC, source ASC, id ASC`,
+		);
+		return rows.map(toDailyMetric);
+	}
+
 	async listByDay(localDay: string): Promise<DailyMetric[]> {
 		if (!LOCAL_DAY_PATTERN.test(localDay)) {
 			throw new TypeError("Daily metric local day must use YYYY-MM-DD.");

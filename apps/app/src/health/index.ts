@@ -26,6 +26,11 @@ export {
 } from "./policy";
 export { type ResolvedMetricDay, resolveMetricDay } from "./resolved-day";
 export {
+	importedDailyMetricAsObservation,
+	resolveMetricObservations,
+	type ResolvedMetricObservation,
+} from "./resolved-series";
+export {
 	type AppliedHealthSampleChanges,
 	applyHealthSampleChanges,
 	type HealthSampleChanges,

@@ -173,6 +173,12 @@ function ObservationRow({
 	);
 }
 
+function sourceLabel(source: string): string {
+	if (source === "healthkit") return "Apple Health";
+	if (source === "health_connect") return "Health Connect";
+	return source === "user" ? "You" : source;
+}
+
 export function HistoryDayScreen({ localDay, store }: HistoryDayScreenProps) {
 	const history = useMemo(() => store ?? createHistoryStore(), [store]);
 	const [day, setDay] = useState<HistoryDay | null>(null);
@@ -260,6 +266,40 @@ export function HistoryDayScreen({ localDay, store }: HistoryDayScreenProps) {
 					) : null}
 					{day.assessments.map((assessment) => (
 						<ObservationRow key={assessment.id} observation={assessment} />
+					))}
+
+					{day.measurements.length > 0 ? (
+						<SectionHeader title="Measurements" />
+					) : null}
+					{day.measurements.map((measurement) => (
+						<Card
+							key={`${measurement.source}:${measurement.id}`}
+							style={styles.observationRow}
+						>
+							<View style={styles.grow}>
+								<AppText variant="score">
+									{measurement.label}: {measurement.formattedValue}
+								</AppText>
+								<AppText variant="micro" color="subtle">
+									Source: {sourceLabel(measurement.source)}
+									{measurement.selected ? " · Used for daily value" : ""}
+								</AppText>
+							</View>
+							{measurement.observation ? (
+								<Button
+									label="Delete"
+									variant="text"
+									tone="danger"
+									onPress={() =>
+										void mutate(() =>
+											history.deleteObservation(
+												measurement.observation as Observation,
+											),
+										)
+									}
+								/>
+							) : null}
+						</Card>
 					))}
 
 					{day.unknown.length > 0 ? (

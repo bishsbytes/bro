@@ -92,6 +92,11 @@ export function HistoryScreen({ store }: HistoryScreenProps) {
 								: `${day.assessmentCount} wheel of life reviews`}
 						</AppText>
 					) : null}
+					{day.healthLabels && day.healthLabels.length > 0 ? (
+						<AppText color="muted">
+							Health: {day.healthLabels.join(", ")}
+						</AppText>
+					) : null}
 					{day.noteBodies.map((body, index) => (
 						<AppText key={`${day.localDay}-note-${index}`}>{body}</AppText>
 					))}

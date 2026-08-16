@@ -1,12 +1,31 @@
 import {
+	type DailyMetric,
+	DailyMetricRepository,
 	type DayNote,
 	DayNoteRepository,
 	getDb,
 	type Observation,
 	ObservationRepository,
+	UnitPreferenceRepository,
 } from "@bro/database-app";
 import type { SQLiteDatabase } from "expo-sqlite";
 import { resolveMetric } from "../content/metric-registry";
+import {
+	formatMetricValue,
+	metricDisplayUnit,
+} from "../health/metric-presentation";
+import { isHealthMetricSlug } from "../health/policy";
+import { resolveMetricDay } from "../health/resolved-day";
+
+export type HistoryMeasurement = {
+	id: string;
+	metricSlug: string;
+	label: string;
+	formattedValue: string;
+	source: string;
+	selected: boolean;
+	observation: Observation | null;
+};
 
 export type HistoricalCheckIn = {
 	id: string;
@@ -21,6 +40,7 @@ export type HistoryDay = {
 	unpairedScored: Observation[];
 	factors: Observation[];
 	assessments: Observation[];
+	measurements: HistoryMeasurement[];
 	unknown: Observation[];
 	notes: DayNote[];
 };
@@ -33,6 +53,7 @@ export type HistoryDaySummary = {
 	noteBodies: string[];
 	/** Distinct wheel sittings whose scores landed on this day. */
 	assessmentCount: number;
+	healthLabels?: string[];
 };
 
 function pairCheckIns(
@@ -61,6 +82,9 @@ export function assembleHistoryDay(
 	localDay: string,
 	observations: readonly Observation[],
 	notes: readonly DayNote[],
+	dailyMetrics: readonly DailyMetric[] = [],
+	preferenceByDimension: ReadonlyMap<string, string> = new Map(),
+	locale?: string,
 ): HistoryDay {
 	const checkIns = pairCheckIns(observations);
 	const pairedIds = new Set(
@@ -69,6 +93,7 @@ export function assembleHistoryDay(
 	const unpairedScored: Observation[] = [];
 	const factors: Observation[] = [];
 	const assessments: Observation[] = [];
+	const measurementObservations: Observation[] = [];
 	const unknown: Observation[] = [];
 
 	for (const observation of observations) {
@@ -79,6 +104,8 @@ export function assembleHistoryDay(
 			factors.push(observation);
 		} else if (resolved.metric.kind === "assessment") {
 			assessments.push(observation);
+		} else if (resolved.metric.kind === "measurement") {
+			measurementObservations.push(observation);
 		} else if (
 			resolved.metric.kind === "scored" &&
 			!pairedIds.has(observation.id)
@@ -86,6 +113,74 @@ export function assembleHistoryDay(
 			unpairedScored.push(observation);
 		}
 	}
+	// Keep the pre-import day view unchanged. Manual measurement provenance is
+	// shown here only when there is a tracker row to compare it with.
+	const measurementSlugs = new Set(dailyMetrics.map((row) => row.metricSlug));
+	const measurements = [...measurementSlugs].flatMap((metricSlug) => {
+		const resolved = resolveMetric(metricSlug);
+		if (resolved.kind !== "known" || resolved.metric.kind !== "measurement") {
+			return [];
+		}
+		const metric = resolved.metric;
+		const displayUnit = metricDisplayUnit(
+			metric,
+			preferenceByDimension,
+			locale,
+		);
+		const userRows = measurementObservations.filter(
+			(row) => row.metricSlug === metricSlug,
+		);
+		const importedRows = dailyMetrics.filter(
+			(row) => row.metricSlug === metricSlug,
+		);
+		const selectedIds = new Set<string>();
+		if (isHealthMetricSlug(metricSlug)) {
+			const selected = resolveMetricDay(
+				metricSlug,
+				localDay,
+				userRows,
+				importedRows,
+			).selected;
+			if (selected?.kind === "imported") selectedIds.add(selected.row.id);
+			if (selected?.kind === "user") {
+				const selectedUser = selected.rows.at(-1);
+				if (selectedUser) selectedIds.add(selectedUser.id);
+			}
+		} else {
+			const selectedUser = [...userRows]
+				.sort(
+					(left, right) =>
+						left.observedAt - right.observedAt ||
+						left.id.localeCompare(right.id),
+				)
+				.at(-1);
+			if (selectedUser) selectedIds.add(selectedUser.id);
+		}
+		return [
+			...userRows.map((observation) => ({
+				id: observation.id,
+				metricSlug,
+				label: metric.label,
+				formattedValue: formatMetricValue(
+					metric,
+					observation.value,
+					displayUnit,
+				),
+				source: observation.source,
+				selected: selectedIds.has(observation.id),
+				observation,
+			})),
+			...importedRows.map((row) => ({
+				id: row.id,
+				metricSlug,
+				label: metric.label,
+				formattedValue: formatMetricValue(metric, row.value, displayUnit),
+				source: row.source,
+				selected: selectedIds.has(row.id),
+				observation: null,
+			})),
+		];
+	});
 
 	return {
 		localDay,
@@ -93,6 +188,7 @@ export function assembleHistoryDay(
 		unpairedScored,
 		factors,
 		assessments,
+		measurements,
 		unknown,
 		notes: [...notes],
 	};
@@ -101,16 +197,21 @@ export function assembleHistoryDay(
 export class HistoryStore {
 	private readonly observations: ObservationRepository;
 	private readonly notes: DayNoteRepository;
+	private readonly dailyMetrics: DailyMetricRepository;
+	private readonly unitPreferences: UnitPreferenceRepository;
 
 	constructor(private readonly db: SQLiteDatabase) {
 		this.observations = new ObservationRepository(db);
 		this.notes = new DayNoteRepository(db);
+		this.dailyMetrics = new DailyMetricRepository(db);
+		this.unitPreferences = new UnitPreferenceRepository(db);
 	}
 
 	async loadHistory(): Promise<HistoryDaySummary[]> {
-		const [observations, notes] = await Promise.all([
+		const [observations, notes, dailyMetrics] = await Promise.all([
 			this.observations.listAll(),
 			this.notes.listAll(),
+			this.dailyMetrics.listAll(),
 		]);
 		const assessmentObservations: Observation[] = [];
 		const dailyObservations: Observation[] = [];
@@ -125,6 +226,7 @@ export class HistoryStore {
 		const localDays = new Set([
 			...observations.map((row) => row.localDay),
 			...notes.map((note) => note.localDay),
+			...dailyMetrics.map((row) => row.localDay),
 		]);
 
 		return [...localDays]
@@ -144,6 +246,13 @@ export class HistoryStore {
 						? [resolved.metric.label]
 						: [];
 				});
+				const healthLabels = dailyMetrics
+					.filter((row) => row.localDay === localDay)
+					.flatMap((row) => {
+						const resolved = resolveMetric(row.metricSlug);
+						return resolved.kind === "known" ? [resolved.metric.label] : [];
+					});
+				const uniqueHealthLabels = [...new Set(healthLabels)];
 
 				return {
 					localDay,
@@ -158,16 +267,33 @@ export class HistoryStore {
 						.filter((note) => note.localDay === localDay)
 						.map((note) => note.body),
 					assessmentCount: assessmentIds.size,
+					...(uniqueHealthLabels.length > 0
+						? { healthLabels: uniqueHealthLabels }
+						: {}),
 				};
 			});
 	}
 
 	async loadDay(localDay: string): Promise<HistoryDay> {
-		const [observations, notes] = await Promise.all([
+		const [observations, notes, dailyMetrics, preferences] = await Promise.all([
 			this.observations.listByDay(localDay),
 			this.notes.listByDay(localDay),
+			this.dailyMetrics.listByDay(localDay),
+			this.unitPreferences.resolveLatestPerDimension(),
 		]);
-		return assembleHistoryDay(localDay, observations, notes);
+		return assembleHistoryDay(
+			localDay,
+			observations,
+			notes,
+			dailyMetrics,
+			new Map(
+				preferences.map((preference) => [
+					preference.dimension,
+					preference.unit,
+				]),
+			),
+			Intl.DateTimeFormat().resolvedOptions().locale,
+		);
 	}
 
 	async updateCheckIn(
