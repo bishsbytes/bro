@@ -61,4 +61,8 @@ export {
 	type TrackedMetricDefault,
 	TrackedMetricsRepository,
 } from "./repositories/tracked-metrics-repository";
+export {
+	type UnitPreference,
+	UnitPreferenceRepository,
+} from "./repositories/unit-preference-repository";
 export { createUuidV7, type RandomBytes } from "./uuid-v7";

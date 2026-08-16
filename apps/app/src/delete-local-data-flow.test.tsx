@@ -84,6 +84,7 @@ describe("delete local data", () => {
 		const reminders = new databaseApp.ReminderRepository(db);
 		const assessments = new databaseApp.AssessmentRepository(db);
 		const goals = new databaseApp.GoalRepository(db);
+		const unitPreferences = new databaseApp.UnitPreferenceRepository(db);
 		await observations.create({
 			metricSlug: "mood",
 			value: 4,
@@ -127,6 +128,7 @@ describe("delete local data", () => {
 			targetDate: null,
 			startedAt: Date.parse("2026-08-14T11:05:00.000Z"),
 		});
+		await unitPreferences.set("mass", "st");
 		(
 			Notifications.getAllScheduledNotificationsAsync as jest.Mock
 		).mockResolvedValue([
@@ -164,6 +166,7 @@ describe("delete local data", () => {
 		expect(await reminders.listAll()).toEqual([]);
 		expect(await assessments.listAll()).toEqual([]);
 		expect(await goals.listAll()).toEqual([]);
+		expect(await unitPreferences.list()).toEqual([]);
 		expect(transaction).toHaveBeenCalledTimes(1);
 		const cancelMock =
 			Notifications.cancelScheduledNotificationAsync as jest.Mock;

@@ -450,6 +450,77 @@ describe("product repositories", () => {
 		).rejects.toThrow("real YYYY-MM-DD date");
 	});
 
+	it("sets unit preferences and resolves replicated rows latest-first", async () => {
+		let now = 1_000;
+		let nextId = 0;
+		const repository = new databaseApp.UnitPreferenceRepository(db, {
+			now: () => now,
+			createId: () => {
+				nextId += 1;
+				return `unit-preference-${nextId}`;
+			},
+		});
+
+		const created = await repository.set(" mass ", " kg ");
+		now = 2_000;
+		await expect(repository.set("mass", "lb")).resolves.toMatchObject({
+			id: created.id,
+			dimension: "mass",
+			unit: "lb",
+			createdAt: 1_000,
+			updatedAt: 2_000,
+		});
+		expect(await repository.list()).toHaveLength(1);
+
+		await db.runAsync(
+			`INSERT INTO unit_preferences (
+				id, dimension, unit, created_at, updated_at
+			) VALUES (?, ?, ?, ?, ?), (?, ?, ?, ?, ?)`,
+			[
+				"replicated-mass",
+				"mass",
+				"st",
+				1_500,
+				3_000,
+				"future-dimension",
+				"energy",
+				"kJ",
+				1_500,
+				2_500,
+			],
+		);
+		expect(await repository.resolveLatestPerDimension()).toEqual([
+			{
+				id: "future-dimension",
+				dimension: "energy",
+				unit: "kJ",
+				createdAt: 1_500,
+				updatedAt: 2_500,
+			},
+			{
+				id: "replicated-mass",
+				dimension: "mass",
+				unit: "st",
+				createdAt: 1_500,
+				updatedAt: 3_000,
+			},
+		]);
+
+		now = 4_000;
+		await expect(repository.set("mass", "kg")).resolves.toMatchObject({
+			id: "replicated-mass",
+			unit: "kg",
+			createdAt: 1_500,
+			updatedAt: 4_000,
+		});
+		await expect(repository.set("", "kg")).rejects.toThrow(
+			"dimension must not be empty",
+		);
+		await expect(repository.set("length", " ")).rejects.toThrow(
+			"unit must not be empty",
+		);
+	});
+
 	it("creates, edits, disables, and hard-deletes reminder schedules", async () => {
 		let now = 1_000;
 		const repository = new databaseApp.ReminderRepository(db, {

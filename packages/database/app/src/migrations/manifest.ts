@@ -18,4 +18,8 @@ export const migrations: Migration[] = [
 		id: "0002_square_mikhail_rasputin",
 		sql: "CREATE TABLE IF NOT EXISTS `assessments` (\n\t`id` text PRIMARY KEY NOT NULL,\n\t`template_slug` text NOT NULL,\n\t`template_version` integer NOT NULL,\n\t`started_at` integer NOT NULL,\n\t`completed_at` integer,\n\t`items` text NOT NULL,\n\t`focus_item_slugs` text NOT NULL,\n\t`created_at` integer NOT NULL,\n\t`updated_at` integer NOT NULL\n);\n--> statement-breakpoint\nCREATE TABLE IF NOT EXISTS `goals` (\n\t`id` text PRIMARY KEY NOT NULL,\n\t`metric_slug` text NOT NULL,\n\t`direction` text NOT NULL,\n\t`target_value` real NOT NULL,\n\t`target_date` text,\n\t`started_at` integer NOT NULL,\n\t`achieved_at` integer,\n\t`abandoned_at` integer,\n\t`created_at` integer NOT NULL,\n\t`updated_at` integer NOT NULL\n);\n--> statement-breakpoint\nALTER TABLE `tracked_metrics` ADD `custom_label` text;\n",
 	},
+	{
+		id: "0003_curly_tinkerer",
+		sql: "CREATE TABLE IF NOT EXISTS `unit_preferences` (\n\t`id` text PRIMARY KEY NOT NULL,\n\t`dimension` text NOT NULL,\n\t`unit` text NOT NULL,\n\t`created_at` integer NOT NULL,\n\t`updated_at` integer NOT NULL\n);\n",
+	},
 ];

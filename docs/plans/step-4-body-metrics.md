@@ -2,7 +2,7 @@
 
 ## Status
 
-Planned, 16 August 2026. Implementation not started. Builds directly on the [step 3 hand-off](step-3-wheel-of-life.md#step-4-hand-off): the `goals` table is live and waiting for weight targets, migration 004 runs over a twice-proven multi-migration path, and `settings/life-areas` is the precedent for the units screen.
+Implementation in progress, 16 August 2026. Slice 1 is complete: migration 004, the conflict-tolerant `unit_preferences` table and bundled manifest, latest-per-dimension repository resolution, real-SQLite fresh/step-3/rerun coverage, and delete-local-data coverage are implemented and green. Builds directly on the [step 3 hand-off](step-3-wheel-of-life.md#step-4-hand-off): the `goals` table is live and waiting for weight targets, migration 004 runs over a twice-proven multi-migration path, and `settings/life-areas` is the precedent for the units screen.
 
 This is the delivery plan for [sequencing step 4 of the product domains plan](product-domains-and-data.md#sequencing): the first dimensional metrics — weight, waist, and body fat — and per-dimension unit preferences. It is deliberately the first real test of [canonical storage with display-side units](product-domains-and-data.md#units-and-measurement-preferences), taken now because a stored value in an unknown unit is the one mistake this schema cannot absorb, and cheap now becomes a rewrite of every row later.
 

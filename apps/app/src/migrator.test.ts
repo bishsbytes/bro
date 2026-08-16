@@ -44,6 +44,7 @@ describe("product database migrations", () => {
 				"0000_check_in",
 				"0001_odd_lockheed",
 				"0002_square_mikhail_rasputin",
+				"0003_curly_tinkerer",
 			],
 			skipped: [],
 		});
@@ -57,6 +58,7 @@ describe("product database migrations", () => {
 				'reminders',
 				'assessments',
 				'goals',
+				'unit_preferences',
 				'idx_observations_metric_day',
 				'idx_observations_day',
 				'idx_day_notes_day'
@@ -74,6 +76,7 @@ describe("product database migrations", () => {
 			{ name: "observations", type: "table" },
 			{ name: "reminders", type: "table" },
 			{ name: "tracked_metrics", type: "table" },
+			{ name: "unit_preferences", type: "table" },
 		]);
 		expect(
 			objects
@@ -99,6 +102,7 @@ describe("product database migrations", () => {
 				"0000_check_in",
 				"0001_odd_lockheed",
 				"0002_square_mikhail_rasputin",
+				"0003_curly_tinkerer",
 			],
 		});
 
@@ -109,10 +113,11 @@ describe("product database migrations", () => {
 			{ id: "0000_check_in" },
 			{ id: "0001_odd_lockheed" },
 			{ id: "0002_square_mikhail_rasputin" },
+			{ id: "0003_curly_tinkerer" },
 		]);
 	});
 
-	it("applies only migration 003 to a step-2 database", async () => {
+	it("applies migrations 003 and 004 to a step-2 database", async () => {
 		const { databaseApp, db } = await migratedDatabase("step-two.db");
 		await db.execAsync(`
 			CREATE TABLE IF NOT EXISTS __app_migrations (
@@ -133,22 +138,51 @@ describe("product database migrations", () => {
 		`);
 
 		await expect(databaseApp.runMigrations(db)).resolves.toEqual({
-			applied: ["0002_square_mikhail_rasputin"],
+			applied: ["0002_square_mikhail_rasputin", "0003_curly_tinkerer"],
 			skipped: ["0000_check_in", "0001_odd_lockheed"],
 		});
 		expect(
 			await db.getAllAsync<{ name: string }>(
 				`SELECT name FROM sqlite_master
-				 WHERE type = 'table' AND name IN ('assessments', 'goals')
+				 WHERE type = 'table'
+				 AND name IN ('assessments', 'goals', 'unit_preferences')
 				 ORDER BY name`,
 			),
-		).toEqual([{ name: "assessments" }, { name: "goals" }]);
+		).toEqual([
+			{ name: "assessments" },
+			{ name: "goals" },
+			{ name: "unit_preferences" },
+		]);
 		expect(
 			await db.getFirstAsync<{ name: string }>(
 				`SELECT name FROM pragma_table_info('tracked_metrics')
 				 WHERE name = 'custom_label'`,
 			),
 		).toEqual({ name: "custom_label" });
+	});
+
+	it("applies only migration 004 to a step-3 database", async () => {
+		const { databaseApp, db } = await migratedDatabase("step-three.db");
+		await databaseApp.runMigrations(db);
+		await db.execAsync(`
+			DROP TABLE unit_preferences;
+			DELETE FROM __app_migrations WHERE id = '0003_curly_tinkerer';
+		`);
+
+		await expect(databaseApp.runMigrations(db)).resolves.toEqual({
+			applied: ["0003_curly_tinkerer"],
+			skipped: [
+				"0000_check_in",
+				"0001_odd_lockheed",
+				"0002_square_mikhail_rasputin",
+			],
+		});
+		expect(
+			await db.getFirstAsync<{ name: string }>(
+				`SELECT name FROM sqlite_master
+				 WHERE type = 'table' AND name = 'unit_preferences'`,
+			),
+		).toEqual({ name: "unit_preferences" });
 	});
 
 	it("tolerates migration statements re-running after a marker race", async () => {
@@ -174,6 +208,7 @@ describe("product database migrations", () => {
 				"0000_check_in",
 				"0001_odd_lockheed",
 				"0002_square_mikhail_rasputin",
+				"0003_curly_tinkerer",
 			],
 			skipped: [],
 		});
@@ -181,7 +216,7 @@ describe("product database migrations", () => {
 		const markers = await db.getFirstAsync<{ count: number }>(
 			"SELECT COUNT(*) AS count FROM __app_migrations",
 		);
-		expect(markers?.count).toBe(3);
+		expect(markers?.count).toBe(4);
 		expect(
 			await db.getFirstAsync<{ count: number }>(
 				`SELECT COUNT(*) AS count FROM pragma_table_info('tracked_metrics')

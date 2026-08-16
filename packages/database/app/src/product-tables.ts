@@ -13,6 +13,7 @@ export const PRODUCT_TABLE_NAMES = {
 	reminders: "reminders",
 	assessments: "assessments",
 	goals: "goals",
+	unitPreferences: "unit_preferences",
 } as const;
 
 export type ProductTableName =

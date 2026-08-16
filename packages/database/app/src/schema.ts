@@ -99,3 +99,14 @@ export const goals = sqliteTable(PRODUCT_TABLE_NAMES.goals, {
 	createdAt: integer("created_at").notNull(),
 	updatedAt: integer("updated_at").notNull(),
 });
+
+export const unitPreferences = sqliteTable(
+	PRODUCT_TABLE_NAMES.unitPreferences,
+	{
+		id: text("id").primaryKey(),
+		dimension: text("dimension").notNull(),
+		unit: text("unit").notNull(),
+		createdAt: integer("created_at").notNull(),
+		updatedAt: integer("updated_at").notNull(),
+	},
+);
