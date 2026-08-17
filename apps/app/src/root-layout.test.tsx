@@ -46,6 +46,18 @@ jest.mock("./history/history-store", () => ({
 	}),
 }));
 
+jest.mock("./habits/habits-store", () => ({
+	createHabitsStore: () => ({
+		loadToday: async () => ({
+			localDay: "2026-08-14",
+			habits: [],
+			challenges: [],
+		}),
+		toggleManual: jest.fn(),
+		completeChallengeDay: jest.fn(),
+	}),
+}));
+
 jest.mock("./trends/trends-store", () => ({
 	createTrendsStore: () => ({
 		load: async (period: number) => ({

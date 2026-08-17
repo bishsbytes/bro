@@ -183,6 +183,14 @@ export class ChallengeProgressRepository extends BaseRepository {
 		return rows.map(toChallengeProgress);
 	}
 
+	async listAll(): Promise<ChallengeProgress[]> {
+		const rows = await this.all<ChallengeProgressRow>(
+			`SELECT ${SELECT_COLUMNS} FROM challenge_progress
+			 ORDER BY local_day ASC, completed_at ASC, id ASC`,
+		);
+		return rows.map(toChallengeProgress);
+	}
+
 	async listByDay(localDay: string): Promise<ChallengeProgress[]> {
 		if (!isCalendarDay(localDay)) {
 			throw new TypeError(

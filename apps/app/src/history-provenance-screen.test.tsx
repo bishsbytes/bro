@@ -52,6 +52,8 @@ describe("history measurement provenance", () => {
 			],
 			unknown: [],
 			notes: [],
+			habitCompletions: [],
+			challengeSteps: [],
 		};
 		const store = {
 			loadDay: jest.fn(async () => day),

@@ -97,6 +97,17 @@ export function SettingsScreen({
 		<Screen scroll padded edges={["bottom"]}>
 			<HealthSettingsEntry availability={healthAvailability} />
 			<Card style={styles.section}>
+				<SectionHeader title="Habits" />
+				<AppText color="muted">
+					Choose routines, set their days, and add your own.
+				</AppText>
+				<Button
+					label="Manage habits"
+					variant="secondary"
+					onPress={() => router.push("/settings/habits")}
+				/>
+			</Card>
+			<Card style={styles.section}>
 				<SectionHeader title="Life areas" />
 				<AppText color="muted">
 					Choose, order, and rename the areas shown in your wheel of life.

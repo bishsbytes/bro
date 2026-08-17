@@ -97,7 +97,18 @@ export function HistoryScreen({ store }: HistoryScreenProps) {
 							Health: {day.healthLabels.join(", ")}
 						</AppText>
 					) : null}
+					{day.habitLabels && day.habitLabels.length > 0 ? (
+						<AppText color="muted">
+							Habits: {day.habitLabels.join(", ")}
+						</AppText>
+					) : null}
+					{day.challengeLabels && day.challengeLabels.length > 0 ? (
+						<AppText color="muted">
+							Challenges: {day.challengeLabels.join(", ")}
+						</AppText>
+					) : null}
 					{day.noteBodies.map((body, index) => (
+						// biome-ignore lint/suspicious/noArrayIndexKey: summaries do not expose note ids and these text rows hold no state
 						<AppText key={`${day.localDay}-note-${index}`}>{body}</AppText>
 					))}
 				</ListRow>

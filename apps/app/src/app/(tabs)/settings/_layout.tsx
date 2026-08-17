@@ -19,6 +19,7 @@ export default function SettingsLayout() {
 			/>
 			<Stack.Screen name="reminders" options={{ title: "Reminders" }} />
 			<Stack.Screen name="life-areas" options={{ title: "Life areas" }} />
+			<Stack.Screen name="habits" options={{ title: "Habits" }} />
 			<Stack.Screen name="units" options={{ title: "Units" }} />
 			<Stack.Screen name="health" options={{ title: "Health data" }} />
 		</Stack>

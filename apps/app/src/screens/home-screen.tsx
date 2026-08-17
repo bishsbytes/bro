@@ -15,11 +15,20 @@ import { FormField } from "../components/form-field";
 import { Screen } from "../components/screen";
 import { SectionHeader } from "../components/section-header";
 import { type FactorCategory, resolveMetric } from "../content/metric-registry";
+import {
+	createHabitsStore,
+	type HabitsStore,
+	type TodayHabitsSnapshot,
+} from "../habits/habits-store";
 import { StyleSheet } from "../theme/unistyles";
-import { parseMeasurement, type ParsedMeasurement } from "../units";
+import { type ParsedMeasurement, parseMeasurement } from "../units";
 
 type HomeScreenProps = {
 	store?: Pick<CheckInStore, "loadToday" | "save">;
+	habitsStore?: Pick<
+		HabitsStore,
+		"loadToday" | "toggleManual" | "completeChallengeDay"
+	>;
 };
 
 const SCORES = [1, 2, 3, 4, 5] as const;
@@ -66,9 +75,21 @@ function measurementPlaceholder(measurement: CheckInMeasurement): string {
 		: `Enter ${measurement.displayUnit}`;
 }
 
-export function HomeScreen({ store }: HomeScreenProps) {
+export function HomeScreen({ store, habitsStore }: HomeScreenProps) {
 	const checkIns = useMemo(() => store ?? createCheckInStore(), [store]);
+	const routines = useMemo(
+		() => habitsStore ?? createHabitsStore(),
+		[habitsStore],
+	);
 	const [today, setToday] = useState<TodayCheckIn | null>(null);
+	const [habitsToday, setHabitsToday] = useState<TodayHabitsSnapshot | null>(
+		null,
+	);
+	const [routineBusy, setRoutineBusy] = useState<string | null>(null);
+	const [routineError, setRoutineError] = useState<string | null>(null);
+	const [finishedChallenge, setFinishedChallenge] = useState<string | null>(
+		null,
+	);
 	const [mood, setMood] = useState<number | null>(null);
 	const [energy, setEnergy] = useState<number | null>(null);
 	const [selectedFactors, setSelectedFactors] = useState<string[]>([]);
@@ -97,11 +118,60 @@ export function HomeScreen({ store }: HomeScreenProps) {
 		}
 	}, [checkIns]);
 
+	const loadRoutines = useCallback(async () => {
+		setRoutineError(null);
+		try {
+			setHabitsToday(await routines.loadToday());
+		} catch (caught) {
+			setRoutineError(
+				caught instanceof Error ? caught.message : String(caught),
+			);
+		}
+	}, [routines]);
+
 	useFocusEffect(
 		useCallback(() => {
 			void load();
-		}, [load]),
+			void loadRoutines();
+		}, [load, loadRoutines]),
 	);
+
+	async function toggleHabit(habitId: string) {
+		if (!habitsToday || routineBusy) return;
+		setRoutineBusy(habitId);
+		setRoutineError(null);
+		try {
+			await routines.toggleManual(habitId, habitsToday.localDay);
+			await loadRoutines();
+		} catch (caught) {
+			setRoutineError(
+				caught instanceof Error ? caught.message : String(caught),
+			);
+		} finally {
+			setRoutineBusy(null);
+		}
+	}
+
+	async function completeChallenge(enrolmentId: string, dayIndex: number) {
+		if (!habitsToday || routineBusy) return;
+		setRoutineBusy(enrolmentId);
+		setRoutineError(null);
+		try {
+			const detail = await routines.completeChallengeDay(
+				enrolmentId,
+				dayIndex,
+				habitsToday.localDay,
+			);
+			if (detail.isFinished) setFinishedChallenge(detail.title);
+			await loadRoutines();
+		} catch (caught) {
+			setRoutineError(
+				caught instanceof Error ? caught.message : String(caught),
+			);
+		} finally {
+			setRoutineBusy(null);
+		}
+	}
 
 	function toggleFactor(slug: string) {
 		setSelectedFactors((current) =>
@@ -246,6 +316,101 @@ export function HomeScreen({ store }: HomeScreenProps) {
 			<AppText variant="display" style={styles.pageTitle}>
 				How are you?
 			</AppText>
+			{finishedChallenge ? (
+				<Card style={styles.routineCard}>
+					<AppText variant="section">Challenge complete</AppText>
+					<AppText color="muted">You finished {finishedChallenge}.</AppText>
+					<Button
+						label="Dismiss"
+						variant="text"
+						onPress={() => setFinishedChallenge(null)}
+					/>
+				</Card>
+			) : null}
+			{habitsToday &&
+			habitsToday.habits.length === 0 &&
+			habitsToday.challenges.length === 0 &&
+			!habitsToday.hasHabits ? (
+				<Card style={styles.routineCard}>
+					<AppText variant="section">Build a routine</AppText>
+					<AppText color="muted">
+						Add a habit and Today will keep the next small action in view.
+					</AppText>
+					<Button
+						label="Choose a habit"
+						variant="secondary"
+						onPress={() => router.push("/settings/habits")}
+					/>
+				</Card>
+			) : null}
+			{habitsToday && habitsToday.habits.length > 0 ? (
+				<View style={styles.section}>
+					<SectionHeader
+						title="Habits"
+						action={
+							<TouchableOpacity onPress={() => router.push("/settings/habits")}>
+								<AppText variant="label" color="brand">
+									Manage
+								</AppText>
+							</TouchableOpacity>
+						}
+					/>
+					{habitsToday.habits.map((item) => (
+						<Card key={item.habit.id} style={styles.habitCard}>
+							<View style={styles.routineCopy}>
+								<AppText variant="score">{item.label}</AppText>
+								{item.progressLabel ? (
+									<AppText color="muted">{item.progressLabel}</AppText>
+								) : null}
+								<AppText variant="caption" color="subtle">
+									{item.completed ? "Done today" : "Still to do"}
+									{item.streak > 0 ? ` · ${item.streak} day streak` : ""}
+								</AppText>
+							</View>
+							{item.habit.kind === "manual" ? (
+								<Button
+									label={item.completed ? "Undo" : "Mark done"}
+									variant={item.completed ? "text" : "secondary"}
+									loading={routineBusy === item.habit.id}
+									onPress={() => void toggleHabit(item.habit.id)}
+								/>
+							) : null}
+						</Card>
+					))}
+				</View>
+			) : null}
+			{habitsToday && habitsToday.challenges.length > 0 ? (
+				<View style={styles.section}>
+					<SectionHeader title="Challenges" />
+					{habitsToday.challenges.map((challenge) => (
+						<Card key={challenge.enrolmentId} style={styles.routineCard}>
+							<AppText variant="caption" color="brand">
+								DAY {challenge.dayIndex} OF {challenge.durationDays}
+							</AppText>
+							<AppText variant="section">{challenge.dayTitle}</AppText>
+							<AppText color="muted">{challenge.action}</AppText>
+							<Button
+								label="Mark step done"
+								loading={routineBusy === challenge.enrolmentId}
+								onPress={() =>
+									void completeChallenge(
+										challenge.enrolmentId,
+										challenge.dayIndex,
+									)
+								}
+							/>
+							<Button
+								label="View challenge"
+								variant="text"
+								onPress={() =>
+									router.push(`/challenges/${challenge.enrolmentId}`)
+								}
+							/>
+						</Card>
+					))}
+				</View>
+			) : null}
+			{routineError ? <AppText color="danger">{routineError}</AppText> : null}
 			{today.entries.length === 0 ? (
 				<Card style={styles.stockCard}>
 					<AppText variant="section">Take stock of the bigger picture</AppText>
@@ -482,7 +647,14 @@ const styles = StyleSheet.create((theme) => ({
 		gap: theme.spacing.md,
 	},
 	stockCard: { gap: theme.spacing.sm, marginBottom: theme.spacing.xl },
+	routineCard: { gap: theme.spacing.sm, marginBottom: theme.spacing.xl },
 	section: { marginBottom: theme.spacing.xl, gap: theme.spacing.md },
+	habitCard: {
+		flexDirection: "row",
+		alignItems: "center",
+		gap: theme.spacing.md,
+	},
+	routineCopy: { flex: 1, gap: theme.spacing.xs },
 	entryCard: {
 		flexDirection: "row",
 		justifyContent: "space-between",

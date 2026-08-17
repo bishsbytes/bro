@@ -1,14 +1,24 @@
 import {
+	type ChallengeEnrolment,
+	ChallengeEnrolmentRepository,
+	type ChallengeProgress,
+	ChallengeProgressRepository,
 	type DailyMetric,
 	DailyMetricRepository,
 	type DayNote,
 	DayNoteRepository,
 	getDb,
+	type Habit,
+	type HabitCompletion,
+	HabitCompletionRepository,
+	HabitRepository,
 	type Observation,
 	ObservationRepository,
 	UnitPreferenceRepository,
 } from "@bro/database-app";
 import type { SQLiteDatabase } from "expo-sqlite";
+import { resolveChallenge } from "../content/challenge-catalogue";
+import { resolveHabit } from "../content/habit-catalogue";
 import { resolveMetric } from "../content/metric-registry";
 import {
 	formatMetricValue,
@@ -43,6 +53,22 @@ export type HistoryDay = {
 	measurements: HistoryMeasurement[];
 	unknown: Observation[];
 	notes: DayNote[];
+	habitCompletions: HistoryHabitCompletion[];
+	challengeSteps: HistoryChallengeStep[];
+};
+
+export type HistoryHabitCompletion = {
+	id: string;
+	habitId: string;
+	label: string;
+};
+
+export type HistoryChallengeStep = {
+	id: string;
+	enrolmentId: string;
+	title: string;
+	dayIndex: number;
+	dayTitle: string;
 };
 
 export type HistoryDaySummary = {
@@ -54,7 +80,18 @@ export type HistoryDaySummary = {
 	/** Distinct wheel sittings whose scores landed on this day. */
 	assessmentCount: number;
 	healthLabels?: string[];
+	habitLabels?: string[];
+	challengeLabels?: string[];
 };
+
+function habitLabel(habit: Habit | undefined): string {
+	if (!habit) return "Habit";
+	return (
+		habit.customLabel ??
+		resolveHabit(habit.slug)?.label ??
+		habit.slug.replace(/^habit:(?:custom:)?/, "")
+	);
+}
 
 function pairCheckIns(
 	observations: readonly Observation[],
@@ -85,6 +122,10 @@ export function assembleHistoryDay(
 	dailyMetrics: readonly DailyMetric[] = [],
 	preferenceByDimension: ReadonlyMap<string, string> = new Map(),
 	locale?: string,
+	habits: readonly Habit[] = [],
+	habitCompletions: readonly HabitCompletion[] = [],
+	enrolments: readonly ChallengeEnrolment[] = [],
+	challengeProgress: readonly ChallengeProgress[] = [],
 ): HistoryDay {
 	const checkIns = pairCheckIns(observations);
 	const pairedIds = new Set(
@@ -191,6 +232,30 @@ export function assembleHistoryDay(
 		measurements,
 		unknown,
 		notes: [...notes],
+		habitCompletions: habitCompletions.map((completion) => ({
+			id: completion.id,
+			habitId: completion.habitId,
+			label: habitLabel(
+				habits.find((habit) => habit.id === completion.habitId),
+			),
+		})),
+		challengeSteps: challengeProgress.map((progress) => {
+			const enrolment = enrolments.find(
+				(candidate) => candidate.id === progress.enrolmentId,
+			);
+			const day = enrolment
+				? resolveChallenge(enrolment.challengeSlug)?.days.find(
+						(candidate) => candidate.day === progress.dayIndex,
+					)
+				: null;
+			return {
+				id: progress.id,
+				enrolmentId: progress.enrolmentId,
+				title: enrolment?.title ?? "Challenge",
+				dayIndex: progress.dayIndex,
+				dayTitle: day?.title ?? `Day ${progress.dayIndex}`,
+			};
+		}),
 	};
 }
 
@@ -199,19 +264,39 @@ export class HistoryStore {
 	private readonly notes: DayNoteRepository;
 	private readonly dailyMetrics: DailyMetricRepository;
 	private readonly unitPreferences: UnitPreferenceRepository;
+	private readonly habits: HabitRepository;
+	private readonly habitCompletions: HabitCompletionRepository;
+	private readonly enrolments: ChallengeEnrolmentRepository;
+	private readonly challengeProgress: ChallengeProgressRepository;
 
 	constructor(private readonly db: SQLiteDatabase) {
 		this.observations = new ObservationRepository(db);
 		this.notes = new DayNoteRepository(db);
 		this.dailyMetrics = new DailyMetricRepository(db);
 		this.unitPreferences = new UnitPreferenceRepository(db);
+		this.habits = new HabitRepository(db);
+		this.habitCompletions = new HabitCompletionRepository(db);
+		this.enrolments = new ChallengeEnrolmentRepository(db);
+		this.challengeProgress = new ChallengeProgressRepository(db);
 	}
 
 	async loadHistory(): Promise<HistoryDaySummary[]> {
-		const [observations, notes, dailyMetrics] = await Promise.all([
+		const [
+			observations,
+			notes,
+			dailyMetrics,
+			habits,
+			habitCompletions,
+			enrolments,
+			challengeProgress,
+		] = await Promise.all([
 			this.observations.listAll(),
 			this.notes.listAll(),
 			this.dailyMetrics.listAll(),
+			this.habits.listAll(),
+			this.habitCompletions.listAll(),
+			this.enrolments.listAll(),
+			this.challengeProgress.listAll(),
 		]);
 		const assessmentObservations: Observation[] = [];
 		const dailyObservations: Observation[] = [];
@@ -227,6 +312,8 @@ export class HistoryStore {
 			...observations.map((row) => row.localDay),
 			...notes.map((note) => note.localDay),
 			...dailyMetrics.map((row) => row.localDay),
+			...habitCompletions.map((row) => row.localDay),
+			...challengeProgress.map((row) => row.localDay),
 		]);
 
 		return [...localDays]
@@ -253,6 +340,18 @@ export class HistoryStore {
 						return resolved.kind === "known" ? [resolved.metric.label] : [];
 					});
 				const uniqueHealthLabels = [...new Set(healthLabels)];
+				const habitLabels = habitCompletions
+					.filter((row) => row.localDay === localDay)
+					.map((row) =>
+						habitLabel(habits.find((habit) => habit.id === row.habitId)),
+					);
+				const challengeLabels = challengeProgress
+					.filter((row) => row.localDay === localDay)
+					.map(
+						(row) =>
+							enrolments.find((candidate) => candidate.id === row.enrolmentId)
+								?.title ?? "Challenge",
+					);
 
 				return {
 					localDay,
@@ -270,16 +369,31 @@ export class HistoryStore {
 					...(uniqueHealthLabels.length > 0
 						? { healthLabels: uniqueHealthLabels }
 						: {}),
+					...(habitLabels.length > 0 ? { habitLabels } : {}),
+					...(challengeLabels.length > 0 ? { challengeLabels } : {}),
 				};
 			});
 	}
 
 	async loadDay(localDay: string): Promise<HistoryDay> {
-		const [observations, notes, dailyMetrics, preferences] = await Promise.all([
+		const [
+			observations,
+			notes,
+			dailyMetrics,
+			preferences,
+			habits,
+			habitCompletions,
+			enrolments,
+			challengeProgress,
+		] = await Promise.all([
 			this.observations.listByDay(localDay),
 			this.notes.listByDay(localDay),
 			this.dailyMetrics.listByDay(localDay),
 			this.unitPreferences.resolveLatestPerDimension(),
+			this.habits.listAll(),
+			this.habitCompletions.listByDay(localDay),
+			this.enrolments.listAll(),
+			this.challengeProgress.listByDay(localDay),
 		]);
 		return assembleHistoryDay(
 			localDay,
@@ -293,6 +407,10 @@ export class HistoryStore {
 				]),
 			),
 			Intl.DateTimeFormat().resolvedOptions().locale,
+			habits,
+			habitCompletions,
+			enrolments,
+			challengeProgress,
 		);
 	}
 

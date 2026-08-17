@@ -5,7 +5,7 @@ import { KILOGRAMS_PER_POUND } from "./units";
 
 jest.mock("expo-router", () => ({
 	router: { push: jest.fn() },
-	useFocusEffect: (effect: () => void | (() => void)) => {
+	useFocusEffect: (effect: () => undefined | (() => void)) => {
 		const React = jest.requireActual("react");
 		React.useEffect(effect, [effect]);
 	},
@@ -34,6 +34,21 @@ const measurementToday = {
 	],
 };
 
+const emptyRoutines = {
+	localDay: "2026-08-14",
+	hasHabits: false,
+	habits: [],
+	challenges: [],
+};
+
+function habitsStore() {
+	return {
+		loadToday: jest.fn(async () => emptyRoutines),
+		toggleManual: jest.fn(async () => undefined),
+		completeChallengeDay: jest.fn(),
+	};
+}
+
 describe("home screen", () => {
 	beforeEach(() => {
 		jest.clearAllMocks();
@@ -42,6 +57,7 @@ describe("home screen", () => {
 	it("shows the fast check-in", async () => {
 		const screen = await render(
 			<HomeScreen
+				habitsStore={habitsStore()}
 				store={{
 					loadToday: jest.fn(async () => emptyToday),
 					save: jest.fn(async () => emptyToday),
@@ -53,10 +69,72 @@ describe("home screen", () => {
 		expect(screen.queryByText("Measurements")).toBeNull();
 	});
 
+	it("marks a manual habit complete from Today", async () => {
+		const completed = {
+			localDay: "2026-08-14",
+			hasHabits: true,
+			habits: [
+				{
+					habit: {
+						id: "habit-1",
+						slug: "habit:reading",
+						customLabel: null,
+						kind: "manual" as const,
+						metricSlug: null,
+						direction: null,
+						targetValue: null,
+						daysOfWeek: 0b111_1111,
+						position: 0,
+						addedAt: 1,
+						removedAt: null,
+						createdAt: 1,
+						updatedAt: 1,
+					},
+					label: "Read",
+					completed: true,
+					streak: 4,
+					progressLabel: null,
+				},
+			],
+			challenges: [],
+		};
+		const toggleManual = jest.fn(async () => undefined);
+		const routineStore = {
+			loadToday: jest
+				.fn()
+				.mockResolvedValueOnce({
+					...completed,
+					habits: [{ ...completed.habits[0], completed: false, streak: 3 }],
+				})
+				.mockResolvedValue(completed),
+			toggleManual,
+			completeChallengeDay: jest.fn(),
+		};
+		const screen = await render(
+			<HomeScreen
+				habitsStore={routineStore}
+				store={{
+					loadToday: jest.fn(async () => emptyToday),
+					save: jest.fn(async () => emptyToday),
+				}}
+			/>,
+		);
+
+		expect(await screen.findByText("Read")).toBeTruthy();
+		expect(screen.getByText(/3 day streak/)).toBeTruthy();
+		await fireEvent.press(screen.getByText("Mark done"));
+
+		await waitFor(() =>
+			expect(toggleManual).toHaveBeenCalledWith("habit-1", "2026-08-14"),
+		);
+		expect(await screen.findByText(/4 day streak/)).toBeTruthy();
+	});
+
 	it("saves after mood, energy, and one factor selection", async () => {
 		const save = jest.fn(async () => emptyToday);
 		const screen = await render(
 			<HomeScreen
+				habitsStore={habitsStore()}
 				store={{ loadToday: jest.fn(async () => emptyToday), save }}
 			/>,
 		);
@@ -87,6 +165,7 @@ describe("home screen", () => {
 		);
 		const screen = await render(
 			<HomeScreen
+				habitsStore={habitsStore()}
 				store={{ loadToday: jest.fn(async () => measurementToday), save }}
 			/>,
 		);
@@ -115,6 +194,7 @@ describe("home screen", () => {
 		const save = jest.fn(async () => measurementToday);
 		const screen = await render(
 			<HomeScreen
+				habitsStore={habitsStore()}
 				store={{ loadToday: jest.fn(async () => measurementToday), save }}
 			/>,
 		);

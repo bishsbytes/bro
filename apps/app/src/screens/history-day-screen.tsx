@@ -221,6 +221,25 @@ export function HistoryDayScreen({ localDay, store }: HistoryDayScreenProps) {
 
 			{day ? (
 				<>
+					{day.habitCompletions.length > 0 ? (
+						<SectionHeader title="Habits completed" />
+					) : null}
+					{day.habitCompletions.map((completion) => (
+						<Card key={completion.id} style={styles.card}>
+							<AppText variant="score">{completion.label}</AppText>
+						</Card>
+					))}
+					{day.challengeSteps.length > 0 ? (
+						<SectionHeader title="Challenge steps" />
+					) : null}
+					{day.challengeSteps.map((step) => (
+						<Card key={step.id} style={styles.card}>
+							<AppText variant="caption" color="brand">
+								{step.title} · Day {step.dayIndex}
+							</AppText>
+							<AppText variant="score">{step.dayTitle}</AppText>
+						</Card>
+					))}
 					<SectionHeader title="Check-ins" />
 					{day.checkIns.length === 0 ? (
 						<AppText color="muted">No scored check-ins.</AppText>

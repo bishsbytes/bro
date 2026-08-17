@@ -15,11 +15,11 @@ import * as SplashScreen from "expo-splash-screen";
 import { StatusBar } from "expo-status-bar";
 import { useCallback, useEffect, useState } from "react";
 import { ActivityIndicator, Text, TouchableOpacity, View } from "react-native";
+import { HealthImportEffects } from "../health/health-import-effects";
 import {
 	DeviceSettingsProvider,
 	useDeviceSettings,
 } from "../providers/device-settings-provider";
-import { HealthImportEffects } from "../health/health-import-effects";
 import { ReminderNotificationEffects } from "../reminders/reminder-notification-effects";
 import { StyleSheet, useUnistyles } from "../theme/unistyles";
 
@@ -98,6 +98,7 @@ function RootNavigator() {
 				<Stack.Screen name="(tabs)" options={{ headerShown: false }} />
 				<Stack.Screen name="review" options={{ headerShown: false }} />
 				<Stack.Screen name="body" options={{ headerShown: false }} />
+				<Stack.Screen name="challenges" options={{ headerShown: false }} />
 				<Stack.Screen name="account" options={{ title: "Account" }} />
 			</Stack.Protected>
 			<Stack.Screen name="sign-in" options={{ title: "Sign in" }} />

@@ -143,6 +143,14 @@ export class HabitCompletionRepository extends BaseRepository {
 		return rows.map(toHabitCompletion);
 	}
 
+	async listAll(): Promise<HabitCompletion[]> {
+		const rows = await this.all<HabitCompletionRow>(
+			`SELECT ${SELECT_COLUMNS} FROM habit_completions
+			 ORDER BY local_day ASC, completed_at ASC, id ASC`,
+		);
+		return rows.map(toHabitCompletion);
+	}
+
 	async listByDay(localDay: string): Promise<HabitCompletion[]> {
 		if (!isCalendarDay(localDay)) {
 			throw new TypeError(
