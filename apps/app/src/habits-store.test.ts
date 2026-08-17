@@ -33,6 +33,7 @@ function habit(slug: string) {
 
 describe("habits store", () => {
 	beforeEach(async () => {
+		(globalThis.fetch as jest.Mock).mockClear();
 		mockSqlite.reset();
 		jest.resetModules();
 		databaseApp = jest.requireActual("@bro/database-app");
@@ -90,6 +91,48 @@ describe("habits store", () => {
 		now = new Date("2026-08-18T12:00:00.000Z");
 		today = await store.loadToday();
 		expect(today.habits.map(({ streak }) => streak)).toEqual([1, 1]);
+	});
+
+	it("heals a metric streak after a late resolved-day import without logging completion", async () => {
+		now = new Date("2026-08-14T12:00:00.000Z");
+		const steps = await store.addTemplate(habit("habit:steps-10k"), {
+			label: "Daily steps",
+			daysOfWeek: 0b111_1111,
+			targetValue: 10_000,
+		});
+		const metrics = new databaseApp.DailyMetricRepository(db);
+		await metrics.upsert({
+			metricSlug: "steps",
+			localDay: "2026-08-14",
+			value: 10_500,
+			source: "health_connect",
+		});
+		await metrics.upsert({
+			metricSlug: "steps",
+			localDay: "2026-08-15",
+			value: 9_000,
+			source: "health_connect",
+		});
+		now = new Date("2026-08-16T12:00:00.000Z");
+
+		expect((await store.loadToday()).habits[0]).toMatchObject({
+			completed: false,
+			streak: 0,
+		});
+		await metrics.upsert({
+			metricSlug: "steps",
+			localDay: "2026-08-15",
+			value: 10_012,
+			source: "health_connect",
+		});
+
+		expect((await store.loadToday()).habits[0]).toMatchObject({
+			completed: false,
+			streak: 2,
+		});
+		expect(
+			await new databaseApp.HabitCompletionRepository(db).listByHabit(steps.id),
+		).toEqual([]);
 	});
 
 	it("creates, edits, reorders, and soft-removes custom habits", async () => {
@@ -153,5 +196,26 @@ describe("habits store", () => {
 		]);
 		const rerun = await store.startChallenge("challenge:health-basics");
 		expect(rerun.id).not.toBe(enrolment.id);
+		expect(globalThis.fetch).not.toHaveBeenCalled();
+	});
+
+	it("renders a retired challenge from its enrolment snapshot", async () => {
+		const enrolment = await new databaseApp.ChallengeEnrolmentRepository(
+			db,
+		).enrol({
+			challengeSlug: "challenge:retired",
+			title: "A challenge remembered",
+			durationDays: 4,
+			areaSlug: "wheel:growth",
+			startedOn: "2026-08-17",
+		});
+
+		await expect(store.loadChallenge(enrolment.id)).resolves.toMatchObject({
+			title: "A challenge remembered",
+			durationDays: 4,
+			nextDayIndex: 1,
+			currentDay: null,
+			contentAvailable: false,
+		});
 	});
 });

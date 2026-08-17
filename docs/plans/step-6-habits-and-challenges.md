@@ -2,7 +2,7 @@
 
 ## Status
 
-**Draft proposal, 16 August 2026.** Written to be corrected — the table shapes follow the product plan's sketch; the completion semantics, cadence rules, and catalogue contents are a starting position with the sign-off items marked. No native work, no prebuild, no new store: pure TypeScript and SQL over what exists.
+**Complete, 17 August 2026.** Migration 006, repositories, catalogues, derived completion and streak math, Today and settings surfaces, challenge enrolment/progress/finish flows, History integration, delete-local-data coverage, and export format v5 are delivered. The signed-off semantics below are implemented and covered by real-SQLite, pure-domain, and interaction tests. No native work or prebuild was required.
 
 This is the delivery plan for [sequencing step 6 of the product domains plan](product-domains-and-data.md#sequencing): habits and challenges — the first structured-programme domain, and the first thing that gives a user a reason to open the app on a day they feel fine. It consumes the [step 5 hand-off](step-5-health-import.md#step-6-hand-off) whole: objective daily series (`steps`, `sleep_duration`) a habit target can read without new import work; the resolved-day merge as the one function completion checks call; and the registry's `aggregation` field already carrying `sum`. It also collects two promissory notes from earlier steps: step 3 shipped the authored challenge catalogue as read-only content and deferred enrolment and progress to here, and step 2 left the `reminders` table deliberately kind-less until habit nudges were designed.
 
@@ -158,6 +158,8 @@ The history day view lists that day's manual completions and any challenge steps
 1. Export format v5 with the four sections, new fixture, v1–v4 fixtures still parsing, sensitive exclusion per the locked decision.
 2. The automated acceptance matrix below.
 3. Product plan updates (step 6 status; open decision 15 resolved; the challenges-social answer recorded) and the step 7 hand-off.
+
+**Delivered 17 August 2026.** Export v5 retains parent rows for every included completion/progress row, excludes catalogue-sensitive, metric-sensitive, custom-habit, and sensitive-area challenge data on request, and preserves v1–v4 parsing. The acceptance matrix is covered across migration, repository, pure-domain, store, export, deletion, navigation, and surface suites. The product plan now records challenges as solo-only and marks step 6 complete.
 
 ## Expected touchpoints
 

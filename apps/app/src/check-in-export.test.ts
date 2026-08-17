@@ -1,14 +1,18 @@
+import { readFileSync } from "node:fs";
+import { join } from "node:path";
 import type {
 	Assessment,
+	ChallengeEnrolment,
+	ChallengeProgress,
 	DailyMetric,
 	DayNote,
 	Goal,
+	Habit,
+	HabitCompletion,
 	Observation,
 	TrackedMetric,
 	UnitPreference,
 } from "@bro/database-app";
-import { readFileSync } from "node:fs";
-import { join } from "node:path";
 import {
 	type MetricDefinition,
 	resolveMetric,
@@ -123,8 +127,56 @@ const restingHeartRateDailyMetric: DailyMetric = {
 	value: 58,
 };
 
+const readingHabit: Habit = {
+	id: "habit-reading",
+	slug: "habit:reading",
+	customLabel: "Read fiction",
+	kind: "manual",
+	metricSlug: null,
+	direction: null,
+	targetValue: null,
+	daysOfWeek: 0b111_1111,
+	position: 0,
+	addedAt: 1_786_621_000_000,
+	removedAt: null,
+	createdAt: 1_786_621_000_000,
+	updatedAt: 1_786_621_000_000,
+};
+
+const readingCompletion: HabitCompletion = {
+	id: "completion-reading",
+	habitId: readingHabit.id,
+	localDay: "2026-08-13",
+	completedAt: 1_786_621_300_000,
+	createdAt: 1_786_621_300_000,
+	updatedAt: 1_786_621_300_000,
+};
+
+const healthEnrolment: ChallengeEnrolment = {
+	id: "enrolment-health",
+	challengeSlug: "challenge:health-basics",
+	title: "Back to the health basics",
+	durationDays: 3,
+	areaSlug: "wheel:health",
+	startedOn: "2026-08-13",
+	completedAt: null,
+	abandonedAt: null,
+	createdAt: 1_786_621_400_000,
+	updatedAt: 1_786_621_400_000,
+};
+
+const healthProgress: ChallengeProgress = {
+	id: "progress-health-1",
+	enrolmentId: healthEnrolment.id,
+	dayIndex: 1,
+	localDay: "2026-08-13",
+	completedAt: 1_786_621_500_000,
+	createdAt: 1_786_621_500_000,
+	updatedAt: 1_786_621_500_000,
+};
+
 describe("check-in export", () => {
-	it("matches the version 4 golden file and round-trips daily metrics", () => {
+	it("matches the version 5 golden file and round-trips habit and challenge data", () => {
 		const input = {
 			observations: [],
 			dayNotes: [],
@@ -133,20 +185,18 @@ describe("check-in export", () => {
 			goals: [],
 			unitPreferences: [],
 			dailyMetrics: [stepsDailyMetric, restingHeartRateDailyMetric],
-			registry: [
-				knownMetric("resting_heart_rate"),
-				knownMetric("steps"),
-			],
+			habits: [readingHabit],
+			habitCompletions: [readingCompletion],
+			challengeEnrolments: [healthEnrolment],
+			challengeProgress: [healthProgress],
+			registry: [knownMetric("resting_heart_rate"), knownMetric("steps")],
 		};
-		const serialized = serializeCheckInExport(
-			input,
-			{
-				appVersion: "1.0.0",
-				exportedAt: 1_786_708_800_000,
-			},
-		);
+		const serialized = serializeCheckInExport(input, {
+			appVersion: "1.0.0",
+			exportedAt: 1_786_708_800_000,
+		});
 		const golden = readFileSync(
-			join(__dirname, "export", "__fixtures__", "check-in-export-v4.json"),
+			join(__dirname, "export", "__fixtures__", "check-in-export-v5.json"),
 			"utf8",
 		);
 
@@ -155,14 +205,23 @@ describe("check-in export", () => {
 			CHECK_IN_EXPORT_FORMAT_VERSION,
 		);
 		expect(parseCheckInExport(serialized)).toEqual(
-			buildCheckInExport(
-				input,
-				{
-					appVersion: "1.0.0",
-					exportedAt: 1_786_708_800_000,
-				},
-			),
+			buildCheckInExport(input, {
+				appVersion: "1.0.0",
+				exportedAt: 1_786_708_800_000,
+			}),
 		);
+	});
+
+	it("continues to parse the committed version 4 fixture", () => {
+		const fixture = readFileSync(
+			join(__dirname, "export", "__fixtures__", "check-in-export-v4.json"),
+			"utf8",
+		);
+
+		const parsed = parseCheckInExport(fixture);
+		expect(parsed.metadata.formatVersion).toBe(4);
+		expect("dailyMetrics" in parsed ? parsed.dailyMetrics : []).toHaveLength(2);
+		expect("habits" in parsed).toBe(false);
 	});
 
 	it("continues to parse the committed version 3 fixture", () => {
@@ -247,6 +306,48 @@ describe("check-in export", () => {
 			id: "goal-2",
 			metricSlug: "wheel:sobriety",
 		};
+		const sensitiveCatalogueHabit: Habit = {
+			...readingHabit,
+			id: "habit-alcohol-free",
+			slug: "habit:alcohol-free",
+			customLabel: null,
+			position: 1,
+		};
+		const customHabit: Habit = {
+			...readingHabit,
+			id: "habit-custom",
+			slug: "habit:custom:private",
+			customLabel: "Private routine",
+			position: 2,
+		};
+		const sensitiveMetricHabit: Habit = {
+			...readingHabit,
+			id: "habit-heart",
+			slug: "habit:heart",
+			customLabel: null,
+			kind: "metric",
+			metricSlug: "resting_heart_rate",
+			direction: "at_most",
+			targetValue: 60,
+			position: 3,
+		};
+		const completionFor = (habit: Habit): HabitCompletion => ({
+			...readingCompletion,
+			id: `completion-${habit.id}`,
+			habitId: habit.id,
+		});
+		const faithEnrolment: ChallengeEnrolment = {
+			...healthEnrolment,
+			id: "enrolment-faith",
+			challengeSlug: "challenge:faith-reflection",
+			title: "A grounded faith practice",
+			areaSlug: "wheel:faith",
+		};
+		const faithProgress: ChallengeProgress = {
+			...healthProgress,
+			id: "progress-faith-1",
+			enrolmentId: faithEnrolment.id,
+		};
 
 		const input = {
 			observations: [moodObservation, sensitiveObservation, unknownObservation],
@@ -256,6 +357,20 @@ describe("check-in export", () => {
 			goals: [sensitiveWheelGoal],
 			unitPreferences,
 			dailyMetrics: [restingHeartRateDailyMetric, stepsDailyMetric],
+			habits: [
+				readingHabit,
+				sensitiveCatalogueHabit,
+				customHabit,
+				sensitiveMetricHabit,
+			],
+			habitCompletions: [
+				readingCompletion,
+				completionFor(sensitiveCatalogueHabit),
+				completionFor(customHabit),
+				completionFor(sensitiveMetricHabit),
+			],
+			challengeEnrolments: [healthEnrolment, faithEnrolment],
+			challengeProgress: [healthProgress, faithProgress],
 			registry: [
 				knownMetric("mood"),
 				sensitiveMetric,
@@ -282,6 +397,10 @@ describe("check-in export", () => {
 			"resting_heart_rate",
 			"steps",
 		]);
+		expect(included.habits).toHaveLength(4);
+		expect(included.habitCompletions).toHaveLength(4);
+		expect(included.challengeEnrolments).toHaveLength(2);
+		expect(included.challengeProgress).toHaveLength(2);
 
 		const exported = buildCheckInExport(input, {
 			appVersion: "1.0.0",
@@ -309,6 +428,10 @@ describe("check-in export", () => {
 		expect(exported.goals).toEqual([]);
 		expect(exported.unitPreferences).toEqual(unitPreferences);
 		expect(exported.dailyMetrics).toEqual([stepsDailyMetric]);
+		expect(exported.habits).toEqual([readingHabit]);
+		expect(exported.habitCompletions).toEqual([readingCompletion]);
+		expect(exported.challengeEnrolments).toEqual([healthEnrolment]);
+		expect(exported.challengeProgress).toEqual([healthProgress]);
 	});
 
 	it("produces a valid versioned export for an empty database", () => {
@@ -321,6 +444,10 @@ describe("check-in export", () => {
 				goals: [],
 				unitPreferences: [],
 				dailyMetrics: [],
+				habits: [],
+				habitCompletions: [],
+				challengeEnrolments: [],
+				challengeProgress: [],
 				registry: [knownMetric("mood")],
 			},
 			{ appVersion: "1.0.0", exportedAt: 0 },
@@ -328,7 +455,7 @@ describe("check-in export", () => {
 
 		expect(exported).toMatchObject({
 			metadata: {
-				formatVersion: 4,
+				formatVersion: 5,
 				exportedAt: "1970-01-01T00:00:00.000Z",
 				appVersion: "1.0.0",
 			},
@@ -339,6 +466,10 @@ describe("check-in export", () => {
 			goals: [],
 			unitPreferences: [],
 			dailyMetrics: [],
+			habits: [],
+			habitCompletions: [],
+			challengeEnrolments: [],
+			challengeProgress: [],
 		});
 		expect(exported.registry.metrics).toHaveLength(1);
 	});

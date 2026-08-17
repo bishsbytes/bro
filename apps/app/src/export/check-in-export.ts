@@ -1,15 +1,21 @@
 import type {
 	Assessment,
+	ChallengeEnrolment,
+	ChallengeProgress,
 	DailyMetric,
 	DayNote,
 	Goal,
+	Habit,
+	HabitCompletion,
 	Observation,
 	TrackedMetric,
 	UnitPreference,
 } from "@bro/database-app";
+import { resolveHabit } from "../content/habit-catalogue";
+import { LIFE_AREA_CATALOGUE } from "../content/life-area-catalogue";
 import type { MetricDefinition } from "../content/metric-registry";
 
-export const CHECK_IN_EXPORT_FORMAT_VERSION = 4 as const;
+export const CHECK_IN_EXPORT_FORMAT_VERSION = 5 as const;
 
 export type CheckInExportInput = {
 	observations: readonly Observation[];
@@ -19,6 +25,10 @@ export type CheckInExportInput = {
 	goals: readonly Goal[];
 	unitPreferences: readonly UnitPreference[];
 	dailyMetrics: readonly DailyMetric[];
+	habits: readonly Habit[];
+	habitCompletions: readonly HabitCompletion[];
+	challengeEnrolments: readonly ChallengeEnrolment[];
+	challengeProgress: readonly ChallengeProgress[];
 	registry: readonly MetricDefinition[];
 };
 
@@ -32,7 +42,7 @@ type VersionOneTrackedMetric = Omit<TrackedMetric, "customLabel">;
 /** Registry dimensions join the serialized contract with the planned v3 bump. */
 type LegacyMetricDefinition = Omit<MetricDefinition, "dimension">;
 
-type ExportMetadata<Version extends 1 | 2 | 3 | 4> = {
+type ExportMetadata<Version extends 1 | 2 | 3 | 4 | 5> = {
 	formatVersion: Version;
 	exportedAt: string;
 	appVersion: string;
@@ -77,15 +87,24 @@ export type CheckInExportV3 = {
 	unitPreferences: UnitPreference[];
 };
 
-export type CheckInExport = Omit<CheckInExportV3, "metadata"> & {
-	metadata: ExportMetadata<typeof CHECK_IN_EXPORT_FORMAT_VERSION>;
+export type CheckInExportV4 = Omit<CheckInExportV3, "metadata"> & {
+	metadata: ExportMetadata<4>;
 	dailyMetrics: DailyMetric[];
+};
+
+export type CheckInExport = Omit<CheckInExportV4, "metadata"> & {
+	metadata: ExportMetadata<typeof CHECK_IN_EXPORT_FORMAT_VERSION>;
+	habits: Habit[];
+	habitCompletions: HabitCompletion[];
+	challengeEnrolments: ChallengeEnrolment[];
+	challengeProgress: ChallengeProgress[];
 };
 
 export type ParsedCheckInExport =
 	| CheckInExportV1
 	| CheckInExportV2
 	| CheckInExportV3
+	| CheckInExportV4
 	| CheckInExport;
 
 function compareText(left: string, right: string): number {
@@ -192,6 +211,64 @@ function copyDailyMetric(metric: DailyMetric): DailyMetric {
 	};
 }
 
+function copyHabit(habit: Habit): Habit {
+	return {
+		id: habit.id,
+		slug: habit.slug,
+		customLabel: habit.customLabel,
+		kind: habit.kind,
+		metricSlug: habit.metricSlug,
+		direction: habit.direction,
+		targetValue: habit.targetValue,
+		daysOfWeek: habit.daysOfWeek,
+		position: habit.position,
+		addedAt: habit.addedAt,
+		removedAt: habit.removedAt,
+		createdAt: habit.createdAt,
+		updatedAt: habit.updatedAt,
+	};
+}
+
+function copyHabitCompletion(completion: HabitCompletion): HabitCompletion {
+	return {
+		id: completion.id,
+		habitId: completion.habitId,
+		localDay: completion.localDay,
+		completedAt: completion.completedAt,
+		createdAt: completion.createdAt,
+		updatedAt: completion.updatedAt,
+	};
+}
+
+function copyChallengeEnrolment(
+	enrolment: ChallengeEnrolment,
+): ChallengeEnrolment {
+	return {
+		id: enrolment.id,
+		challengeSlug: enrolment.challengeSlug,
+		title: enrolment.title,
+		durationDays: enrolment.durationDays,
+		areaSlug: enrolment.areaSlug,
+		startedOn: enrolment.startedOn,
+		completedAt: enrolment.completedAt,
+		abandonedAt: enrolment.abandonedAt,
+		createdAt: enrolment.createdAt,
+		updatedAt: enrolment.updatedAt,
+	};
+}
+
+function copyChallengeProgress(progress: ChallengeProgress): ChallengeProgress {
+	return {
+		id: progress.id,
+		enrolmentId: progress.enrolmentId,
+		dayIndex: progress.dayIndex,
+		localDay: progress.localDay,
+		completedAt: progress.completedAt,
+		createdAt: progress.createdAt,
+		updatedAt: progress.updatedAt,
+	};
+}
+
 export function buildCheckInExport(
 	input: CheckInExportInput,
 	options: CheckInExportOptions,
@@ -207,9 +284,29 @@ export function buildCheckInExport(
 	const registryBySlug = new Map(
 		input.registry.map((metric) => [metric.slug, metric]),
 	);
+	const lifeAreaBySlug = new Map<string, (typeof LIFE_AREA_CATALOGUE)[number]>(
+		LIFE_AREA_CATALOGUE.map((area) => [area.slug, area]),
+	);
 	const includeSlug = (slug: string): boolean =>
 		!options.excludeSensitiveMetrics ||
 		registryBySlug.get(slug)?.sensitive !== true;
+	const includeHabit = (habit: Habit): boolean => {
+		if (!options.excludeSensitiveMetrics) return true;
+		if (habit.slug.startsWith("habit:custom:")) return false;
+		if (resolveHabit(habit.slug)?.sensitive === true) return false;
+		return habit.metricSlug === null || includeSlug(habit.metricSlug);
+	};
+	const includeChallenge = (enrolment: ChallengeEnrolment): boolean =>
+		!options.excludeSensitiveMetrics ||
+		lifeAreaBySlug.get(enrolment.areaSlug)?.sensitive !== true;
+	const includedHabitIds = new Set(
+		input.habits.filter(includeHabit).map((habit) => habit.id),
+	);
+	const includedEnrolmentIds = new Set(
+		input.challengeEnrolments
+			.filter(includeChallenge)
+			.map((enrolment) => enrolment.id),
+	);
 
 	return {
 		metadata: {
@@ -302,6 +399,43 @@ export function buildCheckInExport(
 					compareText(left.source, right.source) ||
 					compareText(left.id, right.id),
 			),
+		habits: input.habits
+			.filter((habit) => includedHabitIds.has(habit.id))
+			.map(copyHabit)
+			.sort(
+				(left, right) =>
+					left.position - right.position ||
+					left.createdAt - right.createdAt ||
+					compareText(left.id, right.id),
+			),
+		habitCompletions: input.habitCompletions
+			.filter((completion) => includedHabitIds.has(completion.habitId))
+			.map(copyHabitCompletion)
+			.sort(
+				(left, right) =>
+					compareText(left.localDay, right.localDay) ||
+					left.completedAt - right.completedAt ||
+					compareText(left.id, right.id),
+			),
+		challengeEnrolments: input.challengeEnrolments
+			.filter((enrolment) => includedEnrolmentIds.has(enrolment.id))
+			.map(copyChallengeEnrolment)
+			.sort(
+				(left, right) =>
+					compareText(left.startedOn, right.startedOn) ||
+					left.createdAt - right.createdAt ||
+					compareText(left.id, right.id),
+			),
+		challengeProgress: input.challengeProgress
+			.filter((progress) => includedEnrolmentIds.has(progress.enrolmentId))
+			.map(copyChallengeProgress)
+			.sort(
+				(left, right) =>
+					compareText(left.localDay, right.localDay) ||
+					left.completedAt - right.completedAt ||
+					left.dayIndex - right.dayIndex ||
+					compareText(left.id, right.id),
+			),
 	};
 }
 
@@ -354,11 +488,22 @@ export function parseCheckInExport(serialized: string): ParsedCheckInExport {
 		requireArray(parsed, "unitPreferences");
 		return parsed as CheckInExportV3;
 	}
+	if (parsed.metadata.formatVersion === 4) {
+		requireArray(parsed, "assessments");
+		requireArray(parsed, "goals");
+		requireArray(parsed, "unitPreferences");
+		requireArray(parsed, "dailyMetrics");
+		return parsed as CheckInExportV4;
+	}
 	if (parsed.metadata.formatVersion === CHECK_IN_EXPORT_FORMAT_VERSION) {
 		requireArray(parsed, "assessments");
 		requireArray(parsed, "goals");
 		requireArray(parsed, "unitPreferences");
 		requireArray(parsed, "dailyMetrics");
+		requireArray(parsed, "habits");
+		requireArray(parsed, "habitCompletions");
+		requireArray(parsed, "challengeEnrolments");
+		requireArray(parsed, "challengeProgress");
 		return parsed as CheckInExport;
 	}
 	throw new RangeError(
