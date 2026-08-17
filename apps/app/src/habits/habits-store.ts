@@ -2,11 +2,13 @@ import {
 	ChallengeEnrolmentRepository,
 	ChallengeProgressRepository,
 	createUuidV7,
+	type DailyMetric,
 	DailyMetricRepository,
 	getDb,
 	type Habit,
 	HabitCompletionRepository,
 	HabitRepository,
+	type Observation,
 	ObservationRepository,
 	TrackedMetricsRepository,
 } from "@bro/database-app";
@@ -211,6 +213,18 @@ export class HabitsStore {
 					),
 					this.dailyMetrics.listByMetric(metricSlug),
 				]);
+				const observationsByDay = new Map<string, Observation[]>();
+				for (const row of observations) {
+					const rows = observationsByDay.get(row.localDay);
+					if (rows) rows.push(row);
+					else observationsByDay.set(row.localDay, [row]);
+				}
+				const metricsByDay = new Map<string, DailyMetric[]>();
+				for (const row of metrics) {
+					const rows = metricsByDay.get(row.localDay);
+					if (rows) rows.push(row);
+					else metricsByDay.set(row.localDay, [row]);
+				}
 				const resolvedValues = new Map<string, number | null>();
 				const complete = (day: string) => {
 					let value = resolvedValues.get(day);
@@ -218,8 +232,8 @@ export class HabitsStore {
 						value = resolveMetricDay(
 							metricSlug,
 							day,
-							observations,
-							metrics,
+							observationsByDay.get(day) ?? [],
+							metricsByDay.get(day) ?? [],
 						).value;
 						resolvedValues.set(day, value ?? null);
 					}
@@ -228,7 +242,6 @@ export class HabitsStore {
 						value: value ?? null,
 					});
 				};
-				complete(localDay);
 				return {
 					habit,
 					label: displayLabel(habit),
@@ -386,6 +399,10 @@ export class HabitsStore {
 		});
 	}
 
+	/**
+	 * Idempotent by design: Start on an already-open slug resumes that run.
+	 * The repository still rejects a genuine concurrent double enrolment.
+	 */
 	async startChallenge(challengeSlug: string) {
 		const active = (await this.enrolments.listActive()).find(
 			(enrolment) => enrolment.challengeSlug === challengeSlug,

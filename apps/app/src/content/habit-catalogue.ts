@@ -84,7 +84,8 @@ export const HABIT_CATALOGUE = [
 	{
 		slug: "habit:training",
 		label: "Train",
-		description: "Make space for three purposeful training sessions each week.",
+		description:
+			"Make space for a purposeful session on your scheduled training days.",
 		kind: "manual",
 		metricSlug: null,
 		direction: null,

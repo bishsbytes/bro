@@ -1,6 +1,7 @@
 import type { SQLiteDatabase } from "expo-sqlite";
 import { createUuidV7 } from "../uuid-v7";
 import { BaseRepository } from "./base-repository";
+import { isCalendarDay } from "./calendar-day";
 
 export type ChallengeProgress = {
 	id: string;
@@ -29,18 +30,6 @@ type RepositoryOptions = {
 
 const SELECT_COLUMNS =
 	"id, enrolment_id, day_index, local_day, completed_at, created_at, updated_at";
-
-function isCalendarDay(value: string): boolean {
-	const match = /^([0-9]{4})-([0-9]{2})-([0-9]{2})$/.exec(value);
-	if (!match) return false;
-	const [, year, month, day] = match;
-	const date = new Date(Date.UTC(Number(year), Number(month) - 1, Number(day)));
-	return (
-		date.getUTCFullYear() === Number(year) &&
-		date.getUTCMonth() === Number(month) - 1 &&
-		date.getUTCDate() === Number(day)
-	);
-}
 
 function toChallengeProgress(row: ChallengeProgressRow): ChallengeProgress {
 	return {

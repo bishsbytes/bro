@@ -1,6 +1,7 @@
 import type { SQLiteDatabase } from "expo-sqlite";
 import { createUuidV7 } from "../uuid-v7";
 import { BaseRepository } from "./base-repository";
+import { isCalendarDay } from "./calendar-day";
 
 export type ChallengeEnrolment = {
 	id: string;
@@ -47,18 +48,6 @@ function required(value: string, label: string): string {
 	const normalized = value.trim();
 	if (!normalized) throw new TypeError(`${label} must not be empty.`);
 	return normalized;
-}
-
-function isCalendarDay(value: string): boolean {
-	const match = /^([0-9]{4})-([0-9]{2})-([0-9]{2})$/.exec(value);
-	if (!match) return false;
-	const [, year, month, day] = match;
-	const date = new Date(Date.UTC(Number(year), Number(month) - 1, Number(day)));
-	return (
-		date.getUTCFullYear() === Number(year) &&
-		date.getUTCMonth() === Number(month) - 1 &&
-		date.getUTCDate() === Number(day)
-	);
 }
 
 function toChallengeEnrolment(row: ChallengeEnrolmentRow): ChallengeEnrolment {

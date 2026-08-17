@@ -296,9 +296,12 @@ export function buildCheckInExport(
 		if (resolveHabit(habit.slug)?.sensitive === true) return false;
 		return habit.metricSlug === null || includeSlug(habit.metricSlug);
 	};
-	const includeChallenge = (enrolment: ChallengeEnrolment): boolean =>
-		!options.excludeSensitiveMetrics ||
-		lifeAreaBySlug.get(enrolment.areaSlug)?.sensitive !== true;
+	const includeChallenge = (enrolment: ChallengeEnrolment): boolean => {
+		if (!options.excludeSensitiveMetrics) return true;
+		// A retired area's sensitivity is unknowable, so it sits out like custom habits.
+		const area = lifeAreaBySlug.get(enrolment.areaSlug);
+		return area !== undefined && area.sensitive !== true;
+	};
 	const includedHabitIds = new Set(
 		input.habits.filter(includeHabit).map((habit) => habit.id),
 	);

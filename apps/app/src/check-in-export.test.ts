@@ -348,6 +348,18 @@ describe("check-in export", () => {
 			id: "progress-faith-1",
 			enrolmentId: faithEnrolment.id,
 		};
+		const retiredAreaEnrolment: ChallengeEnrolment = {
+			...healthEnrolment,
+			id: "enrolment-retired",
+			challengeSlug: "challenge:retired-programme",
+			title: "A retired programme",
+			areaSlug: "wheel:retired",
+		};
+		const retiredAreaProgress: ChallengeProgress = {
+			...healthProgress,
+			id: "progress-retired-1",
+			enrolmentId: retiredAreaEnrolment.id,
+		};
 
 		const input = {
 			observations: [moodObservation, sensitiveObservation, unknownObservation],
@@ -369,8 +381,12 @@ describe("check-in export", () => {
 				completionFor(customHabit),
 				completionFor(sensitiveMetricHabit),
 			],
-			challengeEnrolments: [healthEnrolment, faithEnrolment],
-			challengeProgress: [healthProgress, faithProgress],
+			challengeEnrolments: [
+				healthEnrolment,
+				faithEnrolment,
+				retiredAreaEnrolment,
+			],
+			challengeProgress: [healthProgress, faithProgress, retiredAreaProgress],
 			registry: [
 				knownMetric("mood"),
 				sensitiveMetric,
@@ -399,8 +415,8 @@ describe("check-in export", () => {
 		]);
 		expect(included.habits).toHaveLength(4);
 		expect(included.habitCompletions).toHaveLength(4);
-		expect(included.challengeEnrolments).toHaveLength(2);
-		expect(included.challengeProgress).toHaveLength(2);
+		expect(included.challengeEnrolments).toHaveLength(3);
+		expect(included.challengeProgress).toHaveLength(3);
 
 		const exported = buildCheckInExport(input, {
 			appVersion: "1.0.0",
