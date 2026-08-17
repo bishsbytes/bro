@@ -98,7 +98,10 @@ function RootNavigator() {
 			<Stack.Protected guard={settings.onboardingComplete}>
 				<Stack.Screen name="(tabs)" options={{ headerShown: false }} />
 				<Stack.Screen name="review" options={{ headerShown: false }} />
-				<Stack.Screen name="body" options={{ headerShown: false }} />
+				<Stack.Screen name="history" options={{ headerShown: false }} />
+				<Stack.Screen name="settings" options={{ headerShown: false }} />
+				<Stack.Screen name="trends" options={{ title: "Trends" }} />
+				<Stack.Screen name="body/[slug]" options={{ title: "Measurement" }} />
 				<Stack.Screen name="challenges" options={{ headerShown: false }} />
 				<Stack.Screen name="account" options={{ title: "Account" }} />
 			</Stack.Protected>

@@ -6,6 +6,7 @@ import { AppText } from "../components/app-text";
 import { Button } from "../components/button";
 import { Card } from "../components/card";
 import { FormField } from "../components/form-field";
+import { ListRow } from "../components/list-row";
 import { StackScreen as Screen } from "../components/screen";
 import { SectionHeader } from "../components/section-header";
 import { useDeviceSettings } from "../providers/device-settings-provider";
@@ -91,6 +92,13 @@ export function AccountScreen() {
 			contentContainerStyle={styles.container}
 			keyboardShouldPersistTaps="handled"
 		>
+			<ListRow
+				title="Settings"
+				detail="Reminders, health data, units, and local data."
+				accessibilityLabel="Open settings"
+				onPress={() => router.push("/settings")}
+			/>
+
 			{notice ? (
 				<AppText variant="caption" color="muted" style={styles.notice}>
 					{notice}

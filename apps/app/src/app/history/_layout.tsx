@@ -1,5 +1,5 @@
 import { Stack } from "expo-router";
-import { stackScreenOptions, useUnistyles } from "../../../theme/unistyles";
+import { stackScreenOptions, useUnistyles } from "../../theme/unistyles";
 
 export default function HistoryLayout() {
 	const { theme } = useUnistyles();
@@ -11,10 +11,7 @@ export default function HistoryLayout() {
 				animation: process.env.NODE_ENV === "test" ? "none" : "default",
 			}}
 		>
-			<Stack.Screen
-				name="index"
-				options={{ title: "History", headerShown: false }}
-			/>
+			<Stack.Screen name="index" options={{ title: "History" }} />
 			<Stack.Screen
 				name="[localDay]"
 				options={({ route }) => {

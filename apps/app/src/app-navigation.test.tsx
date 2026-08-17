@@ -52,6 +52,13 @@ jest.mock("./history/history-store", () => ({
 	}),
 }));
 
+jest.mock("./body/body-store", () => ({
+	createBodyStore: () => ({
+		loadOverview: async () => ({ metrics: [] }),
+		setTracked: jest.fn(),
+	}),
+}));
+
 jest.mock("./habits/habits-store", () => ({
 	createHabitsStore: () => ({
 		loadToday: async () => ({
@@ -141,7 +148,7 @@ async function openAccount(
 	router: Awaited<ReturnType<typeof launch>>["router"],
 	view: Awaited<ReturnType<typeof launch>>["view"],
 ) {
-	await waitFor(() => expect(router.getPathname()).toBe("/settings"));
+	await waitFor(() => expect(router.getPathname()).toBe("/"));
 	await fireEvent.press(await view.findByLabelText(/^Account/));
 	await waitFor(() => expect(router.getPathname()).toBe("/account"));
 }
@@ -173,27 +180,23 @@ describe("app entry", () => {
 		expect(await view.findByText("How are you?")).toBeTruthy();
 	});
 
-	it("moves between all four top-level tabs without changing pathnames", async () => {
+	it("moves between the four human-domain tabs", async () => {
 		const { router, view } = await launch({ onboardingComplete: true });
 		expect(view.getByLabelText("Account")).toBeTruthy();
 
-		await press(view, "History");
-		await waitFor(() => expect(router.getPathname()).toBe("/history"));
-		expect(await view.findByText("Nothing logged yet")).toBeTruthy();
+		await press(view, "Body");
+		await waitFor(() => expect(router.getPathname()).toBe("/body"));
+		expect(await view.findByText("No body metrics tracked")).toBeTruthy();
 		expect(view.getByLabelText("Account")).toBeTruthy();
 
-		await press(view, "Trends");
-		await waitFor(() => expect(router.getPathname()).toBe("/trends"));
-		expect(
-			await view.findByText(
-				"Daily summaries; scored metrics use averages and measurements use the last reading. Missing days stay as gaps.",
-			),
-		).toBeTruthy();
+		await press(view, "Mind");
+		await waitFor(() => expect(router.getPathname()).toBe("/mind"));
+		expect(await view.findByText("Your mind patterns start here")).toBeTruthy();
 		expect(view.getByLabelText("Account")).toBeTruthy();
 
-		await press(view, "Settings");
-		await waitFor(() => expect(router.getPathname()).toBe("/settings"));
-		expect(await view.findByText("Data on this device")).toBeTruthy();
+		await press(view, "Life");
+		await waitFor(() => expect(router.getPathname()).toBe("/life"));
+		expect(await view.findByText("YOUR BIGGER PICTURE")).toBeTruthy();
 		expect(view.getByLabelText("Account")).toBeTruthy();
 
 		await press(view, "Today");
@@ -234,10 +237,7 @@ describe("app entry", () => {
 	});
 
 	it("keeps account routes reachable from the app, with sign-up offered there", async () => {
-		const { router, view } = await launch(
-			{ onboardingComplete: true },
-			"/settings",
-		);
+		const { router, view } = await launch({ onboardingComplete: true });
 
 		await openAccount(router, view);
 		expect(router.getPathname()).toBe("/account");
@@ -245,6 +245,12 @@ describe("app entry", () => {
 		// Opening Account without a stored session is still a local-only act.
 		expect(mockedAuthClient.useSession).not.toHaveBeenCalled();
 		expect(globalThis.fetch).not.toHaveBeenCalled();
+
+		await press(view, "Settings");
+		await waitFor(() => expect(router.getPathname()).toBe("/settings"));
+		expect(await view.findByText("Data on this device")).toBeTruthy();
+		await act(async () => expoRouter.back());
+		await waitFor(() => expect(router.getPathname()).toBe("/account"));
 
 		await press(view, "Sign in");
 
@@ -321,14 +327,11 @@ describe("app entry", () => {
 			error: null,
 		});
 
-		const { router, view } = await launch(
-			{
-				onboardingComplete: true,
-				hasStoredRemoteSession: true,
-				lastRemoteUserId: "user-a",
-			},
-			"/settings",
-		);
+		const { router, view } = await launch({
+			onboardingComplete: true,
+			hasStoredRemoteSession: true,
+			lastRemoteUserId: "user-a",
+		});
 
 		await openAccount(router, view);
 		expect(await view.findByText("ada@example.com")).toBeTruthy();
@@ -377,8 +380,8 @@ describe("app entry", () => {
 
 		// Returning from a sign-in entered here dismisses back onto Account
 		// rather than stacking a second copy of it under the first.
-		act(() => expoRouter.back());
-		await waitFor(() => expect(router.getPathname()).toBe("/settings"));
-		expect(await view.findByText("Data on this device")).toBeTruthy();
+		await act(async () => expoRouter.back());
+		await waitFor(() => expect(router.getPathname()).toBe("/"));
+		expect(await view.findByText("How are you?")).toBeTruthy();
 	});
 });

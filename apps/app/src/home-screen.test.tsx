@@ -67,6 +67,8 @@ describe("home screen", () => {
 
 		expect(await screen.findByLabelText("Mood 4")).toBeTruthy();
 		expect(screen.queryByText("Measurements")).toBeNull();
+		expect(await screen.findByText("Build a routine")).toBeTruthy();
+		expect(screen.queryByText("Take stock of the bigger picture")).toBeNull();
 	});
 
 	it("marks a manual habit complete from Today", async () => {

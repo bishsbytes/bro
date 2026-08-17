@@ -1,17 +1,17 @@
 import { useAuth } from "@bro/auth-app";
 import MaterialIcons from "@expo/vector-icons/MaterialIcons";
-import { Tabs, usePathname, useSegments } from "expo-router";
+import { router, Tabs, usePathname, useSegments } from "expo-router";
 import { useLayoutEffect, useRef } from "react";
-import { View } from "react-native";
+import { TouchableOpacity, View } from "react-native";
 import { AppHeader } from "../../components/app-header";
 import { AvatarIdentityContext } from "../../components/avatar-identity-context";
 import { StyleSheet, useUnistyles } from "../../theme/unistyles";
 
 const TAB_TITLES = {
 	"/": "Today",
-	"/history": "History",
-	"/trends": "Trends",
-	"/settings": "Settings",
+	"/body": "Body",
+	"/mind": "Mind",
+	"/life": "Life",
 } as const;
 
 export default function TabLayout() {
@@ -34,14 +34,35 @@ export default function TabLayout() {
 	return (
 		<AvatarIdentityContext.Provider value={user?.name ?? null}>
 			<View style={styles.shell}>
-				{title ? <AppHeader title={title} /> : null}
+				{title ? (
+					<AppHeader
+						title={title}
+						actions={
+							pathname === "/" ? (
+								<TouchableOpacity
+									accessibilityRole="button"
+									accessibilityLabel="Open history"
+									hitSlop={theme.spacing.sm}
+									style={styles.headerAction}
+									onPress={() => router.push("/history")}
+								>
+									<MaterialIcons
+										name="calendar-today"
+										color={theme.colors.brand}
+										size={theme.control.avatarIconSize}
+									/>
+								</TouchableOpacity>
+							) : null
+						}
+					/>
+				) : null}
 				<Tabs
 					detachInactiveScreens={false}
 					screenOptions={{
 						headerShown: false,
-						// Keep each lightweight, local-data tab mounted from startup so its
-						// scene is ready before the first tab press.
-						lazy: false,
+						// Domain dashboards initialise repositories and charts. Mount them on
+						// first use, then keep them attached for quick returns.
+						lazy: true,
 						sceneStyle: { backgroundColor: theme.colors.background },
 						tabBarActiveTintColor: theme.colors.brand,
 						tabBarInactiveTintColor: theme.colors.tabInactive,
@@ -67,29 +88,33 @@ export default function TabLayout() {
 						}}
 					/>
 					<Tabs.Screen
-						name="history"
+						name="body"
 						options={{
-							title: "History",
+							title: "Body",
 							tabBarIcon: ({ color, size }) => (
-								<MaterialIcons name="auto-stories" color={color} size={size} />
+								<MaterialIcons
+									name="fitness-center"
+									color={color}
+									size={size}
+								/>
 							),
 						}}
 					/>
 					<Tabs.Screen
-						name="trends"
+						name="mind"
 						options={{
-							title: "Trends",
+							title: "Mind",
 							tabBarIcon: ({ color, size }) => (
-								<MaterialIcons name="insights" color={color} size={size} />
+								<MaterialIcons name="psychology" color={color} size={size} />
 							),
 						}}
 					/>
 					<Tabs.Screen
-						name="settings"
+						name="life"
 						options={{
-							title: "Settings",
+							title: "Life",
 							tabBarIcon: ({ color, size }) => (
-								<MaterialIcons name="tune" color={color} size={size} />
+								<MaterialIcons name="explore" color={color} size={size} />
 							),
 						}}
 					/>
@@ -101,4 +126,14 @@ export default function TabLayout() {
 
 const styles = StyleSheet.create((theme) => ({
 	shell: { flex: 1, backgroundColor: theme.colors.background },
+	headerAction: {
+		width: theme.control.avatarSize,
+		height: theme.control.avatarSize,
+		alignItems: "center",
+		justifyContent: "center",
+		borderWidth: 1,
+		borderColor: theme.colors.border,
+		borderRadius: theme.control.avatarSize / 2,
+		backgroundColor: theme.colors.surface,
+	},
 }));

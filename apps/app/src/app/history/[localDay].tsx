@@ -1,5 +1,5 @@
 import { useLocalSearchParams } from "expo-router";
-import { HistoryDayScreen } from "../../../screens/history-day-screen";
+import { HistoryDayScreen } from "../../screens/history-day-screen";
 
 export default function HistoryDayRoute() {
 	const { localDay } = useLocalSearchParams<{ localDay: string }>();

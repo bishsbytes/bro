@@ -259,7 +259,6 @@ describe("delete local data", () => {
 		expect(await view.findByText("How are you?")).toBeTruthy();
 		expect(view.queryByText("Logged today")).toBeNull();
 
-		await fireEvent.press(view.getByText("Settings"));
 		await fireEvent.press(view.getByLabelText(/^Account/));
 		expect(await view.findByText("ada@example.com")).toBeTruthy();
 		expect(mockedAuthClient.useSession).toHaveBeenCalled();

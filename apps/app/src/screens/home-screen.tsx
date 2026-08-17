@@ -305,6 +305,150 @@ export function HomeScreen({ store, habitsStore }: HomeScreenProps) {
 		const resolved = resolveMetric(slug);
 		return resolved.kind === "known" ? resolved.metric.label : slug;
 	});
+	const checkInForm = formOpen ? (
+		<View style={styles.form}>
+			<SectionHeader title={editing ? "Edit check-in" : "Check in"} />
+
+			<AppText variant="label" style={styles.prompt}>
+				Mood
+			</AppText>
+			<View style={styles.scoreRow}>
+				{SCORES.map((score, index) => {
+					const selected = mood === score;
+					return (
+						<TouchableOpacity
+							key={score}
+							accessibilityRole="button"
+							accessibilityLabel={`Mood ${score}`}
+							accessibilityState={{ selected }}
+							style={[styles.scoreButton, selected && styles.choiceSelected]}
+							onPress={() => setMood(score)}
+						>
+							<AppText style={styles.face}>{MOOD_FACES[index]}</AppText>
+							<AppText
+								variant="micro"
+								color="subtle"
+								style={[selected && styles.choiceSelectedText]}
+							>
+								{score}
+							</AppText>
+						</TouchableOpacity>
+					);
+				})}
+			</View>
+
+			<AppText variant="label" style={styles.prompt}>
+				Energy
+			</AppText>
+			<View style={styles.scoreRow}>
+				{SCORES.map((score) => {
+					const selected = energy === score;
+					return (
+						<TouchableOpacity
+							key={score}
+							accessibilityRole="button"
+							accessibilityLabel={`Energy ${score}`}
+							accessibilityState={{ selected }}
+							style={[styles.scoreButton, selected && styles.choiceSelected]}
+							onPress={() => setEnergy(score)}
+						>
+							<AppText
+								variant="score"
+								style={[selected && styles.choiceSelectedText]}
+							>
+								{score}
+							</AppText>
+						</TouchableOpacity>
+					);
+				})}
+			</View>
+
+			<AppText variant="label" style={styles.prompt}>
+				What applied today?
+			</AppText>
+			{groupedFactors.map(({ category, label, factors }) =>
+				factors.length > 0 ? (
+					<View key={category} style={styles.factorGroup}>
+						<AppText
+							variant="caption"
+							color="subtle"
+							style={styles.categoryLabel}
+						>
+							{label}
+						</AppText>
+						<View style={styles.factorRow}>
+							{factors.map((factor) => {
+								const selected = selectedFactors.includes(factor.slug);
+								return (
+									<TouchableOpacity
+										key={factor.slug}
+										accessibilityRole="button"
+										accessibilityLabel={factor.label}
+										accessibilityState={{ selected }}
+										style={[
+											styles.factorButton,
+											selected && styles.choiceSelected,
+										]}
+										onPress={() => toggleFactor(factor.slug)}
+									>
+										<AppText
+											variant="caption"
+											color="muted"
+											style={[selected && styles.choiceSelectedText]}
+										>
+											{factor.label}
+										</AppText>
+									</TouchableOpacity>
+								);
+							})}
+						</View>
+					</View>
+				) : null,
+			)}
+
+			{!editing && today.availableMeasurements.length > 0 ? (
+				<View style={styles.measurementSection}>
+					<AppText variant="label">Measurements</AppText>
+					<AppText variant="caption" color="subtle">
+						Optional — leave a field blank to skip it today.
+					</AppText>
+					{today.availableMeasurements.map((measurement) => (
+						<FormField
+							key={measurement.metricSlug}
+							label={`${measurement.label} (${measurement.displayUnit})`}
+							value={measurementInputs[measurement.metricSlug] ?? ""}
+							onChangeText={(value) =>
+								updateMeasurementInput(measurement.metricSlug, value)
+							}
+							placeholder={measurementPlaceholder(measurement)}
+							keyboardType={
+								measurement.displayUnit === "st" ? "default" : "decimal-pad"
+							}
+							autoCapitalize="none"
+							error={measurementErrors[measurement.metricSlug]}
+						/>
+					))}
+				</View>
+			) : null}
+
+			<FormField
+				label="Note (optional)"
+				containerStyle={styles.noteField}
+				value={note}
+				onChangeText={setNote}
+				placeholder="Anything worth remembering?"
+				multiline
+			/>
+
+			{error ? <AppText color="danger">{error}</AppText> : null}
+			<Button
+				label={editing ? "Update check-in" : "Save check-in"}
+				loading={saving}
+				disabled={mood === null || energy === null || saving}
+				onPress={() => void save()}
+			/>
+		</View>
+	) : null;
 
 	return (
 		<Screen
@@ -316,6 +460,7 @@ export function HomeScreen({ store, habitsStore }: HomeScreenProps) {
 			<AppText variant="display" style={styles.pageTitle}>
 				How are you?
 			</AppText>
+			{checkInForm}
 			{finishedChallenge ? (
 				<Card style={styles.routineCard}>
 					<AppText variant="section">Challenge complete</AppText>
@@ -411,7 +556,7 @@ export function HomeScreen({ store, habitsStore }: HomeScreenProps) {
 				</View>
 			) : null}
 			{routineError ? <AppText color="danger">{routineError}</AppText> : null}
-			{today.entries.length === 0 ? (
+			{!formOpen && today.entries.length === 0 ? (
 				<Card style={styles.stockCard}>
 					<AppText variant="section">Take stock of the bigger picture</AppText>
 					<AppText color="muted">
@@ -424,7 +569,7 @@ export function HomeScreen({ store, habitsStore }: HomeScreenProps) {
 					/>
 				</Card>
 			) : null}
-			{today.entries.length > 0 ? (
+			{!formOpen && today.entries.length > 0 ? (
 				<View style={styles.section}>
 					<SectionHeader
 						title="Logged today"
@@ -483,157 +628,6 @@ export function HomeScreen({ store, habitsStore }: HomeScreenProps) {
 							onPress={startAnother}
 						/>
 					) : null}
-				</View>
-			) : null}
-
-			{formOpen ? (
-				<View style={styles.form}>
-					<SectionHeader title={editing ? "Edit check-in" : "Check in"} />
-
-					<AppText variant="label" style={styles.prompt}>
-						Mood
-					</AppText>
-					<View style={styles.scoreRow}>
-						{SCORES.map((score, index) => {
-							const selected = mood === score;
-							return (
-								<TouchableOpacity
-									key={score}
-									accessibilityRole="button"
-									accessibilityLabel={`Mood ${score}`}
-									accessibilityState={{ selected }}
-									style={[
-										styles.scoreButton,
-										selected && styles.choiceSelected,
-									]}
-									onPress={() => setMood(score)}
-								>
-									<AppText style={styles.face}>{MOOD_FACES[index]}</AppText>
-									<AppText
-										variant="micro"
-										color="subtle"
-										style={[selected && styles.choiceSelectedText]}
-									>
-										{score}
-									</AppText>
-								</TouchableOpacity>
-							);
-						})}
-					</View>
-
-					<AppText variant="label" style={styles.prompt}>
-						Energy
-					</AppText>
-					<View style={styles.scoreRow}>
-						{SCORES.map((score) => {
-							const selected = energy === score;
-							return (
-								<TouchableOpacity
-									key={score}
-									accessibilityRole="button"
-									accessibilityLabel={`Energy ${score}`}
-									accessibilityState={{ selected }}
-									style={[
-										styles.scoreButton,
-										selected && styles.choiceSelected,
-									]}
-									onPress={() => setEnergy(score)}
-								>
-									<AppText
-										variant="score"
-										style={[selected && styles.choiceSelectedText]}
-									>
-										{score}
-									</AppText>
-								</TouchableOpacity>
-							);
-						})}
-					</View>
-
-					<AppText variant="label" style={styles.prompt}>
-						What applied today?
-					</AppText>
-					{groupedFactors.map(({ category, label, factors }) =>
-						factors.length > 0 ? (
-							<View key={category} style={styles.factorGroup}>
-								<AppText
-									variant="caption"
-									color="subtle"
-									style={styles.categoryLabel}
-								>
-									{label}
-								</AppText>
-								<View style={styles.factorRow}>
-									{factors.map((factor) => {
-										const selected = selectedFactors.includes(factor.slug);
-										return (
-											<TouchableOpacity
-												key={factor.slug}
-												accessibilityRole="button"
-												accessibilityLabel={factor.label}
-												accessibilityState={{ selected }}
-												style={[
-													styles.factorButton,
-													selected && styles.choiceSelected,
-												]}
-												onPress={() => toggleFactor(factor.slug)}
-											>
-												<AppText
-													variant="caption"
-													color="muted"
-													style={[selected && styles.choiceSelectedText]}
-												>
-													{factor.label}
-												</AppText>
-											</TouchableOpacity>
-										);
-									})}
-								</View>
-							</View>
-						) : null,
-					)}
-
-					{!editing && today.availableMeasurements.length > 0 ? (
-						<View style={styles.measurementSection}>
-							<AppText variant="label">Measurements</AppText>
-							<AppText variant="caption" color="subtle">
-								Optional — leave a field blank to skip it today.
-							</AppText>
-							{today.availableMeasurements.map((measurement) => (
-								<FormField
-									key={measurement.metricSlug}
-									label={`${measurement.label} (${measurement.displayUnit})`}
-									value={measurementInputs[measurement.metricSlug] ?? ""}
-									onChangeText={(value) =>
-										updateMeasurementInput(measurement.metricSlug, value)
-									}
-									placeholder={measurementPlaceholder(measurement)}
-									keyboardType={
-										measurement.displayUnit === "st" ? "default" : "decimal-pad"
-									}
-									autoCapitalize="none"
-									error={measurementErrors[measurement.metricSlug]}
-								/>
-							))}
-						</View>
-					) : null}
-
-					<FormField
-						label="Note (optional)"
-						containerStyle={styles.noteField}
-						value={note}
-						onChangeText={setNote}
-						placeholder="Anything worth remembering?"
-						multiline
-					/>
-
-					{error ? <AppText color="danger">{error}</AppText> : null}
-					<Button
-						label={editing ? "Update check-in" : "Save check-in"}
-						loading={saving}
-						disabled={mood === null || energy === null || saving}
-						onPress={() => void save()}
-					/>
 				</View>
 			) : null}
 		</Screen>

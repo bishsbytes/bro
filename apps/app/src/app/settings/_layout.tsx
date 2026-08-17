@@ -1,5 +1,5 @@
 import { Stack } from "expo-router";
-import { stackScreenOptions, useUnistyles } from "../../../theme/unistyles";
+import { stackScreenOptions, useUnistyles } from "../../theme/unistyles";
 
 export default function SettingsLayout() {
 	const { theme } = useUnistyles();
@@ -11,10 +11,7 @@ export default function SettingsLayout() {
 				animation: process.env.NODE_ENV === "test" ? "none" : "default",
 			}}
 		>
-			<Stack.Screen
-				name="index"
-				options={{ title: "Settings", headerShown: false }}
-			/>
+			<Stack.Screen name="index" options={{ title: "Settings" }} />
 			<Stack.Screen name="reminders" options={{ title: "Reminders" }} />
 			<Stack.Screen name="life-areas" options={{ title: "Life areas" }} />
 			<Stack.Screen name="habits" options={{ title: "Habits" }} />

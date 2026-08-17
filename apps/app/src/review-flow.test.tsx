@@ -132,9 +132,8 @@ describe("wheel-of-life review flow", () => {
 		expect(await assessments.listAll()).toHaveLength(1);
 
 		await act(async () => expoRouter.replace("/"));
-		expect(
-			await secondRun.findByText("Take stock of the bigger picture"),
-		).toBeTruthy();
+		await fireEvent.press(secondRun.getByText("Life"));
+		expect(await secondRun.findByText("YOUR BIGGER PICTURE")).toBeTruthy();
 		await fireEvent.press(secondRun.getByText("Take stock"));
 		expect(
 			await secondRun.findByText("Nothing is saved until you finish."),

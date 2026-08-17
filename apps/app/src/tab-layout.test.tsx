@@ -31,6 +31,7 @@ jest.mock("expo-router", () => {
 	);
 
 	return {
+		router: { push: jest.fn() },
 		Tabs,
 		usePathname: () => mockPathname,
 		useSegments: () => mockSegments,
@@ -44,12 +45,12 @@ describe("TabLayout", () => {
 		jest.clearAllMocks();
 	});
 
-	it("owns one stable header above attached, eagerly mounted tab scenes", async () => {
+	it("owns one stable header above lazy, retained tab scenes", async () => {
 		const screen = await render(<TabLayout />);
 
 		expect(screen.getByText("Today")).toBeTruthy();
 		expect(mockTabsOptions).toHaveBeenCalledWith(
-			expect.objectContaining({ lazy: false }),
+			expect.objectContaining({ lazy: true }),
 		);
 		expect(mockTabsProps).toHaveBeenCalledWith({
 			detachInactiveScreens: false,
@@ -64,10 +65,10 @@ describe("TabLayout", () => {
 		expect(screenOptions.tabBarStyle).not.toHaveProperty("paddingTop");
 		expect(screenOptions.tabBarItemStyle).toBeUndefined();
 
-		mockPathname = "/history";
+		mockPathname = "/body";
 		await screen.rerender(<TabLayout />);
 
-		expect(screen.getByText("History")).toBeTruthy();
+		expect(screen.getByText("Body")).toBeTruthy();
 		expect(screen.queryByText("Today")).toBeNull();
 	});
 
@@ -80,8 +81,8 @@ describe("TabLayout", () => {
 
 		expect(screen.getByText("Today")).toBeTruthy();
 
-		mockPathname = "/history/2026-08-14";
-		mockSegments = ["(tabs)", "history", "[localDay]"];
+		mockPathname = "/body/weight";
+		mockSegments = ["(tabs)", "body", "[slug]"];
 		await screen.rerender(<TabLayout />);
 
 		expect(screen.queryByText("Today")).toBeNull();
