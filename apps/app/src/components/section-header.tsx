@@ -20,7 +20,7 @@ export function SectionHeader({
 		<View style={styles.container}>
 			<View style={styles.copy}>
 				{eyebrow ? (
-					<AppText variant="caption" color="brand" style={styles.eyebrow}>
+					<AppText variant="caption" color="muted" style={styles.eyebrow}>
 						{eyebrow}
 					</AppText>
 				) : null}

@@ -171,7 +171,7 @@ export function RemindersScreen({ store }: RemindersScreenProps) {
 	}
 
 	return (
-		<Screen scroll padded gap="lg" edges={["bottom"]}>
+		<Screen scroll padded gap="lg">
 			{state?.permission === "denied" ? (
 				<Card style={styles.banner}>
 					<AppText variant="label" color="danger">

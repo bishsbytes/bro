@@ -54,6 +54,15 @@ describe("TabLayout", () => {
 		expect(mockTabsProps).toHaveBeenCalledWith({
 			detachInactiveScreens: false,
 		});
+		const screenOptions = mockTabsOptions.mock.calls[0]?.[0] as {
+			tabBarStyle: Record<string, unknown>;
+			tabBarItemStyle?: Record<string, unknown>;
+		};
+		// React Navigation owns both the device inset and the internal item spacing.
+		// Overriding either makes the bar overlap or compress on Android devices.
+		expect(screenOptions.tabBarStyle).not.toHaveProperty("height");
+		expect(screenOptions.tabBarStyle).not.toHaveProperty("paddingTop");
+		expect(screenOptions.tabBarItemStyle).toBeUndefined();
 
 		mockPathname = "/history";
 		await screen.rerender(<TabLayout />);

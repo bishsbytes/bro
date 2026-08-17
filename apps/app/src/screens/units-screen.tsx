@@ -72,7 +72,7 @@ export function UnitsScreen({ store }: UnitsScreenProps) {
 	}
 
 	return (
-		<Screen scroll padded gap="lg" edges={["bottom"]}>
+		<Screen scroll padded gap="lg">
 			<AppText color="muted">
 				Choose how measurements appear. Stored values stay unchanged, so
 				switching units never changes your history or goals.

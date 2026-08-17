@@ -660,7 +660,12 @@ const styles = StyleSheet.create((theme) => ({
 		justifyContent: "space-between",
 		alignItems: "center",
 	},
-	form: { marginBottom: theme.spacing.xl },
+	form: {
+		marginBottom: theme.spacing.xl,
+		padding: theme.spacing.xl,
+		borderRadius: theme.radius.md,
+		backgroundColor: theme.colors.surface,
+	},
 	prompt: {
 		fontWeight: "600",
 		marginTop: theme.spacing.lg,

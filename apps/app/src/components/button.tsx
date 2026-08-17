@@ -41,6 +41,7 @@ export function Button({
 			accessibilityLabel={accessibilityLabel}
 			accessibilityState={{ disabled: blocked, busy: loading }}
 			disabled={blocked}
+			activeOpacity={0.72}
 			style={[
 				styles.base,
 				variant === "primary" && styles.primary,
@@ -65,10 +66,10 @@ export function Button({
 
 const styles = StyleSheet.create((theme) => ({
 	base: {
-		minHeight: 48,
+		minHeight: theme.control.buttonMinHeight,
 		alignItems: "center",
 		justifyContent: "center",
-		borderRadius: theme.radius.sm,
+		borderRadius: theme.radius.md,
 		paddingHorizontal: theme.spacing.lg,
 		paddingVertical: theme.spacing.md,
 	},
@@ -76,10 +77,10 @@ const styles = StyleSheet.create((theme) => ({
 	secondary: {
 		borderWidth: 1,
 		borderColor: theme.colors.border,
-		backgroundColor: theme.colors.background,
+		backgroundColor: theme.colors.surface,
 	},
 	danger: { backgroundColor: theme.colors.danger },
 	dangerOutline: { borderColor: theme.colors.danger },
 	disabled: { opacity: theme.opacity.disabled },
-	label: { fontWeight: "600" },
+	label: { fontWeight: "700" },
 }));

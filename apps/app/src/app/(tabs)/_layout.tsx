@@ -1,10 +1,10 @@
-import MaterialIcons from "@expo/vector-icons/MaterialIcons";
 import { useAuth } from "@bro/auth-app";
+import MaterialIcons from "@expo/vector-icons/MaterialIcons";
 import { Tabs, usePathname, useSegments } from "expo-router";
 import { useLayoutEffect, useRef } from "react";
 import { View } from "react-native";
-import { AvatarIdentityContext } from "../../components/avatar-identity-context";
 import { AppHeader } from "../../components/app-header";
+import { AvatarIdentityContext } from "../../components/avatar-identity-context";
 import { StyleSheet, useUnistyles } from "../../theme/unistyles";
 
 const TAB_TITLES = {
@@ -47,10 +47,14 @@ export default function TabLayout() {
 						tabBarInactiveTintColor: theme.colors.tabInactive,
 						tabBarStyle: {
 							backgroundColor: theme.colors.tabBackground,
-							borderTopColor: theme.colors.headerBorder,
+							borderTopWidth: 0,
+							shadowOpacity: 0,
+							elevation: 0,
 						},
-						tabBarLabelStyle: theme.typography.micro,
-						tabBarActiveBackgroundColor: theme.colors.tabIndicator,
+						tabBarLabelStyle: {
+							...theme.typography.micro,
+							fontWeight: "500",
+						},
 					}}
 				>
 					<Tabs.Screen
@@ -58,7 +62,7 @@ export default function TabLayout() {
 						options={{
 							title: "Today",
 							tabBarIcon: ({ color, size }) => (
-								<MaterialIcons name="home" color={color} size={size} />
+								<MaterialIcons name="wb-sunny" color={color} size={size} />
 							),
 						}}
 					/>
@@ -67,7 +71,7 @@ export default function TabLayout() {
 						options={{
 							title: "History",
 							tabBarIcon: ({ color, size }) => (
-								<MaterialIcons name="history" color={color} size={size} />
+								<MaterialIcons name="auto-stories" color={color} size={size} />
 							),
 						}}
 					/>
@@ -76,7 +80,7 @@ export default function TabLayout() {
 						options={{
 							title: "Trends",
 							tabBarIcon: ({ color, size }) => (
-								<MaterialIcons name="show-chart" color={color} size={size} />
+								<MaterialIcons name="insights" color={color} size={size} />
 							),
 						}}
 					/>
@@ -85,7 +89,7 @@ export default function TabLayout() {
 						options={{
 							title: "Settings",
 							tabBarIcon: ({ color, size }) => (
-								<MaterialIcons name="settings" color={color} size={size} />
+								<MaterialIcons name="tune" color={color} size={size} />
 							),
 						}}
 					/>

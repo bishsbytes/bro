@@ -1,4 +1,4 @@
-import { darkTheme, lightTheme } from "./theme/unistyles";
+import { darkTheme, lightTheme, stackScreenOptions } from "./theme/unistyles";
 
 describe("design tokens", () => {
 	it("defines every colour in both themes", () => {
@@ -31,5 +31,19 @@ describe("design tokens", () => {
 		expect(darkTheme.typography).toEqual(lightTheme.typography);
 		expect(darkTheme.control).toEqual(lightTheme.control);
 		expect(darkTheme.opacity).toEqual(lightTheme.opacity);
+	});
+
+	it("uses a distinct canvas and raised surface in each colour scheme", () => {
+		expect(lightTheme.colors.background).not.toBe(lightTheme.colors.surface);
+		expect(darkTheme.colors.background).not.toBe(darkTheme.colors.surface);
+	});
+
+	it("keeps native stacks aligned with the shared visual system", () => {
+		expect(stackScreenOptions(lightTheme)).toMatchObject({
+			headerStyle: { backgroundColor: lightTheme.colors.headerBackground },
+			headerTintColor: lightTheme.colors.text,
+			headerShadowVisible: false,
+			contentStyle: { backgroundColor: lightTheme.colors.background },
+		});
 	});
 });

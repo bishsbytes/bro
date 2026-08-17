@@ -167,7 +167,7 @@ export function HabitsScreen({ store }: { store?: HabitsScreenStore }) {
 	}
 
 	return (
-		<Screen scroll padded gap="lg" edges={["bottom"]}>
+		<Screen scroll padded gap="lg">
 			<AppText color="muted">
 				Choose the days that matter. Unscheduled days never count against a
 				streak.

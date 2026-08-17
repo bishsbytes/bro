@@ -23,10 +23,13 @@ export function EmptyState({
 			<AppText
 				variant="section"
 				color={tone === "danger" ? "danger" : "default"}
+				style={styles.copy}
 			>
 				{title}
 			</AppText>
-			<AppText color="muted">{body}</AppText>
+			<AppText color="muted" style={styles.copy}>
+				{body}
+			</AppText>
 			{actionLabel && onAction ? (
 				<Button label={actionLabel} variant="text" onPress={onAction} />
 			) : null}
@@ -35,5 +38,10 @@ export function EmptyState({
 }
 
 const styles = StyleSheet.create((theme) => ({
-	card: { gap: theme.spacing.sm },
+	card: {
+		alignItems: "center",
+		gap: theme.spacing.md,
+		paddingVertical: theme.spacing.xxl,
+	},
+	copy: { textAlign: "center" },
 }));

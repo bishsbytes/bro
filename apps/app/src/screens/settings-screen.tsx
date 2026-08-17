@@ -5,6 +5,7 @@ import { View } from "react-native";
 import { AppText } from "../components/app-text";
 import { Button } from "../components/button";
 import { Card } from "../components/card";
+import { ListRow } from "../components/list-row";
 import { Screen } from "../components/screen";
 import { SectionHeader } from "../components/section-header";
 import type { HealthGatewayAvailability } from "../health/gateway";
@@ -48,17 +49,12 @@ function HealthSettingsEntry({
 	const label =
 		health.platform === "healthkit" ? "Apple Health" : "Health Connect";
 	return (
-		<Card style={styles.section}>
-			<SectionHeader title="Health data" />
-			<AppText color="muted">
-				Import health history from {label}. Your data stays on this device.
-			</AppText>
-			<Button
-				label="Manage health data"
-				variant="secondary"
-				onPress={() => router.push("/settings/health")}
-			/>
-		</Card>
+		<ListRow
+			title="Health data"
+			detail={`Import from ${label}. Your data stays on this device.`}
+			accessibilityLabel="Manage health data"
+			onPress={() => router.push("/settings/health")}
+		/>
 	);
 }
 
@@ -94,52 +90,32 @@ export function SettingsScreen({
 	}
 
 	return (
-		<Screen scroll padded edges={["bottom"]}>
+		<Screen scroll padded gap="md">
 			<HealthSettingsEntry availability={healthAvailability} />
-			<Card style={styles.section}>
-				<SectionHeader title="Habits" />
-				<AppText color="muted">
-					Choose routines, set their days, and add your own.
-				</AppText>
-				<Button
-					label="Manage habits"
-					variant="secondary"
-					onPress={() => router.push("/settings/habits")}
-				/>
-			</Card>
-			<Card style={styles.section}>
-				<SectionHeader title="Life areas" />
-				<AppText color="muted">
-					Choose, order, and rename the areas shown in your wheel of life.
-				</AppText>
-				<Button
-					label="Manage life areas"
-					variant="secondary"
-					onPress={() => router.push("/settings/life-areas")}
-				/>
-			</Card>
-			<Card style={styles.section}>
-				<SectionHeader title="Units" />
-				<AppText color="muted">
-					Choose how weight, length, and body fat measurements appear.
-				</AppText>
-				<Button
-					label="Manage units"
-					variant="secondary"
-					onPress={() => router.push("/settings/units")}
-				/>
-			</Card>
-			<Card style={styles.section}>
-				<SectionHeader title="Reminders" />
-				<AppText color="muted">
-					Choose when this device nudges you to check in.
-				</AppText>
-				<Button
-					label="Manage reminders"
-					variant="secondary"
-					onPress={() => router.push("/settings/reminders")}
-				/>
-			</Card>
+			<ListRow
+				title="Habits"
+				detail="Choose routines, days, and your own habits."
+				accessibilityLabel="Manage habits"
+				onPress={() => router.push("/settings/habits")}
+			/>
+			<ListRow
+				title="Life areas"
+				detail="Choose, order, and rename the areas in your wheel."
+				accessibilityLabel="Manage life areas"
+				onPress={() => router.push("/settings/life-areas")}
+			/>
+			<ListRow
+				title="Units"
+				detail="Choose how body measurements appear."
+				accessibilityLabel="Manage units"
+				onPress={() => router.push("/settings/units")}
+			/>
+			<ListRow
+				title="Reminders"
+				detail="Choose when this device nudges you to check in."
+				accessibilityLabel="Manage reminders"
+				onPress={() => router.push("/settings/reminders")}
+			/>
 			<Card style={styles.section}>
 				<SectionHeader title="Data on this device" />
 				{deleteStep === "idle" ? (

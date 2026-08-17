@@ -5,7 +5,7 @@ import { AppText } from "../components/app-text";
 import { Button } from "../components/button";
 import { Card } from "../components/card";
 import { EmptyState } from "../components/empty-state";
-import { Screen } from "../components/screen";
+import { StackScreen as Screen } from "../components/screen";
 import {
 	type ChallengeDetail,
 	createHabitsStore,

@@ -3,7 +3,7 @@ import { useState } from "react";
 import { AppText } from "../components/app-text";
 import { Button } from "../components/button";
 import { FormField } from "../components/form-field";
-import { Screen } from "../components/screen";
+import { StackScreen as Screen } from "../components/screen";
 import { authStyles } from "./auth-styles";
 
 export type SignInScreenProps = {

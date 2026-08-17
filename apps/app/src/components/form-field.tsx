@@ -45,16 +45,17 @@ export function FormField({
 }
 
 const styles = StyleSheet.create((theme) => ({
-	label: { marginBottom: theme.spacing.xs, fontWeight: "600" },
+	label: { marginBottom: theme.spacing.sm, fontWeight: "600" },
 	input: {
+		minHeight: theme.control.buttonMinHeight,
 		borderWidth: 1,
 		borderColor: theme.colors.border,
 		borderRadius: theme.radius.sm,
-		paddingHorizontal: theme.spacing.md,
+		paddingHorizontal: theme.spacing.lg,
 		paddingVertical: theme.spacing.md,
 		fontSize: theme.typography.label.fontSize,
 		color: theme.colors.text,
-		backgroundColor: theme.colors.background,
+		backgroundColor: theme.colors.surface,
 	},
 	multiline: {
 		minHeight: theme.control.noteMinHeight,

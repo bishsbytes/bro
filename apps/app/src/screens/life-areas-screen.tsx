@@ -1,8 +1,8 @@
 import {
+	TrackedMetricsRepository as DatabaseTrackedMetricsRepository,
 	getDb,
 	type ResolvedTrackedMetric,
 	type TrackedMetricsRepository,
-	TrackedMetricsRepository as DatabaseTrackedMetricsRepository,
 } from "@bro/database-app";
 import { useFocusEffect } from "expo-router";
 import { useCallback, useMemo, useState } from "react";
@@ -15,10 +15,10 @@ import { FormField } from "../components/form-field";
 import { Screen } from "../components/screen";
 import {
 	DEFAULT_LIFE_AREA_METRICS,
-	MAX_ACTIVE_LIFE_AREAS,
-	resolveLifeAreas,
 	type LifeAreaSlug,
+	MAX_ACTIVE_LIFE_AREAS,
 	type ResolvedLifeArea,
+	resolveLifeAreas,
 } from "../content/life-area-catalogue";
 import { StyleSheet, useUnistyles } from "../theme/unistyles";
 
@@ -132,7 +132,7 @@ export function LifeAreasScreen({ repository }: LifeAreasScreenProps) {
 	}
 
 	return (
-		<Screen scroll padded gap="lg" edges={["bottom"]}>
+		<Screen scroll padded gap="lg">
 			<AppText color="muted">
 				Choose which areas appear in a new wheel. Changes affect future reviews
 				only; saved reviews keep their original labels and order.

@@ -29,6 +29,7 @@ export function ListRow({
 	return (
 		<TouchableOpacity
 			accessibilityRole="button"
+			activeOpacity={0.72}
 			style={[styles.row, style]}
 			{...props}
 		>

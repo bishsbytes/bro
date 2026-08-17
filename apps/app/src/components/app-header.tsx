@@ -40,7 +40,7 @@ const styles = StyleSheet.create((theme) => ({
 		justifyContent: "space-between",
 		gap: theme.spacing.lg,
 		paddingHorizontal: theme.spacing.xl,
-		paddingTop: theme.spacing.sm,
+		paddingTop: theme.spacing.md,
 		paddingBottom: theme.spacing.lg,
 	},
 	copy: { flex: 1 },

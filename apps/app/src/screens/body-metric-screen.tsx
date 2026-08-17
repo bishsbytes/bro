@@ -3,9 +3,9 @@ import { router, useFocusEffect } from "expo-router";
 import { useCallback, useMemo, useState } from "react";
 import { ActivityIndicator, View } from "react-native";
 import {
-	createBodyStore,
 	type BodyMetricDetail,
 	type BodyStore,
+	createBodyStore,
 	type MeasurementPresentation,
 } from "../body/body-store";
 import { AppText } from "../components/app-text";
@@ -13,11 +13,11 @@ import { Button } from "../components/button";
 import { Card } from "../components/card";
 import { EmptyState } from "../components/empty-state";
 import { FormField } from "../components/form-field";
-import { Screen } from "../components/screen";
+import { StackScreen as Screen } from "../components/screen";
 import { SectionHeader } from "../components/section-header";
 import { TrendChart } from "../components/trend-chart";
 import { StyleSheet } from "../theme/unistyles";
-import { parseMeasurement, type ParsedMeasurement } from "../units";
+import { type ParsedMeasurement, parseMeasurement } from "../units";
 
 type BodyMetricScreenProps = {
 	metricSlug: string;

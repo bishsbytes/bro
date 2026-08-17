@@ -21,7 +21,11 @@ import {
 	useDeviceSettings,
 } from "../providers/device-settings-provider";
 import { ReminderNotificationEffects } from "../reminders/reminder-notification-effects";
-import { StyleSheet, useUnistyles } from "../theme/unistyles";
+import {
+	StyleSheet,
+	stackScreenOptions,
+	useUnistyles,
+} from "../theme/unistyles";
 
 void SplashScreen.preventAutoHideAsync();
 
@@ -84,10 +88,7 @@ function RootNavigator() {
 	return (
 		<Stack
 			screenOptions={{
-				headerStyle: { backgroundColor: theme.colors.headerBackground },
-				headerTintColor: theme.colors.text,
-				headerShadowVisible: true,
-				contentStyle: { backgroundColor: theme.colors.background },
+				...stackScreenOptions(theme),
 				animation: process.env.NODE_ENV === "test" ? "none" : "default",
 			}}
 		>

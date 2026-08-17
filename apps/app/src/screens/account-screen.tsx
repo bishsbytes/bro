@@ -6,10 +6,10 @@ import { AppText } from "../components/app-text";
 import { Button } from "../components/button";
 import { Card } from "../components/card";
 import { FormField } from "../components/form-field";
-import { Screen } from "../components/screen";
+import { StackScreen as Screen } from "../components/screen";
 import { SectionHeader } from "../components/section-header";
-import { StyleSheet } from "../theme/unistyles";
 import { useDeviceSettings } from "../providers/device-settings-provider";
+import { StyleSheet } from "../theme/unistyles";
 
 type Confirmation = "sign-out" | "delete-account" | null;
 
@@ -88,7 +88,6 @@ export function AccountScreen() {
 		<Screen
 			scroll
 			padded
-			edges={["bottom"]}
 			contentContainerStyle={styles.container}
 			keyboardShouldPersistTaps="handled"
 		>

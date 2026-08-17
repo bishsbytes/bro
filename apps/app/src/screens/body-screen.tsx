@@ -2,15 +2,15 @@ import { router, useFocusEffect } from "expo-router";
 import { useCallback, useMemo, useState } from "react";
 import { ActivityIndicator, Switch, View } from "react-native";
 import {
-	createBodyStore,
 	type BodyOverview,
 	type BodyStore,
+	createBodyStore,
 } from "../body/body-store";
 import { AppText } from "../components/app-text";
 import { Button } from "../components/button";
 import { Card } from "../components/card";
 import { EmptyState } from "../components/empty-state";
-import { Screen } from "../components/screen";
+import { StackScreen as Screen } from "../components/screen";
 import { SectionHeader } from "../components/section-header";
 import { TrendChart } from "../components/trend-chart";
 import { StyleSheet, useUnistyles } from "../theme/unistyles";

@@ -5,10 +5,10 @@ import {
 	View,
 	type ViewStyle,
 } from "react-native";
-import { SafeAreaView, type Edge } from "react-native-safe-area-context";
+import { type Edge, SafeAreaView } from "react-native-safe-area-context";
 import { StyleSheet, useUnistyles } from "../theme/unistyles";
 
-type Spacing = "xs" | "sm" | "md" | "lg" | "xl" | "xxl";
+type Spacing = "xs" | "sm" | "md" | "lg" | "xl" | "xxl" | "xxxl";
 
 type ScreenProps = {
 	children: ReactNode;
@@ -21,6 +21,9 @@ type ScreenProps = {
 	contentContainerStyle?: ScrollViewProps["contentContainerStyle"];
 	keyboardShouldPersistTaps?: ScrollViewProps["keyboardShouldPersistTaps"];
 };
+
+type StackScreenProps = Omit<ScreenProps, "edges">;
+type FullScreenProps = Omit<ScreenProps, "edges">;
 
 export function Screen({
 	children,
@@ -59,10 +62,27 @@ export function Screen({
 	);
 }
 
+/**
+ * Screen used under a native stack header. The header owns the top inset; this
+ * component guarantees that scrolling and fixed content stop above system
+ * navigation at the bottom of the device.
+ */
+export function StackScreen(props: StackScreenProps) {
+	return <Screen {...props} edges={["bottom"]} />;
+}
+
+/** Screen used without either a native header or a bottom tab bar. */
+export function FullScreen(props: FullScreenProps) {
+	return <Screen {...props} edges={["top", "bottom"]} />;
+}
+
 const styles = StyleSheet.create((theme) => ({
 	screen: { flex: 1, backgroundColor: theme.colors.background },
 	scroll: { flex: 1, backgroundColor: theme.colors.background },
 	content: { flexGrow: 1 },
-	padded: { padding: theme.spacing.xl },
+	padded: {
+		paddingHorizontal: theme.spacing.lg,
+		paddingVertical: theme.spacing.xl,
+	},
 	centered: { alignItems: "center", justifyContent: "center" },
 }));

@@ -1,7 +1,7 @@
 import { router } from "expo-router";
 import { AppText } from "../../components/app-text";
 import { Button } from "../../components/button";
-import { Screen } from "../../components/screen";
+import { FullScreen as Screen } from "../../components/screen";
 import { useDeviceSettings } from "../../providers/device-settings-provider";
 import { onboardingStyles as styles } from "../../screens/onboarding-styles";
 

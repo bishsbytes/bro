@@ -6,7 +6,7 @@ import { Button } from "../components/button";
 import { Card } from "../components/card";
 import { EmptyState } from "../components/empty-state";
 import { FormField } from "../components/form-field";
-import { Screen } from "../components/screen";
+import { StackScreen as Screen } from "../components/screen";
 import {
 	createReviewStore,
 	type GoalSetup,

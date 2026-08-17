@@ -1,7 +1,7 @@
 import { router } from "expo-router";
 import { AppText } from "../../components/app-text";
 import { Button } from "../../components/button";
-import { Screen } from "../../components/screen";
+import { FullScreen as Screen } from "../../components/screen";
 import { onboardingStyles as styles } from "../../screens/onboarding-styles";
 
 export default function PrivacyRoute() {
