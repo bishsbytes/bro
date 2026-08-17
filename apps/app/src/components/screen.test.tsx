@@ -1,5 +1,5 @@
 import { render } from "@testing-library/react-native";
-import { Text } from "react-native";
+import { StyleSheet, Text } from "react-native";
 import { FullScreen, Screen, StackScreen } from "./screen";
 
 jest.mock("react-native-safe-area-context", () => {
@@ -50,5 +50,19 @@ describe("Screen safe areas", () => {
 		);
 
 		expect(view.getByTestId("safe-area-top-bottom")).toBeTruthy();
+	});
+
+	it("centres content vertically without collapsing control width", async () => {
+		const view = await render(
+			<Screen centered>
+				<Text>Centered content</Text>
+			</Screen>,
+		);
+		const content = view.getByText("Centered content").parent;
+
+		expect(StyleSheet.flatten(content?.props.style)).toMatchObject({
+			alignItems: "stretch",
+			justifyContent: "center",
+		});
 	});
 });

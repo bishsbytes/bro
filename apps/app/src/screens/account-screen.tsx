@@ -304,7 +304,6 @@ const styles = StyleSheet.create((theme) => ({
 	confirmation: {
 		borderWidth: 1,
 		borderColor: theme.colors.border,
-		backgroundColor: theme.colors.background,
 		marginTop: theme.spacing.xl,
 		gap: theme.spacing.md,
 	},

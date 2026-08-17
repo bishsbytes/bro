@@ -84,5 +84,5 @@ const styles = StyleSheet.create((theme) => ({
 		paddingHorizontal: theme.spacing.lg,
 		paddingVertical: theme.spacing.xl,
 	},
-	centered: { alignItems: "center", justifyContent: "center" },
+	centered: { alignItems: "stretch", justifyContent: "center" },
 }));
