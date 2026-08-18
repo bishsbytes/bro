@@ -1,13 +1,23 @@
-import { router, useFocusEffect } from "expo-router";
+import { type Href, router, useFocusEffect } from "expo-router";
 import { useCallback, useMemo, useState } from "react";
 import { ActivityIndicator } from "react-native";
 import { AppText } from "../components/app-text";
 import { Button } from "../components/button";
 import { Card } from "../components/card";
 import { EmptyState } from "../components/empty-state";
+import { ListRow } from "../components/list-row";
 import { Screen } from "../components/screen";
 import { SectionHeader } from "../components/section-header";
 import { TrendChart } from "../components/trend-chart";
+import {
+	createInsightStore,
+	type InsightSnapshot,
+	type InsightStore,
+} from "../insight/insight-store";
+import {
+	renderInsightSummary,
+	renderInsightTeaserProgress,
+} from "../insight/presentation";
 import { StyleSheet } from "../theme/unistyles";
 import {
 	createTrendsStore,
@@ -17,22 +27,29 @@ import {
 
 type MindScreenProps = {
 	store?: Pick<TrendsStore, "load">;
+	insightStore?: Pick<InsightStore, "load">;
 };
 
 function latestScore(
 	series: TrendsSnapshot["metrics"][number]["series"],
 ): number | null {
 	return (
-		[...series.points]
-			.reverse()
-			.find((point) => point.value !== null)?.value ?? null
+		[...series.points].reverse().find((point) => point.value !== null)?.value ??
+		null
 	);
 }
 
-export function MindScreen({ store }: MindScreenProps) {
+export function MindScreen({ store, insightStore }: MindScreenProps) {
 	const trends = useMemo(() => store ?? createTrendsStore(), [store]);
+	const insights = useMemo(
+		() => insightStore ?? createInsightStore(),
+		[insightStore],
+	);
 	const [snapshot, setSnapshot] = useState<TrendsSnapshot | null>(null);
+	const [insightSnapshot, setInsightSnapshot] =
+		useState<InsightSnapshot | null>(null);
 	const [error, setError] = useState<string | null>(null);
+	const [insightError, setInsightError] = useState<string | null>(null);
 
 	const load = useCallback(async () => {
 		setError(null);
@@ -43,10 +60,22 @@ export function MindScreen({ store }: MindScreenProps) {
 		}
 	}, [trends]);
 
+	const loadInsights = useCallback(async () => {
+		setInsightError(null);
+		try {
+			setInsightSnapshot(await insights.load());
+		} catch (caught) {
+			setInsightError(
+				caught instanceof Error ? caught.message : String(caught),
+			);
+		}
+	}, [insights]);
+
 	useFocusEffect(
 		useCallback(() => {
 			void load();
-		}, [load]),
+			void loadInsights();
+		}, [load, loadInsights]),
 	);
 
 	const mindMetrics =
@@ -68,6 +97,54 @@ export function MindScreen({ store }: MindScreenProps) {
 				</AppText>
 				<Button label="Check in" onPress={() => router.push("/")} />
 			</Card>
+
+			<SectionHeader title="Insights" eyebrow="LAST 90 DAYS" />
+			{!insightSnapshot && !insightError ? (
+				<ActivityIndicator size="large" />
+			) : null}
+			{insightError ? (
+				<EmptyState
+					title="Insights could not be loaded"
+					body={insightError}
+					actionLabel="Try again"
+					onAction={() => void loadInsights()}
+					tone="danger"
+				/>
+			) : null}
+			{insightSnapshot?.state === "empty" ? (
+				<Card style={styles.insightCard}>
+					<AppText variant="section">
+						Your patterns start with check-ins
+					</AppText>
+					<AppText color="muted">
+						As your record grows, this space compares days to show associations
+						that you did not have to type in yourself.
+					</AppText>
+				</Card>
+			) : null}
+			{insightSnapshot?.state === "not-yet" ? (
+				<Card style={styles.insightCard}>
+					<AppText variant="section">
+						Watching {insightSnapshot.teaser.watchedCount} patterns
+					</AppText>
+					<AppText color="muted">
+						{renderInsightTeaserProgress(insightSnapshot.teaser)}
+					</AppText>
+				</Card>
+			) : null}
+			{insightSnapshot?.shown.map((insight) => (
+				<ListRow
+					key={insight.pair.id}
+					title="Pattern in your record"
+					detail={renderInsightSummary(insight)}
+					accessibilityLabel={`Open insight: ${renderInsightSummary(insight)}`}
+					onPress={() =>
+						router.push(
+							`/insights/${encodeURIComponent(insight.pair.id)}` as Href,
+						)
+					}
+				/>
+			))}
 
 			<SectionHeader title="Mood and energy" eyebrow="LAST 7 DAYS" />
 			{!snapshot && !error ? <ActivityIndicator size="large" /> : null}
@@ -126,6 +203,7 @@ export function MindScreen({ store }: MindScreenProps) {
 const styles = StyleSheet.create((theme) => ({
 	checkInCard: { gap: theme.spacing.md },
 	metricCard: { gap: theme.spacing.md },
+	insightCard: { gap: theme.spacing.md },
 }));
 
 export default MindScreen;

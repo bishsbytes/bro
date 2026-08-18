@@ -1,5 +1,5 @@
 import { deleteLocalProductData } from "@bro/database-app";
-import { router } from "expo-router";
+import { type Href, router } from "expo-router";
 import { useEffect, useState } from "react";
 import { View } from "react-native";
 import { AppText } from "../components/app-text";
@@ -115,6 +115,12 @@ export function SettingsScreen({
 				detail="Choose when this device nudges you to check in."
 				accessibilityLabel="Manage reminders"
 				onPress={() => router.push("/settings/reminders")}
+			/>
+			<ListRow
+				title="Export your data"
+				detail="Share or save a copy of the record on this device."
+				accessibilityLabel="Export your data"
+				onPress={() => router.push("/settings/export" as Href)}
 			/>
 			<Card style={styles.section}>
 				<SectionHeader title="Data on this device" />

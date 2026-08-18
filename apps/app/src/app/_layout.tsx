@@ -103,6 +103,7 @@ function RootNavigator() {
 				<Stack.Screen name="trends" options={{ title: "Trends" }} />
 				<Stack.Screen name="body/[slug]" options={{ title: "Measurement" }} />
 				<Stack.Screen name="challenges" options={{ headerShown: false }} />
+				<Stack.Screen name="insights/[id]" options={{ title: "Insight" }} />
 				<Stack.Screen name="account" options={{ title: "Account" }} />
 			</Stack.Protected>
 			<Stack.Screen name="sign-in" options={{ title: "Sign in" }} />

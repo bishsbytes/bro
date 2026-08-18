@@ -82,6 +82,18 @@ jest.mock("./trends/trends-store", () => ({
 	}),
 }));
 
+jest.mock("./insight/insight-store", () => ({
+	createInsightStore: () => ({
+		load: async () => ({
+			state: "empty",
+			throughLocalDay: "2026-08-14",
+			evaluations: [],
+			shown: [],
+			teaser: { watchedCount: 14, nearest: null },
+		}),
+	}),
+}));
+
 const mockedAuthClient = authClient as unknown as {
 	useSession: jest.Mock;
 	signIn: { email: jest.Mock };

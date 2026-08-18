@@ -165,6 +165,27 @@ describe("habits store", () => {
 		expect(settings.active[0]).toMatchObject({ label: "Read fiction" });
 	});
 
+	it("ends a removed habit's adherence record on its removal day", async () => {
+		now = new Date("2026-08-14T12:00:00.000Z");
+		const reading = await store.addTemplate(habit("habit:reading"), {
+			label: "Read",
+			daysOfWeek: 0b111_1111,
+			targetValue: null,
+		});
+		await store.toggleManual(reading.id, "2026-08-14");
+		now = new Date("2026-08-15T12:00:00.000Z");
+		await store.removeHabit(reading.id);
+		now = new Date("2026-08-17T12:00:00.000Z");
+
+		const detail = await store.loadHabitDetail(reading.id);
+		expect(detail?.days.slice(-4).map((day) => day.state)).toEqual([
+			"done",
+			"missed",
+			"unscheduled",
+			"unscheduled",
+		]);
+	});
+
 	it("enrols, pauses by completion, finishes, and retains history", async () => {
 		const enrolment = await store.startChallenge("challenge:health-basics");
 		expect(await store.startChallenge("challenge:health-basics")).toEqual(

@@ -1,6 +1,12 @@
 export {
-	isoWeekdayForLocalDay,
+	deriveHabitAdherence,
+	type HabitAdherenceDay,
+	type HabitAdherenceInput,
+	type HabitAdherenceState,
+} from "./adherence";
+export {
 	isHabitScheduled,
+	isoWeekdayForLocalDay,
 	scheduledDaysBetween,
 	shiftLocalDay,
 } from "./cadence";

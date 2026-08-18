@@ -1,0 +1,118 @@
+import type * as DatabaseApp from "@bro/database-app";
+import { fireEvent, render, waitFor } from "@testing-library/react-native";
+import type { SQLiteDatabase } from "expo-sqlite";
+import { parseCheckInExport } from "./export/check-in-export";
+import { createNodeSqliteMock } from "./test-support/node-sqlite";
+
+const mockSqlite = createNodeSqliteMock();
+let mockRandomSeed = 0;
+let databaseApp: typeof DatabaseApp;
+let db: SQLiteDatabase;
+
+jest.mock("expo-sqlite", () => ({
+	openDatabaseSync: mockSqlite.openDatabaseSync,
+	openDatabaseAsync: mockSqlite.openDatabaseAsync,
+}));
+jest.mock("expo-crypto", () => ({
+	getRandomBytes: jest.fn((length: number) => {
+		const bytes = new Uint8Array(length);
+		mockRandomSeed += 1;
+		bytes[length - 1] = mockRandomSeed;
+		return bytes;
+	}),
+}));
+
+const { ExportStore } = jest.requireActual(
+	"./export/export-store",
+) as typeof import("./export/export-store");
+const { ExportScreen } = jest.requireActual(
+	"./screens/export-screen",
+) as typeof import("./screens/export-screen");
+
+describe("export flow", () => {
+	beforeEach(async () => {
+		mockSqlite.reset();
+		mockRandomSeed = 0;
+		databaseApp = jest.requireActual("@bro/database-app");
+		db = await databaseApp.initDb("export-flow.db");
+		await databaseApp.runMigrations(db);
+	});
+
+	afterEach(async () => {
+		await databaseApp.closeDb();
+	});
+
+	afterAll(() => mockSqlite.cleanup());
+
+	it("round-trips v5 and applies the sensitive toggle to the emitted payload", async () => {
+		const observations = new databaseApp.ObservationRepository(db);
+		const base = {
+			observedAt: Date.parse("2026-08-18T09:00:00.000Z"),
+			localDay: "2026-08-18",
+			tzOffsetMinutes: -60,
+			source: "user",
+			sourceRecordId: null,
+			assessmentId: null,
+		};
+		await observations.create({
+			...base,
+			metricSlug: "mood",
+			value: 4,
+			scaleMin: 1,
+			scaleMax: 5,
+		});
+		await observations.create({
+			...base,
+			metricSlug: "weight",
+			value: 80,
+			scaleMin: null,
+			scaleMax: null,
+		});
+		const store = new ExportStore(db, "1.0.0", () => 1_787_040_000_000);
+
+		const withoutSensitive = parseCheckInExport(await store.serialize(false));
+		const withSensitive = parseCheckInExport(await store.serialize(true));
+		expect(withoutSensitive.metadata.formatVersion).toBe(5);
+		expect(withoutSensitive.observations.map((row) => row.metricSlug)).toEqual([
+			"mood",
+		]);
+		expect(withSensitive.observations.map((row) => row.metricSlug)).toEqual([
+			"mood",
+			"weight",
+		]);
+	});
+
+	it("defaults sensitive data off and hands each generated file to the share action", async () => {
+		const realStore = new ExportStore(db, "1.0.0", () => 1_787_040_000_000);
+		const withoutSensitive = await realStore.serialize(false);
+		const withSensitive = await realStore.serialize(true);
+		const serialize = jest
+			.fn()
+			.mockResolvedValueOnce(withoutSensitive)
+			.mockResolvedValueOnce(withSensitive);
+		const share = jest.fn(async (_payload: string, _fileName: string) => ({
+			message: "Export saved.",
+			uri: "file://export",
+		}));
+		const screen = await render(
+			<ExportScreen store={{ serialize }} share={share} />,
+		);
+
+		await fireEvent.press(screen.getByText("Share or save export"));
+		await waitFor(() => expect(serialize).toHaveBeenCalledWith(false));
+		expect(
+			parseCheckInExport(share.mock.calls[0]?.[0]).metadata.formatVersion,
+		).toBe(5);
+
+		await fireEvent(
+			screen.getByLabelText("Include sensitive data"),
+			"valueChange",
+			true,
+		);
+		await fireEvent.press(screen.getByText("Share or save export"));
+		await waitFor(() => expect(serialize).toHaveBeenLastCalledWith(true));
+		expect(
+			parseCheckInExport(share.mock.calls[1]?.[0]).metadata.formatVersion,
+		).toBe(5);
+	});
+});

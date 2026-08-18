@@ -4,6 +4,7 @@ import { resolveChallenge } from "./content/challenge-catalogue";
 import { resolveHabit } from "./content/habit-catalogue";
 import { ChallengeDetailScreen } from "./screens/challenge-detail-screen";
 import { ChallengeScreen } from "./screens/challenge-screen";
+import { HabitDetailScreen } from "./screens/habit-detail-screen";
 import { HabitsScreen } from "./screens/habits-screen";
 
 const mockRouter = {
@@ -158,5 +159,50 @@ describe("habit and challenge surfaces", () => {
 			expect(completeChallengeDay).toHaveBeenCalledWith("run-1", 3),
 		);
 		expect(await screen.findByText("You finished it")).toBeTruthy();
+	});
+
+	it("renders the four adherence states as a descriptive habit record", async () => {
+		const habit: Habit = {
+			id: "habit-1",
+			slug: "habit:steps-10k",
+			customLabel: null,
+			kind: "metric",
+			metricSlug: "steps",
+			direction: "at_least",
+			targetValue: 10_000,
+			daysOfWeek: 0b111_1111,
+			position: 0,
+			addedAt: 1,
+			removedAt: null,
+			createdAt: 1,
+			updatedAt: 1,
+		};
+		const screen = await render(
+			<HabitDetailScreen
+				id={habit.id}
+				store={{
+					loadHabitDetail: jest.fn(async () => ({
+						habit,
+						label: "10,000 steps",
+						fromLocalDay: "2026-08-15",
+						throughLocalDay: "2026-08-18",
+						days: [
+							{ localDay: "2026-08-15", state: "done" as const },
+							{ localDay: "2026-08-16", state: "missed" as const },
+							{
+								localDay: "2026-08-17",
+								state: "unscheduled" as const,
+							},
+							{ localDay: "2026-08-18", state: "no-data" as const },
+						],
+					})),
+				}}
+			/>,
+		);
+
+		expect(await screen.findByLabelText("2026-08-15: Done")).toBeTruthy();
+		expect(screen.getByLabelText("2026-08-16: Missed")).toBeTruthy();
+		expect(screen.getByLabelText("2026-08-17: Unscheduled")).toBeTruthy();
+		expect(screen.getByLabelText("2026-08-18: No data")).toBeTruthy();
 	});
 });

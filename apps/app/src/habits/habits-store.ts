@@ -27,9 +27,10 @@ import {
 	resolveLifeAreas,
 } from "../content/life-area-catalogue";
 import { localDayAt } from "../health/mapping";
-import { isHealthMetricSlug } from "../health/policy";
+import { type HealthMetricSlug, isHealthMetricSlug } from "../health/policy";
 import { resolveMetricDay } from "../health/resolved-day";
-import { isHabitScheduled } from "./cadence";
+import { deriveHabitAdherence, type HabitAdherenceDay } from "./adherence";
+import { isHabitScheduled, shiftLocalDay } from "./cadence";
 import { resolveChallengePosition } from "./challenge-position";
 import { isMetricHabitComplete } from "./completion";
 import { deriveHabitStreak } from "./streak";
@@ -75,6 +76,14 @@ export type HabitCatalogueGroup = {
 export type HabitSettingsSnapshot = {
 	active: HabitSettingsItem[];
 	groups: HabitCatalogueGroup[];
+};
+
+export type HabitDetail = {
+	habit: Habit;
+	label: string;
+	fromLocalDay: string;
+	throughLocalDay: string;
+	days: HabitAdherenceDay[];
 };
 
 export type HabitEditorDraft = {
@@ -173,6 +182,47 @@ export class HabitsStore {
 		return localDayAt(this.now().getTime(), this.timeZone());
 	}
 
+	private async metricDayValues(
+		metricSlug: HealthMetricSlug,
+		fromLocalDay: string,
+		throughLocalDay: string,
+	): Promise<(localDay: string) => number | null> {
+		const [observations, metrics] = await Promise.all([
+			this.observations.listByMetricAndDayRange(
+				metricSlug,
+				fromLocalDay,
+				throughLocalDay,
+			),
+			this.dailyMetrics.listByMetric(metricSlug),
+		]);
+		const observationsByDay = new Map<string, Observation[]>();
+		for (const row of observations) {
+			const rows = observationsByDay.get(row.localDay);
+			if (rows) rows.push(row);
+			else observationsByDay.set(row.localDay, [row]);
+		}
+		const metricsByDay = new Map<string, DailyMetric[]>();
+		for (const row of metrics) {
+			const rows = metricsByDay.get(row.localDay);
+			if (rows) rows.push(row);
+			else metricsByDay.set(row.localDay, [row]);
+		}
+		const resolvedValues = new Map<string, number | null>();
+		return (localDay) => {
+			let value = resolvedValues.get(localDay);
+			if (!resolvedValues.has(localDay)) {
+				value = resolveMetricDay(
+					metricSlug,
+					localDay,
+					observationsByDay.get(localDay) ?? [],
+					metricsByDay.get(localDay) ?? [],
+				).value;
+				resolvedValues.set(localDay, value ?? null);
+			}
+			return value ?? null;
+		};
+	}
+
 	async loadToday(localDay = this.today()): Promise<TodayHabitsSnapshot> {
 		const [activeHabits, activeEnrolments] = await Promise.all([
 			this.habits.listActive(),
@@ -205,43 +255,16 @@ export class HabitsStore {
 				if (!metricSlug || !isHealthMetricSlug(metricSlug)) {
 					throw new TypeError(`Unsupported metric habit: ${habit.metricSlug}`);
 				}
-				const [observations, metrics] = await Promise.all([
-					this.observations.listByMetricAndDayRange(
+				const metricValue = await this.metricDayValues(
+					metricSlug,
+					startedOn,
+					localDay,
+				);
+				const complete = (day: string) =>
+					isMetricHabitComplete(habit, {
 						metricSlug,
-						startedOn,
-						localDay,
-					),
-					this.dailyMetrics.listByMetric(metricSlug),
-				]);
-				const observationsByDay = new Map<string, Observation[]>();
-				for (const row of observations) {
-					const rows = observationsByDay.get(row.localDay);
-					if (rows) rows.push(row);
-					else observationsByDay.set(row.localDay, [row]);
-				}
-				const metricsByDay = new Map<string, DailyMetric[]>();
-				for (const row of metrics) {
-					const rows = metricsByDay.get(row.localDay);
-					if (rows) rows.push(row);
-					else metricsByDay.set(row.localDay, [row]);
-				}
-				const resolvedValues = new Map<string, number | null>();
-				const complete = (day: string) => {
-					let value = resolvedValues.get(day);
-					if (!resolvedValues.has(day)) {
-						value = resolveMetricDay(
-							metricSlug,
-							day,
-							observationsByDay.get(day) ?? [],
-							metricsByDay.get(day) ?? [],
-						).value;
-						resolvedValues.set(day, value ?? null);
-					}
-					return isMetricHabitComplete(habit, {
-						metricSlug,
-						value: value ?? null,
+						value: metricValue(day),
 					});
-				};
 				return {
 					habit,
 					label: displayLabel(habit),
@@ -252,10 +275,7 @@ export class HabitsStore {
 						daysOfWeek: habit.daysOfWeek,
 						isComplete: complete,
 					}),
-					progressLabel: formatProgress(
-						habit,
-						resolvedValues.get(localDay) ?? null,
-					),
+					progressLabel: formatProgress(habit, metricValue(localDay)),
 				};
 			}),
 		);
@@ -324,6 +344,60 @@ export class HabitsStore {
 			.filter((group) => group.habits.length > 0)
 			.sort((left, right) => Number(left.more) - Number(right.more));
 		return { active, groups };
+	}
+
+	async loadHabitDetail(id: string): Promise<HabitDetail | null> {
+		const habit = await this.habits.findById(id);
+		if (!habit) return null;
+		const throughLocalDay = this.today();
+		const fromLocalDay = shiftLocalDay(throughLocalDay, -55);
+		const startedOn = localDayAt(habit.addedAt, this.timeZone());
+		const removedOn =
+			habit.removedAt === null
+				? null
+				: localDayAt(habit.removedAt, this.timeZone());
+
+		if (habit.kind === "manual") {
+			const completions = await this.completions.listByHabit(habit.id);
+			return {
+				habit,
+				label: displayLabel(habit),
+				fromLocalDay,
+				throughLocalDay,
+				days: deriveHabitAdherence({
+					habit,
+					fromLocalDay,
+					throughLocalDay,
+					startedOn,
+					removedOn,
+					completedDays: new Set(completions.map((row) => row.localDay)),
+				}),
+			};
+		}
+
+		const metricSlug = habit.metricSlug;
+		if (!metricSlug || !isHealthMetricSlug(metricSlug)) {
+			throw new TypeError(`Unsupported metric habit: ${habit.metricSlug}`);
+		}
+		const metricValue = await this.metricDayValues(
+			metricSlug,
+			fromLocalDay,
+			throughLocalDay,
+		);
+		return {
+			habit,
+			label: displayLabel(habit),
+			fromLocalDay,
+			throughLocalDay,
+			days: deriveHabitAdherence({
+				habit,
+				fromLocalDay,
+				throughLocalDay,
+				startedOn,
+				removedOn,
+				metricValue,
+			}),
+		};
 	}
 
 	async addTemplate(

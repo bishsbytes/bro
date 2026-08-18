@@ -1,4 +1,4 @@
-import { useFocusEffect } from "expo-router";
+import { type Href, router, useFocusEffect } from "expo-router";
 import { useCallback, useMemo, useState } from "react";
 import { ActivityIndicator, TouchableOpacity, View } from "react-native";
 import { AppText } from "../components/app-text";
@@ -284,6 +284,16 @@ export function HabitsScreen({ store }: { store?: HabitsScreenStore }) {
 							}
 						/>
 					</View>
+					<Button
+						label="View 8-week record"
+						variant="secondary"
+						disabled={busy}
+						onPress={() =>
+							router.push(
+								`/settings/habits/${encodeURIComponent(item.habit.id)}` as Href,
+							)
+						}
+					/>
 					<Button
 						label="Remove habit"
 						variant="text"
