@@ -1,4 +1,4 @@
-import { HealthSettingsScreen } from "../../screens/health-settings-screen";
+import { HealthSettingsScreen } from "../../screens/settings/health-settings-screen";
 
 export default function HealthSettingsRoute() {
 	return <HealthSettingsScreen />;

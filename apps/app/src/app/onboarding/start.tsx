@@ -3,7 +3,7 @@ import { AppText } from "../../components/app-text";
 import { Button } from "../../components/button";
 import { FullScreen as Screen } from "../../components/screen";
 import { useDeviceSettings } from "../../providers/device-settings-provider";
-import { onboardingStyles as styles } from "../../screens/onboarding-styles";
+import { onboardingStyles as styles } from "../../screens/onboarding/onboarding-styles";
 
 export default function StartRoute() {
 	const { completeOnboarding } = useDeviceSettings();

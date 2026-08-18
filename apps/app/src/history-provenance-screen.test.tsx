@@ -1,7 +1,7 @@
 import type { Observation } from "@bro/database-app";
 import { render } from "@testing-library/react-native";
 import type { HistoryDay } from "./history/history-store";
-import { HistoryDayScreen } from "./screens/history-day-screen";
+import { HistoryDayScreen } from "./screens/history/history-day-screen";
 
 function userWeight(): Observation {
 	return {

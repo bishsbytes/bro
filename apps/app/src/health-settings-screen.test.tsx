@@ -1,7 +1,7 @@
 import { fireEvent, render, waitFor } from "@testing-library/react-native";
 import type { HealthSettingsSnapshot } from "./health/health-settings-store";
-import { HealthSettingsScreen } from "./screens/health-settings-screen";
-import { SettingsScreen } from "./screens/settings-screen";
+import { HealthSettingsScreen } from "./screens/settings/health-settings-screen";
+import { SettingsScreen } from "./screens/settings/settings-screen";
 
 const mockPush = jest.fn();
 

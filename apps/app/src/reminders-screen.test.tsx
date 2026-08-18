@@ -1,6 +1,6 @@
 import type { Reminder } from "@bro/database-app";
 import { fireEvent, render, waitFor } from "@testing-library/react-native";
-import { RemindersScreen } from "./screens/reminders-screen";
+import { RemindersScreen } from "./screens/settings/reminders-screen";
 
 jest.mock("expo-router", () => ({
 	useFocusEffect: (effect: () => void | (() => void)) => {

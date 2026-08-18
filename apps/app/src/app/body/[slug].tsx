@@ -1,5 +1,5 @@
 import { useLocalSearchParams } from "expo-router";
-import { BodyMetricScreen } from "../../screens/body-metric-screen";
+import { BodyMetricScreen } from "../../screens/body/body-metric-screen";
 
 export default function BodyMetricRoute() {
 	const params = useLocalSearchParams<{ slug?: string | string[] }>();

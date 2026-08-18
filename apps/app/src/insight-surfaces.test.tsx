@@ -2,8 +2,8 @@ import { INSIGHT_CATALOGUE } from "@bro/domain/insight-catalogue";
 import { fireEvent, render } from "@testing-library/react-native";
 import type { ShownInsight } from "./insight/engine";
 import type { InsightSnapshot } from "./insight/insight-store";
-import { InsightDetailScreen } from "./screens/insight-detail-screen";
-import { MindScreen } from "./screens/mind-screen";
+import { InsightDetailScreen } from "./screens/insights/insight-detail-screen";
+import { MindScreen } from "./screens/mind/mind-screen";
 
 const mockPush = jest.fn();
 

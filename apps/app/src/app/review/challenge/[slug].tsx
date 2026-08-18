@@ -1,5 +1,5 @@
 import { useLocalSearchParams } from "expo-router";
-import { ChallengeScreen } from "../../../screens/challenge-screen";
+import { ChallengeScreen } from "../../../screens/challenges/challenge-screen";
 
 export default function ChallengeRoute() {
 	const { slug } = useLocalSearchParams<{ slug?: string | string[] }>();

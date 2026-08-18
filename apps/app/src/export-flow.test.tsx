@@ -26,8 +26,8 @@ const { ExportStore } = jest.requireActual(
 	"./export/export-store",
 ) as typeof import("./export/export-store");
 const { ExportScreen } = jest.requireActual(
-	"./screens/export-screen",
-) as typeof import("./screens/export-screen");
+	"./screens/settings/export-screen",
+) as typeof import("./screens/settings/export-screen");
 
 describe("export flow", () => {
 	beforeEach(async () => {

@@ -1,3 +1,3 @@
-import { AccountScreen } from "../screens/account-screen";
+import { AccountScreen } from "../screens/settings/account-screen";
 
 export default AccountScreen;

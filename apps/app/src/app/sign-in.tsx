@@ -1,7 +1,7 @@
 import { router, useLocalSearchParams } from "expo-router";
 import { leaveAccountFlow } from "../navigation/account-flow";
 import { useDeviceSettings } from "../providers/device-settings-provider";
-import { SignInScreen } from "../screens/sign-in-screen";
+import { SignInScreen } from "../screens/auth/sign-in-screen";
 
 export default function SignInRoute() {
 	const { settings, completeOnboarding } = useDeviceSettings();

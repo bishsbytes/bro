@@ -1,5 +1,5 @@
 import { useLocalSearchParams } from "expo-router";
-import { ReviewResultScreen } from "../../screens/review-result-screen";
+import { ReviewResultScreen } from "../../screens/review/review-result-screen";
 
 export default function ReviewResultRoute() {
 	const { id } = useLocalSearchParams<{ id?: string | string[] }>();

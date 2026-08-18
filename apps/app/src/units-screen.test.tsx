@@ -1,5 +1,5 @@
 import { fireEvent, render, waitFor } from "@testing-library/react-native";
-import { UnitsScreen } from "./screens/units-screen";
+import { UnitsScreen } from "./screens/settings/units-screen";
 import type { UnitSettingsSnapshot } from "./units/unit-settings-store";
 
 jest.mock("expo-router", () => ({

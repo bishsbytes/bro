@@ -1,5 +1,5 @@
 import { useLocalSearchParams } from "expo-router";
-import { GoalScreen } from "../../screens/goal-screen";
+import { GoalScreen } from "../../screens/review/goal-screen";
 
 export default function GoalRoute() {
 	const params = useLocalSearchParams<{

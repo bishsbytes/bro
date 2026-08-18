@@ -1,7 +1,7 @@
 import type { ResolvedTrackedMetric, TrackedMetric } from "@bro/database-app";
 import { DEFAULT_LIFE_AREA_METRICS } from "@bro/domain/life-area-catalogue";
 import { fireEvent, render, waitFor } from "@testing-library/react-native";
-import { LifeAreasScreen } from "./screens/life-areas-screen";
+import { LifeAreasScreen } from "./screens/settings/life-areas-screen";
 
 jest.mock("expo-router", () => ({
 	useFocusEffect: (effect: () => void | (() => void)) => {

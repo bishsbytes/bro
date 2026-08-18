@@ -1,4 +1,4 @@
-import { MindScreen } from "../../screens/mind-screen";
+import { MindScreen } from "../../screens/mind/mind-screen";
 
 export default function MindRoute() {
 	return <MindScreen />;

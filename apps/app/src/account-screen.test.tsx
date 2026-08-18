@@ -5,7 +5,7 @@ import {
 	DeviceSettingsProvider,
 	useDeviceSettings,
 } from "./providers/device-settings-provider";
-import { AccountScreen } from "./screens/account-screen";
+import { AccountScreen } from "./screens/settings/account-screen";
 
 const mockBack = jest.fn();
 const mockPush = jest.fn();
