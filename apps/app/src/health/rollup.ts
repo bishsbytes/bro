@@ -1,5 +1,5 @@
 import type { HealthPlatform } from "@bro/database-app";
-import { resolveMetric } from "../content/metric-registry";
+import { resolveMetric } from "@bro/domain/metric-registry";
 import type { CanonicalHealthSample } from "./mapping";
 import type { HealthMetricSlug } from "./policy";
 
@@ -57,7 +57,9 @@ function compareSamples(
  * daily total. Days recorded by one origin are unaffected, and origin-less
  * samples share one bucket.
  */
-function dominantOriginTotal(samples: readonly CanonicalHealthSample[]): number {
+function dominantOriginTotal(
+	samples: readonly CanonicalHealthSample[],
+): number {
 	const totals = new Map<string, number>();
 	for (const sample of samples) {
 		const origin = sample.origin ?? "";

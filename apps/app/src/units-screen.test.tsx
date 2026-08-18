@@ -1,6 +1,6 @@
 import { fireEvent, render, waitFor } from "@testing-library/react-native";
-import type { UnitSettingsSnapshot } from "./units/unit-settings-store";
 import { UnitsScreen } from "./screens/units-screen";
+import type { UnitSettingsSnapshot } from "./units/unit-settings-store";
 
 jest.mock("expo-router", () => ({
 	useFocusEffect: (effect: () => void | (() => void)) => {

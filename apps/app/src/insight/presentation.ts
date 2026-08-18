@@ -1,4 +1,4 @@
-import type { InsightCatalogueEntry } from "../content/insight-catalogue";
+import type { InsightCatalogueEntry } from "@bro/domain/insight-catalogue";
 import type { InsightTeaser, ShownInsight } from "./engine";
 
 export function formatInsightValue(

@@ -4,12 +4,12 @@ import {
 	ObservationRepository,
 	TrackedMetricsRepository,
 } from "@bro/database-app";
-import type { SQLiteDatabase } from "expo-sqlite";
 import {
 	INSIGHT_CATALOGUE,
 	resolveInsight,
-} from "../content/insight-catalogue";
-import { DEFAULT_TRACKED_METRICS } from "../content/metric-registry";
+} from "@bro/domain/insight-catalogue";
+import { DEFAULT_TRACKED_METRICS } from "@bro/domain/metric-registry";
+import type { SQLiteDatabase } from "expo-sqlite";
 import { shiftLocalDay } from "../habits/cadence";
 import { localDayAt } from "../health/mapping";
 import {

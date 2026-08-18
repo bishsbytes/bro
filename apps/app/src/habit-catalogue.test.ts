@@ -2,9 +2,9 @@ import {
 	HABIT_CATALOGUE,
 	habitsForArea,
 	resolveHabit,
-} from "./content/habit-catalogue";
-import { LIFE_AREA_CATALOGUE } from "./content/life-area-catalogue";
-import { resolveMetric } from "./content/metric-registry";
+} from "@bro/domain/habit-catalogue";
+import { LIFE_AREA_CATALOGUE } from "@bro/domain/life-area-catalogue";
+import { resolveMetric } from "@bro/domain/metric-registry";
 
 describe("habit catalogue", () => {
 	it("uses permanent unique slugs, positions, and valid cadence masks", () => {

@@ -1,4 +1,4 @@
-import type { InsightCatalogueEntry } from "../content/insight-catalogue";
+import type { InsightCatalogueEntry } from "@bro/domain/insight-catalogue";
 import { shiftLocalDay } from "../habits/cadence";
 
 export const INSIGHT_WINDOW_DAYS = 90;
@@ -252,7 +252,8 @@ export function aggregateInsightTeaser(
 ): InsightTeaser {
 	const pending = evaluations.filter(
 		(evaluation): evaluation is InsightNotYet =>
-			evaluation.kind === "not-yet" && ACTIONABLE_DAY_GATES.has(evaluation.gate),
+			evaluation.kind === "not-yet" &&
+			ACTIONABLE_DAY_GATES.has(evaluation.gate),
 	);
 	const nearest = [...pending].sort(
 		(left, right) =>

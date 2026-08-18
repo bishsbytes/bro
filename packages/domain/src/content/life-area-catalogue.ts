@@ -1,7 +1,4 @@
-import type {
-	ResolvedTrackedMetric,
-	TrackedMetricDefault,
-} from "@bro/database-app";
+import type { ResolvedTrackedMetric, TrackedMetricDefault } from "../tracking";
 
 export type LifeAreaDefinition = {
 	slug: `wheel:${string}`;

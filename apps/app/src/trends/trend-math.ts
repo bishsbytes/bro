@@ -1,5 +1,5 @@
 import type { Observation } from "@bro/database-app";
-import type { MetricDefinition } from "../content/metric-registry";
+import type { MetricDefinition } from "@bro/domain/metric-registry";
 
 export const TREND_PERIODS = [7, 30] as const;
 export type TrendPeriod = (typeof TREND_PERIODS)[number];

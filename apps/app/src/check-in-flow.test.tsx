@@ -1,8 +1,8 @@
 import { authClient } from "@bro/auth-app";
 import type * as DatabaseApp from "@bro/database-app";
+import { KILOGRAMS_PER_POUND } from "@bro/domain";
 import { act, fireEvent, renderRouter } from "expo-router/testing-library";
 import { createNodeSqliteMock } from "./test-support/node-sqlite";
-import { KILOGRAMS_PER_POUND } from "./units";
 
 const mockSqlite = createNodeSqliteMock();
 let mockRandomSeed = 0;

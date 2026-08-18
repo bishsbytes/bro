@@ -1,11 +1,11 @@
 import type * as DatabaseApp from "@bro/database-app";
-import type { SQLiteDatabase } from "expo-sqlite";
 import {
 	DEFAULT_LIFE_AREA_METRICS,
 	listActiveLifeAreas,
 	resolveLifeAreas,
-} from "./content/life-area-catalogue";
-import { DEFAULT_TRACKED_METRICS } from "./content/metric-registry";
+} from "@bro/domain/life-area-catalogue";
+import { DEFAULT_TRACKED_METRICS } from "@bro/domain/metric-registry";
+import type { SQLiteDatabase } from "expo-sqlite";
 import { createNodeSqliteMock } from "./test-support/node-sqlite";
 
 const mockSqlite = createNodeSqliteMock();
@@ -227,11 +227,12 @@ describe("product repositories", () => {
 			{ metricSlug: "wheel:career", position: 1, enabled: true },
 			{ metricSlug: "wheel:money", position: 0, enabled: false },
 		]);
-		expect(swapped.map(({ metricSlug, position }) => [metricSlug, position]))
-			.toEqual([
-				["wheel:career", 1],
-				["wheel:money", 0],
-			]);
+		expect(
+			swapped.map(({ metricSlug, position }) => [metricSlug, position]),
+		).toEqual([
+			["wheel:career", 1],
+			["wheel:money", 0],
+		]);
 
 		const overlays = await repository.listResolved(DEFAULT_LIFE_AREA_METRICS);
 		expect(
@@ -319,14 +320,14 @@ describe("product repositories", () => {
 		});
 		const overlays = await repository.listResolved(DEFAULT_LIFE_AREA_METRICS);
 		const resolved = resolveLifeAreas(overlays);
-		expect(
-			resolved.find((area) => area.slug === "wheel:career"),
-		).toMatchObject({
-			enabled: false,
-			position: 2,
-			label: "Business",
-			customLabel: "Business",
-		});
+		expect(resolved.find((area) => area.slug === "wheel:career")).toMatchObject(
+			{
+				enabled: false,
+				position: 2,
+				label: "Business",
+				customLabel: "Business",
+			},
+		);
 		expect(listActiveLifeAreas(overlays)).toHaveLength(7);
 	});
 

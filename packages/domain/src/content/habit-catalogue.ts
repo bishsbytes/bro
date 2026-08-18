@@ -1,8 +1,8 @@
-import type { HabitDirection } from "@bro/database-app";
-import type { ImportedOnlyMeasurementSlug } from "./metric-registry";
+import type { HabitDirection } from "../tracking";
 import type { LifeAreaSlug } from "./life-area-catalogue";
+import type { ImportedOnlyMeasurementSlug } from "./metric-registry";
 
-export type { HabitDirection } from "@bro/database-app";
+export type { HabitDirection } from "../tracking";
 
 type HabitTemplateBase = {
 	slug: `habit:${string}`;

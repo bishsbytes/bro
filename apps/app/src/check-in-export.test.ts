@@ -16,7 +16,7 @@ import type {
 import {
 	type MetricDefinition,
 	resolveMetric,
-} from "./content/metric-registry";
+} from "@bro/domain/metric-registry";
 import {
 	buildCheckInExport,
 	CHECK_IN_EXPORT_FORMAT_VERSION,

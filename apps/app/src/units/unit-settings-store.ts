@@ -1,9 +1,8 @@
 import {
+	UnitPreferenceRepository as DatabaseUnitPreferenceRepository,
 	getDb,
 	type UnitPreferenceRepository,
-	UnitPreferenceRepository as DatabaseUnitPreferenceRepository,
 } from "@bro/database-app";
-import type { SQLiteDatabase } from "expo-sqlite";
 import {
 	DIMENSIONS,
 	DISPLAY_UNITS_BY_DIMENSION,
@@ -12,7 +11,8 @@ import {
 	formatMeasurement,
 	isDisplayUnitForDimension,
 	resolveDisplayUnit,
-} from ".";
+} from "@bro/domain";
+import type { SQLiteDatabase } from "expo-sqlite";
 
 export type UnitOption = {
 	unit: DisplayUnit;

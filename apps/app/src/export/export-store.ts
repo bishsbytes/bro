@@ -12,9 +12,9 @@ import {
 	TrackedMetricsRepository,
 	UnitPreferenceRepository,
 } from "@bro/database-app";
+import { METRIC_REGISTRY } from "@bro/domain/metric-registry";
 import Constants from "expo-constants";
 import type { SQLiteDatabase } from "expo-sqlite";
-import { METRIC_REGISTRY } from "../content/metric-registry";
 import { serializeCheckInExport } from "./check-in-export";
 
 export class ExportStore {

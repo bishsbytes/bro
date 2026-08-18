@@ -28,6 +28,7 @@
 		"@better-auth/expo": "^1.6.27",
 		"@bro/auth-app": "workspace:*",
 		"@bro/database-app": "workspace:*",
+		"@bro/domain": "workspace:*",
 		"@expo/metro": "*",
 		"@expo/vector-icons": "*",
 		"@kingstinct/react-native-healthkit": "14.0.2",

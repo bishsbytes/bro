@@ -16,6 +16,7 @@
 	],
 	"references": [
 		{ "path": "../../packages/auth/app" },
-		{ "path": "../../packages/database/app" }
+		{ "path": "../../packages/database/app" },
+		{ "path": "../../packages/domain" }
 	]
 }

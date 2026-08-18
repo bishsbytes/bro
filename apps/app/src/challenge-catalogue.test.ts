@@ -2,8 +2,8 @@ import {
 	CHALLENGE_CATALOGUE,
 	challengeForArea,
 	resolveChallenge,
-} from "./content/challenge-catalogue";
-import { LIFE_AREA_CATALOGUE } from "./content/life-area-catalogue";
+} from "@bro/domain/challenge-catalogue";
+import { LIFE_AREA_CATALOGUE } from "@bro/domain/life-area-catalogue";
 
 describe("starter challenge catalogue", () => {
 	it("provides complete authored templates with permanent namespaced slugs", () => {

@@ -1,5 +1,5 @@
-import { INSIGHT_CATALOGUE } from "./content/insight-catalogue";
-import { resolveMetric } from "./content/metric-registry";
+import { INSIGHT_CATALOGUE } from "@bro/domain/insight-catalogue";
+import { resolveMetric } from "@bro/domain/metric-registry";
 
 describe("insight catalogue", () => {
 	it("keeps the signed-off pairs stable, premium, and type-compatible", () => {

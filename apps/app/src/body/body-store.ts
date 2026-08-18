@@ -8,16 +8,17 @@ import {
 	TrackedMetricsRepository,
 	UnitPreferenceRepository,
 } from "@bro/database-app";
-import type { SQLiteDatabase } from "expo-sqlite";
-import { localDayOf } from "../check-in/check-in-store";
+import { type DisplayUnit, isDisplayUnitForDimension } from "@bro/domain";
 import {
 	listUserEnterableMeasurements,
-	resolveMetric,
 	type MeasurementMetricDefinition,
 	type MeasurementSlug,
+	resolveMetric,
 	type UserEnterableMeasurementMetricDefinition,
 	type UserEnterableMeasurementSlug,
-} from "../content/metric-registry";
+} from "@bro/domain/metric-registry";
+import type { SQLiteDatabase } from "expo-sqlite";
+import { localDayOf } from "../check-in/check-in-store";
 import {
 	type GoalStatus,
 	goalProgressPercent,
@@ -33,7 +34,6 @@ import {
 	resolveMetricObservations,
 } from "../health/resolved-series";
 import { buildTrendSeries, type TrendSeries } from "../trends/trend-math";
-import { type DisplayUnit, isDisplayUnitForDimension } from "../units";
 
 type MeasurementPresentationBase = {
 	metricSlug: UserEnterableMeasurementSlug;

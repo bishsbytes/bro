@@ -1,4 +1,5 @@
 import type { Observation } from "@bro/database-app";
+import { type ParsedMeasurement, parseMeasurement } from "@bro/domain";
 import { router, useFocusEffect } from "expo-router";
 import { useCallback, useMemo, useState } from "react";
 import { ActivityIndicator, View } from "react-native";
@@ -17,7 +18,6 @@ import { StackScreen as Screen } from "../components/screen";
 import { SectionHeader } from "../components/section-header";
 import { TrendChart } from "../components/trend-chart";
 import { StyleSheet } from "../theme/unistyles";
-import { type ParsedMeasurement, parseMeasurement } from "../units";
 
 type BodyMetricScreenProps = {
 	metricSlug: string;

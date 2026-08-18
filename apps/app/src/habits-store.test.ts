@@ -1,7 +1,7 @@
 import type * as DatabaseApp from "@bro/database-app";
+import { resolveChallenge } from "@bro/domain/challenge-catalogue";
+import { resolveHabit } from "@bro/domain/habit-catalogue";
 import type { SQLiteDatabase } from "expo-sqlite";
-import { resolveChallenge } from "./content/challenge-catalogue";
-import { resolveHabit } from "./content/habit-catalogue";
 import type { HabitsStore } from "./habits/habits-store";
 import { createNodeSqliteMock } from "./test-support/node-sqlite";
 

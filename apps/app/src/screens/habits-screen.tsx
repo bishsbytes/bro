@@ -1,3 +1,4 @@
+import type { HabitTemplate } from "@bro/domain/habit-catalogue";
 import { type Href, router, useFocusEffect } from "expo-router";
 import { useCallback, useMemo, useState } from "react";
 import { ActivityIndicator, TouchableOpacity, View } from "react-native";
@@ -8,7 +9,6 @@ import { EmptyState } from "../components/empty-state";
 import { FormField } from "../components/form-field";
 import { Screen } from "../components/screen";
 import { SectionHeader } from "../components/section-header";
-import type { HabitTemplate } from "../content/habit-catalogue";
 import {
 	createHabitsStore,
 	type HabitEditorDraft,

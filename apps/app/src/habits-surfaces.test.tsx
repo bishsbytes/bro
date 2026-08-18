@@ -1,7 +1,7 @@
 import type { ChallengeEnrolment, Habit } from "@bro/database-app";
+import { resolveChallenge } from "@bro/domain/challenge-catalogue";
+import { resolveHabit } from "@bro/domain/habit-catalogue";
 import { fireEvent, render, waitFor } from "@testing-library/react-native";
-import { resolveChallenge } from "./content/challenge-catalogue";
-import { resolveHabit } from "./content/habit-catalogue";
 import { ChallengeDetailScreen } from "./screens/challenge-detail-screen";
 import { ChallengeScreen } from "./screens/challenge-screen";
 import { HabitDetailScreen } from "./screens/habit-detail-screen";

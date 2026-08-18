@@ -1,6 +1,6 @@
 import type { ResolvedTrackedMetric, TrackedMetric } from "@bro/database-app";
+import { DEFAULT_LIFE_AREA_METRICS } from "@bro/domain/life-area-catalogue";
 import { fireEvent, render, waitFor } from "@testing-library/react-native";
-import { DEFAULT_LIFE_AREA_METRICS } from "./content/life-area-catalogue";
 import { LifeAreasScreen } from "./screens/life-areas-screen";
 
 jest.mock("expo-router", () => ({
@@ -141,10 +141,14 @@ describe("life areas screen", () => {
 		await fireEvent.press(view.getByText("Save label"));
 		await waitFor(() => expect(view.getByText("Business")).toBeTruthy());
 		expect(view.getByText("Default: Work & career")).toBeTruthy();
-		expect(repository.relabel).toHaveBeenCalledWith("wheel:career", "Business", {
-			position: 1,
-			enabled: false,
-		});
+		expect(repository.relabel).toHaveBeenCalledWith(
+			"wheel:career",
+			"Business",
+			{
+				position: 1,
+				enabled: false,
+			},
+		);
 		expect(globalThis.fetch).not.toHaveBeenCalled();
 	});
 
@@ -164,9 +168,7 @@ describe("life areas screen", () => {
 			configure: jest.fn(
 				async (metricSlug: string, position: number, enabled: boolean) => {
 					overlays = overlays.map((row) =>
-						row.metricSlug === metricSlug
-							? { ...row, position, enabled }
-							: row,
+						row.metricSlug === metricSlug ? { ...row, position, enabled } : row,
 					);
 					const updated = overlays.find((row) => row.metricSlug === metricSlug);
 					if (!updated) {
@@ -180,7 +182,9 @@ describe("life areas screen", () => {
 		};
 		const view = await render(<LifeAreasScreen repository={repository} />);
 
-		await waitFor(() => expect(view.getByText("Home & environment")).toBeTruthy());
+		await waitFor(() =>
+			expect(view.getByText("Home & environment")).toBeTruthy(),
+		);
 		await fireEvent(
 			view.getByLabelText("Enable Home & environment"),
 			"valueChange",
@@ -202,9 +206,7 @@ describe("life areas screen", () => {
 			true,
 		);
 		expect(
-			view.getByText(
-				"Choose up to 10 active life areas — disable one first.",
-			),
+			view.getByText("Choose up to 10 active life areas — disable one first."),
 		).toBeTruthy();
 		expect(repository.configure).toHaveBeenCalledTimes(2);
 		expect(view.getByLabelText("Enable Fatherhood")).toBeTruthy();

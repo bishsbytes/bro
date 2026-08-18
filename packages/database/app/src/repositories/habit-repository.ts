@@ -1,9 +1,10 @@
+import type { HabitDirection } from "@bro/domain";
 import type { SQLiteDatabase } from "expo-sqlite";
 import { createUuidV7 } from "../uuid-v7";
 import { BaseRepository } from "./base-repository";
 
 export type HabitKind = "manual" | "metric";
-export type HabitDirection = "at_least" | "at_most";
+export type { HabitDirection } from "@bro/domain";
 
 export type Habit = {
 	id: string;

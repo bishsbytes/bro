@@ -11,9 +11,9 @@ import type {
 	TrackedMetric,
 	UnitPreference,
 } from "@bro/database-app";
-import { resolveHabit } from "../content/habit-catalogue";
-import { LIFE_AREA_CATALOGUE } from "../content/life-area-catalogue";
-import type { MetricDefinition } from "../content/metric-registry";
+import { resolveHabit } from "@bro/domain/habit-catalogue";
+import { LIFE_AREA_CATALOGUE } from "@bro/domain/life-area-catalogue";
+import type { MetricDefinition } from "@bro/domain/metric-registry";
 
 export const CHECK_IN_EXPORT_FORMAT_VERSION = 5 as const;
 

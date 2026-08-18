@@ -4,6 +4,13 @@ import {
 	type ResolvedTrackedMetric,
 	type TrackedMetricsRepository,
 } from "@bro/database-app";
+import {
+	DEFAULT_LIFE_AREA_METRICS,
+	type LifeAreaSlug,
+	MAX_ACTIVE_LIFE_AREAS,
+	type ResolvedLifeArea,
+	resolveLifeAreas,
+} from "@bro/domain/life-area-catalogue";
 import { useFocusEffect } from "expo-router";
 import { useCallback, useMemo, useState } from "react";
 import { ActivityIndicator, Switch, View } from "react-native";
@@ -13,13 +20,6 @@ import { Card } from "../components/card";
 import { EmptyState } from "../components/empty-state";
 import { FormField } from "../components/form-field";
 import { Screen } from "../components/screen";
-import {
-	DEFAULT_LIFE_AREA_METRICS,
-	type LifeAreaSlug,
-	MAX_ACTIVE_LIFE_AREAS,
-	type ResolvedLifeArea,
-	resolveLifeAreas,
-} from "../content/life-area-catalogue";
 import { StyleSheet, useUnistyles } from "../theme/unistyles";
 
 type LifeAreaRepository = Pick<

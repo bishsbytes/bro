@@ -1,7 +1,7 @@
+import { KILOGRAMS_PER_POUND } from "@bro/domain";
+import { listFactors } from "@bro/domain/metric-registry";
 import { fireEvent, render, waitFor } from "@testing-library/react-native";
-import { listFactors } from "./content/metric-registry";
 import { HomeScreen } from "./screens/home-screen";
-import { KILOGRAMS_PER_POUND } from "./units";
 
 jest.mock("expo-router", () => ({
 	router: { push: jest.fn() },

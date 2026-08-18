@@ -1,4 +1,5 @@
 import type * as DatabaseApp from "@bro/database-app";
+import { LIFE_AREA_CATALOGUE } from "@bro/domain/life-area-catalogue";
 import { router as expoRouter } from "expo-router";
 import {
 	act,
@@ -6,7 +7,6 @@ import {
 	renderRouter,
 	waitFor,
 } from "expo-router/testing-library";
-import { LIFE_AREA_CATALOGUE } from "./content/life-area-catalogue";
 import { createNodeSqliteMock } from "./test-support/node-sqlite";
 
 const mockSqlite = createNodeSqliteMock();

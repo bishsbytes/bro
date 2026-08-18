@@ -8,7 +8,7 @@ import {
 	listUserEnterableMeasurements,
 	METRIC_REGISTRY,
 	resolveMetric,
-} from "./content/metric-registry";
+} from "@bro/domain/metric-registry";
 
 describe("metric registry", () => {
 	it("uses unique permanent-format slugs and positions", () => {

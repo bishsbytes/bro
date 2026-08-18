@@ -24,11 +24,15 @@ export default [
 					depConstraints: [
 						{
 							sourceTag: "scope:app",
-							onlyDependOnLibsWithTags: ["scope:app"],
+							onlyDependOnLibsWithTags: ["scope:app", "scope:shared"],
 						},
 						{
 							sourceTag: "scope:api",
-							onlyDependOnLibsWithTags: ["scope:api"],
+							onlyDependOnLibsWithTags: ["scope:api", "scope:shared"],
+						},
+						{
+							sourceTag: "scope:shared",
+							onlyDependOnLibsWithTags: ["scope:shared"],
 						},
 					],
 				},

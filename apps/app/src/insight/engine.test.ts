@@ -1,4 +1,4 @@
-import type { InsightCatalogueEntry } from "../content/insight-catalogue";
+import type { InsightCatalogueEntry } from "@bro/domain/insight-catalogue";
 import { shiftLocalDay } from "../habits/cadence";
 import {
 	aggregateInsightTeaser,

@@ -1,5 +1,5 @@
 import type { DailyMetric, Observation } from "@bro/database-app";
-import { resolveMetric } from "../content/metric-registry";
+import { resolveMetric } from "@bro/domain/metric-registry";
 import type { HealthMetricSlug } from "./policy";
 
 export type ResolvedMetricDay = {

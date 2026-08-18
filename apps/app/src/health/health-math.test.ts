@@ -1,5 +1,5 @@
 import type { DailyMetric, Observation } from "@bro/database-app";
-import { KILOGRAMS_PER_POUND } from "../units";
+import { KILOGRAMS_PER_POUND } from "@bro/domain";
 import {
 	applyHealthSampleChanges,
 	type CanonicalHealthSample,

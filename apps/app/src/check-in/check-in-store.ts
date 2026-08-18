@@ -6,7 +6,13 @@ import {
 	TrackedMetricsRepository,
 	UnitPreferenceRepository,
 } from "@bro/database-app";
-import type { SQLiteDatabase } from "expo-sqlite";
+import {
+	type Dimension,
+	type DisplayUnit,
+	formatMeasurement,
+	isDisplayUnitForDimension,
+	resolveDisplayUnit,
+} from "@bro/domain";
 import {
 	DEFAULT_TRACKED_METRICS,
 	FACTOR_PRESENCE_VALUE,
@@ -14,15 +20,9 @@ import {
 	listFactors,
 	resolveMetric,
 	type UserEnterableMeasurementSlug,
-} from "../content/metric-registry";
+} from "@bro/domain/metric-registry";
+import type { SQLiteDatabase } from "expo-sqlite";
 import { refreshReminderNotifications } from "../reminders/reminder-materialiser";
-import {
-	type Dimension,
-	type DisplayUnit,
-	formatMeasurement,
-	isDisplayUnitForDimension,
-	resolveDisplayUnit,
-} from "../units";
 
 export type CheckInEntry = {
 	id: string;

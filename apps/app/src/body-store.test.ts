@@ -1,7 +1,7 @@
 import type * as DatabaseApp from "@bro/database-app";
+import { KILOGRAMS_PER_POUND } from "@bro/domain";
 import type { SQLiteDatabase } from "expo-sqlite";
 import { createNodeSqliteMock } from "./test-support/node-sqlite";
-import { KILOGRAMS_PER_POUND } from "./units";
 
 const mockSqlite = createNodeSqliteMock();
 let mockRandomSeed = 0;

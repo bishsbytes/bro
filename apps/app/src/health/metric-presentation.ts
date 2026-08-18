@@ -1,4 +1,3 @@
-import type { MeasurementMetricDefinition } from "../content/metric-registry";
 import {
 	type Dimension,
 	type DisplayUnit,
@@ -6,7 +5,8 @@ import {
 	formatMeasurement,
 	INTRINSIC_DIMENSIONS,
 	resolveDisplayUnit,
-} from "../units";
+} from "@bro/domain";
+import type { MeasurementMetricDefinition } from "@bro/domain/metric-registry";
 
 function isIntrinsicDimension(
 	dimension: MeasurementMetricDefinition["dimension"],

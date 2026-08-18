@@ -1,4 +1,5 @@
 import type { DayNote, Observation } from "@bro/database-app";
+import { resolveMetric } from "@bro/domain/metric-registry";
 import { useEffect, useMemo, useState } from "react";
 import { ActivityIndicator, TouchableOpacity, View } from "react-native";
 import { AppText } from "../components/app-text";
@@ -7,7 +8,6 @@ import { Card } from "../components/card";
 import { FormField } from "../components/form-field";
 import { Screen } from "../components/screen";
 import { SectionHeader } from "../components/section-header";
-import { resolveMetric } from "../content/metric-registry";
 import {
 	createHistoryStore,
 	type HistoricalCheckIn,

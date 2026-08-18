@@ -1,4 +1,4 @@
-import type { MeasurementSlug } from "../content/metric-registry";
+import type { MeasurementSlug } from "@bro/domain/metric-registry";
 
 export const HEALTH_BACKFILL_DAYS = 365;
 export const RAW_SAMPLE_RETENTION_DAYS = 90;

@@ -1,3 +1,4 @@
+import { resolveChallenge } from "@bro/domain/challenge-catalogue";
 import { router } from "expo-router";
 import { useMemo, useState } from "react";
 import { AppText } from "../components/app-text";
@@ -5,7 +6,6 @@ import { Button } from "../components/button";
 import { Card } from "../components/card";
 import { EmptyState } from "../components/empty-state";
 import { StackScreen as Screen } from "../components/screen";
-import { resolveChallenge } from "../content/challenge-catalogue";
 import { createHabitsStore, type HabitsStore } from "../habits/habits-store";
 import { StyleSheet } from "../theme/unistyles";
 

@@ -12,20 +12,20 @@ import {
 	ObservationRepository,
 	TrackedMetricsRepository,
 } from "@bro/database-app";
-import type { SQLiteDatabase } from "expo-sqlite";
 import {
 	type ChallengeDay,
 	resolveChallenge,
-} from "../content/challenge-catalogue";
+} from "@bro/domain/challenge-catalogue";
 import {
 	HABIT_CATALOGUE,
 	type HabitTemplate,
 	resolveHabit,
-} from "../content/habit-catalogue";
+} from "@bro/domain/habit-catalogue";
 import {
 	DEFAULT_LIFE_AREA_METRICS,
 	resolveLifeAreas,
-} from "../content/life-area-catalogue";
+} from "@bro/domain/life-area-catalogue";
+import type { SQLiteDatabase } from "expo-sqlite";
 import { localDayAt } from "../health/mapping";
 import { type HealthMetricSlug, isHealthMetricSlug } from "../health/policy";
 import { resolveMetricDay } from "../health/resolved-day";

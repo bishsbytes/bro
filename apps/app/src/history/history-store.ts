@@ -16,10 +16,10 @@ import {
 	ObservationRepository,
 	UnitPreferenceRepository,
 } from "@bro/database-app";
+import { resolveChallenge } from "@bro/domain/challenge-catalogue";
+import { resolveHabit } from "@bro/domain/habit-catalogue";
+import { resolveMetric } from "@bro/domain/metric-registry";
 import type { SQLiteDatabase } from "expo-sqlite";
-import { resolveChallenge } from "../content/challenge-catalogue";
-import { resolveHabit } from "../content/habit-catalogue";
-import { resolveMetric } from "../content/metric-registry";
 import {
 	formatMetricValue,
 	metricDisplayUnit,

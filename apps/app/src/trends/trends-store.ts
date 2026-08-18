@@ -5,22 +5,22 @@ import {
 	TrackedMetricsRepository,
 	UnitPreferenceRepository,
 } from "@bro/database-app";
-import type { SQLiteDatabase } from "expo-sqlite";
-import { localDayOf } from "../check-in/check-in-store";
+import type { DisplayUnit } from "@bro/domain";
 import {
-	listScoredMetrics,
 	listMeasurements,
+	listScoredMetrics,
 	listUserEnterableMeasurements,
 	type MeasurementMetricDefinition,
 	type ScoredMetricDefinition,
-} from "../content/metric-registry";
+} from "@bro/domain/metric-registry";
+import type { SQLiteDatabase } from "expo-sqlite";
+import { localDayOf } from "../check-in/check-in-store";
 import {
 	formatMetricValue,
 	metricDisplayUnit,
 } from "../health/metric-presentation";
 import { isHealthMetricSlug } from "../health/policy";
 import { resolveMetricObservations } from "../health/resolved-series";
-import type { DisplayUnit } from "../units";
 import {
 	buildTrendSeries,
 	type TrendPeriod,

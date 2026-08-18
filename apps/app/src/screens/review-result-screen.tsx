@@ -1,3 +1,4 @@
+import { challengeForArea } from "@bro/domain/challenge-catalogue";
 import { router } from "expo-router";
 import { useEffect, useMemo, useState } from "react";
 import { ActivityIndicator, View } from "react-native";
@@ -8,7 +9,6 @@ import { EmptyState } from "../components/empty-state";
 import { StackScreen as Screen } from "../components/screen";
 import { SectionHeader } from "../components/section-header";
 import { WheelChart } from "../components/wheel-chart";
-import { challengeForArea } from "../content/challenge-catalogue";
 import {
 	createReviewStore,
 	type ReviewResult,

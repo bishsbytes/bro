@@ -12,7 +12,7 @@ import {
 	parseMeasurement,
 	resolveDisplayUnit,
 	toCanonical,
-} from ".";
+} from "@bro/domain";
 
 function canonicalValueOf(result: ReturnType<typeof parseMeasurement>): number {
 	if (!result.ok) throw new Error(result.error);

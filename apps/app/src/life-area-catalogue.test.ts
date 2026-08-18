@@ -4,8 +4,8 @@ import {
 	LIFE_AREA_CATALOGUE,
 	listActiveLifeAreas,
 	resolveLifeAreas,
-} from "./content/life-area-catalogue";
-import { WHEEL_OF_LIFE_TEMPLATE } from "./content/wheel-template";
+} from "@bro/domain/life-area-catalogue";
+import { WHEEL_OF_LIFE_TEMPLATE } from "@bro/domain/wheel-template";
 
 const PERMANENT_AREAS = [
 	["wheel:career", "Work & career", true, false],

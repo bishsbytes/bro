@@ -9,18 +9,18 @@ import {
 	ObservationRepository,
 	TrackedMetricsRepository,
 } from "@bro/database-app";
-import type { SQLiteDatabase } from "expo-sqlite";
 import {
 	DEFAULT_LIFE_AREA_METRICS,
 	listActiveLifeAreas,
 	resolveLifeAreas,
-} from "../content/life-area-catalogue";
-import { resolveMetric } from "../content/metric-registry";
-import { WHEEL_OF_LIFE_TEMPLATE } from "../content/wheel-template";
+} from "@bro/domain/life-area-catalogue";
+import { resolveMetric } from "@bro/domain/metric-registry";
+import { WHEEL_OF_LIFE_TEMPLATE } from "@bro/domain/wheel-template";
+import type { SQLiteDatabase } from "expo-sqlite";
 import {
+	type GoalStatus,
 	goalProgressPercent,
 	goalStatus,
-	type GoalStatus,
 } from "../goals/goal-progress";
 
 export type ReviewDraft = {

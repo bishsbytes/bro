@@ -1,9 +1,9 @@
 import type * as DatabaseApp from "@bro/database-app";
+import { KILOGRAMS_PER_POUND } from "@bro/domain";
+import { resolveMetric } from "@bro/domain/metric-registry";
 import type { SQLiteDatabase } from "expo-sqlite";
-import { resolveMetric } from "./content/metric-registry";
 import { createNodeSqliteMock } from "./test-support/node-sqlite";
 import { buildTrendSeries } from "./trends/trend-math";
-import { KILOGRAMS_PER_POUND } from "./units";
 
 const mockSqlite = createNodeSqliteMock();
 let mockRandomSeed = 0;

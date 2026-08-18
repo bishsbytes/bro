@@ -13,6 +13,9 @@
 			"path": "./packages/database/app"
 		},
 		{
+			"path": "./packages/domain"
+		},
+		{
 			"path": "./packages/auth/api"
 		},
 		{

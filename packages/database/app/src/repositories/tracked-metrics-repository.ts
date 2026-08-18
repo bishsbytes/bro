@@ -1,3 +1,4 @@
+import type { ResolvedTrackedMetric, TrackedMetricDefault } from "@bro/domain";
 import type { SQLiteDatabase } from "expo-sqlite";
 import { createUuidV7 } from "../uuid-v7";
 import { BaseRepository } from "./base-repository";
@@ -13,24 +14,15 @@ export type TrackedMetric = {
 	updatedAt: number;
 };
 
-export type TrackedMetricDefault = {
-	metricSlug: string;
-	position: number;
-	enabled?: boolean;
-};
+export type {
+	ResolvedTrackedMetric,
+	TrackedMetricDefault,
+} from "@bro/domain";
 
 export type TrackedMetricConfiguration = {
 	metricSlug: string;
 	position: number;
 	enabled: boolean;
-};
-
-export type ResolvedTrackedMetric = TrackedMetricDefault & {
-	enabled: boolean;
-	overlayId: string | null;
-	addedAt: number | null;
-	removedAt: number | null;
-	customLabel: string | null;
 };
 
 type TrackedMetricRow = {

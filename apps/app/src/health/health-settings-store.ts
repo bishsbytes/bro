@@ -3,11 +3,11 @@ import {
 	HealthConnectionRepository,
 	type HealthPlatform,
 } from "@bro/database-app";
-import { resolveMetric } from "../content/metric-registry";
+import { resolveMetric } from "@bro/domain/metric-registry";
 import type { HealthGatewayAvailability } from "./gateway";
-import { healthImportEngine } from "./import-service";
 import type { HealthImportEngine } from "./import-engine";
-import { V1_HEALTH_METRIC_SLUGS, type HealthMetricSlug } from "./policy";
+import { healthImportEngine } from "./import-service";
+import { type HealthMetricSlug, V1_HEALTH_METRIC_SLUGS } from "./policy";
 
 export type HealthMetricConnectionStatus = {
 	metricSlug: HealthMetricSlug;

@@ -1,5 +1,5 @@
+import { INSIGHT_CATALOGUE } from "@bro/domain/insight-catalogue";
 import { fireEvent, render } from "@testing-library/react-native";
-import { INSIGHT_CATALOGUE } from "./content/insight-catalogue";
 import type { ShownInsight } from "./insight/engine";
 import type { InsightSnapshot } from "./insight/insight-store";
 import { InsightDetailScreen } from "./screens/insight-detail-screen";

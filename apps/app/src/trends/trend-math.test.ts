@@ -1,5 +1,5 @@
 import type { Observation } from "@bro/database-app";
-import { resolveMetric } from "../content/metric-registry";
+import { resolveMetric } from "@bro/domain/metric-registry";
 import { buildTrendSeries, trendRange } from "./trend-math";
 
 function observation(
