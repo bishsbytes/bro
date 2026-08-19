@@ -18,6 +18,7 @@ export default function SettingsLayout() {
 			<Stack.Screen name="habits/[id]" options={{ title: "Habit record" }} />
 			<Stack.Screen name="units" options={{ title: "Units" }} />
 			<Stack.Screen name="drinks" options={{ title: "Drink settings" }} />
+			<Stack.Screen name="food" options={{ title: "Food settings" }} />
 			<Stack.Screen name="health" options={{ title: "Health data" }} />
 			<Stack.Screen name="export" options={{ title: "Export your data" }} />
 		</Stack>

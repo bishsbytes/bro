@@ -11,10 +11,7 @@ export type MetricKind = "scored" | "factor" | "assessment" | "measurement";
 export type MetricAggregation = "mean" | "presence" | "last" | "sum";
 export type FactorCategory = "body" | "lifestyle" | "mind" | "social";
 export type UserEnterableMeasurementSlug = "weight" | "waist" | "body_fat";
-export type UserEnterableMeasurementDimension =
-	| "mass"
-	| "length"
-	| "fraction";
+export type UserEnterableMeasurementDimension = "mass" | "length" | "fraction";
 export type ImportedOnlyMeasurementSlug =
 	| "sleep_duration"
 	| "steps"
@@ -23,7 +20,10 @@ export type ConsumptionDerivedMeasurementSlug =
 	| "alcohol_intake"
 	| "caffeine_intake"
 	| "fluid_intake"
-	| "energy_intake";
+	| "energy_intake"
+	| "protein_intake"
+	| "carbs_intake"
+	| "fat_intake";
 export type MeasurementSlug =
 	| UserEnterableMeasurementSlug
 	| ImportedOnlyMeasurementSlug
@@ -288,38 +288,27 @@ export const METRIC_REGISTRY = [
 		5,
 		true,
 	),
-	consumptionMeasurement(
-		"alcohol_intake",
-		"Alcohol",
-		"mass",
-		6,
-		true,
-		{ unitPreferenceDimension: "alcohol" },
-	),
-	consumptionMeasurement(
-		"caffeine_intake",
-		"Caffeine",
-		"mass",
-		7,
-		false,
-		{ fixedDisplayUnit: "mg" },
-	),
-	consumptionMeasurement(
-		"fluid_intake",
-		"Fluid intake",
-		"volume",
-		8,
-		false,
-		{ unitPreferenceDimension: "volume" },
-	),
-	consumptionMeasurement(
-		"energy_intake",
-		"Energy intake",
-		"energy",
-		9,
-		false,
-		{ fixedDisplayUnit: "kcal" },
-	),
+	consumptionMeasurement("alcohol_intake", "Alcohol", "mass", 6, true, {
+		unitPreferenceDimension: "alcohol",
+	}),
+	consumptionMeasurement("caffeine_intake", "Caffeine", "mass", 7, false, {
+		fixedDisplayUnit: "mg",
+	}),
+	consumptionMeasurement("fluid_intake", "Fluid intake", "volume", 8, false, {
+		unitPreferenceDimension: "volume",
+	}),
+	consumptionMeasurement("energy_intake", "Energy intake", "energy", 9, false, {
+		fixedDisplayUnit: "kcal",
+	}),
+	consumptionMeasurement("protein_intake", "Protein", "mass", 10, false, {
+		fixedDisplayUnit: "g",
+	}),
+	consumptionMeasurement("carbs_intake", "Carbohydrate", "mass", 11, false, {
+		fixedDisplayUnit: "g",
+	}),
+	consumptionMeasurement("fat_intake", "Fat", "mass", 12, false, {
+		fixedDisplayUnit: "g",
+	}),
 	...LIFE_AREA_CATALOGUE.map((area) =>
 		assessment(area.slug, area.label, area.defaultPosition, area.sensitive),
 	),

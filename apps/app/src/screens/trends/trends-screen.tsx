@@ -76,6 +76,17 @@ export function TrendsScreen({ store }: TrendsScreenProps) {
 						onPress={() => router.push("/drinks" as Href)}
 					/>
 				</Card>
+				<Card style={styles.destinationCard}>
+					<SectionHeader title="Food" eyebrow="NUTRITION" />
+					<AppText color="muted">
+						Log food and review daily nutrition totals.
+					</AppText>
+					<Button
+						label="Open Food"
+						variant="secondary"
+						onPress={() => router.push("/food" as Href)}
+					/>
+				</Card>
 			</View>
 			<AppText color="muted">
 				Daily summaries; scored metrics use averages, body metrics use the last

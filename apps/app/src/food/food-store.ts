@@ -2,7 +2,9 @@ import {
 	type ConsumptionEntry,
 	ConsumptionEntryRepository,
 	type CreateConsumptionEntry,
+	type CreateCustomConsumableComponent,
 	type CustomConsumable,
+	type CustomConsumableComponent,
 	CustomConsumableRepository,
 	type CustomConsumableServing,
 	type Goal,
@@ -13,19 +15,10 @@ import {
 } from "@bro/database-app";
 import {
 	type DisplayUnit,
-	formatMeasurement,
 	isDisplayUnitForDimension,
-	isDisplayUnitForPreferenceDimension,
 	type ParsedMeasurement,
 	parseMeasurement,
-	resolveUnitPreference,
 } from "@bro/domain";
-import {
-	DRINK_CATALOGUE,
-	ethanolKgFromVolumeAndAbv,
-	resolveDrink,
-	snapshotDrinkServing,
-} from "@bro/domain/drink-catalogue";
 import {
 	type ConsumptionDerivedMeasurementMetricDefinition,
 	type ConsumptionDerivedMeasurementSlug,
@@ -46,41 +39,52 @@ import {
 } from "../health/metric-presentation";
 import { resolveMetricObservations } from "../health/resolved-series";
 
-export type DrinkOccurrence = {
+export const FOOD_METRIC_SLUGS = [
+	"energy_intake",
+	"protein_intake",
+	"carbs_intake",
+	"fat_intake",
+] as const satisfies readonly ConsumptionDerivedMeasurementSlug[];
+
+type FoodMetricSlug = (typeof FOOD_METRIC_SLUGS)[number];
+
+export type FoodOccurrence = {
 	localDay: string;
 	time: string;
 };
 
-export type FreeDrinkDraft = DrinkOccurrence & {
+export type FreeFoodDraft = FoodOccurrence & {
 	label: string;
 	servingLabel: string | null;
 	quantity: number;
-	volumeMl: number | null;
-	abvPercent: number | null;
-	caffeineMg: number | null;
 	energyKcal: number | null;
+	proteinG: number | null;
+	carbsG: number | null;
+	fatG: number | null;
 };
 
-export type DrinkEntryEdit = DrinkOccurrence & {
+export type FoodEntryEdit = FoodOccurrence & {
 	label: string;
 	servingLabel: string | null;
 	quantity: number;
 };
 
-export type CustomDrinkDraft = {
+export type CustomFoodDraft = {
 	id?: string;
 	label: string;
 	brand: string | null;
+	isRecipe: boolean;
 	servings: CustomConsumableServing[];
+	components: CreateCustomConsumableComponent[];
 };
 
-export type PresentedDrinkEntry = {
+export type PresentedFoodEntry = {
 	entry: ConsumptionEntry;
 	detail: string;
 	contributions: string;
 };
 
-export type DrinkGoalProgress = {
+export type FoodGoalProgress = {
 	goal: Goal;
 	status: GoalStatus;
 	startValue: number | null;
@@ -91,82 +95,44 @@ export type DrinkGoalProgress = {
 	currentFormatted: string | null;
 };
 
-export type DrinkMetricSummary = {
-	metric: ConsumptionDerivedMeasurementMetricDefinition;
+export type FoodMetricSummary = {
+	metric: ConsumptionDerivedMeasurementMetricDefinition & {
+		slug: FoodMetricSlug;
+	};
 	tracked: boolean;
 	displayUnit: DisplayUnit;
 	dayValue: number | null;
 	dayFormatted: string | null;
 	weekValue: number | null;
 	weekFormatted: string | null;
-	goals: DrinkGoalProgress[];
+	goals: FoodGoalProgress[];
 };
 
-export type DrinkDaySnapshot = {
+export type CustomFood = {
+	consumable: CustomConsumable;
+	components: CustomConsumableComponent[];
+};
+
+export type FoodDaySnapshot = {
 	localDay: string;
 	defaultTime: string;
-	entries: PresentedDrinkEntry[];
-	metrics: DrinkMetricSummary[];
+	entries: PresentedFoodEntry[];
+	metrics: FoodMetricSummary[];
 	weekFromLocalDay: string;
-	recents: PresentedDrinkEntry[];
+	recents: PresentedFoodEntry[];
 	recentLocalDays: string[];
-	catalogue: typeof DRINK_CATALOGUE;
-	customDrinks: CustomConsumable[];
+	customFoods: CustomFood[];
 };
 
-export type DrinkMetricSetting = {
-	metricSlug: ConsumptionDerivedMeasurementSlug;
+export type FoodMetricSetting = {
+	metricSlug: FoodMetricSlug;
 	label: string;
 	tracked: boolean;
 };
 
-export type DrinkUnitOption = {
-	unit: DisplayUnit;
-	label: string;
+export type FoodSettingsSnapshot = {
+	metrics: FoodMetricSetting[];
 };
-
-export type DrinkUnitSetting = {
-	dimension: "alcohol" | "volume";
-	title: string;
-	resolvedUnit: DisplayUnit;
-	explicitUnit: DisplayUnit | null;
-	preview: string;
-	options: DrinkUnitOption[];
-};
-
-export type DrinkSettingsSnapshot = {
-	metrics: DrinkMetricSetting[];
-	units: DrinkUnitSetting[];
-};
-
-const DRINK_UNIT_DIMENSIONS = ["alcohol", "volume"] as const;
-const DRINK_METRIC_SLUGS = [
-	"alcohol_intake",
-	"caffeine_intake",
-	"fluid_intake",
-	"energy_intake",
-] as const satisfies readonly ConsumptionDerivedMeasurementSlug[];
-const UNIT_OPTIONS = {
-	alcohol: [
-		{ unit: "uk_unit", label: "UK units" },
-		{ unit: "us_standard_drink", label: "US standard drinks" },
-		{ unit: "g", label: "Grams" },
-	],
-	volume: [
-		{ unit: "ml", label: "Millilitres" },
-		{ unit: "l", label: "Litres" },
-		{ unit: "fl_oz_uk", label: "UK fluid ounces" },
-		{ unit: "fl_oz_us", label: "US fluid ounces" },
-	],
-} as const satisfies Record<
-	(typeof DRINK_UNIT_DIMENSIONS)[number],
-	readonly DrinkUnitOption[]
->;
-
-const UNIT_PREVIEWS = {
-	alcohol: { canonicalValue: 0.020_181_999, dimension: "mass" },
-	volume: { canonicalValue: 0.568_261_25, dimension: "volume" },
-} as const;
 
 function systemLocale(): string | undefined {
 	try {
@@ -176,75 +142,19 @@ function systemLocale(): string | undefined {
 	}
 }
 
-function consumptionDefaults() {
-	return drinkMetrics().map((metric) => ({
+function foodMetrics(): FoodMetricSummary["metric"][] {
+	return listConsumptionDerivedMeasurements().filter(
+		(metric): metric is FoodMetricSummary["metric"] =>
+			FOOD_METRIC_SLUGS.includes(metric.slug as FoodMetricSlug),
+	);
+}
+
+function foodDefaults() {
+	return foodMetrics().map((metric) => ({
 		metricSlug: metric.slug,
 		position: metric.defaultPosition,
 		enabled: false,
 	}));
-}
-
-function drinkMetrics() {
-	return listConsumptionDerivedMeasurements().filter((metric) =>
-		DRINK_METRIC_SLUGS.includes(
-			metric.slug as (typeof DRINK_METRIC_SLUGS)[number],
-		),
-	);
-}
-
-function parseMetricInput(
-	metric: ConsumptionDerivedMeasurementMetricDefinition,
-	displayUnit: DisplayUnit,
-	input: string,
-	locale: string | undefined,
-): ParsedMeasurement {
-	if (
-		metric.dimension === "mass" &&
-		isDisplayUnitForDimension("mass", displayUnit)
-	) {
-		return parseMeasurement(input, "mass", displayUnit, locale);
-	}
-	if (
-		metric.dimension === "length" &&
-		isDisplayUnitForDimension("length", displayUnit)
-	) {
-		return parseMeasurement(input, "length", displayUnit, locale);
-	}
-	if (
-		metric.dimension === "fraction" &&
-		isDisplayUnitForDimension("fraction", displayUnit)
-	) {
-		return parseMeasurement(input, "fraction", displayUnit, locale);
-	}
-	if (
-		metric.dimension === "volume" &&
-		isDisplayUnitForDimension("volume", displayUnit)
-	) {
-		return parseMeasurement(input, "volume", displayUnit, locale);
-	}
-	if (
-		metric.dimension === "energy" &&
-		isDisplayUnitForDimension("energy", displayUnit)
-	) {
-		return parseMeasurement(input, "energy", displayUnit, locale);
-	}
-	throw new TypeError(
-		`Unit ${displayUnit} does not measure ${metric.dimension}.`,
-	);
-}
-
-function unitPreview(
-	dimension: "alcohol" | "volume",
-	unit: DisplayUnit,
-): string {
-	const preview = UNIT_PREVIEWS[dimension];
-	if (dimension === "alcohol" && isDisplayUnitForDimension("mass", unit)) {
-		return formatMeasurement(preview.canonicalValue, "mass", unit);
-	}
-	if (dimension === "volume" && isDisplayUnitForDimension("volume", unit)) {
-		return formatMeasurement(preview.canonicalValue, "volume", unit);
-	}
-	throw new TypeError(`Unit ${unit} does not measure ${dimension}.`);
 }
 
 function assertFiniteNonNegative(value: number | null, label: string): void {
@@ -255,11 +165,11 @@ function assertFiniteNonNegative(value: number | null, label: string): void {
 
 function assertQuantity(quantity: number): void {
 	if (!Number.isFinite(quantity) || quantity <= 0) {
-		throw new RangeError("Drink quantity must be a positive number.");
+		throw new RangeError("Food quantity must be a positive number.");
 	}
 }
 
-function occurrenceOf({ localDay, time }: DrinkOccurrence): {
+function occurrenceOf({ localDay, time }: FoodOccurrence): {
 	occurredAt: number;
 	localDay: string;
 	tzOffsetMinutes: number;
@@ -311,13 +221,14 @@ function timeOf(timestamp: number): string {
 function recentKey(entry: ConsumptionEntry): string {
 	return JSON.stringify([
 		entry.catalogueRef,
+		entry.consumableRef,
 		entry.label,
 		entry.servingLabel,
 		entry.quantity,
-		entry.volumeL,
-		entry.ethanolKg,
-		entry.caffeineKg,
 		entry.energyKcal,
+		entry.proteinG,
+		entry.carbsG,
+		entry.fatG,
 	]);
 }
 
@@ -333,7 +244,34 @@ function uniqueRecents(
 	});
 }
 
-export class DrinksStore {
+function scaleNullable(value: number | null | undefined, quantity: number) {
+	return value == null ? null : value * quantity;
+}
+
+function parseMetricInput(
+	metric: FoodMetricSummary["metric"],
+	displayUnit: DisplayUnit,
+	input: string,
+	locale: string | undefined,
+): ParsedMeasurement {
+	if (
+		metric.dimension === "mass" &&
+		isDisplayUnitForDimension("mass", displayUnit)
+	) {
+		return parseMeasurement(input, "mass", displayUnit, locale);
+	}
+	if (
+		metric.dimension === "energy" &&
+		isDisplayUnitForDimension("energy", displayUnit)
+	) {
+		return parseMeasurement(input, "energy", displayUnit, locale);
+	}
+	throw new TypeError(
+		`Unit ${displayUnit} does not measure ${metric.dimension}.`,
+	);
+}
+
+export class FoodStore {
 	private readonly entries: ConsumptionEntryRepository;
 	private readonly customConsumables: CustomConsumableRepository;
 	private readonly goals: GoalRepository;
@@ -352,27 +290,27 @@ export class DrinksStore {
 		this.preferences = new UnitPreferenceRepository(db);
 	}
 
-	async loadToday(): Promise<DrinkDaySnapshot> {
+	async loadToday(): Promise<FoodDaySnapshot> {
 		return await this.loadDay(localDayOf(this.now()));
 	}
 
-	async loadDay(localDay: string): Promise<DrinkDaySnapshot> {
+	async loadDay(localDay: string): Promise<FoodDaySnapshot> {
 		const weekFromLocalDay = localDayOffset(localDay, -6);
 		const [
-			dayEntries,
+			allDayEntries,
 			allEntries,
 			recents,
-			customDrinks,
+			customFoods,
 			preferences,
 			overlays,
 			goals,
 		] = await Promise.all([
 			this.entries.listByDay(localDay),
 			this.entries.listAll(),
-			this.entries.listRecent(24),
-			this.customConsumables.listByKind("drink"),
+			this.entries.listRecentByKind("food", 24),
+			this.customConsumables.listByKind("food"),
 			this.preferences.resolveLatestPerDimension(),
-			this.tracked.listResolved(consumptionDefaults()),
+			this.tracked.listResolved(foodDefaults()),
 			this.goals.listAll(),
 		]);
 		const preferenceByDimension = new Map(
@@ -382,7 +320,7 @@ export class DrinksStore {
 			overlays.map((overlay) => [overlay.metricSlug, overlay]),
 		);
 		const locale = this.locale();
-		const metrics = drinkMetrics().map((metric) => {
+		const metrics = foodMetrics().map((metric) => {
 			const displayUnit = metricDisplayUnit(
 				metric,
 				preferenceByDimension,
@@ -391,7 +329,7 @@ export class DrinksStore {
 			const dayValue = consumptionMetricDayTotal(
 				metric.slug,
 				localDay,
-				dayEntries,
+				allDayEntries,
 			).value;
 			const weekEntries = allEntries.filter(
 				(entry) =>
@@ -429,7 +367,7 @@ export class DrinksStore {
 					.map((goal) => this.goalProgress(goal, metric, displayUnit, series)),
 			};
 		});
-
+		const foodEntries = allDayEntries.filter((entry) => entry.kind === "food");
 		return {
 			localDay,
 			defaultTime:
@@ -437,9 +375,7 @@ export class DrinksStore {
 					? timeOf(this.now().getTime())
 					: "20:00",
 			weekFromLocalDay,
-			entries: dayEntries
-				.filter((entry) => entry.kind === "drink")
-				.map((entry) => this.presentEntry(entry, metrics)),
+			entries: foodEntries.map((entry) => this.presentEntry(entry, metrics)),
 			metrics,
 			recents: uniqueRecents(recents)
 				.slice(0, 8)
@@ -447,114 +383,88 @@ export class DrinksStore {
 			recentLocalDays: [
 				...new Set(
 					allEntries
-						.filter((entry) => entry.kind === "drink")
+						.filter((entry) => entry.kind === "food")
 						.map((entry) => entry.localDay)
 						.filter((day) => day !== localDay),
 				),
 			].slice(0, 7),
-			catalogue: DRINK_CATALOGUE,
-			customDrinks,
+			customFoods: await Promise.all(
+				customFoods.map(async (consumable) => ({
+					consumable,
+					components: await this.customConsumables.listComponents(
+						consumable.id,
+					),
+				})),
+			),
 		};
+	}
+
+	async logFree(draft: FreeFoodDraft): Promise<ConsumptionEntry> {
+		assertQuantity(draft.quantity);
+		assertFiniteNonNegative(draft.energyKcal, "Food energy");
+		assertFiniteNonNegative(draft.proteinG, "Food protein");
+		assertFiniteNonNegative(draft.carbsG, "Food carbohydrate");
+		assertFiniteNonNegative(draft.fatG, "Food fat");
+		const input: CreateConsumptionEntry = {
+			kind: "food",
+			catalogueRef: null,
+			consumableRef: null,
+			label: draft.label,
+			servingLabel: draft.servingLabel,
+			quantity: draft.quantity,
+			volumeL: null,
+			ethanolKg: null,
+			caffeineKg: null,
+			energyKcal: scaleNullable(draft.energyKcal, draft.quantity),
+			proteinG: scaleNullable(draft.proteinG, draft.quantity),
+			carbsG: scaleNullable(draft.carbsG, draft.quantity),
+			fatG: scaleNullable(draft.fatG, draft.quantity),
+			...occurrenceOf(draft),
+		};
+		return await this.entries.create(input);
 	}
 
 	async logCustom(
 		consumableId: string,
 		servingId: string,
 		quantity: number,
-		occurrence: DrinkOccurrence,
+		occurrence: FoodOccurrence,
 	): Promise<ConsumptionEntry> {
 		assertQuantity(quantity);
 		const consumable = await this.customConsumables.findById(consumableId);
 		const serving = consumable?.servings.find(
 			(candidate) => candidate.id === servingId,
 		);
-		if (consumable?.kind !== "drink" || !serving) {
-			throw new TypeError("Choose a custom drink and serving.");
+		if (consumable?.kind !== "food" || !serving) {
+			throw new TypeError("Choose a custom food and serving.");
 		}
-		const scale = (value: number | null) =>
-			value === null ? null : value * quantity;
 		return await this.entries.create({
-			kind: "drink",
+			kind: "food",
 			catalogueRef: null,
 			consumableRef: `custom:${consumable.id}`,
 			label: consumable.label,
 			servingLabel: serving.label,
 			quantity,
-			volumeL: scale(serving.volumeL),
-			ethanolKg: scale(serving.ethanolKg),
-			caffeineKg: scale(serving.caffeineKg),
-			energyKcal: scale(serving.energyKcal),
-			proteinG: scale(serving.proteinG),
-			carbsG: scale(serving.carbsG),
-			fatG: scale(serving.fatG),
-			...occurrenceOf(occurrence),
-		});
-	}
-
-	async saveCustom(draft: CustomDrinkDraft): Promise<CustomConsumable> {
-		if (!draft.id) {
-			return await this.customConsumables.create({
-				kind: "drink",
-				label: draft.label,
-				brand: draft.brand,
-				isRecipe: false,
-				servings: draft.servings,
-			});
-		}
-		const existing = await this.customConsumables.findById(draft.id);
-		if (existing?.kind !== "drink") {
-			throw new TypeError("Custom drink not found.");
-		}
-		const updated = await this.customConsumables.update(draft.id, {
-			label: draft.label,
-			brand: draft.brand,
-			isRecipe: false,
-			servings: draft.servings,
-		});
-		if (!updated) throw new TypeError("Custom drink not found.");
-		return updated;
-	}
-
-	async deleteCustom(id: string): Promise<void> {
-		const existing = await this.customConsumables.findById(id);
-		if (
-			existing?.kind !== "drink" ||
-			!(await this.customConsumables.delete(id))
-		) {
-			throw new TypeError("Custom drink not found.");
-		}
-	}
-
-	async logCatalogue(
-		catalogueId: string,
-		servingId: string,
-		quantity: number,
-		occurrence: DrinkOccurrence,
-	): Promise<ConsumptionEntry> {
-		const drink = resolveDrink(catalogueId);
-		const serving = drink?.servings.find(
-			(candidate) => candidate.id === servingId,
-		);
-		if (!drink || !serving) {
-			throw new TypeError("Choose a drink and serving from the catalogue.");
-		}
-		const snapshot = snapshotDrinkServing(drink, serving, quantity);
-		return await this.entries.create({
-			kind: "drink",
-			...snapshot,
+			volumeL: null,
+			ethanolKg: null,
+			caffeineKg: null,
+			energyKcal: scaleNullable(serving.energyKcal, quantity),
+			proteinG: scaleNullable(serving.proteinG, quantity),
+			carbsG: scaleNullable(serving.carbsG, quantity),
+			fatG: scaleNullable(serving.fatG, quantity),
 			...occurrenceOf(occurrence),
 		});
 	}
 
 	async repeatEntry(
 		id: string,
-		occurrence: DrinkOccurrence = {
+		occurrence: FoodOccurrence = {
 			localDay: localDayOf(this.now()),
 			time: timeOf(this.now().getTime()),
 		},
 	): Promise<ConsumptionEntry> {
 		const entry = await this.entries.findById(id);
-		if (entry?.kind !== "drink") throw new TypeError("Recent drink not found.");
+		if (entry?.kind !== "food") throw new TypeError("Recent food not found.");
 		const {
 			id: _id,
 			createdAt: _createdAt,
@@ -567,50 +477,12 @@ export class DrinksStore {
 		});
 	}
 
-	async logFree(draft: FreeDrinkDraft): Promise<ConsumptionEntry> {
-		assertQuantity(draft.quantity);
-		assertFiniteNonNegative(draft.volumeMl, "Drink volume");
-		assertFiniteNonNegative(draft.abvPercent, "Drink ABV");
-		assertFiniteNonNegative(draft.caffeineMg, "Drink caffeine");
-		assertFiniteNonNegative(draft.energyKcal, "Drink energy");
-		if (draft.abvPercent !== null && draft.abvPercent > 100) {
-			throw new RangeError("Drink ABV must not exceed 100%.");
-		}
-		if (draft.abvPercent !== null && draft.volumeMl === null) {
-			throw new TypeError("Enter a volume when entering an ABV.");
-		}
-		const volumeL =
-			draft.volumeMl === null
-				? null
-				: (draft.volumeMl / 1_000) * draft.quantity;
-		const input: CreateConsumptionEntry = {
-			kind: "drink",
-			catalogueRef: null,
-			label: draft.label,
-			servingLabel: draft.servingLabel,
-			quantity: draft.quantity,
-			volumeL,
-			ethanolKg:
-				draft.abvPercent === null || volumeL === null
-					? null
-					: ethanolKgFromVolumeAndAbv(volumeL, draft.abvPercent),
-			caffeineKg:
-				draft.caffeineMg === null
-					? null
-					: (draft.caffeineMg / 1_000_000) * draft.quantity,
-			energyKcal:
-				draft.energyKcal === null ? null : draft.energyKcal * draft.quantity,
-			...occurrenceOf(draft),
-		};
-		return await this.entries.create(input);
-	}
-
 	async updateEntry(
 		id: string,
-		edit: DrinkEntryEdit,
+		edit: FoodEntryEdit,
 	): Promise<ConsumptionEntry> {
 		const entry = await this.entries.findById(id);
-		if (entry?.kind !== "drink") throw new TypeError("Drink entry not found.");
+		if (entry?.kind !== "food") throw new TypeError("Food entry not found.");
 		assertQuantity(edit.quantity);
 		const scale = edit.quantity / entry.quantity;
 		const updated = await this.entries.update(id, {
@@ -619,75 +491,102 @@ export class DrinksStore {
 			label: edit.label,
 			servingLabel: edit.servingLabel,
 			quantity: edit.quantity,
-			volumeL: entry.volumeL === null ? null : entry.volumeL * scale,
-			ethanolKg: entry.ethanolKg === null ? null : entry.ethanolKg * scale,
-			caffeineKg: entry.caffeineKg === null ? null : entry.caffeineKg * scale,
-			energyKcal: entry.energyKcal === null ? null : entry.energyKcal * scale,
-			proteinG: entry.proteinG == null ? null : entry.proteinG * scale,
-			carbsG: entry.carbsG == null ? null : entry.carbsG * scale,
-			fatG: entry.fatG == null ? null : entry.fatG * scale,
+			volumeL: null,
+			ethanolKg: null,
+			caffeineKg: null,
+			energyKcal: scaleNullable(entry.energyKcal, scale),
+			proteinG: scaleNullable(entry.proteinG, scale),
+			carbsG: scaleNullable(entry.carbsG, scale),
+			fatG: scaleNullable(entry.fatG, scale),
 			...occurrenceOf(edit),
 		});
-		if (!updated) throw new TypeError("Drink entry not found.");
+		if (!updated) throw new TypeError("Food entry not found.");
 		return updated;
 	}
 
 	async deleteEntry(id: string): Promise<void> {
 		const entry = await this.entries.findById(id);
-		if (entry?.kind !== "drink" || !(await this.entries.delete(id))) {
-			throw new TypeError("Drink entry not found.");
+		if (entry?.kind !== "food" || !(await this.entries.delete(id))) {
+			throw new TypeError("Food entry not found.");
 		}
 	}
 
-	async loadSettings(): Promise<DrinkSettingsSnapshot> {
-		const [overlays, preferences] = await Promise.all([
-			this.tracked.listResolved(consumptionDefaults()),
-			this.preferences.resolveLatestPerDimension(),
-		]);
+	async saveCustom(draft: CustomFoodDraft): Promise<CustomConsumable> {
+		if (!draft.isRecipe && draft.components.length > 0) {
+			throw new TypeError("Only recipes can have components.");
+		}
+		if (!draft.id) {
+			return await this.customConsumables.create(
+				{
+					kind: "food",
+					label: draft.label,
+					brand: draft.brand,
+					isRecipe: draft.isRecipe,
+					servings: draft.servings,
+				},
+				draft.components,
+			);
+		}
+		const existing = await this.customConsumables.findById(draft.id);
+		if (existing?.kind !== "food") {
+			throw new TypeError("Custom food not found.");
+		}
+		const currentComponents = await this.customConsumables.listComponents(
+			draft.id,
+		);
+		if (!draft.isRecipe) {
+			for (const component of currentComponents) {
+				await this.customConsumables.deleteComponent(component.id);
+			}
+		}
+		const updated = await this.customConsumables.update(draft.id, {
+			label: draft.label,
+			brand: draft.brand,
+			isRecipe: draft.isRecipe,
+			servings: draft.servings,
+		});
+		if (!updated) throw new TypeError("Custom food not found.");
+		for (const component of currentComponents) {
+			await this.customConsumables.deleteComponent(component.id);
+		}
+		for (const component of draft.components) {
+			await this.customConsumables.addComponent(draft.id, component);
+		}
+		return updated;
+	}
+
+	async deleteCustom(id: string): Promise<void> {
+		const existing = await this.customConsumables.findById(id);
+		if (
+			existing?.kind !== "food" ||
+			!(await this.customConsumables.delete(id))
+		) {
+			throw new TypeError("Custom food not found.");
+		}
+	}
+
+	async loadSettings(): Promise<FoodSettingsSnapshot> {
+		const overlays = await this.tracked.listResolved(foodDefaults());
 		const overlayBySlug = new Map(
 			overlays.map((overlay) => [overlay.metricSlug, overlay]),
 		);
-		const storedByDimension = new Map(
-			preferences.map((preference) => [preference.dimension, preference.unit]),
-		);
 		return {
-			metrics: drinkMetrics().map((metric) => ({
+			metrics: foodMetrics().map((metric) => ({
 				metricSlug: metric.slug,
 				label: metric.label,
 				tracked: overlayBySlug.get(metric.slug)?.enabled ?? false,
 			})),
-			units: DRINK_UNIT_DIMENSIONS.map((dimension) => {
-				const storedUnit = storedByDimension.get(dimension);
-				const explicitUnit =
-					storedUnit !== undefined &&
-					isDisplayUnitForPreferenceDimension(dimension, storedUnit)
-						? storedUnit
-						: null;
-				const resolvedUnit = resolveUnitPreference(
-					dimension,
-					storedUnit,
-					this.locale(),
-				);
-				return {
-					dimension,
-					title: dimension === "alcohol" ? "Alcohol" : "Fluid",
-					resolvedUnit,
-					explicitUnit,
-					preview: unitPreview(dimension, resolvedUnit),
-					options: [...UNIT_OPTIONS[dimension]],
-				};
-			}),
 		};
 	}
 
 	async setTracked(
 		metricSlug: string,
 		enabled: boolean,
-	): Promise<DrinkSettingsSnapshot> {
-		const metric = this.resolveConsumptionMetric(metricSlug);
-		const overlay = (
-			await this.tracked.listResolved(consumptionDefaults())
-		).find((candidate) => candidate.metricSlug === metric.slug);
+	): Promise<FoodSettingsSnapshot> {
+		const metric = this.resolveFoodMetric(metricSlug);
+		const overlay = (await this.tracked.listResolved(foodDefaults())).find(
+			(candidate) => candidate.metricSlug === metric.slug,
+		);
 		await this.tracked.configure(
 			metric.slug,
 			overlay?.position ?? metric.defaultPosition,
@@ -696,23 +595,12 @@ export class DrinksStore {
 		return await this.loadSettings();
 	}
 
-	async setUnit(
-		dimension: "alcohol" | "volume",
-		unit: string,
-	): Promise<DrinkSettingsSnapshot> {
-		if (!isDisplayUnitForPreferenceDimension(dimension, unit)) {
-			throw new TypeError(`Unit ${unit} does not measure ${dimension}.`);
-		}
-		await this.preferences.set(dimension, unit);
-		return await this.loadSettings();
-	}
-
 	async createGoal(
 		metricSlug: string,
 		targetInput: string,
 		targetDate: string | null,
 	): Promise<Goal> {
-		const metric = this.resolveConsumptionMetric(metricSlug);
+		const metric = this.resolveFoodMetric(metricSlug);
 		const [entries, goals, preferences] = await Promise.all([
 			this.entries.listAll(),
 			this.goals.listAll(),
@@ -738,7 +626,7 @@ export class DrinksStore {
 		const latest = resolveMetricObservations(metric.slug, [], [], entries).at(
 			-1,
 		);
-		if (!latest) throw new TypeError("Log a drink before setting a goal.");
+		if (!latest) throw new TypeError("Log food before setting a goal.");
 		if (parsed.canonicalValue === latest.value) {
 			throw new RangeError("Choose a target different from your latest total.");
 		}
@@ -767,30 +655,26 @@ export class DrinksStore {
 		return await this.goals.abandon(id);
 	}
 
-	private resolveConsumptionMetric(
-		metricSlug: string,
-	): ConsumptionDerivedMeasurementMetricDefinition {
+	private resolveFoodMetric(metricSlug: string): FoodMetricSummary["metric"] {
 		const resolved = resolveMetric(metricSlug);
 		if (
 			resolved.kind !== "known" ||
 			resolved.metric.kind !== "measurement" ||
 			!("measurementSource" in resolved.metric) ||
 			resolved.metric.measurementSource !== "consumption" ||
-			!DRINK_METRIC_SLUGS.includes(
-				resolved.metric.slug as (typeof DRINK_METRIC_SLUGS)[number],
-			)
+			!FOOD_METRIC_SLUGS.includes(resolved.metric.slug as FoodMetricSlug)
 		) {
-			throw new TypeError(`Unknown drink metric: ${metricSlug}`);
+			throw new TypeError(`Unknown food metric: ${metricSlug}`);
 		}
-		return resolved.metric;
+		return resolved.metric as FoodMetricSummary["metric"];
 	}
 
 	private goalProgress(
 		goal: Goal,
-		metric: ConsumptionDerivedMeasurementMetricDefinition,
+		metric: FoodMetricSummary["metric"],
 		displayUnit: DisplayUnit,
 		series: ReturnType<typeof resolveMetricObservations>,
-	): DrinkGoalProgress {
+	): FoodGoalProgress {
 		const startValue =
 			series.filter((row) => row.observedAt <= goal.startedAt).at(-1)?.value ??
 			null;
@@ -811,20 +695,17 @@ export class DrinksStore {
 
 	private presentEntry(
 		entry: ConsumptionEntry,
-		metrics: readonly DrinkMetricSummary[],
-	): PresentedDrinkEntry {
-		const fieldByMetric = {
-			alcohol_intake: entry.ethanolKg,
-			caffeine_intake: entry.caffeineKg,
-			fluid_intake: entry.volumeL,
+		metrics: readonly FoodMetricSummary[],
+	): PresentedFoodEntry {
+		const valueByMetric: Record<FoodMetricSlug, number | null> = {
 			energy_intake: entry.energyKcal,
-			protein_intake: null,
-			carbs_intake: null,
-			fat_intake: null,
-		} as const;
+			protein_intake: entry.proteinG == null ? null : entry.proteinG / 1_000,
+			carbs_intake: entry.carbsG == null ? null : entry.carbsG / 1_000,
+			fat_intake: entry.fatG == null ? null : entry.fatG / 1_000,
+		};
 		const contributions = metrics.flatMap(({ metric, displayUnit }) => {
-			const value = fieldByMetric[metric.slug];
-			return value !== null && value > 0
+			const value = valueByMetric[metric.slug];
+			return value !== null
 				? [formatMetricValue(metric, value, displayUnit)]
 				: [];
 		});
@@ -838,14 +719,14 @@ export class DrinksStore {
 	}
 }
 
-export function createDrinksStore(): DrinksStore {
-	return new DrinksStore(getDb());
+export function createFoodStore(): FoodStore {
+	return new FoodStore(getDb());
 }
 
-export function previousLocalDay(localDay: string): string {
+export function previousFoodLocalDay(localDay: string): string {
 	return localDayOffset(localDay, -1);
 }
 
-export function occurrenceTime(timestamp: number): string {
+export function foodOccurrenceTime(timestamp: number): string {
 	return timeOf(timestamp);
 }

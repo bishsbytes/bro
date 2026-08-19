@@ -13,7 +13,13 @@ function entry(
 	values: Partial<
 		Pick<
 			ConsumptionEntry,
-			"volumeL" | "ethanolKg" | "caffeineKg" | "energyKcal"
+			| "volumeL"
+			| "ethanolKg"
+			| "caffeineKg"
+			| "energyKcal"
+			| "proteinG"
+			| "carbsG"
+			| "fatG"
 		>
 	>,
 ): ConsumptionEntry {
@@ -28,6 +34,9 @@ function entry(
 		ethanolKg: null,
 		caffeineKg: null,
 		energyKcal: null,
+		proteinG: null,
+		carbsG: null,
+		fatG: null,
 		occurredAt: Date.parse(`${localDay}T18:00:00.000Z`),
 		localDay,
 		tzOffsetMinutes: 0,
@@ -61,33 +70,50 @@ const nextDayWater = entry("water", "2026-08-16", {
 	caffeineKg: 0,
 	energyKcal: 0,
 });
+const chicken = entry("chicken", "2026-08-15", {
+	energyKcal: 420,
+	proteinG: 52,
+	carbsG: 0,
+	fatG: 24,
+});
 
 describe("consumption-derived daily totals", () => {
 	it("sums each canonical entry field and distinguishes no data from zero", () => {
 		const entries = [lager, coffee, anotherLager, nextDayWater];
 		expect(
-			consumptionMetricDayTotal("alcohol_intake", "2026-08-15", entries)
-				.value,
+			consumptionMetricDayTotal("alcohol_intake", "2026-08-15", entries).value,
 		).toBeCloseTo(0.031_900_213, 12);
 		expect(
-			consumptionMetricDayTotal("caffeine_intake", "2026-08-15", entries)
-				.value,
+			consumptionMetricDayTotal("caffeine_intake", "2026-08-15", entries).value,
 		).toBe(0.000_095);
 		expect(
-			consumptionMetricDayTotal("fluid_intake", "2026-08-15", entries)
-				.value,
+			consumptionMetricDayTotal("fluid_intake", "2026-08-15", entries).value,
 		).toBeCloseTo(1.148_261_25, 12);
 		expect(
-			consumptionMetricDayTotal("energy_intake", "2026-08-15", entries)
-				.value,
+			consumptionMetricDayTotal("energy_intake", "2026-08-15", entries).value,
 		).toBe(388);
 		expect(
-			consumptionMetricDayTotal("alcohol_intake", "2026-08-16", entries)
-				.value,
+			consumptionMetricDayTotal("alcohol_intake", "2026-08-16", entries).value,
 		).toBe(0);
 		expect(
 			consumptionMetricDayTotal("alcohol_intake", "2026-08-17", entries),
 		).toMatchObject({ value: null, entries: [] });
+	});
+
+	it("sums food energy with drinks and keeps macros independent", () => {
+		const entries = [lager, coffee, chicken];
+		expect(
+			consumptionMetricDayTotal("energy_intake", "2026-08-15", entries).value,
+		).toBe(666);
+		expect(
+			consumptionMetricDayTotal("protein_intake", "2026-08-15", entries).value,
+		).toBeCloseTo(0.052, 12);
+		expect(
+			consumptionMetricDayTotal("carbs_intake", "2026-08-15", entries).value,
+		).toBe(0);
+		expect(
+			consumptionMetricDayTotal("fat_intake", "2026-08-15", entries).value,
+		).toBeCloseTo(0.024, 12);
 	});
 
 	it("selects entry provenance and changes immediately after a correction", () => {
@@ -104,13 +130,8 @@ describe("consumption-derived daily totals", () => {
 			entries: [lager, coffee, anotherLager],
 		});
 		expect(
-			resolveMetricDay(
-				"alcohol_intake",
-				"2026-08-15",
-				[],
-				[],
-				[lager, coffee],
-			).value,
+			resolveMetricDay("alcohol_intake", "2026-08-15", [], [], [lager, coffee])
+				.value,
 		).toBeCloseTo(0.020_181_999, 12);
 	});
 
@@ -159,11 +180,13 @@ describe("consumption-derived daily totals", () => {
 			[],
 			[lager, coffee, nextDayWater],
 		);
-		expect(series.map(({ localDay, value, source }) => ({
-			localDay,
-			value,
-			source,
-		}))).toEqual([
+		expect(
+			series.map(({ localDay, value, source }) => ({
+				localDay,
+				value,
+				source,
+			})),
+		).toEqual([
 			{ localDay: "2026-08-15", value: 0.818_261_25, source: "consumption" },
 			{ localDay: "2026-08-16", value: 0.5, source: "consumption" },
 		]);

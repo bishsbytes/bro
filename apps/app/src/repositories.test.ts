@@ -492,6 +492,9 @@ describe("product repositories", () => {
 							"caffeine_intake",
 							"fluid_intake",
 							"energy_intake",
+							"protein_intake",
+							"carbs_intake",
+							"fat_intake",
 						].includes(metricSlug),
 				)
 				.every((metric) => metric.enabled),

@@ -1,3 +1,4 @@
+import { ethanolKgFromVolumeAndAbv } from "@bro/domain/drink-catalogue";
 import { type Href, router, useFocusEffect } from "expo-router";
 import { useCallback, useMemo, useState } from "react";
 import { ActivityIndicator, TouchableOpacity, View } from "react-native";
@@ -21,15 +22,18 @@ type DrinksScreenProps = {
 		DrinksStore,
 		| "loadToday"
 		| "logCatalogue"
+		| "logCustom"
 		| "logFree"
 		| "repeatEntry"
 		| "createGoal"
 		| "achieveGoal"
 		| "abandonGoal"
+		| "saveCustom"
+		| "deleteCustom"
 	>;
 };
 
-type AddMode = "catalogue" | "free" | null;
+type AddMode = "catalogue" | "custom" | "free" | null;
 
 function optionalNumber(value: string): number | null {
 	return value.trim() ? Number(value) : null;
@@ -42,6 +46,7 @@ export function DrinksScreen({ store }: DrinksScreenProps) {
 	const [busy, setBusy] = useState(false);
 	const [mode, setMode] = useState<AddMode>(null);
 	const [catalogueId, setCatalogueId] = useState("");
+	const [customId, setCustomId] = useState("");
 	const [servingId, setServingId] = useState("");
 	const [quantity, setQuantity] = useState("1");
 	const [localDay, setLocalDay] = useState("");
@@ -52,6 +57,9 @@ export function DrinksScreen({ store }: DrinksScreenProps) {
 	const [abv, setAbv] = useState("");
 	const [caffeineMg, setCaffeineMg] = useState("");
 	const [energyKcal, setEnergyKcal] = useState("");
+	const [editingCustomId, setEditingCustomId] = useState<string | "new" | null>(
+		null,
+	);
 	const [goalSlug, setGoalSlug] = useState<string | null>(null);
 	const [goalTarget, setGoalTarget] = useState("");
 	const [goalDate, setGoalDate] = useState("");
@@ -101,6 +109,7 @@ export function DrinksScreen({ store }: DrinksScreenProps) {
 	function resetAddForm() {
 		setMode(null);
 		setCatalogueId("");
+		setCustomId("");
 		setServingId("");
 		setQuantity("1");
 		setLabel("");
@@ -109,6 +118,81 @@ export function DrinksScreen({ store }: DrinksScreenProps) {
 		setAbv("");
 		setCaffeineMg("");
 		setEnergyKcal("");
+	}
+
+	function selectCustom(nextCustomId: string) {
+		const drink = snapshot?.customDrinks.find(
+			(candidate) => candidate.id === nextCustomId,
+		);
+		setCustomId(nextCustomId);
+		setServingId(drink?.servings[0]?.id ?? "");
+	}
+
+	function editCustom(id: string | null) {
+		const drink = snapshot?.customDrinks.find(
+			(candidate) => candidate.id === id,
+		);
+		const serving = drink?.servings[0];
+		setEditingCustomId(id ?? "new");
+		setLabel(drink?.label ?? "");
+		setServingLabel(serving?.label ?? "serving");
+		setVolumeMl(
+			serving?.volumeL == null ? "" : String(serving.volumeL * 1_000),
+		);
+		setAbv(
+			serving?.volumeL && serving.ethanolKg != null
+				? String((serving.ethanolKg / (serving.volumeL * 0.789_24)) * 100)
+				: "",
+		);
+		setCaffeineMg(
+			serving?.caffeineKg == null ? "" : String(serving.caffeineKg * 1_000_000),
+		);
+		setEnergyKcal(
+			serving?.energyKcal == null ? "" : String(serving.energyKcal),
+		);
+	}
+
+	async function saveCustomDrink() {
+		const volumeL =
+			optionalNumber(volumeMl) === null
+				? null
+				: (optionalNumber(volumeMl) ?? 0) / 1_000;
+		const abvPercent = optionalNumber(abv);
+		const saved = await mutate(() =>
+			drinks.saveCustom({
+				id:
+					editingCustomId && editingCustomId !== "new"
+						? editingCustomId
+						: undefined,
+				label,
+				brand: null,
+				servings: [
+					{
+						id:
+							snapshot?.customDrinks.find(({ id }) => id === editingCustomId)
+								?.servings[0]?.id ?? "default",
+						label: servingLabel.trim() || "serving",
+						volumeL,
+						ethanolKg:
+							volumeL === null || abvPercent === null
+								? null
+								: ethanolKgFromVolumeAndAbv(volumeL, abvPercent),
+						caffeineKg:
+							optionalNumber(caffeineMg) === null
+								? null
+								: (optionalNumber(caffeineMg) ?? 0) / 1_000_000,
+						energyKcal: optionalNumber(energyKcal),
+						proteinG: null,
+						carbsG: null,
+						fatG: null,
+					},
+				],
+			}),
+		);
+		if (saved) {
+			setEditingCustomId(null);
+			resetAddForm();
+		}
 	}
 
 	async function saveCatalogue() {
@@ -148,14 +232,24 @@ export function DrinksScreen({ store }: DrinksScreenProps) {
 		}
 	}
 
+	async function saveCustomEntry() {
+		const savedDay = localDay;
+		const saved = await mutate(() =>
+			drinks.logCustom(customId, servingId, Number(quantity), {
+				localDay,
+				time,
+			}),
+		);
+		if (!saved) return;
+		resetAddForm();
+		if (savedDay !== snapshot?.localDay)
+			router.push(`/drinks/${savedDay}` as Href);
+	}
+
 	async function saveGoal() {
 		if (!goalSlug) return;
 		await mutate(async () => {
-			await drinks.createGoal(
-				goalSlug,
-				goalTarget,
-				goalDate.trim() || null,
-			);
+			await drinks.createGoal(goalSlug, goalTarget, goalDate.trim() || null);
 			setGoalSlug(null);
 			setGoalTarget("");
 			setGoalDate("");
@@ -186,6 +280,9 @@ export function DrinksScreen({ store }: DrinksScreenProps) {
 
 	const selectedDrink = snapshot.catalogue.find(
 		(drink) => drink.id === catalogueId,
+	);
+	const selectedCustom = snapshot.customDrinks.find(
+		(drink) => drink.id === customId,
 	);
 	const trackedMetrics = snapshot.metrics.filter((metric) => metric.tracked);
 
@@ -247,6 +344,111 @@ export function DrinksScreen({ store }: DrinksScreenProps) {
 				)}
 			</View>
 
+			<View style={styles.section}>
+				<SectionHeader
+					title="Custom drinks"
+					action={
+						<Button
+							label="Create"
+							variant="text"
+							onPress={() => editCustom(null)}
+						/>
+					}
+				/>
+				{snapshot.customDrinks.length === 0 ? (
+					<AppText color="muted">
+						Save a drink you use often. It stays available offline.
+					</AppText>
+				) : (
+					snapshot.customDrinks.map((drink) => (
+						<Card key={drink.id} style={styles.actions}>
+							<View style={styles.grow}>
+								<AppText variant="label">{drink.label}</AppText>
+								<AppText variant="caption" color="muted">
+									{drink.servings[0]?.label}
+								</AppText>
+							</View>
+							<Button
+								label="Edit"
+								variant="text"
+								onPress={() => editCustom(drink.id)}
+							/>
+							<Button
+								label="Delete"
+								variant="text"
+								tone="danger"
+								disabled={busy}
+								onPress={() => void mutate(() => drinks.deleteCustom(drink.id))}
+							/>
+						</Card>
+					))
+				)}
+				{editingCustomId !== null ? (
+					<Card style={styles.section}>
+						<FormField
+							label="Custom drink name"
+							value={label}
+							onChangeText={setLabel}
+						/>
+						<FormField
+							label="Serving"
+							value={servingLabel}
+							onChangeText={setServingLabel}
+						/>
+						<View style={styles.actions}>
+							<FormField
+								label="Volume (ml)"
+								value={volumeMl}
+								onChangeText={setVolumeMl}
+								keyboardType="decimal-pad"
+								containerStyle={styles.grow}
+							/>
+							<FormField
+								label="ABV %"
+								value={abv}
+								onChangeText={setAbv}
+								keyboardType="decimal-pad"
+								containerStyle={styles.grow}
+							/>
+						</View>
+						<View style={styles.actions}>
+							<FormField
+								label="Caffeine (mg)"
+								value={caffeineMg}
+								onChangeText={setCaffeineMg}
+								keyboardType="decimal-pad"
+								containerStyle={styles.grow}
+							/>
+							<FormField
+								label="Energy (kcal)"
+								value={energyKcal}
+								onChangeText={setEnergyKcal}
+								keyboardType="decimal-pad"
+								containerStyle={styles.grow}
+							/>
+						</View>
+						<View style={styles.actions}>
+							<Button
+								label="Cancel"
+								variant="text"
+								style={styles.grow}
+								onPress={() => {
+									setEditingCustomId(null);
+									resetAddForm();
+								}}
+							/>
+							<Button
+								label="Save custom drink"
+								loading={busy}
+								disabled={!label.trim()}
+								style={styles.grow}
+								onPress={() => void saveCustomDrink()}
+							/>
+						</View>
+					</Card>
+				) : null}
+			</View>
+
 			<Card style={styles.section}>
 				<SectionHeader title="Log a drink" />
 				{mode === null ? (
@@ -255,6 +457,13 @@ export function DrinksScreen({ store }: DrinksScreenProps) {
 							label="Choose a drink"
 							style={styles.grow}
 							onPress={() => setMode("catalogue")}
+						/>
+						<Button
+							label="Choose custom drink"
+							variant="secondary"
+							style={styles.grow}
+							disabled={snapshot.customDrinks.length === 0}
+							onPress={() => setMode("custom")}
 						/>
 						<Button
 							label="Something else"
@@ -298,9 +507,46 @@ export function DrinksScreen({ store }: DrinksScreenProps) {
 					</View>
 				) : null}
 
+				{mode === "custom" ? (
+					<View style={styles.section}>
+						<AppText variant="label">Custom drink</AppText>
+						<View style={styles.wrap}>
+							{snapshot.customDrinks.map((drink) => (
+								<Button
+									key={drink.id}
+									label={drink.label}
+									variant={customId === drink.id ? "primary" : "secondary"}
+									onPress={() => selectCustom(drink.id)}
+								/>
+							))}
+						</View>
+						{selectedCustom ? (
+							<>
+								<AppText variant="label">Serving</AppText>
+								<View style={styles.wrap}>
+									{selectedCustom.servings.map((serving) => (
+										<Button
+											key={serving.id}
+											label={serving.label}
+											variant={
+												servingId === serving.id ? "primary" : "secondary"
+											}
+											onPress={() => setServingId(serving.id)}
+										/>
+									))}
+								</View>
+							</>
+						) : null}
+					</View>
+				) : null}
+
 				{mode === "free" ? (
 					<View style={styles.section}>
-						<FormField label="Drink name" value={label} onChangeText={setLabel} />
+						<FormField
+							label="Drink name"
+							value={label}
+							onChangeText={setLabel}
+						/>
 						<FormField
 							label="Serving label (optional)"
 							value={servingLabel}
@@ -385,10 +631,17 @@ export function DrinksScreen({ store }: DrinksScreenProps) {
 							<Button
 								label="Save drink"
 								loading={busy}
-								disabled={mode === "catalogue" && (!catalogueId || !servingId)}
+								disabled={
+									(mode === "catalogue" && (!catalogueId || !servingId)) ||
+									(mode === "custom" && (!customId || !servingId))
+								}
 								style={styles.grow}
 								onPress={() =>
-									void (mode === "catalogue" ? saveCatalogue() : saveFree())
+									void (mode === "catalogue"
+										? saveCatalogue()
+										: mode === "custom"
+											? saveCustomEntry()
+											: saveFree())
 								}
 							/>
 						</View>
@@ -454,7 +707,9 @@ export function DrinksScreen({ store }: DrinksScreenProps) {
 					</AppText>
 				) : null}
 				{trackedMetrics.map((metric) => {
-					const activeGoal = metric.goals.find((goal) => goal.status === "active");
+					const activeGoal = metric.goals.find(
+						(goal) => goal.status === "active",
+					);
 					return (
 						<Card key={metric.metric.slug} style={styles.section}>
 							<SectionHeader title={metric.metric.label} />
@@ -521,7 +776,9 @@ export function DrinksScreen({ store }: DrinksScreenProps) {
 									onPress={() => setGoalSlug(metric.metric.slug)}
 								/>
 							) : (
-								<AppText color="muted">Log a value before setting a goal.</AppText>
+								<AppText color="muted">
+									Log a value before setting a goal.
+								</AppText>
 							)}
 						</Card>
 					);

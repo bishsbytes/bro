@@ -42,18 +42,14 @@ describe("drinks store", () => {
 			() => now,
 			() => "en-GB",
 		);
-		const lager = await store.logCatalogue(
-			"drink:lager-4_5",
-			"pint-uk",
-			1,
-			{ localDay: "2026-08-18", time: "20:30" },
-		);
-		await store.logCatalogue(
-			"drink:filter-coffee",
-			"mug-250ml",
-			1,
-			{ localDay: "2026-08-19", time: "08:00" },
-		);
+		const lager = await store.logCatalogue("drink:lager-4_5", "pint-uk", 1, {
+			localDay: "2026-08-18",
+			time: "20:30",
+		});
+		await store.logCatalogue("drink:filter-coffee", "mug-250ml", 1, {
+			localDay: "2026-08-19",
+			time: "08:00",
+		});
 
 		expect(lager).toMatchObject({
 			catalogueRef: "drink:lager-4_5",
@@ -88,12 +84,16 @@ describe("drinks store", () => {
 			localDay: "2026-08-19",
 		});
 		let today = await store.loadToday();
-		expect(today.recents.filter(({ entry }) => entry.label === lager.label)).toHaveLength(1);
+		expect(
+			today.recents.filter(({ entry }) => entry.label === lager.label),
+		).toHaveLength(1);
 		expect(
 			today.metrics.find(({ metric }) => metric.slug === "alcohol_intake")
 				?.dayFormatted,
 		).toBe("2.6 units");
-		expect(await new databaseApp.ObservationRepository(db).listAll()).toEqual([]);
+		expect(await new databaseApp.ObservationRepository(db).listAll()).toEqual(
+			[],
+		);
 
 		await store.updateEntry(repeated.id, {
 			label: "Friday lager",
@@ -103,7 +103,9 @@ describe("drinks store", () => {
 			time: "21:15",
 		});
 		today = await store.loadToday();
-		expect(today.entries.find(({ entry }) => entry.id === repeated.id)?.entry).toMatchObject({
+		expect(
+			today.entries.find(({ entry }) => entry.id === repeated.id)?.entry,
+		).toMatchObject({
 			label: "Friday lager",
 			quantity: 2,
 			volumeL: UK_PINT_L * 2,
@@ -122,7 +124,11 @@ describe("drinks store", () => {
 	});
 
 	it("logs a complete free entry and rejects ambiguous date or ABV input", async () => {
-		const store = new DrinksStore(db, () => now, () => "en-GB");
+		const store = new DrinksStore(
+			db,
+			() => now,
+			() => "en-GB",
+		);
 		const free = await store.logFree({
 			label: "House lager",
 			servingLabel: "glass",
@@ -164,13 +170,22 @@ describe("drinks store", () => {
 	});
 
 	it("keeps tracking default-off and stores goals canonically across unit changes", async () => {
-		const store = new DrinksStore(db, () => now, () => "en-GB");
-		expect((await store.loadSettings()).metrics.every((metric) => !metric.tracked)).toBe(true);
+		const store = new DrinksStore(
+			db,
+			() => now,
+			() => "en-GB",
+		);
+		expect(
+			(await store.loadSettings()).metrics.every((metric) => !metric.tracked),
+		).toBe(true);
 		await store.setTracked("alcohol_intake", true);
 		await store.setUnit("alcohol", "uk_unit");
 		await store.setUnit("volume", "fl_oz_uk");
 		const settings = await store.loadSettings();
-		expect(settings.metrics.find(({ metricSlug }) => metricSlug === "alcohol_intake")?.tracked).toBe(true);
+		expect(
+			settings.metrics.find(({ metricSlug }) => metricSlug === "alcohol_intake")
+				?.tracked,
+		).toBe(true);
 		expect(settings.units).toEqual(
 			expect.arrayContaining([
 				expect.objectContaining({
@@ -212,8 +227,52 @@ describe("drinks store", () => {
 			targetFormatted: "1.1 standard drinks",
 			currentFormatted: "1.4 standard drinks",
 		});
-		expect((await new databaseApp.GoalRepository(db).findById(goal.id))?.targetValue).toBe(
-			2 * KILOGRAMS_ETHANOL_PER_UK_UNIT,
+		expect(
+			(await new databaseApp.GoalRepository(db).findById(goal.id))?.targetValue,
+		).toBe(2 * KILOGRAMS_ETHANOL_PER_UK_UNIT);
+	});
+
+	it("creates, edits, logs, and deletes a custom drink without changing its snapshot", async () => {
+		const store = new DrinksStore(
+			db,
+			() => now,
+			() => "en-GB",
 		);
+		const custom = await store.saveCustom({
+			label: "Recovery shake",
+			brand: null,
+			servings: [
+				{
+					id: "bottle",
+					label: "bottle",
+					volumeL: 0.5,
+					ethanolKg: 0,
+					caffeineKg: 0,
+					energyKcal: 240,
+					proteinG: 30,
+					carbsG: 20,
+					fatG: 4,
+				},
+			],
+		});
+		const logged = await store.logCustom(custom.id, "bottle", 1, {
+			localDay: "2026-08-19",
+			time: "12:00",
+		});
+		const originalServing = custom.servings[0];
+		if (!originalServing) throw new Error("Expected a custom drink serving.");
+		await store.saveCustom({
+			id: custom.id,
+			label: "New recovery shake",
+			brand: null,
+			servings: [{ ...originalServing, energyKcal: 300 }],
+		});
+		expect(
+			await new databaseApp.ConsumptionEntryRepository(db).findById(logged.id),
+		).toMatchObject({ label: "Recovery shake", energyKcal: 240 });
+		await store.deleteCustom(custom.id);
+		expect(
+			await new databaseApp.ConsumptionEntryRepository(db).findById(logged.id),
+		).toMatchObject({ label: "Recovery shake", energyKcal: 240 });
 	});
 });

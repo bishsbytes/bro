@@ -99,6 +99,12 @@ export function SettingsScreen({
 				onPress={() => router.push("/settings/drinks" as Href)}
 			/>
 			<ListRow
+				title="Food"
+				detail="Choose nutrition totals for Trends and goals."
+				accessibilityLabel="Manage food logging"
+				onPress={() => router.push("/settings/food" as Href)}
+			/>
+			<ListRow
 				title="Habits"
 				detail="Choose routines, days, and your own habits."
 				accessibilityLabel="Manage habits"

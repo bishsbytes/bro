@@ -105,6 +105,21 @@ describe("metric registry", () => {
 				dimension: "energy",
 				fixedDisplayUnit: "kcal",
 			}),
+			expect.objectContaining({
+				slug: "protein_intake",
+				dimension: "mass",
+				fixedDisplayUnit: "g",
+			}),
+			expect.objectContaining({
+				slug: "carbs_intake",
+				dimension: "mass",
+				fixedDisplayUnit: "g",
+			}),
+			expect.objectContaining({
+				slug: "fat_intake",
+				dimension: "mass",
+				fixedDisplayUnit: "g",
+			}),
 		]);
 		for (const metric of listUserEnterableMeasurements()) {
 			expect(metric).toMatchObject({
@@ -153,6 +168,21 @@ describe("metric registry", () => {
 			expect.objectContaining({
 				slug: "energy_intake",
 				sensitive: false,
+			}),
+			expect.objectContaining({
+				slug: "protein_intake",
+				sensitive: false,
+				fixedDisplayUnit: "g",
+			}),
+			expect.objectContaining({
+				slug: "carbs_intake",
+				sensitive: false,
+				fixedDisplayUnit: "g",
+			}),
+			expect.objectContaining({
+				slug: "fat_intake",
+				sensitive: false,
+				fixedDisplayUnit: "g",
 			}),
 		]);
 		expect(listAssessmentMetrics().map((metric) => metric.slug)).toEqual([
@@ -205,13 +235,11 @@ describe("metric registry", () => {
 					(metric.kind === "measurement" &&
 						"measurementSource" in metric &&
 						metric.measurementSource === "consumption"),
-			).map(
-				(metric) => ({
-					metricSlug: metric.slug,
-					position: metric.defaultPosition,
-					...(metric.kind === "measurement" ? { enabled: false } : {}),
-				}),
-			),
+			).map((metric) => ({
+				metricSlug: metric.slug,
+				position: metric.defaultPosition,
+				...(metric.kind === "measurement" ? { enabled: false } : {}),
+			})),
 		);
 		expect(
 			DEFAULT_TRACKED_METRICS.some(({ metricSlug }) =>
