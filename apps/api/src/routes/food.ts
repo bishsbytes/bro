@@ -1,5 +1,5 @@
 import type { FoodSearchResponse } from "@bro/domain/food-search";
-import { Hono } from "hono";
+import { type Context, Hono } from "hono";
 import {
 	type FoodProvider,
 	FoodProviderUnavailableError,
@@ -25,22 +25,16 @@ export class InMemoryFoodRateLimiter {
 		private readonly limit = 30,
 		private readonly windowMs = 60_000,
 		private readonly now: () => number = Date.now,
+		private readonly maxBuckets = 10_000,
 	) {}
 
 	consume(bucket: string): { allowed: boolean; retryAfterSeconds: number } {
 		const now = this.now();
-		let bucketKey = bucket;
-		let current = this.buckets.get(bucketKey);
-		if (!current && this.buckets.size >= 999) {
-			for (const [key, value] of this.buckets) {
-				if (value.resetsAt <= now) this.buckets.delete(key);
-			}
-			if (this.buckets.size >= 999) bucketKey = "overflow";
-			current = this.buckets.get(bucketKey);
-		}
+		let current = this.buckets.get(bucket);
+		if (!current) this.evictFor(now);
 		if (!current || current.resetsAt <= now) {
 			current = { count: 0, resetsAt: now + this.windowMs };
-			this.buckets.set(bucketKey, current);
+			this.buckets.set(bucket, current);
 		}
 		current.count += 1;
 		return {
@@ -51,10 +45,40 @@ export class InMemoryFoodRateLimiter {
 			),
 		};
 	}
+
+	/**
+	 * Keeps the map bounded before admitting a new bucket. Expired windows go
+	 * first; if the map is still full, the window closest to expiring is dropped.
+	 * Never collapses callers into a shared bucket — one caller's traffic must
+	 * not be able to rate limit anybody else.
+	 */
+	private evictFor(now: number): void {
+		if (this.buckets.size < this.maxBuckets) return;
+		for (const [key, value] of this.buckets) {
+			if (value.resetsAt <= now) this.buckets.delete(key);
+		}
+		while (this.buckets.size >= this.maxBuckets) {
+			let oldestKey: string | undefined;
+			let oldestResetsAt = Number.POSITIVE_INFINITY;
+			for (const [key, value] of this.buckets) {
+				if (value.resetsAt < oldestResetsAt) {
+					oldestResetsAt = value.resetsAt;
+					oldestKey = key;
+				}
+			}
+			if (oldestKey === undefined) return;
+			this.buckets.delete(oldestKey);
+		}
+	}
 }
 
-function coarseIpBucket(value: string | undefined): string {
-	const address = value?.split(",", 1)[0]?.trim();
+/** Exported for tests: the only thing ever derived from a caller's address. */
+export function coarseBucketOf(value: string | undefined): string {
+	const forwarded = value?.split(",", 1)[0]?.trim();
+	// Node reports an IPv4 peer on a dual-stack socket as ::ffff:a.b.c.d, which
+	// is an IPv4 address wearing an IPv6 costume — unwrap it, or every IPv4
+	// caller lands in one bucket and rate limits every other IPv4 caller.
+	const address = forwarded?.replace(/^::ffff:(?=\d{1,3}(\.\d{1,3}){3}$)/i, "");
 	if (!address) return "unknown";
 	const ipv4 = /^(\d{1,3})\.(\d{1,3})\.(\d{1,3})\.(\d{1,3})$/.exec(address);
 	if (
@@ -82,11 +106,47 @@ function coarseIpBucket(value: string | undefined): string {
 		.join(":")}`;
 }
 
+/**
+ * The peer address of the TCP connection, mirroring @hono/node-server's
+ * getConnInfo without importing it — that helper throws when a test drives the
+ * app through `app.request()`, where there is no incoming socket at all.
+ */
+function socketAddress(c: Context): string | undefined {
+	const env = c.env as
+		| { server?: unknown; incoming?: { socket?: { remoteAddress?: unknown } } }
+		| undefined;
+	if (!env) return undefined;
+	const bindings = (env.server ?? env) as {
+		incoming?: { socket?: { remoteAddress?: unknown } };
+	};
+	const address = bindings.incoming?.socket?.remoteAddress;
+	return typeof address === "string" ? address : undefined;
+}
+
+/**
+ * Forwarded-for headers are client-supplied and trivially spoofed, so they are
+ * only consulted when the deployment guarantees a proxy overwrites them.
+ * Untrusted, the connection's own peer address is the only honest identifier —
+ * and it is still coarsened to a /24 or /64 before anything is counted.
+ */
+function clientAddress(
+	c: Context,
+	trustProxyHeaders: boolean,
+): string | undefined {
+	if (!trustProxyHeaders) return socketAddress(c);
+	return (
+		c.req.header("cf-connecting-ip") ??
+		c.req.header("x-forwarded-for") ??
+		socketAddress(c)
+	);
+}
+
 type FoodRoutesOptions = {
 	provider: FoodProvider;
 	rateLimiter?: InMemoryFoodRateLimiter;
 	observe?: FoodRouteObserver;
 	now?: () => number;
+	trustProxyHeaders?: boolean;
 };
 
 export function createFoodRoutes({
@@ -94,15 +154,14 @@ export function createFoodRoutes({
 	rateLimiter = new InMemoryFoodRateLimiter(),
 	observe = () => undefined,
 	now = Date.now,
+	trustProxyHeaders = false,
 }: FoodRoutesOptions) {
 	const app = new Hono();
 
 	app.use("/api/food/*", async (c, next) => {
 		c.header("Cache-Control", "no-store");
 		const rate = rateLimiter.consume(
-			coarseIpBucket(
-				c.req.header("cf-connecting-ip") ?? c.req.header("x-forwarded-for"),
-			),
+			coarseBucketOf(clientAddress(c, trustProxyHeaders)),
 		);
 		if (!rate.allowed) {
 			observe("food_lookup_rate_limited", {});

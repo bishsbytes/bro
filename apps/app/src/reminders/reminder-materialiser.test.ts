@@ -5,6 +5,7 @@ import type {
 	NotificationPermissionStatus,
 	ReminderNotificationGateway,
 } from "./notification-gateway";
+
 const mockSqlite = createNodeSqliteMock();
 let databaseApp: typeof DatabaseApp;
 let db: SQLiteDatabase;

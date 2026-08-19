@@ -71,12 +71,14 @@ function consumptionObservation(
 	if (selected?.kind !== "consumption") {
 		throw new TypeError("A resolved consumption day must contain entries.");
 	}
-	const latest = [...selected.entries].sort(
-		(left, right) =>
-			left.occurredAt - right.occurredAt ||
-			left.createdAt - right.createdAt ||
-			left.id.localeCompare(right.id),
-	).at(-1);
+	const latest = [...selected.entries]
+		.sort(
+			(left, right) =>
+				left.occurredAt - right.occurredAt ||
+				left.createdAt - right.createdAt ||
+				left.id.localeCompare(right.id),
+		)
+		.at(-1);
 	if (!latest || day.value === null) {
 		throw new TypeError("A resolved consumption day is missing its total.");
 	}
@@ -93,9 +95,7 @@ function consumptionObservation(
 		sourceRecordId: null,
 		assessmentId: null,
 		createdAt: latest.createdAt,
-		updatedAt: Math.max(
-			...selected.entries.map((entry) => entry.updatedAt),
-		),
+		updatedAt: Math.max(...selected.entries.map((entry) => entry.updatedAt)),
 		resolvedDay: day,
 	};
 }

@@ -47,15 +47,7 @@ describe("measurement units", () => {
 			rate_bpm: "bpm",
 		});
 		expect(DISPLAY_UNITS_BY_DIMENSION).toEqual({
-			mass: [
-				"kg",
-				"lb",
-				"st",
-				"g",
-				"mg",
-				"uk_unit",
-				"us_standard_drink",
-			],
+			mass: ["kg", "lb", "st", "g", "mg", "uk_unit", "us_standard_drink"],
 			length: ["cm", "in", "ft"],
 			fraction: ["%"],
 			volume: ["ml", "l", "fl_oz_uk", "fl_oz_us"],
@@ -122,9 +114,7 @@ describe("measurement units", () => {
 		expect(toCanonical(1, "volume", "fl_oz_us")).toBe(
 			LITRES_PER_US_FLUID_OUNCE,
 		);
-		expect(toCanonical(KILOJOULES_PER_KILOCALORIE, "energy", "kJ")).toBe(
-			1,
-		);
+		expect(toCanonical(KILOJOULES_PER_KILOCALORIE, "energy", "kJ")).toBe(1);
 		expect(toCanonical(1, "mass", "uk_unit")).toBe(
 			KILOGRAMS_ETHANOL_PER_UK_UNIT,
 		);
@@ -275,9 +265,7 @@ describe("measurement units", () => {
 		expect(defaultUnitPreference("height", "en-GB")).toBe("ft");
 		expect(defaultUnitPreference("height", "fr-FR")).toBe("cm");
 		expect(defaultUnitPreference("alcohol", "en-GB")).toBe("uk_unit");
-		expect(defaultUnitPreference("alcohol", "en-US")).toBe(
-			"us_standard_drink",
-		);
+		expect(defaultUnitPreference("alcohol", "en-US")).toBe("us_standard_drink");
 		expect(defaultUnitPreference("alcohol", "fr-FR")).toBe("uk_unit");
 		expect(defaultUnitPreference("volume", "en-US")).toBe("fl_oz_us");
 		expect(defaultUnitPreference("volume", "en-GB")).toBe("ml");

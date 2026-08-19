@@ -19,6 +19,11 @@ export type CreateAppOptions = {
 	foodProvider?: FoodProvider;
 	foodRateLimiter?: InMemoryFoodRateLimiter;
 	observeFoodRoute?: FoodRouteObserver;
+	/**
+	 * Only enable behind a proxy that overwrites the forwarded-for headers.
+	 * Left off, food rate limiting counts the connection's own peer address.
+	 */
+	trustProxyHeaders?: boolean;
 };
 
 /**
@@ -35,6 +40,7 @@ export function createApp({
 	}),
 	foodRateLimiter,
 	observeFoodRoute,
+	trustProxyHeaders = false,
 }: CreateAppOptions) {
 	const app = new Hono();
 
@@ -64,6 +70,7 @@ export function createApp({
 			provider: foodProvider,
 			rateLimiter: foodRateLimiter,
 			observe: observeFoodRoute,
+			trustProxyHeaders,
 		}),
 	);
 	app.route("/", createAuthRoutes(auth));

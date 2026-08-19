@@ -7,8 +7,8 @@ import {
 import type { SQLiteDatabase } from "expo-sqlite";
 import {
 	ensureReminderPermission,
-	notificationGateway,
 	type NotificationPermissionStatus,
+	notificationGateway,
 	type ReminderNotificationGateway,
 } from "./notification-gateway";
 import { materialiseReminderNotifications } from "./reminder-materialiser";

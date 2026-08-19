@@ -35,3 +35,8 @@ This repository has a generated `openwiki/` evidence index. It is optional just-
 The scheduled OpenWiki GitHub Actions workflow refreshes the repository wiki. Do not hand-edit generated OpenWiki pages unless explicitly asked; prefer updating source code/docs and letting OpenWiki regenerate.
 
 <!-- OPENWIKI:END -->
+
+## Verifying a change
+
+- `pnpm biome check .` is part of verification, alongside the relevant `nx` test/typecheck/lint targets. It is repo-wide, not project-scoped, and covers what `lint` does not: formatting and import ordering.
+- There is no CI workflow for tests, lint, or format — the OpenWiki refresh is the only one. Nothing runs these but you, so run them before reporting work complete.

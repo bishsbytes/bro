@@ -15,9 +15,9 @@ export function PrivacyContent() {
 					optional sync, those records are never sent to bro's servers.
 				</AppText>
 				<AppText color="muted">
-					Your phone's platform backup may include bro's local records, depending
-					on your Apple or Google backup settings. That backup is managed by your
-					platform provider, not by bro.
+					Your phone's platform backup may include bro's local records,
+					depending on your Apple or Google backup settings. That backup is
+					managed by your platform provider, not by bro.
 				</AppText>
 			</View>
 
@@ -26,8 +26,8 @@ export function PrivacyContent() {
 				<AppText color="muted">
 					When you search for food, the text you type is sent to bro's server,
 					which asks the food database provider for results. The query is not
-					stored or tied to an account, device, or food log. Logging and everything
-					else continue to work offline.
+					stored or tied to an account, device, or food log. Logging and
+					everything else continue to work offline.
 				</AppText>
 			</View>
 
@@ -35,10 +35,10 @@ export function PrivacyContent() {
 				<AppText variant="label">Optional sync</AppText>
 				<AppText color="muted">
 					Sync is off unless you explicitly turn it on. If you choose it when it
-					becomes available, your user-authored records and daily health summaries
-					will be copied to your account so they can appear on your other devices.
-					Detailed imported health samples and the food-search cache will remain
-					device-local.
+					becomes available, your user-authored records and daily health
+					summaries will be copied to your account so they can appear on your
+					other devices. Detailed imported health samples and the food-search
+					cache will remain device-local.
 				</AppText>
 			</View>
 		</View>

@@ -200,10 +200,10 @@ Unchanged copy; now also clears `custom_consumables`, `custom_consumable_compone
 ### Slice 4 implementation sign-off — 19 August 2026
 
 - **Retention:** approved as no query retention. The Hono food subtree has no request-logging middleware, never passes a query or caught upstream error to its aggregate observer, returns `Cache-Control: no-store`, and tests assert that the query is absent from success and error observations. The Node entry point logs only its startup address. Any future ingress or request logger must preserve this route-specific no-query rule.
-- **Identity:** approved as anonymous. Food routes are mounted outside session middleware, the client uses `credentials: "omit"` with only an `Accept` header, and tests prove supplied account/session/device headers are neither resolved nor forwarded. Rate limiting retains only a coarse `/24` IPv4 or `/64`-style IPv6 bucket in process memory for one short window.
+- **Identity:** approved as anonymous. Food routes are mounted outside session middleware, the client uses `credentials: "omit"` with only an `Accept` header, and tests prove supplied account/session/device headers are neither resolved nor forwarded. Rate limiting retains only a coarse `/24` IPv4 or `/64`-style IPv6 bucket in process memory for one short window. The address it coarsens is the connection's own peer address; `X-Forwarded-For` and `CF-Connecting-IP` are read only when `TRUST_PROXY_HEADERS=true` declares a proxy that overwrites them, because a client-supplied header would let any caller mint unlimited buckets. Buckets are per-caller and bounded by eviction — callers are never collapsed into a shared counter, so no one caller's traffic can rate limit anybody else.
 - **Response:** approved as provider-neutral. `FoodSearchResult` is shared by API and client through `@bro/domain/food-search`; Open Food Facts is normalised server-side into namespaced refs, nullable nutrition, and serving choices. Logged entries copy the selected label, serving, quantity, and nutrition values and never read their display from the cache.
 - **Licence:** approved for the initial Open Food Facts source. Every result carries `source: "Open Food Facts"` and `licence: "ODbL-1.0"`; the search card displays both and links to a permanent Data licences settings screen. Provider requests use an identified `User-Agent`, as required by [Open Food Facts' API conditions](https://support.openfoodfacts.org/help/en-gb/12-api-data-reuse/94-are-there-conditions-to-use-the-api).
-- **Offline behavior:** approved. An explicit search is the only client path that makes a request. Successful results cache in `bro-local.db`; failure returns the exact-query cache, keeps the input intact, stops the spinner, and leaves recents, custom foods, recipes, free entry, correction, totals, Trends, goals, insight, and export untouched.
+- **Offline behavior:** approved. An explicit search is the only client path that makes a request. Successful results cache in `bro-local.db`; failure returns the exact-query cache, keeps the input intact, stops the spinner, and leaves recents, custom foods, recipes, free entry, correction, totals, Trends, goals, insight, and export untouched. The degradation line distinguishes a request that never reached the server from one the server answered with a 429 or a 5xx, so the copy never tells a connected user they are offline.
 
 ## Expected touchpoints
 
@@ -249,7 +249,10 @@ pnpm nx run @bro/database-app:db:generate
 pnpm nx run @bro/app:test --skipNxCache
 pnpm nx run @bro/api:test --skipNxCache
 pnpm nx run-many -t typecheck lint -p @bro/app @bro/api @bro/database-app @bro/domain --skipNxCache
+pnpm biome check .
 ```
+
+`biome check` is repo-wide rather than project-scoped, and it catches what `lint` does not: formatting and import ordering. It is listed because nothing else runs it — there is no CI workflow for tests, lint, or format, so a command absent from a plan's verification block is a command nobody runs. It found fifteen formatted files and fifteen import orderings that had drifted across steps 1–9; all were mechanical safe fixes.
 
 Preserve the complete output of a failing command. No device work is required by this step — barcode, which would have required it, is deliberately batched elsewhere.
 

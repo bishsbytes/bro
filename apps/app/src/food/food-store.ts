@@ -570,11 +570,6 @@ export class FoodStore {
 		const currentComponents = await this.customConsumables.listComponents(
 			draft.id,
 		);
-		if (!draft.isRecipe) {
-			for (const component of currentComponents) {
-				await this.customConsumables.deleteComponent(component.id);
-			}
-		}
 		const updated = await this.customConsumables.update(draft.id, {
 			label: draft.label,
 			brand: draft.brand,

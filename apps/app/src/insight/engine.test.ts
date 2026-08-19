@@ -233,22 +233,26 @@ describe("insight engine", () => {
 				return value === undefined ? null : { value };
 			};
 
-			expect(evaluateInsight(alcoholPair, throughLocalDay, read)).toMatchObject({
-				kind: "shown",
-				trueArm: { count: 30 },
-				falseArm: { count: 60 },
-			});
+			expect(evaluateInsight(alcoholPair, throughLocalDay, read)).toMatchObject(
+				{
+					kind: "shown",
+					trueArm: { count: 30 },
+					falseArm: { count: 60 },
+				},
+			);
 
 			for (const key of values.keys()) {
 				if (key.startsWith("alcohol_intake:")) {
 					values.set(key, alcoholPair.input.value / 2);
 				}
 			}
-			expect(evaluateInsight(alcoholPair, throughLocalDay, read)).toMatchObject({
-				kind: "not-yet",
-				gate: "true-arm-days",
-				remaining: 7,
-			});
+			expect(evaluateInsight(alcoholPair, throughLocalDay, read)).toMatchObject(
+				{
+					kind: "not-yet",
+					gate: "true-arm-days",
+					remaining: 7,
+				},
+			);
 		}
 	});
 });

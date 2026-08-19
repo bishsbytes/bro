@@ -1,4 +1,4 @@
 export {
-	consumptionMetricDayTotal,
 	type ConsumptionMetricDayTotal,
+	consumptionMetricDayTotal,
 } from "./daily-totals";

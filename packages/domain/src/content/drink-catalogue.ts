@@ -1,10 +1,8 @@
 import { ETHANOL_DENSITY_G_PER_ML } from "../units/conversion";
+
 export { ETHANOL_DENSITY_G_PER_ML } from "../units/conversion";
 
-export type DrinkCatalogueKind =
-	| "alcoholic"
-	| "caffeinated"
-	| "other";
+export type DrinkCatalogueKind = "alcoholic" | "caffeinated" | "other";
 
 export type DrinkCatalogueServing = {
 	id: string;
@@ -405,8 +403,7 @@ export function ethanolKgFromVolumeAndAbv(
 		throw new RangeError("Drink ABV must not exceed 100%.");
 	}
 	return (
-		(volumeL * 1_000 * (abvPercent / 100) * ETHANOL_DENSITY_G_PER_ML) /
-		1_000
+		(volumeL * 1_000 * (abvPercent / 100) * ETHANOL_DENSITY_G_PER_ML) / 1_000
 	);
 }
 
@@ -425,8 +422,7 @@ export function snapshotDrinkServing(
 		quantity,
 		volumeL: serving.volumeL * quantity,
 		ethanolKg:
-			ethanolKgFromVolumeAndAbv(serving.volumeL, serving.abvPercent) *
-			quantity,
+			ethanolKgFromVolumeAndAbv(serving.volumeL, serving.abvPercent) * quantity,
 		caffeineKg: (serving.caffeineMg / 1_000_000) * quantity,
 		energyKcal: serving.energyKcal * quantity,
 	};

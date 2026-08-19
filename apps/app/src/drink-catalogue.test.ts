@@ -103,9 +103,7 @@ describe("drink catalogue", () => {
 		expect(
 			formatMeasurement(snapshot.ethanolKg, "mass", "us_standard_drink"),
 		).toBe("1.4 standard drinks");
-		expect(formatMeasurement(snapshot.ethanolKg, "mass", "g")).toBe(
-			"20.2 g",
-		);
+		expect(formatMeasurement(snapshot.ethanolKg, "mass", "g")).toBe("20.2 g");
 		expect(snapshot.ethanolKg).toBe(expectedEthanolKg);
 	});
 

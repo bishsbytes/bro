@@ -14,15 +14,15 @@ import {
 	type HealthGatewayBatch,
 } from "./gateway";
 import {
+	type CanonicalHealthSample,
 	localDayAt,
 	mapPlatformSample,
-	type CanonicalHealthSample,
 } from "./mapping";
 import {
 	HEALTH_BACKFILL_DAYS,
-	RAW_SAMPLE_RETENTION_DAYS,
 	type HealthMetricSlug,
 	isHealthMetricSlug,
+	RAW_SAMPLE_RETENTION_DAYS,
 	V1_HEALTH_METRIC_SLUGS,
 } from "./policy";
 import { applyHealthSampleChanges } from "./rollup";

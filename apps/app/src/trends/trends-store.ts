@@ -8,9 +8,9 @@ import {
 } from "@bro/database-app";
 import type { DisplayUnit } from "@bro/domain";
 import {
+	DEFAULT_TRACKED_METRICS,
 	listMeasurements,
 	listScoredMetrics,
-	DEFAULT_TRACKED_METRICS,
 	type MeasurementMetricDefinition,
 	type ScoredMetricDefinition,
 } from "@bro/domain/metric-registry";
@@ -79,11 +79,11 @@ export class TrendsStore {
 		);
 		const [overlays, preferences, dailyMetrics, consumptionEntries] =
 			await Promise.all([
-			this.trackedMetrics.listResolved(measurementDefaults),
-			this.unitPreferences.resolveLatestPerDimension(),
-			this.dailyMetrics.listAll(),
-			this.consumptionEntries.listAll(),
-		]);
+				this.trackedMetrics.listResolved(measurementDefaults),
+				this.unitPreferences.resolveLatestPerDimension(),
+				this.dailyMetrics.listAll(),
+				this.consumptionEntries.listAll(),
+			]);
 		const overlayBySlug = new Map(
 			overlays.map((overlay) => [overlay.metricSlug, overlay]),
 		);

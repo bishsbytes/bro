@@ -1,5 +1,5 @@
-import { HealthImportEngine } from "./import-engine";
 import { UnsupportedHealthGateway } from "./gateway";
+import { HealthImportEngine } from "./import-engine";
 import { createPlatformHealthGateway } from "./platform-gateway";
 
 export const healthImportEngine = new HealthImportEngine({

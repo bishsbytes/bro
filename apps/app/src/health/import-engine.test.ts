@@ -1,5 +1,6 @@
 import type * as DatabaseApp from "@bro/database-app";
 import type { SQLiteDatabase } from "expo-sqlite";
+import { createNodeSqliteMock } from "../test-support/node-sqlite";
 import {
 	HealthChangeTokenExpiredError,
 	type HealthGateway,
@@ -7,7 +8,6 @@ import {
 } from "./gateway";
 import type { PlatformHealthSample } from "./mapping";
 import type { HealthMetricSlug } from "./policy";
-import { createNodeSqliteMock } from "../test-support/node-sqlite";
 
 const mockSqlite = createNodeSqliteMock();
 let mockRandomByte = 0;

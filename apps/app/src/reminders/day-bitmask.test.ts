@@ -1,8 +1,8 @@
 import {
 	EVERY_DAY_MASK,
+	ISO_WEEKDAYS,
 	includesWeekday,
 	isoWeekdayIndex,
-	ISO_WEEKDAYS,
 	weekdaysFromMask,
 	weekdaysToMask,
 } from "./day-bitmask";

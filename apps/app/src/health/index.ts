@@ -1,6 +1,6 @@
 export {
-	HealthChangeTokenExpiredError,
 	type HealthBackfillRange,
+	HealthChangeTokenExpiredError,
 	type HealthGateway,
 	type HealthGatewayAvailability,
 	type HealthGatewayBatch,
@@ -27,8 +27,8 @@ export {
 export { type ResolvedMetricDay, resolveMetricDay } from "./resolved-day";
 export {
 	importedDailyMetricAsObservation,
-	resolveMetricObservations,
 	type ResolvedMetricObservation,
+	resolveMetricObservations,
 } from "./resolved-series";
 export {
 	type AppliedHealthSampleChanges,

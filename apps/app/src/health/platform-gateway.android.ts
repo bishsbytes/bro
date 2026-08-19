@@ -3,19 +3,19 @@ import {
 	getChanges,
 	getGrantedPermissions,
 	getSdkStatus,
+	type HealthConnectRecordResult,
 	initialize,
 	openHealthConnectSettings,
+	type Permission,
+	type RecordType,
 	readRecords,
 	requestPermission,
 	SdkAvailabilityStatus,
 	SleepStageType,
-	type HealthConnectRecordResult,
-	type Permission,
-	type RecordType,
 } from "react-native-health-connect";
 import {
-	HealthChangeTokenExpiredError,
 	type HealthBackfillRange,
+	HealthChangeTokenExpiredError,
 	type HealthGateway,
 	type HealthGatewayBatch,
 } from "./gateway";

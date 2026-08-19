@@ -122,6 +122,44 @@ describe("food search store", () => {
 		expect(unavailableFetch).toHaveBeenCalledTimes(1);
 	});
 
+	it("does not claim to be offline when the server answered", async () => {
+		await new databaseApp.FoodCacheRepository(localDb).upsert({
+			ref: "off:12345678",
+			payload: responsePayload.results[0],
+			query: "chicken thighs",
+		});
+		const status = { code: 429 };
+		const answeringFetch = jest.fn(
+			async (_input: string | URL | Request, _init?: RequestInit) =>
+				new Response(JSON.stringify({ error: "nope" }), {
+					status: status.code,
+					headers: { "content-type": "application/json" },
+				}),
+		) as unknown as jest.MockedFunction<typeof fetch>;
+		const store = new FoodSearchStore(localDb, {
+			baseUrl: "https://api.example.test",
+			fetch: answeringFetch,
+			timeoutMs: 50,
+		});
+
+		await expect(store.search("chicken thighs")).resolves.toMatchObject({
+			query: "chicken thighs",
+			results: responsePayload.results,
+			fromCache: true,
+			offline: false,
+			message:
+				"Search is busy right now. Try again in a moment. Your recents, custom foods, and saved results are still available.",
+		});
+
+		status.code = 502;
+		await expect(store.search("chicken thighs")).resolves.toMatchObject({
+			results: responsePayload.results,
+			offline: false,
+			message:
+				"Search is temporarily unavailable. Your recents, custom foods, and saved results are still available.",
+		});
+	});
+
 	it("reads a cached ref without issuing a request", async () => {
 		await new databaseApp.FoodCacheRepository(localDb).upsert({
 			ref: "off:12345678",

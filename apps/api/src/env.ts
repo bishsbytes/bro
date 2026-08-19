@@ -19,6 +19,7 @@ export const env = {
 	betterAuthUrl: required("BETTER_AUTH_URL"),
 	corsOrigin: process.env.CORS_ORIGIN ?? "http://localhost:8081",
 	port: Number(process.env.PORT ?? 3000),
+	trustProxyHeaders: process.env.TRUST_PROXY_HEADERS === "true",
 } as const;
 
 // Annotated rather than inferred: declaration emit can't name the deep

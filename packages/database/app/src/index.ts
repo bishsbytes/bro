@@ -59,8 +59,8 @@ export {
 } from "./repositories/challenge-progress-repository";
 export {
 	type ConsumptionEntry,
-	ConsumptionEntryRepository,
 	type ConsumptionEntryKind,
+	ConsumptionEntryRepository,
 	type CreateConsumptionEntry,
 	type UpdateConsumptionEntry,
 } from "./repositories/consumption-entry-repository";
@@ -85,16 +85,16 @@ export {
 	DayNoteRepository,
 } from "./repositories/day-note-repository";
 export {
+	type FoodCacheEntry,
+	FoodCacheRepository,
+	type UpsertFoodCacheEntry,
+} from "./repositories/food-cache-repository";
+export {
 	type CreateGoal,
 	type Goal,
 	type GoalDirection,
 	GoalRepository,
 } from "./repositories/goal-repository";
-export {
-	type FoodCacheEntry,
-	FoodCacheRepository,
-	type UpsertFoodCacheEntry,
-} from "./repositories/food-cache-repository";
 export {
 	type HabitCompletion,
 	HabitCompletionRepository,

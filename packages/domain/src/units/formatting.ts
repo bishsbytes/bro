@@ -38,8 +38,7 @@ function formatRounded(value: number, unit: SimpleDisplayUnit): string {
 	const suffix = {
 		"%": "%",
 		uk_unit: rounded === 1 ? " unit" : " units",
-		us_standard_drink:
-			rounded === 1 ? " standard drink" : " standard drinks",
+		us_standard_drink: rounded === 1 ? " standard drink" : " standard drinks",
 		fl_oz_uk: " fl oz",
 		fl_oz_us: " fl oz",
 	} as const;

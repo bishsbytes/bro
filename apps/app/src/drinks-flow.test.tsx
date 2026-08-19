@@ -103,20 +103,26 @@ describe("drink logging flow", () => {
 		await fireEvent.press(view.getByText("Save drink"));
 		expect(await view.findByText(/^1 × pint ·/)).toBeTruthy();
 		expect(view.getAllByText("2.6 units").length).toBeGreaterThan(0);
-		const [entry] = await new databaseApp.ConsumptionEntryRepository(db).listAll();
+		const [entry] = await new databaseApp.ConsumptionEntryRepository(
+			db,
+		).listAll();
 		if (!entry) throw new Error("Expected a stored drink entry.");
 		expect(entry).toMatchObject({
 			label: "Lager, 4.5%",
 			servingLabel: "pint",
 			quantity: 1,
 		});
-		expect(await new databaseApp.ObservationRepository(db).listAll()).toEqual([]);
+		expect(await new databaseApp.ObservationRepository(db).listAll()).toEqual(
+			[],
+		);
 
 		await fireEvent.press(view.getByText("Set goal for Alcohol"));
 		await fireEvent.changeText(view.getByLabelText("Target (uk_unit)"), "2");
 		await fireEvent.press(view.getByText("Save goal"));
 		expect(await view.findByText(/Target 2.0 units/)).toBeTruthy();
-		expect((await new databaseApp.GoalRepository(db).listAll())[0]).toMatchObject({
+		expect(
+			(await new databaseApp.GoalRepository(db).listAll())[0],
+		).toMatchObject({
 			metricSlug: "alcohol_intake",
 			direction: "decrease",
 		});
@@ -138,8 +144,12 @@ describe("drink logging flow", () => {
 		await waitFor(() =>
 			expect(view.getByText("No drinks on this day")).toBeTruthy(),
 		);
-		expect(await new databaseApp.ConsumptionEntryRepository(db).listAll()).toEqual([]);
-		expect(await new databaseApp.ObservationRepository(db).listAll()).toEqual([]);
+		expect(
+			await new databaseApp.ConsumptionEntryRepository(db).listAll(),
+		).toEqual([]);
+		expect(await new databaseApp.ObservationRepository(db).listAll()).toEqual(
+			[],
+		);
 
 		await act(async () => expoRouter.replace("/drinks"));
 		await fireEvent.press(await view.findByText("Choose a drink"));
@@ -147,8 +157,9 @@ describe("drink logging flow", () => {
 		await fireEvent.press(view.getByText("Last night"));
 		await fireEvent.press(view.getByText("Save drink"));
 		expect(await view.findByDisplayValue("Water")).toBeTruthy();
-		const [lastNight] =
-			await new databaseApp.ConsumptionEntryRepository(db).listAll();
+		const [lastNight] = await new databaseApp.ConsumptionEntryRepository(
+			db,
+		).listAll();
 		if (!lastNight) throw new Error("Expected the last-night drink.");
 		expect(router.getPathname()).toBe(`/drinks/${lastNight.localDay}`);
 

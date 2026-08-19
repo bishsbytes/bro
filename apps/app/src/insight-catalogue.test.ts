@@ -1,6 +1,6 @@
+import { KILOGRAMS_ETHANOL_PER_UK_UNIT } from "@bro/domain";
 import { INSIGHT_CATALOGUE } from "@bro/domain/insight-catalogue";
 import { resolveMetric } from "@bro/domain/metric-registry";
-import { KILOGRAMS_ETHANOL_PER_UK_UNIT } from "@bro/domain";
 
 describe("insight catalogue", () => {
 	it("keeps the signed-off pairs stable, premium, and type-compatible", () => {
@@ -37,7 +37,8 @@ describe("insight catalogue", () => {
 		);
 		expect(alcoholThresholds).toHaveLength(2);
 		for (const pair of alcoholThresholds) {
-			if (pair.input.kind !== "threshold") throw new Error("Expected threshold");
+			if (pair.input.kind !== "threshold")
+				throw new Error("Expected threshold");
 			expect(pair.input).toMatchObject({
 				operator: "at_least",
 				value: 4 * KILOGRAMS_ETHANOL_PER_UK_UNIT,

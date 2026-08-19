@@ -26,8 +26,11 @@ type FoodSearchStoreOptions = {
 	timeoutMs?: number;
 };
 
-const OFFLINE_MESSAGE =
-	"Search needs a connection. Your recents, custom foods, and saved results are still available.";
+const STILL_AVAILABLE =
+	"Your recents, custom foods, and saved results are still available.";
+const OFFLINE_MESSAGE = `Search needs a connection. ${STILL_AVAILABLE}`;
+const BUSY_MESSAGE = `Search is busy right now. Try again in a moment. ${STILL_AVAILABLE}`;
+const UNAVAILABLE_MESSAGE = `Search is temporarily unavailable. ${STILL_AVAILABLE}`;
 
 function normalizedQuery(query: string): string {
 	const normalized = query.trim();
@@ -74,7 +77,7 @@ export class FoodSearchStore {
 
 	async search(query: string): Promise<FoodSearchSnapshot> {
 		const normalized = normalizedQuery(query);
-		if (!this.baseUrl) return await this.offlineFallback(query, normalized);
+		if (!this.baseUrl) return await this.degraded(query, normalized, true);
 		const controller = new AbortController();
 		const timeout = setTimeout(() => controller.abort(), this.timeoutMs);
 		try {
@@ -88,10 +91,24 @@ export class FoodSearchStore {
 					signal: controller.signal,
 				},
 			);
-			if (!response.ok) return await this.offlineFallback(query, normalized);
+			// A reply — of any status — proves the connection is fine, so saying
+			// "you are offline" here would be a lie the user can see through.
+			if (!response.ok) {
+				return await this.degraded(
+					query,
+					normalized,
+					false,
+					response.status === 429 ? BUSY_MESSAGE : UNAVAILABLE_MESSAGE,
+				);
+			}
 			const payload: unknown = await response.json();
 			if (!isFoodSearchResponse(payload)) {
-				return await this.offlineFallback(query, normalized);
+				return await this.degraded(
+					query,
+					normalized,
+					false,
+					UNAVAILABLE_MESSAGE,
+				);
 			}
 			await Promise.all(
 				payload.results.map((result) =>
@@ -113,7 +130,7 @@ export class FoodSearchStore {
 						: null,
 			};
 		} catch {
-			return await this.offlineFallback(query, normalized);
+			return await this.degraded(query, normalized, true);
 		} finally {
 			clearTimeout(timeout);
 		}
@@ -147,17 +164,24 @@ export class FoodSearchStore {
 		}
 	}
 
-	private async offlineFallback(
+	/**
+	 * Every failure keeps the typed query and falls back to the exact-query
+	 * cache. Only the honesty of the line differs: `offline` is reserved for a
+	 * request that never reached the server.
+	 */
+	private async degraded(
 		query: string,
 		normalized: string,
+		offline: boolean,
+		message: string = OFFLINE_MESSAGE,
 	): Promise<FoodSearchSnapshot> {
 		const cached = await this.cache.listByQuery<unknown>(normalized);
 		return {
 			query,
 			results: validCachedResults(cached),
 			fromCache: true,
-			offline: true,
-			message: OFFLINE_MESSAGE,
+			offline,
+			message,
 		};
 	}
 }

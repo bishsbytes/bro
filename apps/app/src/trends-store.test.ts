@@ -216,6 +216,8 @@ describe("trends store", () => {
 				.filter((point) => point.value !== null)
 				.map((point) => point.value),
 		).toEqual([0.01, 0.025]);
-		expect(await new databaseApp.ObservationRepository(db).listAll()).toEqual([]);
+		expect(await new databaseApp.ObservationRepository(db).listAll()).toEqual(
+			[],
+		);
 	});
 });

@@ -5,7 +5,9 @@ export default function DrinkDayRoute() {
 	const { localDay } = useLocalSearchParams<{ localDay?: string | string[] }>();
 	return (
 		<DrinkDayScreen
-			localDay={Array.isArray(localDay) ? (localDay[0] ?? "") : (localDay ?? "")}
+			localDay={
+				Array.isArray(localDay) ? (localDay[0] ?? "") : (localDay ?? "")
+			}
 		/>
 	);
 }

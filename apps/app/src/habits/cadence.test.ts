@@ -1,7 +1,7 @@
 import { localDayAt } from "../health/mapping";
 import {
-	isoWeekdayForLocalDay,
 	isHabitScheduled,
+	isoWeekdayForLocalDay,
 	scheduledDaysBetween,
 	shiftLocalDay,
 } from "./cadence";

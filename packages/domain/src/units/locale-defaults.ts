@@ -45,10 +45,14 @@ export function defaultUnitPreference<D extends UnitPreferenceDimension>(
 		) as DisplayUnitForPreferenceDimension<D>;
 	}
 	if (dimension === "alcohol") {
-		return (region === "US" ? "us_standard_drink" : "uk_unit") as DisplayUnitForPreferenceDimension<D>;
+		return (
+			region === "US" ? "us_standard_drink" : "uk_unit"
+		) as DisplayUnitForPreferenceDimension<D>;
 	}
 	if (dimension === "volume") {
-		return (region === "US" ? "fl_oz_us" : "ml") as DisplayUnitForPreferenceDimension<D>;
+		return (
+			region === "US" ? "fl_oz_us" : "ml"
+		) as DisplayUnitForPreferenceDimension<D>;
 	}
 	return "%" as DisplayUnitForPreferenceDimension<D>;
 }

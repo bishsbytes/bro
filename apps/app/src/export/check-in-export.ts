@@ -127,7 +127,10 @@ export type ExportedConsumptionEntry = Omit<
 > &
 	Required<FoodSnapshotFields>;
 
-export type CheckInExport = Omit<CheckInExportV6, "metadata" | "consumptionEntries"> & {
+export type CheckInExport = Omit<
+	CheckInExportV6,
+	"metadata" | "consumptionEntries"
+> & {
 	metadata: ExportMetadata<typeof CHECK_IN_EXPORT_FORMAT_VERSION>;
 	consumptionEntries: ExportedConsumptionEntry[];
 	customConsumables: CustomConsumable[];
@@ -331,9 +334,7 @@ function copyConsumptionEntry(
 	};
 }
 
-function copyCustomConsumable(
-	consumable: CustomConsumable,
-): CustomConsumable {
+function copyCustomConsumable(consumable: CustomConsumable): CustomConsumable {
 	return {
 		id: consumable.id,
 		kind: consumable.kind,

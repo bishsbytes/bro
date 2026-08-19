@@ -680,9 +680,9 @@ describe("check-in export", () => {
 			"caffeine_intake",
 			"fluid_intake",
 		]);
-		expect(excluded.trackedMetrics.map(({ metricSlug }) => metricSlug)).toEqual([
-			"caffeine_intake",
-		]);
+		expect(excluded.trackedMetrics.map(({ metricSlug }) => metricSlug)).toEqual(
+			["caffeine_intake"],
+		);
 		expect(excluded.goals.map(({ metricSlug }) => metricSlug)).toEqual([
 			"caffeine_intake",
 		]);

@@ -59,10 +59,12 @@ export function toCanonical(
 		}
 		if (unit === "g") return value / 1_000;
 		if (unit === "mg") return value / 1_000_000;
-		return value *
+		return (
+			value *
 			(unit === "uk_unit"
 				? KILOGRAMS_ETHANOL_PER_UK_UNIT
-				: KILOGRAMS_ETHANOL_PER_US_STANDARD_DRINK);
+				: KILOGRAMS_ETHANOL_PER_US_STANDARD_DRINK)
+		);
 	}
 	if (dimension === "length") {
 		if (unit === "cm") return value / 100;
@@ -72,10 +74,12 @@ export function toCanonical(
 	if (dimension === "volume") {
 		if (unit === "l") return value;
 		if (unit === "ml") return value / 1_000;
-		return value *
+		return (
+			value *
 			(unit === "fl_oz_uk"
 				? LITRES_PER_UK_FLUID_OUNCE
-				: LITRES_PER_US_FLUID_OUNCE);
+				: LITRES_PER_US_FLUID_OUNCE)
+		);
 	}
 	return unit === "kcal" ? value : value / KILOJOULES_PER_KILOCALORIE;
 }
@@ -101,10 +105,12 @@ export function fromCanonical(
 		}
 		if (unit === "g") return canonicalValue * 1_000;
 		if (unit === "mg") return canonicalValue * 1_000_000;
-		return canonicalValue /
+		return (
+			canonicalValue /
 			(unit === "uk_unit"
 				? KILOGRAMS_ETHANOL_PER_UK_UNIT
-				: KILOGRAMS_ETHANOL_PER_US_STANDARD_DRINK);
+				: KILOGRAMS_ETHANOL_PER_US_STANDARD_DRINK)
+		);
 	}
 	if (dimension === "length") {
 		if (unit === "cm") return canonicalValue * 100;
@@ -114,10 +120,12 @@ export function fromCanonical(
 	if (dimension === "volume") {
 		if (unit === "l") return canonicalValue;
 		if (unit === "ml") return canonicalValue * 1_000;
-		return canonicalValue /
+		return (
+			canonicalValue /
 			(unit === "fl_oz_uk"
 				? LITRES_PER_UK_FLUID_OUNCE
-				: LITRES_PER_US_FLUID_OUNCE);
+				: LITRES_PER_US_FLUID_OUNCE)
+		);
 	}
 	return unit === "kcal"
 		? canonicalValue

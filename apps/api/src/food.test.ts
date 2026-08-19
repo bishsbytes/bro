@@ -6,7 +6,7 @@ import {
 	normaliseOpenFoodFactsProduct,
 	OpenFoodFactsProvider,
 } from "./food/open-food-facts.js";
-import { InMemoryFoodRateLimiter } from "./routes/food.js";
+import { coarseBucketOf, InMemoryFoodRateLimiter } from "./routes/food.js";
 
 const result: FoodSearchResult = {
 	ref: "off:12345678",
@@ -124,13 +124,17 @@ describe("public food routes", () => {
 		vi.clearAllMocks();
 	});
 
-	function app(rateLimiter?: InMemoryFoodRateLimiter) {
+	function app(
+		rateLimiter?: InMemoryFoodRateLimiter,
+		trustProxyHeaders = true,
+	) {
 		return createApp({
 			auth: { handler: authHandler },
 			corsOrigin: "app://",
 			foodProvider: { search, findByRef },
 			foodRateLimiter: rateLimiter,
 			observeFoodRoute: observe,
+			trustProxyHeaders,
 		});
 	}
 
@@ -219,5 +223,51 @@ describe("public food routes", () => {
 				})
 			).status,
 		).toBe(429);
+	});
+
+	it("ignores forwarded-for headers unless a proxy is trusted", async () => {
+		const rateLimiter = new InMemoryFoodRateLimiter(1, 60_000, () => 0);
+		const untrusted = app(rateLimiter, false);
+		expect(
+			(
+				await untrusted.request("/api/food/search?q=chicken", {
+					headers: { "x-forwarded-for": "192.0.2.44" },
+				})
+			).status,
+		).toBe(200);
+		// A spoofed header must not mint a fresh bucket for the same caller.
+		expect(
+			(
+				await untrusted.request("/api/food/search?q=another", {
+					headers: { "x-forwarded-for": "198.51.100.7" },
+				})
+			).status,
+		).toBe(429);
+	});
+
+	it("unwraps IPv4-mapped peer addresses into their own /24 buckets", () => {
+		const rateLimiter = new InMemoryFoodRateLimiter(1, 60_000, () => 0);
+		expect(rateLimiter.consume(coarseBucketOf("::ffff:192.0.2.44"))).toEqual(
+			expect.objectContaining({ allowed: true }),
+		);
+		expect(rateLimiter.consume(coarseBucketOf("::ffff:198.51.100.7"))).toEqual(
+			expect.objectContaining({ allowed: true }),
+		);
+		expect(rateLimiter.consume(coarseBucketOf("192.0.2.99"))).toEqual(
+			expect.objectContaining({ allowed: false }),
+		);
+	});
+
+	it("evicts the oldest bucket rather than sharing one when full", () => {
+		let clock = 0;
+		const rateLimiter = new InMemoryFoodRateLimiter(1, 60_000, () => clock, 2);
+		expect(rateLimiter.consume("v4:192.0.2").allowed).toBe(true);
+		clock = 1;
+		expect(rateLimiter.consume("v4:198.51.100").allowed).toBe(true);
+		// The map is full. A third caller must still get its own fresh window
+		// rather than inheriting somebody else's exhausted count.
+		clock = 2;
+		expect(rateLimiter.consume("v4:203.0.113").allowed).toBe(true);
+		expect(rateLimiter.consume("v4:203.0.113").allowed).toBe(false);
 	});
 });

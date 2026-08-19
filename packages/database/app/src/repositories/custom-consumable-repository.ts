@@ -114,7 +114,9 @@ function assertKind(kind: string): asserts kind is CustomConsumableKind {
 
 function assertOptionalQuantity(value: number | null, label: string): void {
 	if (value !== null && (!Number.isFinite(value) || value < 0)) {
-		throw new RangeError(`${label} must be null or a non-negative finite value.`);
+		throw new RangeError(
+			`${label} must be null or a non-negative finite value.`,
+		);
 	}
 }
 
@@ -175,7 +177,9 @@ function parseServings(value: string): CustomConsumableServing[] {
 	return normalizeServings(parsed as CustomConsumableServing[]);
 }
 
-function normalizeConsumable(input: CreateCustomConsumable): CreateCustomConsumable {
+function normalizeConsumable(
+	input: CreateCustomConsumable,
+): CreateCustomConsumable {
 	assertKind(input.kind);
 	return {
 		...input,
@@ -445,9 +449,10 @@ export class CustomConsumableRepository extends BaseRepository {
 				"DELETE FROM custom_consumable_components WHERE consumable_id = ?",
 				[id],
 			);
-			const result = await this.run("DELETE FROM custom_consumables WHERE id = ?", [
-				id,
-			]);
+			const result = await this.run(
+				"DELETE FROM custom_consumables WHERE id = ?",
+				[id],
+			);
 			deleted = result.changes > 0;
 		});
 		return deleted;
@@ -498,9 +503,9 @@ export class CustomConsumableRepository extends BaseRepository {
 	}
 
 	private async touchConsumable(id: string, updatedAt: number): Promise<void> {
-		await this.run("UPDATE custom_consumables SET updated_at = ? WHERE id = ?", [
-			updatedAt,
-			id,
-		]);
+		await this.run(
+			"UPDATE custom_consumables SET updated_at = ? WHERE id = ?",
+			[updatedAt, id],
+		);
 	}
 }
