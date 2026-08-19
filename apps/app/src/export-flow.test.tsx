@@ -44,9 +44,10 @@ describe("export flow", () => {
 
 	afterAll(() => mockSqlite.cleanup());
 
-	it("round-trips v6 and applies the sensitive toggle to metrics and entries", async () => {
+	it("round-trips v7 food data and applies the sensitive toggle", async () => {
 		const observations = new databaseApp.ObservationRepository(db);
 		const consumptionEntries = new databaseApp.ConsumptionEntryRepository(db);
+		const customConsumables = new databaseApp.CustomConsumableRepository(db);
 		const base = {
 			observedAt: Date.parse("2026-08-18T09:00:00.000Z"),
 			localDay: "2026-08-18",
@@ -97,11 +98,61 @@ describe("export flow", () => {
 			localDay: base.localDay,
 			tzOffsetMinutes: -60,
 		});
+		const recipe = await customConsumables.create(
+			{
+				kind: "food",
+				label: "Chicken and rice",
+				brand: null,
+				isRecipe: true,
+				servings: [
+					{
+						id: "bowl",
+						label: "1 bowl",
+						volumeL: null,
+						ethanolKg: null,
+						caffeineKg: null,
+						energyKcal: 430,
+						proteinG: 38,
+						carbsG: 0,
+						fatG: null,
+					},
+				],
+			},
+			[
+				{
+					position: 0,
+					label: "Chicken thigh",
+					quantity: 2,
+					energyKcal: 260,
+					proteinG: 38,
+					carbsG: 0,
+					fatG: null,
+				},
+			],
+		);
+		await consumptionEntries.create({
+			kind: "food",
+			catalogueRef: null,
+			consumableRef: `custom:${recipe.id}`,
+			label: recipe.label,
+			servingLabel: "bowl",
+			quantity: 1,
+			volumeL: null,
+			ethanolKg: null,
+			caffeineKg: null,
+			energyKcal: 430,
+			proteinG: 38,
+			carbsG: 0,
+			fatG: null,
+			occurredAt: base.observedAt + 2,
+			localDay: base.localDay,
+			tzOffsetMinutes: -60,
+		});
 		const store = new ExportStore(db, "1.0.0", () => 1_787_040_000_000);
 
 		const withoutSensitive = parseCheckInExport(await store.serialize(false));
 		const withSensitive = parseCheckInExport(await store.serialize(true));
-		expect(withoutSensitive.metadata.formatVersion).toBe(6);
+		expect(withoutSensitive.metadata.formatVersion).toBe(7);
 		expect(withoutSensitive.observations.map((row) => row.metricSlug)).toEqual([
 			"mood",
 		]);
@@ -113,12 +164,29 @@ describe("export flow", () => {
 			"consumptionEntries" in withoutSensitive
 				? withoutSensitive.consumptionEntries.map((entry) => entry.label)
 				: [],
-		).toEqual(["Coffee"]);
+		).toEqual(["Coffee", "Chicken and rice"]);
 		expect(
 			"consumptionEntries" in withSensitive
 				? withSensitive.consumptionEntries.map((entry) => entry.label)
 				: [],
-		).toEqual(["Lager", "Coffee"]);
+		).toEqual(["Lager", "Coffee", "Chicken and rice"]);
+		expect(
+			"customConsumables" in withoutSensitive
+				? withoutSensitive.customConsumables.map(({ label }) => label)
+				: [],
+		).toEqual(["Chicken and rice"]);
+		expect(
+			"customConsumableComponents" in withoutSensitive
+				? withoutSensitive.customConsumableComponents.map(({ fatG }) => fatG)
+				: [],
+		).toEqual([null]);
+		expect(
+			"consumptionEntries" in withoutSensitive
+				? withoutSensitive.consumptionEntries.find(
+						({ label }) => label === "Chicken and rice",
+					)
+				: null,
+		).toMatchObject({ proteinG: 38, carbsG: 0, fatG: null });
 	});
 
 	it("defaults sensitive data off and hands each generated file to the share action", async () => {
@@ -141,7 +209,7 @@ describe("export flow", () => {
 		await waitFor(() => expect(serialize).toHaveBeenCalledWith(false));
 		expect(
 			parseCheckInExport(share.mock.calls[0]?.[0]).metadata.formatVersion,
-		).toBe(6);
+		).toBe(7);
 
 		await fireEvent(
 			screen.getByLabelText("Include sensitive data"),
@@ -152,6 +220,6 @@ describe("export flow", () => {
 		await waitFor(() => expect(serialize).toHaveBeenLastCalledWith(true));
 		expect(
 			parseCheckInExport(share.mock.calls[1]?.[0]).metadata.formatVersion,
-		).toBe(6);
+		).toBe(7);
 	});
 });

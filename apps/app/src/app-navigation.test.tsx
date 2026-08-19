@@ -221,7 +221,8 @@ describe("app entry", () => {
 
 		await press(view, "Continue");
 		expect(router.getPathname()).toBe("/onboarding/privacy");
-		expect(view.getByText("Your data stays on your phone")).toBeTruthy();
+		expect(view.getByText("Where your data lives")).toBeTruthy();
+		expect(view.getByText("Food search")).toBeTruthy();
 
 		await press(view, "Continue");
 		expect(router.getPathname()).toBe("/onboarding/start");
@@ -261,6 +262,12 @@ describe("app entry", () => {
 		await press(view, "Settings");
 		await waitFor(() => expect(router.getPathname()).toBe("/settings"));
 		expect(await view.findByText("Data on this device")).toBeTruthy();
+		await press(view, "Privacy");
+		await waitFor(() => expect(router.getPathname()).toBe("/settings/privacy"));
+		expect(view.getByText("Where your data lives")).toBeTruthy();
+		expect(view.getByText("Optional sync")).toBeTruthy();
+		await act(async () => expoRouter.back());
+		await waitFor(() => expect(router.getPathname()).toBe("/settings"));
 		await act(async () => expoRouter.back());
 		await waitFor(() => expect(router.getPathname()).toBe("/account"));
 

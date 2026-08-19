@@ -2,7 +2,7 @@
 
 ## Status
 
-**Planned.** Not started. This is the delivery plan for [sequencing step 9 of the product domains plan](product-domains-and-data.md#sequencing) — the last product step, and the one the plan has always described as "the largest, carries the external dependency, and is the easiest to get wrong in a way users abandon".
+**In progress.** Slices 1–3 were implemented in code on 19 August 2026: migration 008 and both stores' repositories; the offline food, recipe, and custom-drink surfaces with derived nutrition metrics; and export v7, delete-local-data coverage, and the privacy rewrite. Slice 4 — provider-backed search, cache-through, offline degradation, attribution, and its privacy sign-off gate — remains. This is the delivery plan for [sequencing step 9 of the product domains plan](product-domains-and-data.md#sequencing) — the last product step, and the one the plan has always described as "the largest, carries the external dependency, and is the easiest to get wrong in a way users abandon".
 
 It consumes the [step 8 hand-off](step-8-drink-logging.md#step-9-hand-off): `consumption_entries` with its snapshot rule, its hard-delete rule, and its read-time derived-totals projection, all proven against a domain with no provider. Step 8 existed to take that design decision away from this step, and it did. **The one hard thing step 9 adds is the provider**, and every decision below is aimed at keeping it the only one.
 

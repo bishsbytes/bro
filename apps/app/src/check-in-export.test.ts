@@ -5,6 +5,8 @@ import type {
 	ChallengeEnrolment,
 	ChallengeProgress,
 	ConsumptionEntry,
+	CustomConsumable,
+	CustomConsumableComponent,
 	DailyMetric,
 	DayNote,
 	Goal,
@@ -180,6 +182,7 @@ const caffeineEntry: ConsumptionEntry = {
 	id: "consumption-coffee",
 	kind: "drink",
 	catalogueRef: "drink:filter-coffee",
+	consumableRef: null,
 	label: "Filter coffee",
 	servingLabel: "mug",
 	quantity: 1,
@@ -187,6 +190,9 @@ const caffeineEntry: ConsumptionEntry = {
 	ethanolKg: 0,
 	caffeineKg: 0.000_095,
 	energyKcal: 2,
+	proteinG: null,
+	carbsG: null,
+	fatG: null,
 	occurredAt: 1_786_621_600_000,
 	localDay: "2026-08-13",
 	tzOffsetMinutes: -60,
@@ -224,8 +230,90 @@ const fluidEntry: ConsumptionEntry = {
 	updatedAt: 1_786_621_700_100,
 };
 
+const foodEntry: ConsumptionEntry = {
+	id: "consumption-chicken-rice",
+	kind: "food",
+	catalogueRef: null,
+	consumableRef: "custom:custom-chicken-rice",
+	label: "Chicken and rice",
+	servingLabel: "bowl",
+	quantity: 1,
+	volumeL: null,
+	ethanolKg: null,
+	caffeineKg: null,
+	energyKcal: 430,
+	proteinG: 38,
+	carbsG: 0,
+	fatG: null,
+	occurredAt: 1_786_621_800_000,
+	localDay: "2026-08-13",
+	tzOffsetMinutes: -60,
+	createdAt: 1_786_621_800_100,
+	updatedAt: 1_786_621_800_100,
+};
+
+const customYoghurt: CustomConsumable = {
+	id: "custom-yoghurt",
+	kind: "food",
+	label: "Greek yoghurt",
+	brand: "Corner shop",
+	isRecipe: false,
+	servings: [
+		{
+			id: "pot",
+			label: "1 pot",
+			volumeL: null,
+			ethanolKg: null,
+			caffeineKg: null,
+			energyKcal: 120,
+			proteinG: 15,
+			carbsG: 0,
+			fatG: null,
+		},
+	],
+	createdAt: 1_786_620_000_000,
+	updatedAt: 1_786_620_000_000,
+};
+
+const chickenRiceRecipe: CustomConsumable = {
+	id: "custom-chicken-rice",
+	kind: "food",
+	label: "Chicken and rice",
+	brand: null,
+	isRecipe: true,
+	servings: [
+		{
+			id: "bowl",
+			label: "1 bowl",
+			volumeL: null,
+			ethanolKg: null,
+			caffeineKg: null,
+			energyKcal: 430,
+			proteinG: 38,
+			carbsG: 0,
+			fatG: null,
+		},
+	],
+	createdAt: 1_786_620_100_000,
+	updatedAt: 1_786_620_100_000,
+};
+
+const chickenComponent: CustomConsumableComponent = {
+	id: "component-chicken",
+	consumableId: chickenRiceRecipe.id,
+	position: 0,
+	label: "Chicken thigh",
+	quantity: 2,
+	energyKcal: 260,
+	proteinG: 38,
+	carbsG: 0,
+	fatG: null,
+	createdAt: 1_786_620_100_100,
+	updatedAt: 1_786_620_100_100,
+};
+
 describe("check-in export", () => {
-	it("matches the version 6 golden file and round-trips consumption data", () => {
+	it("matches the version 7 golden file and round-trips food snapshots", () => {
 		const input = {
 			observations: [],
 			dayNotes: [],
@@ -238,15 +326,17 @@ describe("check-in export", () => {
 			habitCompletions: [],
 			challengeEnrolments: [],
 			challengeProgress: [],
-			consumptionEntries: [caffeineEntry],
-			registry: [knownMetric("caffeine_intake")],
+			consumptionEntries: [foodEntry],
+			customConsumables: [chickenRiceRecipe, customYoghurt],
+			customConsumableComponents: [chickenComponent],
+			registry: [],
 		};
 		const serialized = serializeCheckInExport(input, {
 			appVersion: "1.0.0",
 			exportedAt: 1_786_708_800_000,
 		});
 		const golden = readFileSync(
-			join(__dirname, "export", "__fixtures__", "check-in-export-v6.json"),
+			join(__dirname, "export", "__fixtures__", "check-in-export-v7.json"),
 			"utf8",
 		);
 
@@ -260,6 +350,18 @@ describe("check-in export", () => {
 				exportedAt: 1_786_708_800_000,
 			}),
 		);
+	});
+
+	it("continues to parse the committed version 6 fixture", () => {
+		const fixture = readFileSync(
+			join(__dirname, "export", "__fixtures__", "check-in-export-v6.json"),
+			"utf8",
+		);
+
+		const parsed = parseCheckInExport(fixture);
+		expect(parsed.metadata.formatVersion).toBe(6);
+		expect("consumptionEntries" in parsed).toBe(true);
+		expect("customConsumables" in parsed).toBe(false);
 	});
 
 	it("continues to parse the committed version 4 fixture", () => {
@@ -450,6 +552,8 @@ describe("check-in export", () => {
 			],
 			challengeProgress: [healthProgress, faithProgress, retiredAreaProgress],
 			consumptionEntries: [],
+			customConsumables: [],
+			customConsumableComponents: [],
 			registry: [
 				knownMetric("mood"),
 				sensitiveMetric,
@@ -547,6 +651,8 @@ describe("check-in export", () => {
 			challengeEnrolments: [],
 			challengeProgress: [],
 			consumptionEntries: [fluidEntry, alcoholEntry, caffeineEntry],
+			customConsumables: [],
+			customConsumableComponents: [],
 			registry: [
 				knownMetric("alcohol_intake"),
 				knownMetric("caffeine_intake"),
@@ -597,6 +703,8 @@ describe("check-in export", () => {
 				challengeEnrolments: [],
 				challengeProgress: [],
 				consumptionEntries: [],
+				customConsumables: [],
+				customConsumableComponents: [],
 				registry: [knownMetric("mood")],
 			},
 			{ appVersion: "1.0.0", exportedAt: 0 },
@@ -604,7 +712,7 @@ describe("check-in export", () => {
 
 		expect(exported).toMatchObject({
 			metadata: {
-				formatVersion: 6,
+				formatVersion: 7,
 				exportedAt: "1970-01-01T00:00:00.000Z",
 				appVersion: "1.0.0",
 			},
@@ -620,6 +728,8 @@ describe("check-in export", () => {
 			challengeEnrolments: [],
 			challengeProgress: [],
 			consumptionEntries: [],
+			customConsumables: [],
+			customConsumableComponents: [],
 		});
 		expect(exported.registry.metrics).toHaveLength(1);
 	});

@@ -3,6 +3,7 @@ import {
 	ChallengeEnrolmentRepository,
 	ChallengeProgressRepository,
 	ConsumptionEntryRepository,
+	CustomConsumableRepository,
 	DailyMetricRepository,
 	DayNoteRepository,
 	GoalRepository,
@@ -26,6 +27,7 @@ export class ExportStore {
 	) {}
 
 	async serialize(includeSensitive: boolean): Promise<string> {
+		const customConsumableRepository = new CustomConsumableRepository(this.db);
 		const [
 			observations,
 			dayNotes,
@@ -39,6 +41,7 @@ export class ExportStore {
 			challengeEnrolments,
 			challengeProgress,
 			consumptionEntries,
+			customConsumables,
 		] = await Promise.all([
 			new ObservationRepository(this.db).listAll(),
 			new DayNoteRepository(this.db).listAll(),
@@ -52,7 +55,15 @@ export class ExportStore {
 			new ChallengeEnrolmentRepository(this.db).listAll(),
 			new ChallengeProgressRepository(this.db).listAll(),
 			new ConsumptionEntryRepository(this.db).listAll(),
+			customConsumableRepository.listAll(),
 		]);
+		const customConsumableComponents = (
+			await Promise.all(
+				customConsumables.map(({ id }) =>
+					customConsumableRepository.listComponents(id),
+				),
+			)
+		).flat();
 
 		return serializeCheckInExport(
 			{
@@ -68,6 +79,8 @@ export class ExportStore {
 				challengeEnrolments,
 				challengeProgress,
 				consumptionEntries,
+				customConsumables,
+				customConsumableComponents,
 				registry: METRIC_REGISTRY,
 			},
 			{

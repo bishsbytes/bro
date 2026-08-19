@@ -129,6 +129,12 @@ export function SettingsScreen({
 				onPress={() => router.push("/settings/reminders")}
 			/>
 			<ListRow
+				title="Privacy"
+				detail="See what stays local and when data can leave this device."
+				accessibilityLabel="Privacy information"
+				onPress={() => router.push("/settings/privacy" as Href)}
+			/>
+			<ListRow
 				title="Export your data"
 				detail="Share or save a copy of the record on this device."
 				accessibilityLabel="Export your data"

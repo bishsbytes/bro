@@ -1,0 +1,105 @@
+{
+  "metadata": {
+    "formatVersion": 7,
+    "exportedAt": "2026-08-14T12:00:00.000Z",
+    "appVersion": "1.0.0"
+  },
+  "registry": {
+    "metrics": []
+  },
+  "observations": [],
+  "dayNotes": [],
+  "trackedMetrics": [],
+  "assessments": [],
+  "goals": [],
+  "unitPreferences": [],
+  "dailyMetrics": [],
+  "habits": [],
+  "habitCompletions": [],
+  "challengeEnrolments": [],
+  "challengeProgress": [],
+  "consumptionEntries": [
+    {
+      "id": "consumption-chicken-rice",
+      "kind": "food",
+      "catalogueRef": null,
+      "consumableRef": "custom:custom-chicken-rice",
+      "label": "Chicken and rice",
+      "servingLabel": "bowl",
+      "quantity": 1,
+      "volumeL": null,
+      "ethanolKg": null,
+      "caffeineKg": null,
+      "energyKcal": 430,
+      "proteinG": 38,
+      "carbsG": 0,
+      "fatG": null,
+      "occurredAt": 1786621800000,
+      "localDay": "2026-08-13",
+      "tzOffsetMinutes": -60,
+      "createdAt": 1786621800100,
+      "updatedAt": 1786621800100
+    }
+  ],
+  "customConsumables": [
+    {
+      "id": "custom-yoghurt",
+      "kind": "food",
+      "label": "Greek yoghurt",
+      "brand": "Corner shop",
+      "isRecipe": false,
+      "servings": [
+        {
+          "id": "pot",
+          "label": "1 pot",
+          "volumeL": null,
+          "ethanolKg": null,
+          "caffeineKg": null,
+          "energyKcal": 120,
+          "proteinG": 15,
+          "carbsG": 0,
+          "fatG": null
+        }
+      ],
+      "createdAt": 1786620000000,
+      "updatedAt": 1786620000000
+    },
+    {
+      "id": "custom-chicken-rice",
+      "kind": "food",
+      "label": "Chicken and rice",
+      "brand": null,
+      "isRecipe": true,
+      "servings": [
+        {
+          "id": "bowl",
+          "label": "1 bowl",
+          "volumeL": null,
+          "ethanolKg": null,
+          "caffeineKg": null,
+          "energyKcal": 430,
+          "proteinG": 38,
+          "carbsG": 0,
+          "fatG": null
+        }
+      ],
+      "createdAt": 1786620100000,
+      "updatedAt": 1786620100000
+    }
+  ],
+  "customConsumableComponents": [
+    {
+      "id": "component-chicken",
+      "consumableId": "custom-chicken-rice",
+      "position": 0,
+      "label": "Chicken thigh",
+      "quantity": 2,
+      "energyKcal": 260,
+      "proteinG": 38,
+      "carbsG": 0,
+      "fatG": null,
+      "createdAt": 1786620100100,
+      "updatedAt": 1786620100100
+    }
+  ]
+}

@@ -3,6 +3,8 @@ import type {
 	ChallengeEnrolment,
 	ChallengeProgress,
 	ConsumptionEntry,
+	CustomConsumable,
+	CustomConsumableComponent,
 	DailyMetric,
 	DayNote,
 	Goal,
@@ -16,7 +18,7 @@ import { resolveHabit } from "@bro/domain/habit-catalogue";
 import { LIFE_AREA_CATALOGUE } from "@bro/domain/life-area-catalogue";
 import type { MetricDefinition } from "@bro/domain/metric-registry";
 
-export const CHECK_IN_EXPORT_FORMAT_VERSION = 6 as const;
+export const CHECK_IN_EXPORT_FORMAT_VERSION = 7 as const;
 
 export type CheckInExportInput = {
 	observations: readonly Observation[];
@@ -31,6 +33,8 @@ export type CheckInExportInput = {
 	challengeEnrolments: readonly ChallengeEnrolment[];
 	challengeProgress: readonly ChallengeProgress[];
 	consumptionEntries: readonly ConsumptionEntry[];
+	customConsumables: readonly CustomConsumable[];
+	customConsumableComponents: readonly CustomConsumableComponent[];
 	registry: readonly MetricDefinition[];
 };
 
@@ -44,7 +48,7 @@ type VersionOneTrackedMetric = Omit<TrackedMetric, "customLabel">;
 /** Registry dimensions join the serialized contract with the planned v3 bump. */
 type LegacyMetricDefinition = Omit<MetricDefinition, "dimension">;
 
-type ExportMetadata<Version extends 1 | 2 | 3 | 4 | 5 | 6> = {
+type ExportMetadata<Version extends 1 | 2 | 3 | 4 | 5 | 6 | 7> = {
 	formatVersion: Version;
 	exportedAt: string;
 	appVersion: string;
@@ -102,9 +106,32 @@ export type CheckInExportV5 = Omit<CheckInExportV4, "metadata"> & {
 	challengeProgress: ChallengeProgress[];
 };
 
-export type CheckInExport = Omit<CheckInExportV5, "metadata"> & {
+type FoodSnapshotFields = Pick<
+	ConsumptionEntry,
+	"consumableRef" | "proteinG" | "carbsG" | "fatG"
+>;
+
+type VersionSixConsumptionEntry = Omit<
+	ConsumptionEntry,
+	keyof FoodSnapshotFields
+>;
+
+export type CheckInExportV6 = Omit<CheckInExportV5, "metadata"> & {
+	metadata: ExportMetadata<6>;
+	consumptionEntries: VersionSixConsumptionEntry[];
+};
+
+export type ExportedConsumptionEntry = Omit<
+	ConsumptionEntry,
+	keyof FoodSnapshotFields
+> &
+	Required<FoodSnapshotFields>;
+
+export type CheckInExport = Omit<CheckInExportV6, "metadata" | "consumptionEntries"> & {
 	metadata: ExportMetadata<typeof CHECK_IN_EXPORT_FORMAT_VERSION>;
-	consumptionEntries: ConsumptionEntry[];
+	consumptionEntries: ExportedConsumptionEntry[];
+	customConsumables: CustomConsumable[];
+	customConsumableComponents: CustomConsumableComponent[];
 };
 
 export type ParsedCheckInExport =
@@ -113,6 +140,7 @@ export type ParsedCheckInExport =
 	| CheckInExportV3
 	| CheckInExportV4
 	| CheckInExportV5
+	| CheckInExportV6
 	| CheckInExport;
 
 function compareText(left: string, right: string): number {
@@ -277,11 +305,14 @@ function copyChallengeProgress(progress: ChallengeProgress): ChallengeProgress {
 	};
 }
 
-function copyConsumptionEntry(entry: ConsumptionEntry): ConsumptionEntry {
+function copyConsumptionEntry(
+	entry: ConsumptionEntry,
+): ExportedConsumptionEntry {
 	return {
 		id: entry.id,
 		kind: entry.kind,
 		catalogueRef: entry.catalogueRef,
+		consumableRef: entry.consumableRef ?? null,
 		label: entry.label,
 		servingLabel: entry.servingLabel,
 		quantity: entry.quantity,
@@ -289,11 +320,47 @@ function copyConsumptionEntry(entry: ConsumptionEntry): ConsumptionEntry {
 		ethanolKg: entry.ethanolKg,
 		caffeineKg: entry.caffeineKg,
 		energyKcal: entry.energyKcal,
+		proteinG: entry.proteinG ?? null,
+		carbsG: entry.carbsG ?? null,
+		fatG: entry.fatG ?? null,
 		occurredAt: entry.occurredAt,
 		localDay: entry.localDay,
 		tzOffsetMinutes: entry.tzOffsetMinutes,
 		createdAt: entry.createdAt,
 		updatedAt: entry.updatedAt,
+	};
+}
+
+function copyCustomConsumable(
+	consumable: CustomConsumable,
+): CustomConsumable {
+	return {
+		id: consumable.id,
+		kind: consumable.kind,
+		label: consumable.label,
+		brand: consumable.brand,
+		isRecipe: consumable.isRecipe,
+		servings: consumable.servings.map((serving) => ({ ...serving })),
+		createdAt: consumable.createdAt,
+		updatedAt: consumable.updatedAt,
+	};
+}
+
+function copyCustomConsumableComponent(
+	component: CustomConsumableComponent,
+): CustomConsumableComponent {
+	return {
+		id: component.id,
+		consumableId: component.consumableId,
+		position: component.position,
+		label: component.label,
+		quantity: component.quantity,
+		energyKcal: component.energyKcal,
+		proteinG: component.proteinG,
+		carbsG: component.carbsG,
+		fatG: component.fatG,
+		createdAt: component.createdAt,
+		updatedAt: component.updatedAt,
 	};
 }
 
@@ -480,6 +547,21 @@ export function buildCheckInExport(
 					left.createdAt - right.createdAt ||
 					compareText(left.id, right.id),
 			),
+		customConsumables: input.customConsumables
+			.map(copyCustomConsumable)
+			.sort(
+				(left, right) =>
+					left.createdAt - right.createdAt || compareText(left.id, right.id),
+			),
+		customConsumableComponents: input.customConsumableComponents
+			.map(copyCustomConsumableComponent)
+			.sort(
+				(left, right) =>
+					compareText(left.consumableId, right.consumableId) ||
+					left.position - right.position ||
+					left.createdAt - right.createdAt ||
+					compareText(left.id, right.id),
+			),
 	};
 }
 
@@ -550,6 +632,18 @@ export function parseCheckInExport(serialized: string): ParsedCheckInExport {
 		requireArray(parsed, "challengeProgress");
 		return parsed as CheckInExportV5;
 	}
+	if (parsed.metadata.formatVersion === 6) {
+		requireArray(parsed, "assessments");
+		requireArray(parsed, "goals");
+		requireArray(parsed, "unitPreferences");
+		requireArray(parsed, "dailyMetrics");
+		requireArray(parsed, "habits");
+		requireArray(parsed, "habitCompletions");
+		requireArray(parsed, "challengeEnrolments");
+		requireArray(parsed, "challengeProgress");
+		requireArray(parsed, "consumptionEntries");
+		return parsed as CheckInExportV6;
+	}
 	if (parsed.metadata.formatVersion === CHECK_IN_EXPORT_FORMAT_VERSION) {
 		requireArray(parsed, "assessments");
 		requireArray(parsed, "goals");
@@ -560,6 +654,8 @@ export function parseCheckInExport(serialized: string): ParsedCheckInExport {
 		requireArray(parsed, "challengeEnrolments");
 		requireArray(parsed, "challengeProgress");
 		requireArray(parsed, "consumptionEntries");
+		requireArray(parsed, "customConsumables");
+		requireArray(parsed, "customConsumableComponents");
 		return parsed as CheckInExport;
 	}
 	throw new RangeError(
