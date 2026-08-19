@@ -26,6 +26,16 @@ const SUFFIXES: Record<SimpleDisplayUnit, string> = {
 	cm: "cm",
 	in: "in",
 	"%": "%",
+	g: "g",
+	mg: "mg",
+	uk_unit: "(?:unit|units)",
+	us_standard_drink: "(?:standard\\s*drink|standard\\s*drinks)",
+	ml: "ml",
+	l: "l",
+	fl_oz_uk: "(?:fl\\s*oz|fluid\\s*ounce|fluid\\s*ounces)",
+	fl_oz_us: "(?:fl\\s*oz|fluid\\s*ounce|fluid\\s*ounces)",
+	kcal: "kcal",
+	kJ: "kJ",
 };
 
 function escapeRegex(value: string): string {

@@ -11,7 +11,12 @@ import {
 	INVALID_MEASUREMENT_MESSAGE,
 	isCompoundDisplayUnit,
 	isDisplayUnitForDimension,
+	KILOGRAMS_ETHANOL_PER_UK_UNIT,
+	KILOGRAMS_ETHANOL_PER_US_STANDARD_DRINK,
 	KILOGRAMS_PER_POUND,
+	KILOJOULES_PER_KILOCALORIE,
+	LITRES_PER_UK_FLUID_OUNCE,
+	LITRES_PER_US_FLUID_OUNCE,
 	METRES_PER_FOOT,
 	METRES_PER_INCH,
 	measurementEntryOf,
@@ -35,26 +40,42 @@ describe("measurement units", () => {
 			mass: "kg",
 			length: "m",
 			fraction: "fraction",
+			volume: "l",
+			energy: "kcal",
 			time: "s",
 			count: "count",
 			rate_bpm: "bpm",
 		});
 		expect(DISPLAY_UNITS_BY_DIMENSION).toEqual({
-			mass: ["kg", "lb", "st"],
+			mass: [
+				"kg",
+				"lb",
+				"st",
+				"g",
+				"mg",
+				"uk_unit",
+				"us_standard_drink",
+			],
 			length: ["cm", "in", "ft"],
 			fraction: ["%"],
+			volume: ["ml", "l", "fl_oz_uk", "fl_oz_us"],
+			energy: ["kcal", "kJ"],
 		});
 		expect(DISPLAY_UNITS_BY_PREFERENCE_DIMENSION).toEqual({
 			mass: ["kg", "lb", "st"],
 			height: ["cm", "ft"],
 			length: ["cm", "in"],
 			fraction: ["%"],
+			alcohol: ["uk_unit", "us_standard_drink", "g"],
+			volume: ["ml", "l", "fl_oz_uk", "fl_oz_us"],
 		});
 		expect(DIMENSION_BY_UNIT_PREFERENCE).toEqual({
 			mass: "mass",
 			height: "length",
 			length: "length",
 			fraction: "fraction",
+			alcohol: "mass",
+			volume: "volume",
 		});
 		expect(DISPLAY_RESOLUTIONS).toEqual({
 			kg: 0.1,
@@ -64,6 +85,16 @@ describe("measurement units", () => {
 			in: 0.25,
 			ft: 1,
 			"%": 0.1,
+			g: 0.1,
+			mg: 1,
+			uk_unit: 0.1,
+			us_standard_drink: 0.1,
+			ml: 1,
+			l: 0.1,
+			fl_oz_uk: 0.1,
+			fl_oz_us: 0.1,
+			kcal: 1,
+			kJ: 1,
 		});
 	});
 
@@ -82,6 +113,43 @@ describe("measurement units", () => {
 		expect(fromCanonical(KILOGRAMS_PER_POUND, "mass", "lb")).toBe(1);
 		expect(fromCanonical(METRES_PER_INCH, "length", "in")).toBe(1);
 		expect(fromCanonical(METRES_PER_FOOT, "length", "ft")).toBe(1);
+	});
+
+	it("uses exact volume, energy, and alcohol definitions", () => {
+		expect(toCanonical(1, "volume", "fl_oz_uk")).toBe(
+			LITRES_PER_UK_FLUID_OUNCE,
+		);
+		expect(toCanonical(1, "volume", "fl_oz_us")).toBe(
+			LITRES_PER_US_FLUID_OUNCE,
+		);
+		expect(toCanonical(KILOJOULES_PER_KILOCALORIE, "energy", "kJ")).toBe(
+			1,
+		);
+		expect(toCanonical(1, "mass", "uk_unit")).toBe(
+			KILOGRAMS_ETHANOL_PER_UK_UNIT,
+		);
+		expect(toCanonical(1, "mass", "us_standard_drink")).toBe(
+			KILOGRAMS_ETHANOL_PER_US_STANDARD_DRINK,
+		);
+
+		for (const [dimension, unit] of [
+			["volume", "ml"],
+			["volume", "l"],
+			["volume", "fl_oz_uk"],
+			["volume", "fl_oz_us"],
+			["energy", "kcal"],
+			["energy", "kJ"],
+			["mass", "g"],
+			["mass", "mg"],
+			["mass", "uk_unit"],
+			["mass", "us_standard_drink"],
+		] as const) {
+			const displayValue = fromCanonical(0.314_159, dimension, unit);
+			expect(toCanonical(displayValue, dimension, unit)).toBeCloseTo(
+				0.314_159,
+				12,
+			);
+		}
 	});
 
 	it.each(["12 st 4", "12st 4lb", "12 stones 4 pounds"])(
@@ -145,6 +213,8 @@ describe("measurement units", () => {
 		["5.5 ft 4 in", "length", "ft"],
 		["-1", "length", "cm"],
 		["101%", "fraction", "%"],
+		["-1 ml", "volume", "ml"],
+		["water", "volume", "l"],
 	] as const)(
 		"rejects malformed or out-of-domain input %s",
 		(input, dimension, unit) => {
@@ -162,6 +232,15 @@ describe("measurement units", () => {
 		expect(formatMeasurement(0.8, "length", "in")).toBe("31.50 in");
 		expect(formatMeasurement(1.8, "length", "ft")).toBe("5 ft 11 in");
 		expect(formatMeasurement(0.1846, "fraction", "%")).toBe("18.5%");
+		expect(formatMeasurement(0.020_181_999, "mass", "uk_unit")).toBe(
+			"2.6 units",
+		);
+		expect(formatMeasurement(0.020_181_999, "mass", "g")).toBe("20.2 g");
+		expect(formatMeasurement(0.000_095, "mass", "mg")).toBe("95 mg");
+		expect(formatMeasurement(0.568_261_25, "volume", "fl_oz_uk")).toBe(
+			"20.0 fl oz",
+		);
+		expect(formatMeasurement(125, "energy", "kcal")).toBe("125 kcal");
 	});
 
 	it("carries rounded pounds into the next stone", () => {
@@ -195,6 +274,13 @@ describe("measurement units", () => {
 		expect(defaultUnitPreference("height", "en-US")).toBe("ft");
 		expect(defaultUnitPreference("height", "en-GB")).toBe("ft");
 		expect(defaultUnitPreference("height", "fr-FR")).toBe("cm");
+		expect(defaultUnitPreference("alcohol", "en-GB")).toBe("uk_unit");
+		expect(defaultUnitPreference("alcohol", "en-US")).toBe(
+			"us_standard_drink",
+		);
+		expect(defaultUnitPreference("alcohol", "fr-FR")).toBe("uk_unit");
+		expect(defaultUnitPreference("volume", "en-US")).toBe("fl_oz_us");
+		expect(defaultUnitPreference("volume", "en-GB")).toBe("ml");
 
 		expect(resolveUnitPreference("mass", null, "en-US")).toBe("lb");
 		expect(resolveUnitPreference("mass", "kg", "en-US")).toBe("kg");
@@ -204,6 +290,22 @@ describe("measurement units", () => {
 		expect(resolveUnitPreference("height", "ft", "fr-FR")).toBe("ft");
 		expect(resolveUnitPreference("height", "in", "en-US")).toBe("cm");
 		expect(resolveUnitPreference("length", "ft", "en-GB")).toBe("cm");
+	});
+
+	it("keeps caffeine and energy fixed while alcohol uses its preference", () => {
+		for (const [slug, expectedUnit] of [
+			["caffeine_intake", "mg"],
+			["energy_intake", "kcal"],
+			["alcohol_intake", "us_standard_drink"],
+		] as const) {
+			const resolved = resolveMetric(slug);
+			if (resolved.kind !== "known" || resolved.metric.kind !== "measurement") {
+				throw new Error(`Expected measurement metric ${slug}.`);
+			}
+			expect(metricDisplayUnit(resolved.metric, new Map(), "en-US")).toBe(
+				expectedUnit,
+			);
+		}
 	});
 
 	it("keeps every preference choice usable at its physical dimension", () => {

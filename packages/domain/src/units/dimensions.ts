@@ -1,4 +1,10 @@
-export const DIMENSIONS = ["mass", "length", "fraction"] as const;
+export const DIMENSIONS = [
+	"mass",
+	"length",
+	"fraction",
+	"volume",
+	"energy",
+] as const;
 
 /** Dimensions with a user-selectable display unit. */
 export type Dimension = (typeof DIMENSIONS)[number];
@@ -13,18 +19,31 @@ export const METRIC_DIMENSIONS = [
 ] as const;
 export type MetricDimension = (typeof METRIC_DIMENSIONS)[number];
 
-export type MassDisplayUnit = "kg" | "lb" | "st";
+export type MassDisplayUnit =
+	| "kg"
+	| "lb"
+	| "st"
+	| "g"
+	| "mg"
+	| "uk_unit"
+	| "us_standard_drink";
 export type LengthDisplayUnit = "cm" | "in" | "ft";
 export type FractionDisplayUnit = "%";
+export type VolumeDisplayUnit = "ml" | "l" | "fl_oz_uk" | "fl_oz_us";
+export type EnergyDisplayUnit = "kcal" | "kJ";
 export type DisplayUnit =
 	| MassDisplayUnit
 	| LengthDisplayUnit
-	| FractionDisplayUnit;
+	| FractionDisplayUnit
+	| VolumeDisplayUnit
+	| EnergyDisplayUnit;
 
 type DisplayUnitByDimension = {
 	mass: MassDisplayUnit;
 	length: LengthDisplayUnit;
 	fraction: FractionDisplayUnit;
+	volume: VolumeDisplayUnit;
+	energy: EnergyDisplayUnit;
 };
 
 export type DisplayUnitForDimension<D extends Dimension> =
@@ -34,15 +53,19 @@ export const CANONICAL_STORAGE_UNITS = {
 	mass: "kg",
 	length: "m",
 	fraction: "fraction",
+	volume: "l",
+	energy: "kcal",
 	time: "s",
 	count: "count",
 	rate_bpm: "bpm",
 } as const satisfies Record<MetricDimension, string>;
 
 export const DISPLAY_UNITS_BY_DIMENSION = {
-	mass: ["kg", "lb", "st"],
+	mass: ["kg", "lb", "st", "g", "mg", "uk_unit", "us_standard_drink"],
 	length: ["cm", "in", "ft"],
 	fraction: ["%"],
+	volume: ["ml", "l", "fl_oz_uk", "fl_oz_us"],
+	energy: ["kcal", "kJ"],
 } as const satisfies {
 	[D in Dimension]: readonly DisplayUnitForDimension<D>[];
 };
@@ -57,6 +80,8 @@ export const UNIT_PREFERENCE_DIMENSIONS = [
 	"height",
 	"length",
 	"fraction",
+	"alcohol",
+	"volume",
 ] as const;
 export type UnitPreferenceDimension =
 	(typeof UNIT_PREFERENCE_DIMENSIONS)[number];
@@ -66,6 +91,8 @@ type DisplayUnitByPreferenceDimension = {
 	height: "cm" | "ft";
 	length: "cm" | "in";
 	fraction: FractionDisplayUnit;
+	alcohol: "uk_unit" | "us_standard_drink" | "g";
+	volume: VolumeDisplayUnit;
 };
 
 export type DisplayUnitForPreferenceDimension<
@@ -77,6 +104,8 @@ export const DISPLAY_UNITS_BY_PREFERENCE_DIMENSION = {
 	height: ["cm", "ft"],
 	length: ["cm", "in"],
 	fraction: ["%"],
+	alcohol: ["uk_unit", "us_standard_drink", "g"],
+	volume: ["ml", "l", "fl_oz_uk", "fl_oz_us"],
 } as const satisfies {
 	[D in UnitPreferenceDimension]: readonly DisplayUnitForPreferenceDimension<D>[];
 };
@@ -86,6 +115,8 @@ export const DIMENSION_BY_UNIT_PREFERENCE = {
 	height: "length",
 	length: "length",
 	fraction: "fraction",
+	alcohol: "mass",
+	volume: "volume",
 } as const satisfies Record<UnitPreferenceDimension, Dimension>;
 
 export const FALLBACK_DISPLAY_UNITS_BY_PREFERENCE_DIMENSION = {
@@ -93,6 +124,8 @@ export const FALLBACK_DISPLAY_UNITS_BY_PREFERENCE_DIMENSION = {
 	height: "cm",
 	length: "cm",
 	fraction: "%",
+	alcohol: "uk_unit",
+	volume: "ml",
 } as const satisfies {
 	[D in UnitPreferenceDimension]: DisplayUnitForPreferenceDimension<D>;
 };
@@ -115,6 +148,16 @@ export const DISPLAY_RESOLUTIONS = {
 	in: 0.25,
 	ft: 1,
 	"%": 0.1,
+	g: 0.1,
+	mg: 1,
+	uk_unit: 0.1,
+	us_standard_drink: 0.1,
+	ml: 1,
+	l: 0.1,
+	fl_oz_uk: 0.1,
+	fl_oz_us: 0.1,
+	kcal: 1,
+	kJ: 1,
 } as const satisfies Record<DisplayUnit, number>;
 
 export function isDisplayUnitForDimension<D extends Dimension>(

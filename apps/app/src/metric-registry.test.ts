@@ -3,6 +3,7 @@ import {
 	DEFAULT_TRACKED_METRICS,
 	hasCompletedCheckIn,
 	listAssessmentMetrics,
+	listConsumptionDerivedMeasurements,
 	listFactors,
 	listImportedOnlyMeasurements,
 	listMeasurements,
@@ -39,7 +40,7 @@ describe("metric registry", () => {
 				expect(["last", "mean", "sum"]).toContain(metric.aggregation);
 				expect(metric.category).toBeNull();
 				expect(metric.dimension).toMatch(
-					/^(mass|length|fraction|time|count|rate_bpm)$/,
+					/^(mass|length|fraction|volume|energy|time|count|rate_bpm)$/,
 				);
 			} else {
 				expect(metric.scaleMin).toBeLessThan(metric.scaleMax);
@@ -85,6 +86,25 @@ describe("metric registry", () => {
 				dimension: "rate_bpm",
 				aggregation: "mean",
 			}),
+			expect.objectContaining({
+				slug: "alcohol_intake",
+				dimension: "mass",
+				aggregation: "sum",
+			}),
+			expect.objectContaining({
+				slug: "caffeine_intake",
+				dimension: "mass",
+				fixedDisplayUnit: "mg",
+			}),
+			expect.objectContaining({
+				slug: "fluid_intake",
+				dimension: "volume",
+			}),
+			expect.objectContaining({
+				slug: "energy_intake",
+				dimension: "energy",
+				fixedDisplayUnit: "kcal",
+			}),
 		]);
 		for (const metric of listUserEnterableMeasurements()) {
 			expect(metric).toMatchObject({
@@ -111,6 +131,28 @@ describe("metric registry", () => {
 				slug: "resting_heart_rate",
 				userEnterable: false,
 				sensitive: true,
+			}),
+		]);
+		expect(listConsumptionDerivedMeasurements()).toEqual([
+			expect.objectContaining({
+				slug: "alcohol_intake",
+				userEnterable: false,
+				measurementSource: "consumption",
+				sensitive: true,
+				unitPreferenceDimension: "alcohol",
+			}),
+			expect.objectContaining({
+				slug: "caffeine_intake",
+				sensitive: false,
+			}),
+			expect.objectContaining({
+				slug: "fluid_intake",
+				sensitive: false,
+				unitPreferenceDimension: "volume",
+			}),
+			expect.objectContaining({
+				slug: "energy_intake",
+				sensitive: false,
 			}),
 		]);
 		expect(listAssessmentMetrics().map((metric) => metric.slug)).toEqual([
@@ -157,7 +199,13 @@ describe("metric registry", () => {
 
 	it("exposes only daily check-in metrics as lazy check-in defaults", () => {
 		expect(DEFAULT_TRACKED_METRICS).toEqual(
-			METRIC_REGISTRY.filter((metric) => metric.userEnterable).map(
+			METRIC_REGISTRY.filter(
+				(metric) =>
+					metric.userEnterable ||
+					(metric.kind === "measurement" &&
+						"measurementSource" in metric &&
+						metric.measurementSource === "consumption"),
+			).map(
 				(metric) => ({
 					metricSlug: metric.slug,
 					position: metric.defaultPosition,
@@ -192,6 +240,22 @@ describe("metric registry", () => {
 			expect(
 				listAssessmentMetrics().some(({ slug }) => slug === imported),
 			).toBe(false);
+		}
+		for (const derived of listConsumptionDerivedMeasurements()) {
+			expect(
+				DEFAULT_TRACKED_METRICS.find(
+					({ metricSlug }) => metricSlug === derived.slug,
+				),
+			).toEqual({
+				metricSlug: derived.slug,
+				position: derived.defaultPosition,
+				enabled: false,
+			});
+			expect(listUserEnterableMeasurements()).not.toContainEqual(derived);
+			expect(listImportedOnlyMeasurements()).not.toContainEqual(derived);
+			expect(listScoredMetrics()).not.toContainEqual(derived);
+			expect(listFactors()).not.toContainEqual(derived);
+			expect(listAssessmentMetrics()).not.toContainEqual(derived);
 		}
 	});
 

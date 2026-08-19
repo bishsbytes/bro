@@ -1,5 +1,6 @@
 import type {
 	Dimension,
+	DisplayUnit,
 	IntrinsicDimension,
 	MetricDimension,
 	UnitPreferenceDimension,
@@ -10,13 +11,23 @@ export type MetricKind = "scored" | "factor" | "assessment" | "measurement";
 export type MetricAggregation = "mean" | "presence" | "last" | "sum";
 export type FactorCategory = "body" | "lifestyle" | "mind" | "social";
 export type UserEnterableMeasurementSlug = "weight" | "waist" | "body_fat";
+export type UserEnterableMeasurementDimension =
+	| "mass"
+	| "length"
+	| "fraction";
 export type ImportedOnlyMeasurementSlug =
 	| "sleep_duration"
 	| "steps"
 	| "resting_heart_rate";
+export type ConsumptionDerivedMeasurementSlug =
+	| "alcohol_intake"
+	| "caffeine_intake"
+	| "fluid_intake"
+	| "energy_intake";
 export type MeasurementSlug =
 	| UserEnterableMeasurementSlug
-	| ImportedOnlyMeasurementSlug;
+	| ImportedOnlyMeasurementSlug
+	| ConsumptionDerivedMeasurementSlug;
 
 type MetricDefinitionBase = {
 	slug: string;
@@ -66,13 +77,15 @@ type MeasurementMetricDefinitionBase = MetricDefinitionBase & {
 	category: null;
 	/** Overrides the physical dimension when display preferences need splitting. */
 	unitPreferenceDimension?: UnitPreferenceDimension;
+	/** A display form deliberately fixed for this metric. */
+	fixedDisplayUnit?: DisplayUnit;
 };
 
 export type UserEnterableMeasurementMetricDefinition =
 	MeasurementMetricDefinitionBase & {
 		slug: UserEnterableMeasurementSlug;
 		aggregation: "last";
-		dimension: Dimension;
+		dimension: UserEnterableMeasurementDimension;
 		userEnterable: true;
 	};
 
@@ -84,9 +97,19 @@ export type ImportedOnlyMeasurementMetricDefinition =
 		userEnterable: false;
 	};
 
+export type ConsumptionDerivedMeasurementMetricDefinition =
+	MeasurementMetricDefinitionBase & {
+		slug: ConsumptionDerivedMeasurementSlug;
+		aggregation: "sum";
+		dimension: Dimension;
+		userEnterable: false;
+		measurementSource: "consumption";
+	};
+
 export type MeasurementMetricDefinition =
 	| UserEnterableMeasurementMetricDefinition
-	| ImportedOnlyMeasurementMetricDefinition;
+	| ImportedOnlyMeasurementMetricDefinition
+	| ConsumptionDerivedMeasurementMetricDefinition;
 
 export type MetricDefinition =
 	| ScoredMetricDefinition
@@ -101,7 +124,7 @@ export type MetricResolution =
 /**
  * The only value a factor observation ever carries. A factor that later needs
  * quantity gets a separate quantified-counterpart metric (`alcohol` →
- * `alcohol_units`); reusing the factor's value would make existing rows
+ * `alcohol_intake`); reusing the factor's value would make existing rows
  * ambiguous. Convention: product plan, check-in domain.
  */
 export const FACTOR_PRESENCE_VALUE = 1;
@@ -165,10 +188,36 @@ const assessment = (
 	dimension: null,
 });
 
+const consumptionMeasurement = (
+	slug: ConsumptionDerivedMeasurementSlug,
+	label: string,
+	dimension: Dimension,
+	defaultPosition: number,
+	sensitive: boolean,
+	display:
+		| { unitPreferenceDimension: UnitPreferenceDimension }
+		| { fixedDisplayUnit: DisplayUnit },
+): ConsumptionDerivedMeasurementMetricDefinition => ({
+	slug,
+	label,
+	kind: "measurement",
+	scaleMin: null,
+	scaleMax: null,
+	category: null,
+	aggregation: "sum",
+	dimension,
+	sensitive,
+	userEnterable: false,
+	measurementSource: "consumption",
+	deprecated: false,
+	defaultPosition,
+	...display,
+});
+
 const measurement = (
 	slug: UserEnterableMeasurementSlug,
 	label: string,
-	dimension: Dimension,
+	dimension: UserEnterableMeasurementDimension,
 	defaultPosition: number,
 ): UserEnterableMeasurementMetricDefinition => ({
 	slug,
@@ -239,6 +288,38 @@ export const METRIC_REGISTRY = [
 		5,
 		true,
 	),
+	consumptionMeasurement(
+		"alcohol_intake",
+		"Alcohol",
+		"mass",
+		6,
+		true,
+		{ unitPreferenceDimension: "alcohol" },
+	),
+	consumptionMeasurement(
+		"caffeine_intake",
+		"Caffeine",
+		"mass",
+		7,
+		false,
+		{ fixedDisplayUnit: "mg" },
+	),
+	consumptionMeasurement(
+		"fluid_intake",
+		"Fluid intake",
+		"volume",
+		8,
+		false,
+		{ unitPreferenceDimension: "volume" },
+	),
+	consumptionMeasurement(
+		"energy_intake",
+		"Energy intake",
+		"energy",
+		9,
+		false,
+		{ fixedDisplayUnit: "kcal" },
+	),
 	...LIFE_AREA_CATALOGUE.map((area) =>
 		assessment(area.slug, area.label, area.defaultPosition, area.sensitive),
 	),
@@ -249,7 +330,11 @@ const metricsBySlug = new Map<string, MetricDefinition>(
 );
 
 export const DEFAULT_TRACKED_METRICS = METRIC_REGISTRY.filter(
-	(metric) => metric.userEnterable,
+	(metric) =>
+		metric.userEnterable ||
+		(metric.kind === "measurement" &&
+			"measurementSource" in metric &&
+			metric.measurementSource === "consumption"),
 ).map((metric) => ({
 	metricSlug: metric.slug,
 	position: metric.defaultPosition,
@@ -313,6 +398,17 @@ export function listUserEnterableMeasurements(): UserEnterableMeasurementMetricD
 export function listImportedOnlyMeasurements(): ImportedOnlyMeasurementMetricDefinition[] {
 	return METRIC_REGISTRY.filter(
 		(metric): metric is ImportedOnlyMeasurementMetricDefinition =>
-			metric.kind === "measurement" && !metric.userEnterable,
+			metric.kind === "measurement" &&
+			!metric.userEnterable &&
+			!("measurementSource" in metric),
+	);
+}
+
+export function listConsumptionDerivedMeasurements(): ConsumptionDerivedMeasurementMetricDefinition[] {
+	return METRIC_REGISTRY.filter(
+		(metric): metric is ConsumptionDerivedMeasurementMetricDefinition =>
+			metric.kind === "measurement" &&
+			"measurementSource" in metric &&
+			metric.measurementSource === "consumption",
 	);
 }

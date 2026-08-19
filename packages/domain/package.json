@@ -16,6 +16,11 @@
 			"import": "./src/content/challenge-catalogue.ts",
 			"default": "./src/content/challenge-catalogue.ts"
 		},
+		"./drink-catalogue": {
+			"types": "./src/content/drink-catalogue.ts",
+			"import": "./src/content/drink-catalogue.ts",
+			"default": "./src/content/drink-catalogue.ts"
+		},
 		"./habit-catalogue": {
 			"types": "./src/content/habit-catalogue.ts",
 			"import": "./src/content/habit-catalogue.ts",

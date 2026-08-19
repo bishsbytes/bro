@@ -22,10 +22,11 @@ export function metricDisplayUnit(
 	locale: string | undefined,
 ): DisplayUnit | null {
 	if (isIntrinsicDimension(metric.dimension)) return null;
+	if (metric.fixedDisplayUnit) return metric.fixedDisplayUnit;
 	const preferenceDimension =
 		metric.unitPreferenceDimension ?? metric.dimension;
 	return resolveUnitPreference(
-		preferenceDimension,
+		preferenceDimension as Parameters<typeof resolveUnitPreference>[0],
 		preferenceByDimension.get(preferenceDimension),
 		locale,
 	);
@@ -42,5 +43,9 @@ export function formatMetricValue(
 	if (!displayUnit) {
 		throw new TypeError(`A ${metric.dimension} metric needs a display unit.`);
 	}
-	return formatMeasurement(value, metric.dimension as Dimension, displayUnit);
+	return formatMeasurement(
+		value,
+		metric.dimension as Dimension,
+		displayUnit as never,
+	);
 }

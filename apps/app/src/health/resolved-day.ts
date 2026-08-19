@@ -1,17 +1,27 @@
-import type { DailyMetric, Observation } from "@bro/database-app";
-import { resolveMetric } from "@bro/domain/metric-registry";
-import type { HealthMetricSlug } from "./policy";
+import type {
+	ConsumptionEntry,
+	DailyMetric,
+	Observation,
+} from "@bro/database-app";
+import {
+	type ConsumptionDerivedMeasurementSlug,
+	type MeasurementSlug,
+	resolveMetric,
+} from "@bro/domain/metric-registry";
+import { consumptionMetricDayTotal } from "../consumption";
 
 export type ResolvedMetricDay = {
-	metricSlug: HealthMetricSlug;
+	metricSlug: MeasurementSlug;
 	localDay: string;
 	value: number | null;
 	selected:
 		| { kind: "imported"; row: DailyMetric }
 		| { kind: "user"; rows: Observation[] }
+		| { kind: "consumption"; entries: ConsumptionEntry[] }
 		| null;
 	userRows: Observation[];
 	importedRows: DailyMetric[];
+	consumptionEntries: ConsumptionEntry[];
 };
 
 function compareObservations(left: Observation, right: Observation): number {
@@ -31,16 +41,39 @@ function compareImports(left: DailyMetric, right: DailyMetric): number {
 	);
 }
 
-/** Imported objective data wins without discarding the user's observations. */
+/** Resolves the metric's declared source while retaining its row provenance. */
 export function resolveMetricDay(
-	metricSlug: HealthMetricSlug,
+	metricSlug: MeasurementSlug,
 	localDay: string,
 	observations: readonly Observation[],
 	dailyMetrics: readonly DailyMetric[],
+	consumptionEntries: readonly ConsumptionEntry[] = [],
 ): ResolvedMetricDay {
 	const resolved = resolveMetric(metricSlug);
 	if (resolved.kind !== "known" || resolved.metric.kind !== "measurement") {
-		throw new TypeError(`Unknown health metric: ${metricSlug}`);
+		throw new TypeError(`Unknown resolvable metric: ${metricSlug}`);
+	}
+	if (
+		"measurementSource" in resolved.metric &&
+		resolved.metric.measurementSource === "consumption"
+	) {
+		const total = consumptionMetricDayTotal(
+			metricSlug as ConsumptionDerivedMeasurementSlug,
+			localDay,
+			consumptionEntries,
+		);
+		return {
+			metricSlug,
+			localDay,
+			value: total.value,
+			selected:
+				total.value === null
+					? null
+					: { kind: "consumption", entries: total.entries },
+			userRows: [],
+			importedRows: [],
+			consumptionEntries: total.entries,
+		};
 	}
 	const userRows = observations
 		.filter(
@@ -62,6 +95,7 @@ export function resolveMetricDay(
 			selected: { kind: "imported", row: imported },
 			userRows,
 			importedRows,
+			consumptionEntries: [],
 		};
 	}
 	if (userRows.length === 0) {
@@ -72,6 +106,7 @@ export function resolveMetricDay(
 			selected: null,
 			userRows,
 			importedRows,
+			consumptionEntries: [],
 		};
 	}
 
@@ -90,5 +125,6 @@ export function resolveMetricDay(
 		selected: { kind: "user", rows: userRows },
 		userRows,
 		importedRows,
+		consumptionEntries: [],
 	};
 }

@@ -10,7 +10,6 @@ import {
 	formatMeasurement,
 	isDisplayUnitForPreferenceDimension,
 	resolveUnitPreference,
-	UNIT_PREFERENCE_DIMENSIONS,
 	type UnitPreferenceDimension,
 } from "@bro/domain";
 import type { SQLiteDatabase } from "expo-sqlite";
@@ -48,10 +47,29 @@ const UNIT_LABELS: Record<DisplayUnit, string> = {
 	in: "Inches",
 	ft: "Feet & inches",
 	"%": "Percent",
+	g: "Grams",
+	mg: "Milligrams",
+	uk_unit: "UK units",
+	us_standard_drink: "US standard drinks",
+	ml: "Millilitres",
+	l: "Litres",
+	fl_oz_uk: "UK fluid ounces",
+	fl_oz_us: "US fluid ounces",
+	kcal: "Kilocalories",
+	kJ: "Kilojoules",
 };
 
+const GENERAL_UNIT_PREFERENCE_DIMENSIONS = [
+	"mass",
+	"height",
+	"length",
+	"fraction",
+] as const satisfies readonly UnitPreferenceDimension[];
+type GeneralUnitPreferenceDimension =
+	(typeof GENERAL_UNIT_PREFERENCE_DIMENSIONS)[number];
+
 const SETTING_COPY: Record<
-	UnitPreferenceDimension,
+	GeneralUnitPreferenceDimension,
 	{ title: string; description: string }
 > = {
 	mass: {
@@ -86,10 +104,10 @@ const PREVIEW_CANONICAL_VALUES = {
 	height: 1.7,
 	length: 0.84,
 	fraction: 0.185,
-} as const satisfies Record<UnitPreferenceDimension, number>;
+} as const satisfies Record<GeneralUnitPreferenceDimension, number>;
 
 function previewFor(
-	dimension: UnitPreferenceDimension,
+	dimension: GeneralUnitPreferenceDimension,
 	storedUnit: string | null | undefined,
 	locale: string | undefined,
 ): { resolvedUnit: DisplayUnit; preview: string } {
@@ -117,7 +135,7 @@ export class UnitSettingsStore {
 		);
 		const locale = this.locale();
 		return {
-			settings: UNIT_PREFERENCE_DIMENSIONS.map((dimension) => {
+			settings: GENERAL_UNIT_PREFERENCE_DIMENSIONS.map((dimension) => {
 				const storedUnit = storedByDimension.get(dimension);
 				const explicitUnit =
 					storedUnit !== undefined &&

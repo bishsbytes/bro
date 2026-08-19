@@ -1,6 +1,10 @@
-import type { DailyMetric, Observation } from "@bro/database-app";
+import type {
+	ConsumptionEntry,
+	DailyMetric,
+	Observation,
+} from "@bro/database-app";
+import type { MeasurementSlug } from "@bro/domain/metric-registry";
 import { resolveMetric } from "@bro/domain/metric-registry";
-import type { HealthMetricSlug } from "./policy";
 import { type ResolvedMetricDay, resolveMetricDay } from "./resolved-day";
 
 export type ResolvedMetricObservation = Observation & {
@@ -60,15 +64,58 @@ function userObservation(day: ResolvedMetricDay): ResolvedMetricObservation {
 	};
 }
 
+function consumptionObservation(
+	day: ResolvedMetricDay,
+): ResolvedMetricObservation {
+	const selected = day.selected;
+	if (selected?.kind !== "consumption") {
+		throw new TypeError("A resolved consumption day must contain entries.");
+	}
+	const latest = [...selected.entries].sort(
+		(left, right) =>
+			left.occurredAt - right.occurredAt ||
+			left.createdAt - right.createdAt ||
+			left.id.localeCompare(right.id),
+	).at(-1);
+	if (!latest || day.value === null) {
+		throw new TypeError("A resolved consumption day is missing its total.");
+	}
+	return {
+		id: `resolved-consumption:${day.metricSlug}:${day.localDay}`,
+		metricSlug: day.metricSlug,
+		value: day.value,
+		scaleMin: null,
+		scaleMax: null,
+		observedAt: latest.occurredAt,
+		localDay: day.localDay,
+		tzOffsetMinutes: latest.tzOffsetMinutes,
+		source: "consumption",
+		sourceRecordId: null,
+		assessmentId: null,
+		createdAt: latest.createdAt,
+		updatedAt: Math.max(
+			...selected.entries.map((entry) => entry.updatedAt),
+		),
+		resolvedDay: day,
+	};
+}
+
 /**
- * Produces one selected value per local day. Imported objective rollups win,
- * while every original row remains attached to `resolvedDay` for provenance.
+ * Produces one selected value per local day. Every contributing source row
+ * remains attached to `resolvedDay` for provenance.
  */
 export function resolveMetricObservations(
-	metricSlug: HealthMetricSlug,
+	metricSlug: MeasurementSlug,
 	observations: readonly Observation[],
 	dailyMetrics: readonly DailyMetric[],
+	consumptionEntries: readonly ConsumptionEntry[] = [],
 ): ResolvedMetricObservation[] {
+	const resolved = resolveMetric(metricSlug);
+	const isConsumptionDerived =
+		resolved.kind === "known" &&
+		resolved.metric.kind === "measurement" &&
+		"measurementSource" in resolved.metric &&
+		resolved.metric.measurementSource === "consumption";
 	const localDays = new Set([
 		...observations
 			.filter((row) => row.metricSlug === metricSlug)
@@ -76,6 +123,9 @@ export function resolveMetricObservations(
 		...dailyMetrics
 			.filter((row) => row.metricSlug === metricSlug)
 			.map((row) => row.localDay),
+		...(isConsumptionDerived
+			? consumptionEntries.map((entry) => entry.localDay)
+			: []),
 	]);
 
 	return [...localDays]
@@ -86,12 +136,15 @@ export function resolveMetricObservations(
 				localDay,
 				observations,
 				dailyMetrics,
+				consumptionEntries,
 			);
 			if (!day.selected) return [];
 			return [
 				day.selected.kind === "imported"
 					? importedObservation(day, day.selected.row)
-					: userObservation(day),
+					: day.selected.kind === "consumption"
+						? consumptionObservation(day)
+						: userObservation(day),
 			];
 		});
 }

@@ -35,7 +35,18 @@ function formatRounded(value: number, unit: SimpleDisplayUnit): string {
 	const resolution = DISPLAY_RESOLUTIONS[unit];
 	const rounded = roundToResolution(value, resolution);
 	const formatted = rounded.toFixed(decimalPlaces(resolution));
-	return unit === "%" ? `${formatted}%` : `${formatted} ${unit}`;
+	const suffix = {
+		"%": "%",
+		uk_unit: rounded === 1 ? " unit" : " units",
+		us_standard_drink:
+			rounded === 1 ? " standard drink" : " standard drinks",
+		fl_oz_uk: " fl oz",
+		fl_oz_us: " fl oz",
+	} as const;
+	const resolvedSuffix = suffix[unit as keyof typeof suffix];
+	return resolvedSuffix === "%"
+		? `${formatted}%`
+		: `${formatted}${resolvedSuffix ?? ` ${unit}`}`;
 }
 
 export function formatMeasurement<D extends Dimension>(

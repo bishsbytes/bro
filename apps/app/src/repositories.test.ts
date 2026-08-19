@@ -365,7 +365,15 @@ describe("product repositories", () => {
 			initial
 				.filter(
 					({ metricSlug }) =>
-						!["weight", "waist", "body_fat"].includes(metricSlug),
+						![
+							"weight",
+							"waist",
+							"body_fat",
+							"alcohol_intake",
+							"caffeine_intake",
+							"fluid_intake",
+							"energy_intake",
+						].includes(metricSlug),
 				)
 				.every((metric) => metric.enabled),
 		).toBe(true);

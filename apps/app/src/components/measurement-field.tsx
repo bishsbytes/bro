@@ -10,7 +10,7 @@ import { AppText } from "./app-text";
 import { FormField } from "./form-field";
 
 /** Spoken names for the parts of a compound field, for screen readers. */
-const UNIT_PART_NAMES: Record<DisplayUnit, string> = {
+const UNIT_PART_NAMES: Partial<Record<DisplayUnit, string>> = {
 	kg: "kilograms",
 	lb: "pounds",
 	st: "stones",
