@@ -2,7 +2,7 @@
 
 ## Status
 
-**Proposed, 19 August 2026. Not started.**
+**In progress, 19 August 2026. Slice 1 complete.**
 
 This is the delivery plan for the first half of [sequencing step 8 of the product domains plan](product-domains-and-data.md#sequencing), which this plan splits in two. The product plan's step 8 — food logging — is "the largest, carries the external dependency, and is the easiest to get wrong in a way users abandon". That description is true of food and false of drink: alcohol, caffeine, and fluid need no food database, no barcode, no network, and no new store, and they are the consumption signals the [insight engine](step-7-insight.md) already has authored pairs for. So **step 8 is drink logging, and step 9 is food logging**, and step 8 exists to design and prove the consumption entry model — the entry table, the snapshot rule, the entry-to-daily-signal projection — with zero external dependency, so that step 9's one hard thing is genuinely only the provider.
 

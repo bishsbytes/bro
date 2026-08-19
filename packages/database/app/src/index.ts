@@ -58,6 +58,13 @@ export {
 	ChallengeProgressRepository,
 } from "./repositories/challenge-progress-repository";
 export {
+	type ConsumptionEntry,
+	ConsumptionEntryRepository,
+	type ConsumptionEntryKind,
+	type CreateConsumptionEntry,
+	type UpdateConsumptionEntry,
+} from "./repositories/consumption-entry-repository";
+export {
 	type DailyMetric,
 	DailyMetricRepository,
 	type UpsertDailyMetric,

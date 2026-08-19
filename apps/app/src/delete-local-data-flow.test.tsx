@@ -96,6 +96,7 @@ describe("delete local data", () => {
 			db,
 		);
 		const challengeProgress = new databaseApp.ChallengeProgressRepository(db);
+		const consumptionEntries = new databaseApp.ConsumptionEntryRepository(db);
 		await observations.create({
 			metricSlug: "mood",
 			value: 4,
@@ -165,6 +166,20 @@ describe("delete local data", () => {
 			startedOn: "2026-08-14",
 		});
 		await challengeProgress.completeDay(enrolment.id, 1, "2026-08-14");
+		await consumptionEntries.create({
+			kind: "drink",
+			catalogueRef: "drink:lager",
+			label: "Lager",
+			servingLabel: "pint",
+			quantity: 1,
+			volumeL: 0.568_261_25,
+			ethanolKg: 0.020_181_999,
+			caffeineKg: null,
+			energyKcal: 227,
+			occurredAt: Date.parse("2026-08-14T21:00:00.000Z"),
+			localDay: "2026-08-14",
+			tzOffsetMinutes: -60,
+		});
 		const healthConnections = new databaseApp.HealthConnectionRepository(
 			localDb,
 		);
@@ -202,6 +217,7 @@ describe("delete local data", () => {
 		expect(await observations.listAll()).toHaveLength(2);
 		expect(await notes.listAll()).toHaveLength(1);
 		expect(await trackedMetrics.listAll()).toHaveLength(1);
+		expect(await consumptionEntries.listAll()).toHaveLength(1);
 
 		await fireEvent.press(view.getByText("Cancel"));
 		expect(view.queryByText(DELETE_COPY)).toBeNull();
@@ -223,6 +239,7 @@ describe("delete local data", () => {
 		expect(await habitCompletions.listByDay("2026-08-14")).toEqual([]);
 		expect(await challengeEnrolments.listAll()).toEqual([]);
 		expect(await challengeProgress.listByDay("2026-08-14")).toEqual([]);
+		expect(await consumptionEntries.listAll()).toEqual([]);
 		expect(await healthConnections.list()).toEqual([]);
 		expect(await rawSamples.listByMetricDay("weight", "2026-08-14")).toEqual(
 			[],

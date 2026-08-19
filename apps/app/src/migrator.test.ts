@@ -50,6 +50,7 @@ describe("product database migrations", () => {
 				"0003_curly_tinkerer",
 				"0004_brainy_maggott",
 				"0005_red_wolfsbane",
+				"0006_right_mother_askani",
 			],
 			skipped: [],
 		});
@@ -73,8 +74,11 @@ describe("product database migrations", () => {
 				'habit_completions',
 				'challenge_enrolments',
 				'challenge_progress',
+				'consumption_entries',
 				'idx_habit_completions_natural',
-				'idx_challenge_progress_natural'
+				'idx_challenge_progress_natural',
+				'idx_consumption_entries_day',
+				'idx_consumption_entries_kind_day'
 			 )
 			 ORDER BY name`,
 		);
@@ -83,12 +87,15 @@ describe("product database migrations", () => {
 			{ name: "assessments", type: "table" },
 			{ name: "challenge_enrolments", type: "table" },
 			{ name: "challenge_progress", type: "table" },
+			{ name: "consumption_entries", type: "table" },
 			{ name: "daily_metrics", type: "table" },
 			{ name: "day_notes", type: "table" },
 			{ name: "goals", type: "table" },
 			{ name: "habit_completions", type: "table" },
 			{ name: "habits", type: "table" },
 			{ name: "idx_challenge_progress_natural", type: "index" },
+			{ name: "idx_consumption_entries_day", type: "index" },
+			{ name: "idx_consumption_entries_kind_day", type: "index" },
 			{ name: "idx_daily_metrics_natural", type: "index" },
 			{ name: "idx_day_notes_day", type: "index" },
 			{ name: "idx_habit_completions_natural", type: "index" },
@@ -126,6 +133,7 @@ describe("product database migrations", () => {
 				"0003_curly_tinkerer",
 				"0004_brainy_maggott",
 				"0005_red_wolfsbane",
+				"0006_right_mother_askani",
 			],
 		});
 
@@ -139,10 +147,11 @@ describe("product database migrations", () => {
 			{ id: "0003_curly_tinkerer" },
 			{ id: "0004_brainy_maggott" },
 			{ id: "0005_red_wolfsbane" },
+			{ id: "0006_right_mother_askani" },
 		]);
 	});
 
-	it("applies migrations 003 through 006 to a step-2 database", async () => {
+	it("applies migrations 003 through 007 to a step-2 database", async () => {
 		const { databaseApp, db } = await migratedDatabase("step-two.db");
 		await db.execAsync(`
 			CREATE TABLE IF NOT EXISTS __app_migrations (
@@ -168,6 +177,7 @@ describe("product database migrations", () => {
 				"0003_curly_tinkerer",
 				"0004_brainy_maggott",
 				"0005_red_wolfsbane",
+				"0006_right_mother_askani",
 			],
 			skipped: ["0000_check_in", "0001_odd_lockheed"],
 		});
@@ -208,6 +218,7 @@ describe("product database migrations", () => {
 				"0002_square_mikhail_rasputin",
 				"0004_brainy_maggott",
 				"0005_red_wolfsbane",
+				"0006_right_mother_askani",
 			],
 		});
 		expect(
@@ -244,6 +255,7 @@ describe("product database migrations", () => {
 				"0003_curly_tinkerer",
 				"0004_brainy_maggott",
 				"0005_red_wolfsbane",
+				"0006_right_mother_askani",
 			],
 			skipped: [],
 		});
@@ -251,7 +263,7 @@ describe("product database migrations", () => {
 		const markers = await db.getFirstAsync<{ count: number }>(
 			"SELECT COUNT(*) AS count FROM __app_migrations",
 		);
-		expect(markers?.count).toBe(6);
+		expect(markers?.count).toBe(7);
 		expect(
 			await db.getFirstAsync<{ count: number }>(
 				`SELECT COUNT(*) AS count FROM pragma_table_info('tracked_metrics')
@@ -276,6 +288,7 @@ describe("product database migrations", () => {
 				"0002_square_mikhail_rasputin",
 				"0003_curly_tinkerer",
 				"0005_red_wolfsbane",
+				"0006_right_mother_askani",
 			],
 		});
 		expect(
@@ -305,6 +318,7 @@ describe("product database migrations", () => {
 				"0002_square_mikhail_rasputin",
 				"0003_curly_tinkerer",
 				"0004_brainy_maggott",
+				"0006_right_mother_askani",
 			],
 		});
 		expect(
@@ -321,6 +335,40 @@ describe("product database migrations", () => {
 			{ name: "challenge_progress" },
 			{ name: "habit_completions" },
 			{ name: "habits" },
+		]);
+	});
+
+	it("applies only migration 007 to a step-7 database", async () => {
+		const { databaseApp, db } = await migratedDatabase("step-seven.db");
+		await databaseApp.runMigrations(db);
+		await db.execAsync(`
+			DROP TABLE consumption_entries;
+			DELETE FROM __app_migrations WHERE id = '0006_right_mother_askani';
+		`);
+
+		await expect(databaseApp.runMigrations(db)).resolves.toEqual({
+			applied: ["0006_right_mother_askani"],
+			skipped: [
+				"0000_check_in",
+				"0001_odd_lockheed",
+				"0002_square_mikhail_rasputin",
+				"0003_curly_tinkerer",
+				"0004_brainy_maggott",
+				"0005_red_wolfsbane",
+			],
+		});
+		expect(
+			await db.getAllAsync<{ name: string; type: string }>(
+				`SELECT name, type FROM sqlite_master
+				 WHERE name IN (
+					'consumption_entries', 'idx_consumption_entries_day',
+					'idx_consumption_entries_kind_day'
+				 ) ORDER BY name`,
+			),
+		).toEqual([
+			{ name: "consumption_entries", type: "table" },
+			{ name: "idx_consumption_entries_day", type: "index" },
+			{ name: "idx_consumption_entries_kind_day", type: "index" },
 		]);
 	});
 

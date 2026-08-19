@@ -43,6 +43,13 @@
       "when": 1786913572956,
       "tag": "0005_red_wolfsbane",
       "breakpoints": true
+    },
+    {
+      "idx": 6,
+      "version": "6",
+      "when": 1787145148198,
+      "tag": "0006_right_mother_askani",
+      "breakpoints": true
     }
   ]
 }

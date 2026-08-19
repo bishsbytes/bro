@@ -201,3 +201,28 @@ export const challengeProgress = sqliteTable(
 		),
 	],
 );
+
+export const consumptionEntries = sqliteTable(
+	PRODUCT_TABLE_NAMES.consumptionEntries,
+	{
+		id: text("id").primaryKey(),
+		kind: text("kind").notNull(),
+		catalogueRef: text("catalogue_ref"),
+		label: text("label").notNull(),
+		servingLabel: text("serving_label"),
+		quantity: real("quantity").notNull(),
+		volumeL: real("volume_l"),
+		ethanolKg: real("ethanol_kg"),
+		caffeineKg: real("caffeine_kg"),
+		energyKcal: real("energy_kcal"),
+		occurredAt: integer("occurred_at").notNull(),
+		localDay: text("local_day").notNull(),
+		tzOffsetMinutes: integer("tz_offset_minutes").notNull(),
+		createdAt: integer("created_at").notNull(),
+		updatedAt: integer("updated_at").notNull(),
+	},
+	(table) => [
+		index("idx_consumption_entries_day").on(table.localDay),
+		index("idx_consumption_entries_kind_day").on(table.kind, table.localDay),
+	],
+);

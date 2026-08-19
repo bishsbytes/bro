@@ -45,6 +45,26 @@ function observation(
 	};
 }
 
+function consumptionEntry(
+	overrides: Partial<DatabaseApp.CreateConsumptionEntry> = {},
+): DatabaseApp.CreateConsumptionEntry {
+	return {
+		kind: "drink",
+		catalogueRef: "drink:lager",
+		label: "Lager",
+		servingLabel: "pint",
+		quantity: 1,
+		volumeL: 0.568_261_25,
+		ethanolKg: 0.020_181_999,
+		caffeineKg: null,
+		energyKcal: 227,
+		occurredAt: Date.parse("2026-08-14T21:00:00.000Z"),
+		localDay: "2026-08-14",
+		tzOffsetMinutes: -60,
+		...overrides,
+	};
+}
+
 describe("product repositories", () => {
 	beforeEach(async () => {
 		mockSqlite.reset();
@@ -156,6 +176,73 @@ describe("product repositories", () => {
 			repository.untapFactorForDay("alcohol", "2026-08-14"),
 		).resolves.toBe(2);
 		expect(await repository.listByDay("2026-08-14")).toEqual([mood]);
+	});
+
+	it("creates, lists, edits, and hard-deletes snapshotted consumption entries", async () => {
+		let now = 1_000;
+		let nextId = 0;
+		const repository = new databaseApp.ConsumptionEntryRepository(db, {
+			now: () => now,
+			createId: () => `consumption-${++nextId}`,
+		});
+		const lager = await repository.create(
+			consumptionEntry({ label: "  Lager  ", servingLabel: " pint " }),
+		);
+
+		now = 2_000;
+		const coffee = await repository.create(
+			consumptionEntry({
+				catalogueRef: "drink:filter-coffee",
+				label: "Filter coffee",
+				servingLabel: "mug",
+				volumeL: 0.35,
+				ethanolKg: null,
+				caffeineKg: 0.000_14,
+				energyKcal: 2,
+				occurredAt: Date.parse("2026-08-15T08:00:00.000Z"),
+				localDay: "2026-08-15",
+			}),
+		);
+
+		expect(lager).toMatchObject({
+			id: "consumption-1",
+			label: "Lager",
+			servingLabel: "pint",
+			createdAt: 1_000,
+			updatedAt: 1_000,
+		});
+		await expect(repository.listByDay("2026-08-14")).resolves.toEqual([lager]);
+		await expect(repository.listRecent(1)).resolves.toEqual([coffee]);
+
+		now = 3_000;
+		const corrected = await repository.update(lager.id, {
+			catalogueRef: lager.catalogueRef,
+			label: lager.label,
+			servingLabel: "half pint",
+			quantity: 1,
+			volumeL: lager.volumeL === null ? null : lager.volumeL / 2,
+			ethanolKg: lager.ethanolKg === null ? null : lager.ethanolKg / 2,
+			caffeineKg: null,
+			energyKcal: 113.5,
+			occurredAt: lager.occurredAt,
+			localDay: lager.localDay,
+			tzOffsetMinutes: lager.tzOffsetMinutes,
+		});
+		expect(corrected).toMatchObject({
+			id: lager.id,
+			servingLabel: "half pint",
+			createdAt: 1_000,
+			updatedAt: 3_000,
+		});
+		await expect(repository.delete(lager.id)).resolves.toBe(true);
+		await expect(repository.delete(lager.id)).resolves.toBe(false);
+		await expect(repository.listAll()).resolves.toEqual([coffee]);
+		await expect(
+			repository.create(consumptionEntry({ quantity: 0 })),
+		).rejects.toThrow("quantity must be a positive finite value");
+		await expect(repository.listByDay("2026-02-30")).rejects.toThrow(
+			"real YYYY-MM-DD date",
+		);
 	});
 
 	it("upserts the UI note while retaining manufactured duplicates", async () => {
