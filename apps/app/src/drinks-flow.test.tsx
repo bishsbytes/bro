@@ -95,7 +95,8 @@ describe("drink logging flow", () => {
 		await fireEvent(view.getByLabelText("Track Alcohol"), "valueChange", true);
 		expect(await view.findByLabelText("Stop tracking Alcohol")).toBeTruthy();
 
-		await act(async () => expoRouter.replace("/drinks"));
+		await fireEvent.press(view.getByText("Open drink log"));
+		await waitFor(() => expect(router.getPathname()).toBe("/drinks"));
 		expect(await view.findByText("Nothing logged")).toBeTruthy();
 		await fireEvent.press(view.getByText("Choose a drink"));
 		await fireEvent.press(view.getByText("Lager, 4.5%"));

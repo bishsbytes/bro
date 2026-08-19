@@ -1,4 +1,4 @@
-import { useFocusEffect } from "expo-router";
+import { type Href, router, useFocusEffect } from "expo-router";
 import { useCallback, useMemo, useState } from "react";
 import { ActivityIndicator, Switch, View } from "react-native";
 import { AppText } from "../../components/app-text";
@@ -83,6 +83,11 @@ export function DrinksSettingsScreen({ store }: DrinksSettingsScreenProps) {
 				Choose which daily drink totals appear in Trends. Logging remains
 				available whichever metrics you track.
 			</AppText>
+			<Button
+				label="Open drink log"
+				variant="secondary"
+				onPress={() => router.push("/drinks" as Href)}
+			/>
 			{error ? <AppText color="danger">{error}</AppText> : null}
 
 			<View style={styles.section}>

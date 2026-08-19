@@ -1,4 +1,4 @@
-import { router, useFocusEffect } from "expo-router";
+import { type Href, router, useFocusEffect } from "expo-router";
 import { useCallback, useMemo, useState } from "react";
 import { ActivityIndicator, Switch, View } from "react-native";
 import {
@@ -98,6 +98,32 @@ export function BodyScreen({ store }: BodyScreenProps) {
 				Track the measurements that matter to you. Values and goals always
 				follow your preferred units.
 			</AppText>
+
+			<View style={styles.loggingSection}>
+				<SectionHeader title="Food and drink" eyebrow="DAILY LOG" />
+				<Card style={styles.loggingCard}>
+					<AppText variant="section">Drinks</AppText>
+					<AppText color="muted">
+						Log water, caffeine, alcohol, and your own repeat drinks.
+					</AppText>
+					<Button
+						label="Open Drinks"
+						variant="secondary"
+						onPress={() => router.push("/drinks" as Href)}
+					/>
+				</Card>
+				<Card style={styles.loggingCard}>
+					<AppText variant="section">Food</AppText>
+					<AppText color="muted">
+						Log meals, repeat recent foods, and build custom foods or recipes.
+					</AppText>
+					<Button
+						label="Open Food"
+						variant="secondary"
+						onPress={() => router.push("/food" as Href)}
+					/>
+				</Card>
+			</View>
 
 			{error ? <AppText color="danger">{error}</AppText> : null}
 
@@ -213,5 +239,7 @@ const styles = StyleSheet.create((theme) => ({
 		gap: theme.spacing.md,
 	},
 	grow: { flex: 1, gap: theme.spacing.xs },
+	loggingSection: { gap: theme.spacing.md },
+	loggingCard: { gap: theme.spacing.md },
 	trackingSection: { gap: theme.spacing.md },
 }));

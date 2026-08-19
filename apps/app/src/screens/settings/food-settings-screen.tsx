@@ -1,7 +1,8 @@
-import { useFocusEffect } from "expo-router";
+import { type Href, router, useFocusEffect } from "expo-router";
 import { useCallback, useMemo, useState } from "react";
 import { ActivityIndicator, Switch, View } from "react-native";
 import { AppText } from "../../components/app-text";
+import { Button } from "../../components/button";
 import { Card } from "../../components/card";
 import { EmptyState } from "../../components/empty-state";
 import { Screen } from "../../components/screen";
@@ -67,6 +68,11 @@ export function FoodSettingsScreen({ store }: FoodSettingsScreenProps) {
 				Choose which daily nutrition totals appear in Trends. Logging remains
 				available whichever metrics you track.
 			</AppText>
+			<Button
+				label="Open food log"
+				variant="secondary"
+				onPress={() => router.push("/food" as Href)}
+			/>
 			{error ? <AppText color="danger">{error}</AppText> : null}
 			<View style={styles.section}>
 				<SectionHeader title="Trends and goals" />

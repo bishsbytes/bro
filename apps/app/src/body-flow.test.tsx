@@ -88,6 +88,9 @@ describe("body metrics flow", () => {
 		const view = await router;
 		await act(async () => undefined);
 		expect(await view.findByText("No body metrics tracked")).toBeTruthy();
+		expect(view.getByText("Food and drink")).toBeTruthy();
+		expect(view.getByText("Open Drinks")).toBeTruthy();
+		expect(view.getByText("Open Food")).toBeTruthy();
 
 		await fireEvent(view.getByLabelText("Track Weight"), "valueChange", true);
 		expect(await view.findByText("Nothing logged yet")).toBeTruthy();

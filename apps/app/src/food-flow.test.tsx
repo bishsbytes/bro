@@ -1,7 +1,12 @@
 import { authClient } from "@bro/auth-app";
 import type * as DatabaseApp from "@bro/database-app";
 import { router as expoRouter } from "expo-router";
-import { act, fireEvent, renderRouter } from "expo-router/testing-library";
+import {
+	act,
+	fireEvent,
+	renderRouter,
+	waitFor,
+} from "expo-router/testing-library";
 import { createNodeSqliteMock } from "./test-support/node-sqlite";
 
 const mockSqlite = createNodeSqliteMock();
@@ -84,7 +89,8 @@ describe("food logging flow", () => {
 		await fireEvent(view.getByLabelText("Track Protein"), "valueChange", true);
 		expect(await view.findByLabelText("Stop tracking Protein")).toBeTruthy();
 
-		await act(async () => expoRouter.replace("/food"));
+		await fireEvent.press(view.getByText("Open food log"));
+		await waitFor(() => expect(router.getPathname()).toBe("/food"));
 		expect(await view.findByText("Nothing logged")).toBeTruthy();
 		await fireEvent.press(view.getByText("Something else"));
 		await fireEvent.changeText(
