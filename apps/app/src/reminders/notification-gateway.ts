@@ -1,4 +1,5 @@
 import * as Notifications from "expo-notifications";
+import { Platform } from "react-native";
 
 export const REMINDERS_CHANNEL_ID = "reminders";
 
@@ -47,9 +48,18 @@ export const notificationGateway: ReminderNotificationGateway = {
 	},
 
 	async getPermissionStatus() {
-		return normalisePermission(
+		const permission = normalisePermission(
 			(await Notifications.getPermissionsAsync()).status,
 		);
+		if (permission !== "granted" || Platform.OS !== "android") {
+			return permission;
+		}
+
+		const channel =
+			await Notifications.getNotificationChannelAsync(REMINDERS_CHANNEL_ID);
+		return channel?.importance === Notifications.AndroidImportance.NONE
+			? "denied"
+			: "granted";
 	},
 
 	async requestPermission() {

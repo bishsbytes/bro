@@ -104,6 +104,20 @@ describe("reminder notification materialisation", () => {
 			sourceRecordId: null,
 			assessmentId: null,
 		});
+		await new databaseApp.ObservationRepository(db, {
+			createId: () => "observation-2",
+		}).create({
+			metricSlug: "energy",
+			value: 3,
+			scaleMin: 1,
+			scaleMax: 5,
+			observedAt: now.getTime(),
+			localDay: "2026-08-14",
+			tzOffsetMinutes: now.getTimezoneOffset(),
+			source: "user",
+			sourceRecordId: null,
+			assessmentId: null,
+		});
 		const afterCheckIn =
 			await reminderMaterialiser.materialiseReminderNotifications({
 				db,
@@ -115,6 +129,46 @@ describe("reminder notification materialisation", () => {
 		]);
 		expect(gateway.scheduled).toContain(
 			"checkin-reminder:reminder-1:2026-08-15",
+		);
+	});
+
+	it("keeps today's occurrence after a non-check-in observation", async () => {
+		const gateway = createGateway();
+		const reminders = new databaseApp.ReminderRepository(db, {
+			createId: () => "reminder-1",
+		});
+		await reminders.create({ minuteOfDay: 20 * 60, daysOfWeek: 0b111_1111 });
+		const now = new Date(2026, 7, 14, 10);
+		await reminderMaterialiser.materialiseReminderNotifications({
+			db,
+			gateway,
+			now,
+		});
+
+		await new databaseApp.ObservationRepository(db, {
+			createId: () => "review-observation-1",
+		}).create({
+			metricSlug: "wheel:physical-health",
+			value: 7,
+			scaleMin: 1,
+			scaleMax: 10,
+			observedAt: now.getTime(),
+			localDay: "2026-08-14",
+			tzOffsetMinutes: now.getTimezoneOffset(),
+			source: "user",
+			sourceRecordId: null,
+			assessmentId: null,
+		});
+
+		const afterReview =
+			await reminderMaterialiser.materialiseReminderNotifications({
+				db,
+				gateway,
+				now,
+			});
+		expect(afterReview.cancelled).toEqual([]);
+		expect(gateway.scheduled).toContain(
+			"checkin-reminder:reminder-1:2026-08-14",
 		);
 	});
 

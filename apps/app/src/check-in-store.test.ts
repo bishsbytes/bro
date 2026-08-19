@@ -1,6 +1,6 @@
 import type * as DatabaseApp from "@bro/database-app";
 import { KILOGRAMS_PER_POUND } from "@bro/domain";
-import { resolveMetric } from "@bro/domain/metric-registry";
+import { hasCompletedCheckIn, resolveMetric } from "@bro/domain/metric-registry";
 import type { SQLiteDatabase } from "expo-sqlite";
 import { createNodeSqliteMock } from "./test-support/node-sqlite";
 import { buildTrendSeries } from "./trends/trend-math";
@@ -319,5 +319,48 @@ describe("check-in store", () => {
 		expect(await notes.listByDay(LOCAL_DAY)).toMatchObject([
 			{ id: duplicate.id, body: "Replicated duplicate" },
 		]);
+	});
+
+	it("refreshes reminders only once the check-in is committed and visible", async () => {
+		const observations = new databaseApp.ObservationRepository(db);
+		let visibleToRefresh: DatabaseApp.Observation[] = [];
+		const refresh = jest.fn(async () => {
+			visibleToRefresh = await observations.listByDay(LOCAL_DAY);
+		});
+		const store = new CheckInStore(db, () => CAPTURED_AT, undefined, refresh);
+
+		await store.save({
+			mood: 4,
+			energy: 3,
+			selectedFactorSlugs: [],
+			measurements: [],
+			note: "",
+		});
+
+		expect(refresh).toHaveBeenCalledTimes(1);
+		// The refresh is what cancels today's nudge, so it has to run after the
+		// transaction commits and see the pair that proves the check-in happened.
+		expect(hasCompletedCheckIn(visibleToRefresh)).toBe(true);
+	});
+
+	it("keeps a check-in saved when the reminder refresh fails", async () => {
+		const observations = new databaseApp.ObservationRepository(db);
+		const warn = jest.spyOn(console, "warn").mockImplementation(() => {});
+		const store = new CheckInStore(db, () => CAPTURED_AT, undefined, () =>
+			Promise.reject(new Error("no notification permission")),
+		);
+
+		const saved = await store.save({
+			mood: 4,
+			energy: 3,
+			selectedFactorSlugs: [],
+			measurements: [],
+			note: "",
+		});
+
+		expect(saved.entries).toHaveLength(1);
+		expect(await observations.listByDay(LOCAL_DAY)).toHaveLength(2);
+		expect(warn).toHaveBeenCalled();
+		warn.mockRestore();
 	});
 });

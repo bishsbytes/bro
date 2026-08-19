@@ -22,7 +22,10 @@ import {
 	type UserEnterableMeasurementSlug,
 } from "@bro/domain/metric-registry";
 import type { SQLiteDatabase } from "expo-sqlite";
-import { refreshReminderNotifications } from "../reminders/reminder-materialiser";
+import {
+	refreshReminderNotifications,
+	reportReminderRefreshFailure,
+} from "../reminders/reminder-materialiser";
 
 export type CheckInEntry = {
 	id: string;
@@ -231,6 +234,8 @@ export class CheckInStore {
 		private readonly db: SQLiteDatabase,
 		private readonly now: () => Date = () => new Date(),
 		private readonly locale: () => string | undefined = systemLocale,
+		private readonly refreshReminders: () => Promise<unknown> = () =>
+			refreshReminderNotifications(),
 	) {
 		this.observations = new ObservationRepository(db);
 		this.notes = new DayNoteRepository(db);
@@ -476,7 +481,7 @@ export class CheckInStore {
 		// The product transaction has committed. Notification reconciliation is a
 		// derived install-local side effect and must never make that durable save
 		// appear to have failed.
-		await refreshReminderNotifications().catch(() => undefined);
+		await this.refreshReminders().catch(reportReminderRefreshFailure);
 		return today;
 	}
 

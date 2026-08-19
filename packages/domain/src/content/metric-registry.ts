@@ -249,6 +249,22 @@ export const DEFAULT_TRACKED_METRICS = METRIC_REGISTRY.filter(
 	...(metric.kind === "measurement" ? { enabled: false } : {}),
 }));
 
+/**
+ * A check-in writes exactly these two scored metrics, together, in one
+ * transaction. Any other observation on the same day — a weight, a wheel
+ * review — is not a check-in, so nothing may infer "the user checked in
+ * today" from an observation count.
+ */
+export const CHECK_IN_METRIC_SLUGS = ["mood", "energy"] as const;
+
+export function hasCompletedCheckIn(
+	observations: readonly { readonly metricSlug: string }[],
+): boolean {
+	return CHECK_IN_METRIC_SLUGS.every((slug) =>
+		observations.some((observation) => observation.metricSlug === slug),
+	);
+}
+
 export function resolveMetric(slug: string): MetricResolution {
 	const metric = metricsBySlug.get(slug);
 	return metric ? { kind: "known", metric } : { kind: "unknown", slug };

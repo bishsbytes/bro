@@ -7,7 +7,10 @@ import {
 	getInitialNotificationResponseIdentifier,
 	notificationGateway,
 } from "./notification-gateway";
-import { refreshReminderNotifications } from "./reminder-materialiser";
+import {
+	refreshReminderNotifications,
+	reportReminderRefreshFailure,
+} from "./reminder-materialiser";
 import { REMINDER_NOTIFICATION_PREFIX } from "./reminder-planner";
 
 export function ReminderNotificationEffects({
@@ -19,13 +22,15 @@ export function ReminderNotificationEffects({
 		void notificationGateway
 			.configureChannel()
 			.then(() => refreshReminderNotifications())
-			.catch(() => undefined);
+			.catch(reportReminderRefreshFailure);
 
 		const appStateSubscription = AppState.addEventListener(
 			"change",
 			(state) => {
 				if (state === "active") {
-					void refreshReminderNotifications().catch(() => undefined);
+					void refreshReminderNotifications().catch(
+						reportReminderRefreshFailure,
+					);
 				}
 			},
 		);

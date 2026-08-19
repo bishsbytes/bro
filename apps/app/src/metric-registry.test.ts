@@ -1,5 +1,7 @@
 import {
+	CHECK_IN_METRIC_SLUGS,
 	DEFAULT_TRACKED_METRICS,
+	hasCompletedCheckIn,
 	listAssessmentMetrics,
 	listFactors,
 	listImportedOnlyMeasurements,
@@ -191,5 +193,27 @@ describe("metric registry", () => {
 				listAssessmentMetrics().some(({ slug }) => slug === imported),
 			).toBe(false);
 		}
+	});
+
+	it("counts a check-in only from the full scored pair", () => {
+		for (const slug of CHECK_IN_METRIC_SLUGS) {
+			expect(listScoredMetrics().some((metric) => metric.slug === slug)).toBe(
+				true,
+			);
+			expect(hasCompletedCheckIn([{ metricSlug: slug }])).toBe(false);
+		}
+
+		expect(hasCompletedCheckIn([])).toBe(false);
+		expect(
+			hasCompletedCheckIn([
+				{ metricSlug: "weight" },
+				{ metricSlug: "wheel:physical-health" },
+			]),
+		).toBe(false);
+		expect(
+			hasCompletedCheckIn(
+				CHECK_IN_METRIC_SLUGS.map((metricSlug) => ({ metricSlug })),
+			),
+		).toBe(true);
 	});
 });

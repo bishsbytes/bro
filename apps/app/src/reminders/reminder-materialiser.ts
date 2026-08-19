@@ -3,6 +3,7 @@ import {
 	ObservationRepository,
 	ReminderRepository,
 } from "@bro/database-app";
+import { hasCompletedCheckIn } from "@bro/domain/metric-registry";
 import type { SQLiteDatabase } from "expo-sqlite";
 import {
 	notificationGateway,
@@ -21,7 +22,7 @@ export type MaterialiseResult = {
 };
 
 export async function materialiseReminderNotifications({
-	db = getDb(),
+	db,
 	gateway = notificationGateway,
 	now = new Date(),
 }: {
@@ -34,17 +35,21 @@ export async function materialiseReminderNotifications({
 		return { permission, scheduled: [], cancelled: [] };
 	}
 
+	// Resolved only past the permission gate: a refresh runs on every
+	// foreground, and one that cannot schedule anything must not open the
+	// database to find that out.
+	const database = db ?? getDb();
 	const localDay = localDayOf(now);
 	const [reminders, todayObservations, scheduledRequests] = await Promise.all([
-		new ReminderRepository(db).listAll(),
-		new ObservationRepository(db).listByDay(localDay),
+		new ReminderRepository(database).listAll(),
+		new ObservationRepository(database).listByDay(localDay),
 		gateway.listScheduled(),
 	]);
 	const plan = planReminderNotifications(
 		reminders,
 		now,
 		localDay,
-		todayObservations.length > 0,
+		hasCompletedCheckIn(todayObservations),
 	);
 	const plannedIds = new Set(plan.map(({ identifier }) => identifier));
 	const scheduledIds = new Set(
@@ -97,4 +102,8 @@ export function refreshReminderNotifications(): Promise<
 		.catch(() => undefined)
 		.then(() => materialiseReminderNotifications());
 	return refreshQueue;
+}
+
+export function reportReminderRefreshFailure(error: unknown): void {
+	console.warn("Could not refresh reminder notifications.", error);
 }
