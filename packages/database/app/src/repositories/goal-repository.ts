@@ -1,25 +1,8 @@
 import { isCalendarDay } from "@bro/domain";
+import type { CreateGoal, Goal } from "@bro/mobile-model";
 import { BaseRepository } from "./base-repository";
 
-export type GoalDirection = "increase" | "decrease";
-
-export type Goal = {
-	id: string;
-	metricSlug: string;
-	direction: GoalDirection;
-	targetValue: number;
-	targetDate: string | null;
-	startedAt: number;
-	achievedAt: number | null;
-	abandonedAt: number | null;
-	createdAt: number;
-	updatedAt: number;
-};
-
-export type CreateGoal = Pick<
-	Goal,
-	"metricSlug" | "direction" | "targetValue" | "targetDate" | "startedAt"
->;
+export type { CreateGoal, Goal, GoalDirection } from "@bro/mobile-model";
 
 type GoalRow = {
 	id: string;

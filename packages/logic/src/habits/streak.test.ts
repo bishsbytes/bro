@@ -1,4 +1,4 @@
-import type { Habit } from "@bro/database-app";
+import type { Habit } from "@bro/mobile-model";
 import { localDayAt } from "../health/mapping";
 import { isMetricHabitComplete } from "./completion";
 import { deriveHabitStreak } from "./streak";

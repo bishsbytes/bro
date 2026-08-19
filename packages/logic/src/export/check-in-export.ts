@@ -1,3 +1,6 @@
+import { resolveHabit } from "@bro/domain/habit-catalogue";
+import { LIFE_AREA_CATALOGUE } from "@bro/domain/life-area-catalogue";
+import type { MetricDefinition } from "@bro/domain/metric-registry";
 import type {
 	Assessment,
 	ChallengeEnrolment,
@@ -13,10 +16,7 @@ import type {
 	Observation,
 	TrackedMetric,
 	UnitPreference,
-} from "@bro/database-app";
-import { resolveHabit } from "@bro/domain/habit-catalogue";
-import { LIFE_AREA_CATALOGUE } from "@bro/domain/life-area-catalogue";
-import type { MetricDefinition } from "@bro/domain/metric-registry";
+} from "@bro/mobile-model";
 
 export const CHECK_IN_EXPORT_FORMAT_VERSION = 1 as const;
 

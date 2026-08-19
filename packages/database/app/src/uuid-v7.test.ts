@@ -1,4 +1,4 @@
-import { createUuidV7 } from "@bro/database-app";
+import { createUuidV7 } from "./index";
 
 jest.mock("expo-crypto", () => ({
 	getRandomBytes: jest.fn((length: number) => new Uint8Array(length)),

@@ -1,4 +1,3 @@
-import type * as DatabaseApp from "@bro/database-app";
 import {
 	DEFAULT_LIFE_AREA_METRICS,
 	listActiveLifeAreas,
@@ -6,6 +5,7 @@ import {
 } from "@bro/domain/life-area-catalogue";
 import { DEFAULT_TRACKED_METRICS } from "@bro/domain/metric-registry";
 import type { SQLiteDatabase } from "expo-sqlite";
+import type * as DatabaseApp from "./index";
 import { createNodeSqliteMock } from "./test-support/node-sqlite";
 
 const mockSqlite = createNodeSqliteMock();
@@ -22,7 +22,7 @@ jest.mock("expo-crypto", () => ({
 
 async function openDatabase(databaseName = "repositories.db") {
 	jest.resetModules();
-	databaseApp = jest.requireActual("@bro/database-app");
+	databaseApp = jest.requireActual("./index");
 	db = await databaseApp.initDb(databaseName);
 	await databaseApp.runMigrations(db);
 }

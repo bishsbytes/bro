@@ -1,5 +1,5 @@
-import type * as DatabaseApp from "@bro/database-app";
 import type { SQLiteDatabase } from "expo-sqlite";
+import type * as DatabaseApp from "./index";
 import { createNodeSqliteMock } from "./test-support/node-sqlite";
 
 const mockSqlite = createNodeSqliteMock();
@@ -18,7 +18,7 @@ describe("habit and challenge repositories", () => {
 	beforeEach(async () => {
 		mockSqlite.reset();
 		jest.resetModules();
-		databaseApp = jest.requireActual("@bro/database-app");
+		databaseApp = jest.requireActual("./index");
 		db = await databaseApp.initDb("habit-challenge-repositories.db");
 		await databaseApp.runMigrations(db);
 	});

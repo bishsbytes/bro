@@ -1,5 +1,5 @@
-import type { HealthPlatform } from "@bro/database-app";
 import { resolveMetric } from "@bro/domain/metric-registry";
+import type { HealthPlatform } from "@bro/mobile-model";
 import type { CanonicalHealthSample } from "./mapping";
 import type { HealthMetricSlug } from "./policy";
 

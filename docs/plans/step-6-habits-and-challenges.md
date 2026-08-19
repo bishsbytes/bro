@@ -26,7 +26,7 @@ The step is successful when both loops close: a metric habit whose completion fl
 ## Current baseline
 
 - Migrations 001–005 shipped and proven on real prior-step files; `PRODUCT_TABLE_NAMES` drives migration verification and delete-local-data from one record; the multi-migration path is five-times proven.
-- The challenge catalogue exists ([challenge-catalogue.ts](../../apps/app/src/content/challenge-catalogue.ts)): thirteen templates, one per `wheel:*` area, each a 3-day intro with day titles and actions, typed `challenge:<slug>` and tagged `areaSlug` — read-only by design, "a person can read one and follow it by hand". The review flow renders them at `review/challenge/[slug]`.
+- The challenge catalogue exists ([challenge-catalogue.ts](../../packages/domain/src/content/challenge-catalogue.ts)): thirteen templates, one per `wheel:*` area, each a 3-day intro with day titles and actions, typed `challenge:<slug>` and tagged `areaSlug` — read-only by design, "a person can read one and follow it by hand". The review flow renders them at `review/challenge/[slug]`.
 - The resolved-day merge from step 5 is the single function that answers "what was this metric's value on this local day" across user and imported provenance; Trends, Body, and goal progress already call it.
 - The registry carries `aggregation` (`sum`, `mean`, `last`, `presence`) per metric; `steps` and `sleep_duration` are durable daily series with 365-day backfill on connect.
 - `goals` proved the derived-progress pattern: stored target, progress computed by reading the series, never stored.
@@ -144,7 +144,7 @@ The history day view lists that day's manual completions and any challenge steps
 ### Slice 2: Catalogue and pure domain math — the sign-off gate
 
 1. The authored habit catalogue with types, area tags, defaults, and sensitivity; the flagship 30-day challenge; catalogue invariant tests (slugs stable and namespaced, metric habits reference registry metrics that exist and are objective, sensitive flags consistent with area sensitivity).
-2. Pure domain math in `apps/app/src/habits/`: scheduled-day expansion from a bitmask, derived metric completion over resolved-day values, streak walk with the today rule, challenge position (first uncompleted day) and finish detection. No database, no React, exhaustively tested — including DST days and the midnight boundary.
+2. Pure domain math in `packages/logic/src/habits/`: scheduled-day expansion from a bitmask, derived metric completion over resolved-day values, streak walk with the today rule, challenge position (first uncompleted day) and finish detection. No database, no React, exhaustively tested — including DST days and the midnight boundary.
 3. **Sign-off gate: completion semantics per kind, no-data rule, direction set, cadence model, programme-advance rule, sensitivity mapping, and both catalogues' contents and copy.**
 
 ### Slice 3: Stores and surfaces
@@ -167,10 +167,10 @@ The history day view lists that day's manual completions and any challenge steps
 | --- | --- |
 | Schema and migration | `packages/database/app/src/schema.ts`, `product-tables.ts`, `migrations/manifest.ts`, generated SQL |
 | Repositories | New `habit-repository.ts`, `habit-completion-repository.ts`, `challenge-enrolment-repository.ts`, `challenge-progress-repository.ts` |
-| Catalogue | `apps/app/src/content/habit-catalogue.ts` (new), `challenge-catalogue.ts` (flagship template) |
-| Domain math | New `apps/app/src/habits/` — cadence, derived completion, streaks, challenge position |
+| Catalogue | `packages/domain/src/content/habit-catalogue.ts` (new), `challenge-catalogue.ts` (flagship template) |
+| Domain math | New `packages/logic/src/habits/` — cadence, derived completion, streaks, challenge position |
 | Routes and screens | Today (`home-screen`), `(tabs)/settings/habits`, `review/challenge/[slug]` (enrol), challenge detail, history day view |
-| Export | `apps/app/src/export/check-in-export.ts`, new v5 fixture |
+| Export | `packages/logic/src/export/check-in-export.ts`, new v5 fixture |
 | Tests | `@bro/app:test` — real-SQLite repository suites, pure-math suites, flow tests |
 
 ## Automated acceptance matrix

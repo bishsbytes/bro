@@ -4,18 +4,13 @@
 	"private": true,
 	"type": "module",
 	"nx": {
+		"projectType": "application",
 		"tags": [
 			"scope:api",
-			"type:app"
+			"type:app",
+			"layer:app"
 		],
 		"targets": {
-			"test": {
-				"executor": "nx:run-commands",
-				"options": {
-					"cwd": "apps/api",
-					"command": "vitest run"
-				}
-			},
 			"build": {
 				"executor": "@nx/esbuild:esbuild",
 				"outputs": [

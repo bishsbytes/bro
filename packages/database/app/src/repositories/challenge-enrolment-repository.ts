@@ -1,23 +1,14 @@
 import { isCalendarDay } from "@bro/domain";
+import type {
+	ChallengeEnrolment,
+	CreateChallengeEnrolment,
+} from "@bro/mobile-model";
 import { BaseRepository } from "./base-repository";
 
-export type ChallengeEnrolment = {
-	id: string;
-	challengeSlug: string;
-	title: string;
-	durationDays: number;
-	areaSlug: string;
-	startedOn: string;
-	completedAt: number | null;
-	abandonedAt: number | null;
-	createdAt: number;
-	updatedAt: number;
-};
-
-export type CreateChallengeEnrolment = Pick<
+export type {
 	ChallengeEnrolment,
-	"challengeSlug" | "title" | "durationDays" | "areaSlug" | "startedOn"
->;
+	CreateChallengeEnrolment,
+} from "@bro/mobile-model";
 
 type ChallengeEnrolmentRow = {
 	id: string;

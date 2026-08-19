@@ -143,7 +143,7 @@ Version 1 is UTF-8 JSON with a trailing newline and this top-level shape:
 
 ### Slice 2: Registry and repositories
 
-1. Add `apps/app/src/content/metric-registry.ts`: types, the v1 metrics and factors, categories, and lookup helpers that return a typed "unknown slug" result rather than throwing — the "not in the catalogue" path exists from the first resolver, per the product plan.
+1. Add `packages/domain/src/content/metric-registry.ts`: types, the v1 metrics and factors, categories, and lookup helpers that return a typed "unknown slug" result rather than throwing — the "not in the catalogue" path exists from the first resolver, per the product plan.
 2. Registry invariant tests: slugs unique and permanent-format, scored metrics have sane bounds, factors have categories, aggregation rules total.
 3. Add `ObservationRepository`, `DayNoteRepository`, and `TrackedMetricsRepository` per the repository recipe: create/edit/delete observation; observations by day and by metric-and-range; upsert-by-day note semantics in the repository method (not a unique index); overlay read that overlays stored rows onto registry defaults.
 4. A UUIDv7 helper with tests (monotonicity within a millisecond is not required; time-ordering to the millisecond is).
@@ -191,7 +191,7 @@ Version 1 is UTF-8 JSON with a trailing newline and this top-level shape:
 | --- | --- |
 | Schema and migrations | `packages/database/app/src/schema.ts`, `drizzle/*.sql`, `src/migrations/manifest.ts`, `src/migrator.ts` |
 | Repositories | New `observation-repository.ts`, `day-note-repository.ts`, `tracked-metrics-repository.ts` under `src/repositories/`, exported from `src/index.ts` |
-| Registry | New `apps/app/src/content/metric-registry.ts` |
+| Registry | New `packages/domain/src/content/metric-registry.ts` |
 | Routes | `apps/app/src/app/index.tsx` (today), new `history`, `trends`, `settings` routes; `_layout.tsx` |
 | Screens | New check-in, today, history, day, trends, settings screens under `apps/app/src/screens/` |
 | Export | New serialiser module in the app or `@bro/database-app`, tests beside it |

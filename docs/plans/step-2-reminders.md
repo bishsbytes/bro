@@ -93,7 +93,7 @@ Unchanged copy from step 1; the action now also clears `reminders` (via the shar
 
 ### Slice 2: The planner — pure and exhaustively tested
 
-1. `apps/app/src/reminders/reminder-planner.ts`: `(reminders, now, todayLocalDay, todayHasCheckIn) → PlannedNotification[]` — fire times in the next 14 days, past and checked-in-today occurrences dropped, 56-notification cap by horizon shrink, deterministic ids, deterministic ordering.
+1. `packages/logic/src/reminders/reminder-planner.ts`: `(reminders, now, todayLocalDay, todayHasCheckIn) → PlannedNotification[]` — fire times in the next 14 days, past and checked-in-today occurrences dropped, 56-notification cap by horizon shrink, deterministic ids, deterministic ordering.
 2. Day-bitmask helpers with exhaustive tests (ISO order, round-trip with a `Date`'s local day-of-week).
 3. Planner tests: DST spring-forward (a 02:30 reminder on the missing day), day boundary in non-UTC offsets, cap behaviour with many reminders, the checked-in-today drop, disabled reminders excluded.
 
@@ -137,7 +137,7 @@ Unchanged copy from step 1; the action now also clears `reminders` (via the shar
 | --- | --- |
 | Schema and migration | `packages/database/app/src/schema.ts`, `product-tables.ts`, `drizzle/*.sql`, `src/migrations/manifest.ts` |
 | Repository | New `reminder-repository.ts` under `src/repositories/`, exported from `src/index.ts` |
-| Planner and materialiser | New `apps/app/src/reminders/` — `reminder-planner.ts`, `reminder-materialiser.ts`, `notification-gateway.ts`, day-bitmask helpers |
+| Planner and materialiser | Planner and day-bitmask helpers in `packages/logic/src/reminders/`; materialiser and notification gateway in `apps/app/src/reminders/` |
 | Save hook | `apps/app/src/check-in/check-in-store.ts` |
 | Delete hook | `packages/database/app/src/delete-local-product-data.ts` call site in `settings-screen.tsx` |
 | Routes and screens | `apps/app/src/app/(tabs)/settings/` (menu + `reminders`), new reminders screen under `src/screens/`, root `_layout.tsx` (launch trigger, response handler) |

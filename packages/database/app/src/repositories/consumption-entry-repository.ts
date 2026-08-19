@@ -1,29 +1,18 @@
 import { isCalendarDay } from "@bro/domain";
+import type {
+	ConsumptionEntry,
+	ConsumptionEntryKind,
+	CreateConsumptionEntry,
+	UpdateConsumptionEntry,
+} from "@bro/mobile-model";
 import { BaseRepository } from "./base-repository";
 
-export type ConsumptionEntryKind = "drink" | "food";
-
-export type ConsumptionEntry = {
-	id: string;
-	kind: ConsumptionEntryKind;
-	catalogueRef: string | null;
-	consumableRef: string | null;
-	label: string;
-	servingLabel: string | null;
-	quantity: number;
-	volumeL: number | null;
-	ethanolKg: number | null;
-	caffeineKg: number | null;
-	energyKcal: number | null;
-	proteinG: number | null;
-	carbsG: number | null;
-	fatG: number | null;
-	occurredAt: number;
-	localDay: string;
-	tzOffsetMinutes: number;
-	createdAt: number;
-	updatedAt: number;
-};
+export type {
+	ConsumptionEntry,
+	ConsumptionEntryKind,
+	CreateConsumptionEntry,
+	UpdateConsumptionEntry,
+} from "@bro/mobile-model";
 
 type FoodSnapshotFields = Pick<
 	ConsumptionEntry,
@@ -35,14 +24,6 @@ type NormalizedConsumptionEntryInput = Omit<
 	keyof FoodSnapshotFields
 > &
 	Required<FoodSnapshotFields>;
-
-export type CreateConsumptionEntry = Omit<
-	ConsumptionEntry,
-	"id" | "createdAt" | "updatedAt" | keyof FoodSnapshotFields
-> &
-	Partial<FoodSnapshotFields>;
-
-export type UpdateConsumptionEntry = Omit<CreateConsumptionEntry, "kind">;
 
 type ConsumptionEntryRow = {
 	id: string;

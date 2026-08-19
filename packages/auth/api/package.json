@@ -16,7 +16,8 @@
 	"nx": {
 		"tags": [
 			"scope:api",
-			"type:lib"
+			"type:lib",
+			"layer:integration"
 		],
 		"targets": {
 			"auth:generate-schema": {

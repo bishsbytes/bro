@@ -1,4 +1,4 @@
-import type { Goal } from "@bro/database-app";
+import type { Goal } from "@bro/mobile-model";
 import { goalTargetReached, resolveGoalProgress } from "./goal-presentation";
 
 function goal(overrides: Partial<Goal> = {}): Goal {

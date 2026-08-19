@@ -1,16 +1,7 @@
+import type { FoodCacheEntry, UpsertFoodCacheEntry } from "@bro/mobile-model";
 import { BaseRepository } from "./base-repository";
 
-export type FoodCacheEntry<Payload = unknown> = {
-	ref: string;
-	payload: Payload;
-	query: string | null;
-	fetchedAt: number;
-};
-
-export type UpsertFoodCacheEntry<Payload = unknown> = Pick<
-	FoodCacheEntry<Payload>,
-	"ref" | "payload" | "query"
->;
+export type { FoodCacheEntry, UpsertFoodCacheEntry } from "@bro/mobile-model";
 
 type FoodCacheRow = {
 	ref: string;

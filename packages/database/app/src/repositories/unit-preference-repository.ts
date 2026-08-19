@@ -1,12 +1,7 @@
+import type { UnitPreference } from "@bro/mobile-model";
 import { BaseRepository } from "./base-repository";
 
-export type UnitPreference = {
-	id: string;
-	dimension: string;
-	unit: string;
-	createdAt: number;
-	updatedAt: number;
-};
+export type { UnitPreference } from "@bro/mobile-model";
 
 type UnitPreferenceRow = {
 	id: string;

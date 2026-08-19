@@ -71,3 +71,5 @@ test-output
 /packages/database/app/drizzle/migrations.js
 
 *.tsbuildinfo
+
+vitest.config.*.timestamp*

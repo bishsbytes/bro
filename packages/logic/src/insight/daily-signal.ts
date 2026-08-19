@@ -1,12 +1,12 @@
-import type {
-	ConsumptionEntry,
-	DailyMetric,
-	Observation,
-} from "@bro/database-app";
 import {
 	FACTOR_PRESENCE_VALUE,
 	resolveMetric,
 } from "@bro/domain/metric-registry";
+import type {
+	ConsumptionEntry,
+	DailyMetric,
+	Observation,
+} from "@bro/mobile-model";
 import { resolveMetricDay } from "../health/resolved-day";
 
 export type DailySignal = {

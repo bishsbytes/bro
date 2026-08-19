@@ -31,7 +31,7 @@ Phase 1 already provides most of the identity plumbing:
 - Sign-out clears the device marker before best-effort remote revocation and leaves the app tree mounted.
 - `/sign-in` and `/sign-up` exist and are reachable from the placeholder home screen.
 - `bro-device.db` and `bro.db` are separate, and no product tables exist yet.
-- `@bro/app:test` covers the router, startup, session marker, and offline sign-out. The API projects have no test target yet.
+- `@bro/app:test` covers the router, startup, session marker, and offline sign-out. The API now has Vitest targets, including Testcontainers-backed account-deletion coverage.
 - Better Auth 1.6.27 contains the `deleteUser` client action and server route, but the route is disabled until `user.deleteUser.enabled` is set.
 
 Phase 2 should extend these seams, not replace them.

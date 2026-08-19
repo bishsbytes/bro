@@ -31,7 +31,7 @@ The step is successful when four properties hold: a food logged from the provide
 - Migrations 001–007 shipped. `consumption_entries` exists with `kind`, `catalogue_ref`, snapshotted `label`/`serving_label`/`quantity`, canonical `volume_l`/`ethanol_kg`/`caffeine_kg`/`energy_kcal`, the observation spine's `occurred_at`/`local_day`/`tz_offset_minutes`, and its two indexes ([schema.ts](../../packages/database/app/src/schema.ts)).
 - `ConsumptionEntryRepository` covers insert, list by day, list recents, list all, update, and hard delete, and the table is in `PRODUCT_TABLE_NAMES`, so migration verification and delete-local-data inherit it.
 - The registry has a third measurement variant — **consumption-derived** ([metric-registry.ts](../../packages/domain/src/content/metric-registry.ts)) — with `aggregation: "sum"`, `userEnterable: false`, and `enabled: false` defaults. `alcohol_intake` (6), `caffeine_intake` (7), `fluid_intake` (8), and `energy_intake` (9) ship today; **`energy_intake` is already the metric food extends**, in kilocalories, non-sensitive.
-- `resolveMetricDay` ([resolved-day.ts](../../apps/app/src/health/resolved-day.ts)) resolves over three sources — consumption, imported, user — and everything downstream (Trends, goals, history, insight) reads through it. A new consumption metric needs no new projection path.
+- `resolveMetricDay` ([resolved-day.ts](../../packages/logic/src/health/resolved-day.ts)) resolves over three sources — consumption, imported, user — and everything downstream (Trends, goals, history, insight) reads through it. A new consumption metric needs no new projection path.
 - Canonical energy is kcal with an exact kJ display conversion; masses are kilograms with fixed-unit display available (caffeine renders `mg` with no preference row, the precedent macros follow).
 - `bro-local.db` exists with its own migration manifest and `LOCAL_TABLE_NAMES` ([local-tables.ts](../../packages/database/app/src/local-tables.ts)), holding disposable health-import tables today. It is the store the food cache joins.
 - **`apps/api` already exists** — a Hono app with `@bro/auth-api`, a `/health` route, session middleware, and Postgres via `@bro/database-api`. Step 9 is therefore not the first server code, but the search endpoint **is the first unauthenticated endpoint in the free tier's path**, which is the part that matters.
@@ -212,10 +212,10 @@ Unchanged copy; now also clears `custom_consumables`, `custom_consumable_compone
 | Schema and migration | `packages/database/app/src/schema.ts`, `local-schema.ts`, `product-tables.ts`, `local-tables.ts`, `drizzle/*.sql`, `src/migrations/manifest.ts`, `local-manifest.ts` |
 | Repositories | New `custom-consumable-repository.ts`, `food-cache-repository.ts`; `consumption-entry-repository.ts` extended |
 | Registry | `packages/domain/src/content/metric-registry.ts` (three macro slugs) |
-| Consumption math | `apps/app/src/consumption/` — macro fields in the daily totals projection |
+| Consumption math | `packages/logic/src/consumption/` — macro fields in the daily totals projection |
 | Search | New `apps/app/src/food/` client and cache; new `apps/api/src/routes/food.ts` and its provider adapter |
 | Routes and screens | New `apps/app/src/app/food/` stack; `settings/food`; trends entry point; screens under `src/screens/food/` |
-| Export | `apps/app/src/export/check-in-export.ts`, new v7 fixture |
+| Export | `packages/logic/src/export/check-in-export.ts`, new v7 fixture |
 | Privacy | The privacy screen copy, the licences screen |
 | Tests | Extends `@bro/app:test`, `@bro/api:test`, and the real-SQLite migration suites |
 

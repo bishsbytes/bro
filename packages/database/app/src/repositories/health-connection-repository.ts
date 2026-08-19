@@ -1,17 +1,7 @@
+import type { HealthConnection, HealthPlatform } from "@bro/mobile-model";
 import { BaseRepository } from "./base-repository";
 
-export type HealthPlatform = "healthkit" | "health_connect";
-
-export type HealthConnection = {
-	id: string;
-	platform: HealthPlatform;
-	metricSlug: string;
-	changeToken: string | null;
-	connectedAt: number;
-	lastImportedAt: number | null;
-	createdAt: number;
-	updatedAt: number;
-};
+export type { HealthConnection, HealthPlatform } from "@bro/mobile-model";
 
 type HealthConnectionRow = {
 	id: string;

@@ -1,5 +1,5 @@
-import type { HealthPlatform } from "@bro/database-app";
 import { toCanonical } from "@bro/domain";
+import type { HealthPlatform } from "@bro/mobile-model";
 import { type HealthMetricSlug, isHealthMetricSlug } from "./policy";
 
 export type HealthSampleUnit =

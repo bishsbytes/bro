@@ -1,27 +1,18 @@
 import type { ResolvedTrackedMetric, TrackedMetricDefault } from "@bro/domain";
+import type {
+	TrackedMetric,
+	TrackedMetricConfiguration,
+} from "@bro/mobile-model";
 import { BaseRepository } from "./base-repository";
-
-export type TrackedMetric = {
-	id: string;
-	metricSlug: string;
-	position: number;
-	addedAt: number | null;
-	removedAt: number | null;
-	customLabel: string | null;
-	createdAt: number;
-	updatedAt: number;
-};
 
 export type {
 	ResolvedTrackedMetric,
 	TrackedMetricDefault,
 } from "@bro/domain";
-
-export type TrackedMetricConfiguration = {
-	metricSlug: string;
-	position: number;
-	enabled: boolean;
-};
+export type {
+	TrackedMetric,
+	TrackedMetricConfiguration,
+} from "@bro/mobile-model";
 
 type TrackedMetricRow = {
 	id: string;

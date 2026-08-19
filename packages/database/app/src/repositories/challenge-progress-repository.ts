@@ -1,15 +1,8 @@
 import { isCalendarDay } from "@bro/domain";
+import type { ChallengeProgress } from "@bro/mobile-model";
 import { BaseRepository } from "./base-repository";
 
-export type ChallengeProgress = {
-	id: string;
-	enrolmentId: string;
-	dayIndex: number;
-	localDay: string;
-	completedAt: number;
-	createdAt: number;
-	updatedAt: number;
-};
+export type { ChallengeProgress } from "@bro/mobile-model";
 
 type ChallengeProgressRow = {
 	id: string;

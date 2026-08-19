@@ -1,46 +1,21 @@
-import { BaseRepository } from "./base-repository";
-import {
-	type CreateObservation,
-	type Observation,
-	ObservationRepository,
-} from "./observation-repository";
-
-export type AssessmentItemSnapshot = {
-	slug: string;
-	label: string;
-	position: number;
-};
-
-export type Assessment = {
-	id: string;
-	templateSlug: string;
-	templateVersion: number;
-	startedAt: number;
-	completedAt: number | null;
-	items: AssessmentItemSnapshot[];
-	focusItemSlugs: string[];
-	createdAt: number;
-	updatedAt: number;
-};
-
-export type CreateAssessment = Omit<
+import type {
 	Assessment,
-	"id" | "createdAt" | "updatedAt"
->;
+	AssessmentItemSnapshot,
+	CreateAssessmentWithObservations,
+	Observation,
+	SavedAssessment,
+} from "@bro/mobile-model";
+import { BaseRepository } from "./base-repository";
+import { ObservationRepository } from "./observation-repository";
 
-export type CreateAssessmentObservation = Omit<
-	CreateObservation,
-	"assessmentId"
->;
-
-export type CreateAssessmentWithObservations = CreateAssessment & {
-	observations: CreateAssessmentObservation[];
-};
-
-export type SavedAssessment = {
-	assessment: Assessment;
-	observations: Observation[];
-};
+export type {
+	Assessment,
+	AssessmentItemSnapshot,
+	CreateAssessment,
+	CreateAssessmentObservation,
+	CreateAssessmentWithObservations,
+	SavedAssessment,
+} from "@bro/mobile-model";
 
 type AssessmentRow = {
 	id: string;

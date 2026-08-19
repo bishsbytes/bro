@@ -26,6 +26,9 @@
 		},
 		{
 			"path": "./packages/logic"
+		},
+		{
+			"path": "./packages/mobile-model"
 		}
 	]
 }

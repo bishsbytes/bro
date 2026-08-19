@@ -1,4 +1,4 @@
-import { createDailyMetricId, createUuidV5 } from "@bro/database-app";
+import { createDailyMetricId, createUuidV5 } from "./index";
 
 describe("UUIDv5", () => {
 	it("matches the RFC name-based UUID vector", () => {

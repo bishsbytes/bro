@@ -1,15 +1,7 @@
+import type { Reminder, ReminderSchedule } from "@bro/mobile-model";
 import { BaseRepository } from "./base-repository";
 
-export type Reminder = {
-	id: string;
-	minuteOfDay: number;
-	daysOfWeek: number;
-	enabled: boolean;
-	createdAt: number;
-	updatedAt: number;
-};
-
-export type ReminderSchedule = Pick<Reminder, "minuteOfDay" | "daysOfWeek">;
+export type { Reminder, ReminderSchedule } from "@bro/mobile-model";
 
 type ReminderRow = {
 	id: string;

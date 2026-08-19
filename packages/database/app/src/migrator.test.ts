@@ -1,5 +1,5 @@
-import type * as DatabaseApp from "@bro/database-app";
 import type { SQLiteDatabase } from "expo-sqlite";
+import type * as DatabaseApp from "./index";
 import { createNodeSqliteMock } from "./test-support/node-sqlite";
 
 const mockSqlite = createNodeSqliteMock();
@@ -15,7 +15,7 @@ jest.mock("expo-sqlite", () => ({
 
 function loadDatabaseApp(): typeof DatabaseApp {
 	jest.resetModules();
-	return jest.requireActual("@bro/database-app");
+	return jest.requireActual("./index");
 }
 
 async function migratedDatabase(databaseName: string) {

@@ -1,4 +1,4 @@
-import type * as DatabaseApp from "@bro/database-app";
+import type * as DatabaseApp from "./index";
 import { createNodeSqliteMock } from "./test-support/node-sqlite";
 
 const mockSqlite = createNodeSqliteMock();
@@ -17,7 +17,7 @@ jest.mock("expo-sqlite/kv-store", () => ({
  */
 function relaunch(): typeof DatabaseApp {
 	jest.resetModules();
-	return jest.requireActual("@bro/database-app");
+	return jest.requireActual("./index");
 }
 
 describe("device-local settings", () => {

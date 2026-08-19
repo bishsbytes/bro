@@ -1,4 +1,4 @@
-import type * as DatabaseApp from "@bro/database-app";
+import type * as DatabaseApp from "./index";
 
 const mockOpenDatabaseAsync = jest.fn();
 
@@ -17,7 +17,7 @@ describe("product database startup", () => {
 			.mockResolvedValueOnce(db);
 		let initDb = null as unknown as typeof DatabaseApp.initDb;
 		jest.isolateModules(() => {
-			({ initDb } = jest.requireActual("@bro/database-app"));
+			({ initDb } = jest.requireActual("./index"));
 		});
 
 		await expect(initDb("retry.db")).rejects.toThrow("disk unavailable");
@@ -30,7 +30,7 @@ describe("product database startup", () => {
 		mockOpenDatabaseAsync.mockResolvedValue(db);
 		let initDb = null as unknown as typeof DatabaseApp.initDb;
 		jest.isolateModules(() => {
-			({ initDb } = jest.requireActual("@bro/database-app"));
+			({ initDb } = jest.requireActual("./index"));
 		});
 
 		// Both calls are in flight, so neither has set the resolved handle yet.
@@ -51,7 +51,7 @@ describe("product database startup", () => {
 		let initDb = null as unknown as typeof DatabaseApp.initDb;
 		let initLocalDb = null as unknown as typeof DatabaseApp.initLocalDb;
 		jest.isolateModules(() => {
-			({ initDb, initLocalDb } = jest.requireActual("@bro/database-app"));
+			({ initDb, initLocalDb } = jest.requireActual("./index"));
 		});
 
 		await expect(initDb()).resolves.toBe(productDb);

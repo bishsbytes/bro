@@ -47,7 +47,7 @@ The step is successful when a measurement entered as `12 st 4 lb` is stored once
 - **Measurements join the check-in through the overlay, default-off.** The three metrics ship with `enabled: false` defaults — the daily loop stays two scores and a tap row until a user opts in. The check-in gains a measurements section that renders only tracked measurement metrics, parses input in the preferred unit, and writes canonical values with `source: 'user'` and null bounds. Scored and factor surfaces provably ignore measurement metrics and vice versa — the same guarded invariant as `wheel:*`.
 - **The Body view is a `body` stack outside the tabs**, the `review` precedent exactly: `/body` (latest value, trend sparkline, and goal per tracked measurement; tracking toggles for the untracked), `/body/[slug]` (full history for one metric, goal create/manage). Entry from the trends screen beside the wheel entry. The tab bar stays at four.
 - **Goals on measurements reuse the step 3 table and repository unchanged** — that was the point of shipping them early. Targets are entered in the preferred unit, stored canonical, and inherit the display unit at render, so changing preference never moves a goal. Direction is inferred from target versus latest value, as the wheel does.
-- **Unit conversion is one pure module.** Parse (including compound), convert, format, and display-resolution tables live in `apps/app/src/units/` with no dependency on the database or React; every other surface — check-in, Body, trends, goals, export display — calls it rather than owning arithmetic. Conversion factors are exact definitions (1 lb = 0.45359237 kg), not approximations.
+- **Unit conversion is one pure module.** Parse (including compound), convert, format, and display-resolution tables live in `packages/domain/src/units/` with no dependency on the database or React; every other surface — check-in, Body, trends, goals, export display — calls it rather than owning arithmetic. Conversion factors are exact definitions (1 lb = 0.45359237 kg), not approximations.
 - **`unit_preferences` joins `PRODUCT_TABLE_NAMES`**, so migration verification and delete-local-data inherit it by construction.
 - **Export bumps to format v3**, adding a `unitPreferences` section beside the existing five. Measurement observations already ride in `observations` as canonical values — the export stores what the database stores, and v1 and v2 fixtures keep parsing.
 
@@ -101,7 +101,7 @@ Unchanged copy; the action now also clears `unit_preferences` via the shared tab
 
 ### Slice 2: Dimensions, the units module, and the registry extension
 
-1. `apps/app/src/units/`: dimension model, exact conversion factors, parse (compound included), format with per-dimension display resolution, locale defaulting. Pure functions, exhaustively tested — round-trips, boundary rounding, malformed input.
+1. `packages/domain/src/units/`: dimension model, exact conversion factors, parse (compound included), format with per-dimension display resolution, locale defaulting. Pure functions, exhaustively tested — round-trips, boundary rounding, malformed input.
 2. Registry kind `"measurement"` with `dimension`; aggregation `"last"` added to trend math; the three slugs with labels. Regression tests: scored, factor, and assessment surfaces ignore measurement metrics; `DEFAULT_TRACKED_METRICS` ships them `enabled: false`.
 3. **Canonical units, display units, labels, and display resolutions are the sign-off gate for this slice.**
 
@@ -128,10 +128,10 @@ Unchanged copy; the action now also clears `unit_preferences` via the shared tab
 | --- | --- |
 | Schema and migration | `packages/database/app/src/schema.ts`, `product-tables.ts`, `drizzle/*.sql`, `src/migrations/manifest.ts` |
 | Repositories | New `unit-preference-repository.ts`; exported from `src/index.ts` |
-| Units module | New `apps/app/src/units/` — dimensions, conversion, parsing, formatting, locale defaults |
-| Registry | `apps/app/src/content/metric-registry.ts` (measurement kind, dimension); `apps/app/src/trends/trend-math.ts` (aggregation `last`) |
+| Units module | New `packages/domain/src/units/` — dimensions, conversion, parsing, formatting, locale defaults |
+| Registry | `packages/domain/src/content/metric-registry.ts` (measurement kind, dimension); `packages/logic/src/trends/trend-math.ts` (aggregation `last`) |
 | Routes and screens | New `apps/app/src/app/body/` stack; `(tabs)/settings/units`; check-in measurements section in `home-screen`/`check-in-store`; trends entry point; screens under `src/screens/` |
-| Export | `apps/app/src/export/check-in-export.ts`, new v3 fixture |
+| Export | `packages/logic/src/export/check-in-export.ts`, new v3 fixture |
 | Tests | Extends `@bro/app:test` and the real-SQLite migration suites |
 
 ## Automated acceptance matrix

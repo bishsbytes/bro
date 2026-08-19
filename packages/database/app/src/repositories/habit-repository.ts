@@ -1,43 +1,19 @@
 import type { HabitDirection } from "@bro/domain";
+import type {
+	CreateHabit,
+	Habit,
+	HabitKind,
+	UpdateHabit,
+} from "@bro/mobile-model";
 import { BaseRepository } from "./base-repository";
 
-export type HabitKind = "manual" | "metric";
 export type { HabitDirection } from "@bro/domain";
-
-export type Habit = {
-	id: string;
-	slug: string;
-	customLabel: string | null;
-	kind: HabitKind;
-	metricSlug: string | null;
-	direction: HabitDirection | null;
-	targetValue: number | null;
-	areaSlug: string | null;
-	daysOfWeek: number;
-	position: number;
-	addedAt: number;
-	removedAt: number | null;
-	createdAt: number;
-	updatedAt: number;
-};
-
-export type CreateHabit = Pick<
+export type {
+	CreateHabit,
 	Habit,
-	| "slug"
-	| "customLabel"
-	| "kind"
-	| "metricSlug"
-	| "direction"
-	| "targetValue"
-	| "areaSlug"
-	| "daysOfWeek"
-	| "position"
->;
-
-export type UpdateHabit = Pick<
-	Habit,
-	"customLabel" | "targetValue" | "areaSlug" | "daysOfWeek" | "position"
->;
+	HabitKind,
+	UpdateHabit,
+} from "@bro/mobile-model";
 
 type HabitRow = {
 	id: string;

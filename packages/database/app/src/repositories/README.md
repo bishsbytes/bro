@@ -47,6 +47,13 @@ Create `<domain>-repository.ts` in this directory, extending `BaseRepository`.
 Expose domain operations as named methods; keep the SQL and row-to-domain
 mapping inside it. The real observation read path is the pattern:
 
+Define persistence-independent records and public create/update contracts in
+[`@bro/mobile-model`](../../../../mobile-model/src/records.ts). Import those
+types into the repository and re-export them when compatibility requires it;
+keep database row shapes and SQL mapping types private to the repository. This
+lets pure application logic depend on the model without depending on SQLite,
+migrations, or repository implementations.
+
 ```ts
 async listByDay(localDay: string): Promise<Observation[]> {
   const rows = await this.all<ObservationRow>(

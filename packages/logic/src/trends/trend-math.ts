@@ -1,6 +1,6 @@
-import type { Observation } from "@bro/database-app";
 import { shiftLocalDay } from "@bro/domain";
 import type { MetricDefinition } from "@bro/domain/metric-registry";
+import type { Observation } from "@bro/mobile-model";
 
 export const TREND_PERIODS = [7, 30] as const;
 export type TrendPeriod = (typeof TREND_PERIODS)[number];

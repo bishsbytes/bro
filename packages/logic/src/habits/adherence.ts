@@ -1,5 +1,5 @@
-import type { Habit } from "@bro/database-app";
 import { shiftLocalDay } from "@bro/domain";
+import type { Habit } from "@bro/mobile-model";
 import { isHabitScheduled } from "./cadence";
 import { isMetricHabitComplete } from "./completion";
 import { isHabitMetricSlug } from "./metric-support";

@@ -1,12 +1,7 @@
+import type { DayNote } from "@bro/mobile-model";
 import { BaseRepository } from "./base-repository";
 
-export type DayNote = {
-	id: string;
-	localDay: string;
-	body: string;
-	createdAt: number;
-	updatedAt: number;
-};
+export type { DayNote } from "@bro/mobile-model";
 
 type DayNoteRow = {
 	id: string;

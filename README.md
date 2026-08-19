@@ -18,18 +18,27 @@ packages/
     api/                   @bro/auth-api      Better Auth server configuration
     app/                   @bro/auth-app      Better Auth Expo client, provider, hooks
   domain/                  @bro/domain        Shared catalogues, metric registry, units logic
+  mobile-model/            @bro/mobile-model  Persistence-independent mobile record contracts
+  logic/                   @bro/logic         Pure computation over mobile records
 ```
 
 `database` and `auth` are each split into an `api` and an `app` half. The two halves never import each other, so server-only code (Postgres driver, Drizzle, auth secret) can't be pulled into the React Native bundle.
 
 `domain` is the exception to the split: pure TypeScript with no runtime dependencies, holding the product's definitional core — the content catalogues (habits, challenges, insights, life areas), the metric registry, unit conversion/formatting, and shared vocabulary types. It is tagged `scope:shared`, so ESLint lets both sides depend on it while it may depend on nothing. The app consumes it today; the API can adopt it when it grows server-side features.
 
+`mobile-model` owns database-independent record shapes. Both `database/app` and `logic` depend on it, so repository implementation and migration changes do not invalidate pure computation. `database/app` re-exports these types for compatibility, while `logic` imports their owning package directly.
+
 ```mermaid
 graph TD
   APP["apps/app<br/>Expo"] --> DBAPP["database/app<br/>embedded Turso"]
   APP --> AUTHAPP["auth/app<br/>Better Auth client"]
   APP --> DOMAIN["domain<br/>catalogues + units"]
+  APP --> LOGIC["logic<br/>pure computation"]
   DBAPP --> DOMAIN
+  DBAPP --> MODEL
+  LOGIC --> DOMAIN
+  LOGIC --> MODEL
+  MODEL --> DOMAIN
   API["apps/api<br/>Hono"] --> DBAPI["database/api<br/>Postgres"]
   API --> AUTHAPI["auth/api<br/>Better Auth server"]
   AUTHAPI --> DBAPI
@@ -112,6 +121,8 @@ alias to the development machine. The iOS simulator and web can use
 | `nx run @bro/api:build` | Production bundle (esbuild) |
 | `pnpm nx run @bro/api:test` | Run API integration tests with Vitest and Testcontainers |
 | `pnpm nx run @bro/app:test` | Run the Expo router, Account, startup, and storage tests |
+| `pnpm nx run @bro/database-app:test` | Run embedded-database repository and migration tests |
+| `pnpm nx run-many -t test-ci` | Run atomized per-file unit-test targets |
 | `nx run app:start` | Expo dev server |
 | `nx run @bro/database-api:db:generate` | Generate a Postgres migration from schema changes |
 | `nx run @bro/database-api:db:migrate` | Apply pending Postgres migrations |
@@ -124,7 +135,7 @@ alias to the development machine. The iOS simulator and web can use
 
 - **No `project.json`.** Nx config is inferred, with custom targets in each `package.json` under `nx.targets`.
 - **Biome** owns formatting and general linting (tabs, double quotes). ESLint is intentionally limited to Nx module-boundary enforcement; run both with `pnpm lint`.
-- **Module resolution differs by side.** The API-side packages use `nodenext`, so their relative imports carry `.js` suffixes. The app-side packages (`database/app`, `auth/app`) and `domain` use `bundler` resolution with no suffixes, because Metro does not remap `.js` to `.ts`. Match the package you're editing.
+- **Module resolution differs by side.** The API-side packages use `nodenext`, so their relative imports carry `.js` suffixes. The app-side packages (`database/app`, `auth/app`, `mobile-model`, `logic`) and `domain` use `bundler` resolution with no suffixes, because Metro does not remap `.js` to `.ts`. Match the package you're editing.
 - **TypeScript project references** are managed by `nx sync`; run it after adding a cross-package import.
 - Dependencies shared with Expo must match the SDK. Check `node_modules/expo/bundledNativeModules.json` for the correct version rather than taking `latest`.
 

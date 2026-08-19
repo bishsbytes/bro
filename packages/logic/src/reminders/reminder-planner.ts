@@ -1,5 +1,5 @@
-import type { Reminder } from "@bro/database-app";
 import { localDayOf } from "@bro/domain";
+import type { Reminder } from "@bro/mobile-model";
 import { includesWeekday, isoWeekdayIndex } from "./day-bitmask";
 
 export const REMINDER_NOTIFICATION_PREFIX = "checkin-reminder:";

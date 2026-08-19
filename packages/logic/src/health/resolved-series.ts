@@ -1,10 +1,10 @@
+import type { MeasurementSlug } from "@bro/domain/metric-registry";
+import { resolveMetric } from "@bro/domain/metric-registry";
 import type {
 	ConsumptionEntry,
 	DailyMetric,
 	Observation,
-} from "@bro/database-app";
-import type { MeasurementSlug } from "@bro/domain/metric-registry";
-import { resolveMetric } from "@bro/domain/metric-registry";
+} from "@bro/mobile-model";
 import { type ResolvedMetricDay, resolveMetricDay } from "./resolved-day";
 
 export type ResolvedMetricObservation = Observation & {

@@ -1,4 +1,4 @@
-import type { Reminder } from "@bro/database-app";
+import type { Reminder } from "@bro/mobile-model";
 import { EVERY_DAY_MASK } from "./day-bitmask";
 import {
 	MAX_PLANNED_NOTIFICATIONS,

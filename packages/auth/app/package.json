@@ -16,7 +16,8 @@
 	"nx": {
 		"tags": [
 			"scope:app",
-			"type:lib"
+			"type:lib",
+			"layer:integration"
 		]
 	},
 	"dependencies": {

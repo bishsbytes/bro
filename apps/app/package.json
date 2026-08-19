@@ -7,22 +7,13 @@
 		"eas-build-post-install": "cd ../../ && node tools/scripts/eas-build-post-install.mjs . apps/app"
 	},
 	"nx": {
+		"projectType": "application",
 		"tags": [
 			"scope:app",
-			"type:app"
+			"type:app",
+			"layer:app"
 		],
-		"targets": {
-			"test": {
-				"executor": "nx:run-commands",
-				"outputs": [
-					"{projectRoot}/test-output/jest/coverage"
-				],
-				"options": {
-					"cwd": "apps/app",
-					"command": "jest --config jest.config.cjs"
-				}
-			}
-		}
+		"targets": {}
 	},
 	"dependencies": {
 		"@better-auth/expo": "^1.6.27",

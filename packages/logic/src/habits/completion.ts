@@ -1,5 +1,5 @@
-import type { Habit } from "@bro/database-app";
 import { isConsumptionDerivedMeasurementSlug } from "@bro/domain/metric-registry";
+import type { Habit } from "@bro/mobile-model";
 import type { ResolvedMetricDay } from "../health/resolved-day";
 
 export type MetricHabit = Pick<

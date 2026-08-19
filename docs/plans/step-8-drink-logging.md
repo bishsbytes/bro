@@ -30,8 +30,8 @@ The step is successful when three properties hold: a drink logged as "pint of la
 - Migrations 001–006 shipped; `PRODUCT_TABLE_NAMES` ([product-tables.ts](../../packages/database/app/src/product-tables.ts)) drives Drizzle schema naming, manifest verification, and delete-local-data, so a new product table declares its deletion responsibility in one place.
 - The registry ([metric-registry.ts](../../packages/domain/src/content/metric-registry.ts)) has four kinds and two measurement variants — user-enterable and imported-only — plus the standing convention, written in the file itself, that **a factor needing quantity gets a separate quantified counterpart** (`alcohol` → `alcohol_intake`) rather than overloading `FACTOR_PRESENCE_VALUE`. This step is that comment coming due.
 - Canonical storage with display-side preferences is proven for `mass`, `length`, and `fraction`, with exact conversion factors, compound parsing, render-only rounding, and the `unitPreferenceDimension` override that already splits `height` from `length` ([dimensions.ts](../../packages/domain/src/units/dimensions.ts)).
-- [resolved-day.ts](../../apps/app/src/health/resolved-day.ts) is the one function answering "what was this metric's value on this local day", merging observations with imported `daily_metrics` under imported-wins precedence; Trends, Body, goals, and habit completion all read through it. It is typed to `HealthMetricSlug` today.
-- The insight daily-signal adapter ([daily-signal.ts](../../apps/app/src/insight/daily-signal.ts)) indexes its sources once and answers per metric per day; factors resolve as presence, with an untagged day on a check-in day counting as a false arm.
+- [resolved-day.ts](../../packages/logic/src/health/resolved-day.ts) is the one function answering "what was this metric's value on this local day", merging observations with imported `daily_metrics` under imported-wins precedence; Trends, Body, goals, and habit completion all read through it. It is typed to `HealthMetricSlug` today.
+- The insight daily-signal adapter ([daily-signal.ts](../../packages/logic/src/insight/daily-signal.ts)) indexes its sources once and answers per metric per day; factors resolve as presence, with an untagged day on a check-in day counting as a false arm.
 - `goals` supports create/achieve/abandon against any metric series with canonical targets and derived progress, in both directions.
 - Export format v5 parses v1–v5 fixtures with `sensitiveIncluded` exclusion proven across every domain, and ships a platform-split share/save UI.
 - No table in `bro.db` stores per-event rows yet: every domain to date is either one row per day-ish observation or a small configuration table. This is the first entry log, which is why it is worth designing before the provider arrives.
@@ -141,10 +141,10 @@ Unchanged copy; the action now also clears `consumption_entries` via the shared 
 | Repositories | New `consumption-entry-repository.ts`; exported from `src/index.ts` |
 | Units | `packages/domain/src/units/` — `volume` and `energy` dimensions, the `alcohol` preference dimension, conversion constants, formatting |
 | Catalogue and registry | New `packages/domain/src/content/drink-catalogue.ts`; `metric-registry.ts` (consumption-derived variant, four slugs) |
-| Derived resolution | `apps/app/src/health/resolved-day.ts` and `resolved-series.ts` (third source, widened slug typing); new `apps/app/src/consumption/` for entry → daily-total math |
-| Insight | `apps/app/src/insight/daily-signal.ts` (presence derivation), `packages/domain/src/content/insight-catalogue.ts` (two pairs) |
+| Derived resolution | `packages/logic/src/health/resolved-day.ts` and `resolved-series.ts` (third source, widened slug typing); new `packages/logic/src/consumption/` for entry → daily-total math |
+| Insight | `packages/logic/src/insight/daily-signal.ts` (presence derivation), `packages/domain/src/content/insight-catalogue.ts` (two pairs) |
 | Routes and screens | New `apps/app/src/app/drinks/` stack; `settings/drinks`; trends entry point; screens under `src/screens/` |
-| Export | `apps/app/src/export/check-in-export.ts`, new v6 fixture |
+| Export | `packages/logic/src/export/check-in-export.ts`, new v6 fixture |
 | Tests | Extends `@bro/app:test` and the real-SQLite migration suites |
 
 ## Automated acceptance matrix

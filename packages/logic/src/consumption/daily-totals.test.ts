@@ -2,7 +2,7 @@ import type {
 	ConsumptionEntry,
 	DailyMetric,
 	Observation,
-} from "@bro/database-app";
+} from "@bro/mobile-model";
 import { resolveMetricDay } from "../health/resolved-day";
 import { resolveMetricObservations } from "../health/resolved-series";
 import {

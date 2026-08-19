@@ -1,0 +1,20 @@
+{
+	"extends": "../../../tsconfig.base.json",
+	"compilerOptions": {
+		"outDir": "./out-tsc/jest",
+		"module": "esnext",
+		"moduleResolution": "bundler",
+		"types": ["jest", "node"]
+	},
+	"include": [
+		"jest.config.cjs",
+		"src/**/*.test.ts",
+		"src/test-setup.ts",
+		"src/test-support/**/*.ts"
+	],
+	"references": [
+		{ "path": "../../domain" },
+		{ "path": "../../mobile-model" },
+		{ "path": "./tsconfig.lib.json" }
+	]
+}

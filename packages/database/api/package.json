@@ -16,7 +16,8 @@
 	"nx": {
 		"tags": [
 			"scope:api",
-			"type:lib"
+			"type:lib",
+			"layer:data-access"
 		],
 		"targets": {
 			"db:generate": {

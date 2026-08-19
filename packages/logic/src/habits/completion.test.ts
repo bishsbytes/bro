@@ -1,4 +1,4 @@
-import type { Habit } from "@bro/database-app";
+import type { Habit } from "@bro/mobile-model";
 import { habitMetricDayValue, isMetricHabitComplete } from "./completion";
 
 function metricHabit(overrides: Partial<Habit> = {}): Habit {

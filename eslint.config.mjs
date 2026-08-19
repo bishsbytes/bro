@@ -4,7 +4,13 @@ import tseslint from "typescript-eslint";
 export default [
 	...nx.configs["flat/base"],
 	{
-		ignores: ["**/dist/**", "**/node_modules/**", "**/.expo/**"],
+		ignores: [
+			"**/dist/**",
+			"**/out-tsc/**",
+			"**/node_modules/**",
+			"**/.expo/**",
+			"**/vitest.config.*.timestamp*",
+		],
 	},
 	{
 		files: ["**/*.{ts,tsx,cts,mts,js,jsx,cjs,mjs}"],
@@ -33,6 +39,40 @@ export default [
 						{
 							sourceTag: "scope:shared",
 							onlyDependOnLibsWithTags: ["scope:shared"],
+						},
+						{
+							sourceTag: "layer:domain",
+							onlyDependOnLibsWithTags: ["layer:domain"],
+						},
+						{
+							sourceTag: "layer:model",
+							onlyDependOnLibsWithTags: ["layer:domain"],
+						},
+						{
+							sourceTag: "layer:data-access",
+							onlyDependOnLibsWithTags: ["layer:domain", "layer:model"],
+						},
+						{
+							sourceTag: "layer:application",
+							onlyDependOnLibsWithTags: ["layer:domain", "layer:model"],
+						},
+						{
+							sourceTag: "layer:integration",
+							onlyDependOnLibsWithTags: [
+								"layer:domain",
+								"layer:model",
+								"layer:data-access",
+							],
+						},
+						{
+							sourceTag: "layer:app",
+							onlyDependOnLibsWithTags: [
+								"layer:domain",
+								"layer:model",
+								"layer:data-access",
+								"layer:application",
+								"layer:integration",
+							],
 						},
 					],
 				},

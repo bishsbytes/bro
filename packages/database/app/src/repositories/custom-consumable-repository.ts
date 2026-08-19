@@ -1,57 +1,25 @@
+import type {
+	CreateCustomConsumable,
+	CreateCustomConsumableComponent,
+	CustomConsumable,
+	CustomConsumableComponent,
+	CustomConsumableKind,
+	CustomConsumableServing,
+	UpdateCustomConsumable,
+	UpdateCustomConsumableComponent,
+} from "@bro/mobile-model";
 import { BaseRepository } from "./base-repository";
 
-export type CustomConsumableKind = "food" | "drink";
-
-export type CustomConsumableServing = {
-	id: string;
-	label: string;
-	volumeL: number | null;
-	ethanolKg: number | null;
-	caffeineKg: number | null;
-	energyKcal: number | null;
-	proteinG: number | null;
-	carbsG: number | null;
-	fatG: number | null;
-};
-
-export type CustomConsumable = {
-	id: string;
-	kind: CustomConsumableKind;
-	label: string;
-	brand: string | null;
-	isRecipe: boolean;
-	servings: CustomConsumableServing[];
-	createdAt: number;
-	updatedAt: number;
-};
-
-export type CreateCustomConsumable = Pick<
+export type {
+	CreateCustomConsumable,
+	CreateCustomConsumableComponent,
 	CustomConsumable,
-	"kind" | "label" | "brand" | "isRecipe" | "servings"
->;
-
-export type UpdateCustomConsumable = Omit<CreateCustomConsumable, "kind">;
-
-export type CustomConsumableComponent = {
-	id: string;
-	consumableId: string;
-	position: number;
-	label: string;
-	quantity: number;
-	energyKcal: number | null;
-	proteinG: number | null;
-	carbsG: number | null;
-	fatG: number | null;
-	createdAt: number;
-	updatedAt: number;
-};
-
-export type CreateCustomConsumableComponent = Omit<
 	CustomConsumableComponent,
-	"id" | "consumableId" | "createdAt" | "updatedAt"
->;
-
-export type UpdateCustomConsumableComponent = CreateCustomConsumableComponent;
+	CustomConsumableKind,
+	CustomConsumableServing,
+	UpdateCustomConsumable,
+	UpdateCustomConsumableComponent,
+} from "@bro/mobile-model";
 
 type CustomConsumableRow = {
 	id: string;

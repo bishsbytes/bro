@@ -1,26 +1,7 @@
+import type { RawSample, UpsertRawSample } from "@bro/mobile-model";
 import { BaseRepository } from "./base-repository";
 
-export type RawSample = {
-	id: string;
-	metricSlug: string;
-	value: number;
-	startedAt: number;
-	endedAt: number;
-	localDay: string;
-	source: string;
-	sourceRecordId: string;
-	/** Recording app/device identity within the platform; null when unknown. */
-	origin: string | null;
-	importedAt: number;
-};
-
-export type UpsertRawSample = Omit<
-	RawSample,
-	"id" | "origin" | "importedAt"
-> & {
-	origin?: string | null;
-	importedAt?: number;
-};
+export type { RawSample, UpsertRawSample } from "@bro/mobile-model";
 
 type RawSampleRow = {
 	id: string;

@@ -1,4 +1,4 @@
-import type { Habit } from "@bro/database-app";
+import type { Habit } from "@bro/mobile-model";
 import { deriveHabitAdherence } from "./adherence";
 
 const manual: Habit = {

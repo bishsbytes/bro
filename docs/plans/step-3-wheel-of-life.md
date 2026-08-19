@@ -27,7 +27,7 @@ The step is successful when the review loop closes twice: a first sitting that e
 
 - Migration 002 shipped and the multi-migration path is proven on a real step-1 database file; migration 003 follows a walked road.
 - `observations` already carries a nullable `assessment_id` (indexed queries not needed — sittings are read by id, trends by the existing day/metric indexes).
-- The metric registry (`apps/app/src/content/metric-registry.ts`) is a typed authored catalogue with `kind: "scored" | "factor"`, per-kind scale bounds, sensitivity, deprecation, and a proven "unknown slug" resolution path.
+- The metric registry (`packages/domain/src/content/metric-registry.ts`) is a typed authored catalogue with `kind: "scored" | "factor"`, per-kind scale bounds, sensitivity, deprecation, and a proven "unknown slug" resolution path.
 - `tracked_metrics` is the overlay pattern in production: `metricSlug`, `position`, `addedAt`/`removedAt`, driving the check-in panel through the registry.
 - The settings stack has a child-route precedent (`settings/reminders`); shared components (Card, SectionHeader, EmptyState, Button, FormField, Screen) and the unistyles theme with a token-parity test cover both colour schemes.
 - Export serialisation v1 covers observations, day notes, and tracked metrics with a committed fixture.
@@ -162,9 +162,9 @@ Unchanged copy; the action now also clears `assessments` and `goals` via the sha
 | --- | --- |
 | Schema and migration | `packages/database/app/src/schema.ts`, `product-tables.ts`, `drizzle/*.sql`, `src/migrations/manifest.ts` |
 | Repositories | New `assessment-repository.ts`, `goal-repository.ts`; `tracked-metrics-repository.ts` (relabel); exported from `src/index.ts` |
-| Catalogue | `apps/app/src/content/` — area catalogue, wheel template, `challenge-catalogue.ts`; `metric-registry.ts` (assessment kind) |
+| Catalogue | `packages/domain/src/content/` — area catalogue, wheel template, `challenge-catalogue.ts`; `metric-registry.ts` (assessment kind) |
 | Routes and screens | New `apps/app/src/app/review/` stack; `(tabs)/settings/life-areas`; today empty state; trends entry point; screens under `src/screens/` |
-| Export | `apps/app/src/export/check-in-export.ts`, new v2 fixture |
+| Export | `packages/logic/src/export/check-in-export.ts`, new v2 fixture |
 | Theme | `apps/app/src/theme/unistyles.ts` if the wheel rendering needs tokens |
 | Tests | Extends `@bro/app:test` and the real-SQLite migration suites |
 

@@ -1,35 +1,15 @@
+import type {
+	CreateObservation,
+	Observation,
+	UpdateObservation,
+} from "@bro/mobile-model";
 import { BaseRepository } from "./base-repository";
 
-export type Observation = {
-	id: string;
-	metricSlug: string;
-	value: number;
-	scaleMin: number | null;
-	scaleMax: number | null;
-	observedAt: number;
-	localDay: string;
-	tzOffsetMinutes: number;
-	source: string;
-	sourceRecordId: string | null;
-	assessmentId: string | null;
-	createdAt: number;
-	updatedAt: number;
-};
-
-export type CreateObservation = Omit<
+export type {
+	CreateObservation,
 	Observation,
-	"id" | "createdAt" | "updatedAt"
->;
-
-export type UpdateObservation = Pick<
-	Observation,
-	| "value"
-	| "scaleMin"
-	| "scaleMax"
-	| "observedAt"
-	| "localDay"
-	| "tzOffsetMinutes"
->;
+	UpdateObservation,
+} from "@bro/mobile-model";
 
 type ObservationRow = {
 	id: string;

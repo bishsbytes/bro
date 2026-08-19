@@ -1,5 +1,9 @@
 import { readFileSync } from "node:fs";
 import { join } from "node:path";
+import {
+	type MetricDefinition,
+	resolveMetric,
+} from "@bro/domain/metric-registry";
 import type {
 	Assessment,
 	ChallengeEnrolment,
@@ -15,11 +19,7 @@ import type {
 	Observation,
 	TrackedMetric,
 	UnitPreference,
-} from "@bro/database-app";
-import {
-	type MetricDefinition,
-	resolveMetric,
-} from "@bro/domain/metric-registry";
+} from "@bro/mobile-model";
 import {
 	buildCheckInExport,
 	CHECK_IN_EXPORT_FORMAT_VERSION,

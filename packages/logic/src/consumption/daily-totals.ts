@@ -1,6 +1,6 @@
-import type { ConsumptionEntry } from "@bro/database-app";
 import { shiftLocalDay } from "@bro/domain";
 import type { ConsumptionDerivedMeasurementSlug } from "@bro/domain/metric-registry";
+import type { ConsumptionEntry } from "@bro/mobile-model";
 
 const ENTRY_FIELD_BY_METRIC = {
 	alcohol_intake: "ethanolKg",

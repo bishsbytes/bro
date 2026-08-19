@@ -1,4 +1,4 @@
-import type * as DatabaseApp from "@bro/database-app";
+import type * as DatabaseApp from "./index";
 import { createNodeSqliteMock } from "./test-support/node-sqlite";
 
 const mockSqlite = createNodeSqliteMock();
@@ -11,7 +11,7 @@ jest.mock("expo-crypto", () => ({
 	getRandomBytes: jest.fn((length: number) => new Uint8Array(length)),
 }));
 
-const databaseApp: typeof DatabaseApp = jest.requireActual("@bro/database-app");
+const databaseApp: typeof DatabaseApp = jest.requireActual("./index");
 
 describe("health import repositories", () => {
 	beforeAll(async () => {

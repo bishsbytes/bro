@@ -2,7 +2,6 @@ module.exports = {
 	displayName: "@bro/app",
 	preset: "jest-expo",
 	setupFilesAfterEnv: ["<rootDir>/src/test-setup.ts"],
-	testMatch: ["<rootDir>/src/**/*.test.ts", "<rootDir>/src/**/*.test.tsx"],
 	moduleNameMapper: {
 		"^react$": "<rootDir>/node_modules/react",
 		// pnpm can resolve the same expo-sqlite version to different store paths

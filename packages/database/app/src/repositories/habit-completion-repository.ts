@@ -1,14 +1,8 @@
 import { isCalendarDay } from "@bro/domain";
+import type { HabitCompletion } from "@bro/mobile-model";
 import { BaseRepository } from "./base-repository";
 
-export type HabitCompletion = {
-	id: string;
-	habitId: string;
-	localDay: string;
-	completedAt: number;
-	createdAt: number;
-	updatedAt: number;
-};
+export type { HabitCompletion } from "@bro/mobile-model";
 
 type HabitCompletionRow = {
 	id: string;

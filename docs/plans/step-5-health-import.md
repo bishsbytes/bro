@@ -28,7 +28,7 @@ The step is successful when a fresh connect on a phone with months of platform h
 
 - Migrations 001–004 shipped and proven on real prior-step database files; `PRODUCT_TABLE_NAMES` drives migration verification and delete-local-data from one record.
 - `observations` carries `source` and `sourceRecordId` since migration 001 — the import provenance fields have been waiting four steps.
-- The registry has four kinds; `measurement` carries `dimension`, and step 4's guarded invariants prove per-kind surface isolation in both directions. The units module in `apps/app/src/units/` owns parse/convert/format with exact factors, and `unit_preferences` resolves latest-per-dimension with locale fallback.
+- The registry has four kinds; `measurement` carries `dimension`, and step 4's guarded invariants prove per-kind surface isolation in both directions. The units module in `packages/domain/src/units/` owns parse/convert/format with exact factors, and `unit_preferences` resolves latest-per-dimension with locale fallback.
 - Aggregation `"last"` is in production in trend math; trends render registry-driven series; the Body view shows measurement history, goals, and sparklines in the preferred unit.
 - Export format v3 with committed v1/v2/v3 fixtures; sensitive exclusion covers registry entries, observations, tracked rows, assessment items, and goals by slug.
 - One database file exists (`bro.db`, via `connection.ts`); `bro-device.db` duties are met by the key-value device-settings store; there is no `bro-local.db` and no second migration manifest.
@@ -135,7 +135,7 @@ Disconnect stops imports and clears tokens; copy states plainly that already-imp
 ### Slice 2: Registry, mapping, and rollup math — the sign-off gate
 
 1. Registry entries for `sleep_duration`, `steps`, `resting_heart_rate` (`userEnterable: false`); dimensions `time`, `count`, `rate_bpm` with display formatting (compound `h m`, count, `bpm`) in the units module; aggregation `"sum"`. Regression tests: check-in, scored, factor, and assessment surfaces provably ignore imported-only metrics; `wheel:*`-style invariants.
-2. Pure import math in `apps/app/src/health/`: platform-sample → canonical mapping (unit conversion at the boundary), local-day attribution including the sleep-crosses-midnight rule and DST days, per-metric rollup (`sum`/`mean`/`last`), touched-day recompute over additions and deletions, and the resolved-day precedence merge. No database, no React, exhaustively tested.
+2. Pure import math in `packages/logic/src/health/`: platform-sample → canonical mapping (unit conversion at the boundary), local-day attribution including the sleep-crosses-midnight rule and DST days, per-metric rollup (`sum`/`mean`/`last`), touched-day recompute over additions and deletions, and the resolved-day precedence merge. No database, no React, exhaustively tested.
 3. **Sign-off gate: canonical units, attribution rule, v1 metric set, sensitivity flags, precedence, backfill depth, and retention window.**
 
 ### Slice 3: Gateways, the import engine, and the native build
@@ -202,11 +202,11 @@ One process deviation is recorded rather than repaired: the Android prebuild reg
 | --- | --- |
 | Stores and migrations | `packages/database/app/src/schema.ts`, new `local-schema.ts`, `product-tables.ts`, new `local-tables.ts`, `connection.ts`, new local manifest under `src/migrations/`, new `uuid-v5.ts` |
 | Repositories | New `daily-metric-repository.ts`, `health-connection-repository.ts`, `raw-sample-repository.ts` |
-| Import pipeline | New `apps/app/src/health/` — gateway interface, platform gateways, mapping, rollup, engine, resolved-series merge |
-| Registry and units | `apps/app/src/content/metric-registry.ts`; `apps/app/src/units/` (time/count/rate formatting) |
+| Import pipeline | Gateways and import engine in `apps/app/src/health/`; mapping, rollup, and resolved-series merge in `packages/logic/src/health/` |
+| Registry and units | `packages/domain/src/content/metric-registry.ts`; `packages/domain/src/units/` (time/count/rate formatting) |
 | Routes and screens | `(tabs)/settings/health`; `trends-screen`/`trends-store`; `body-store` and Body screens; history day view provenance |
 | Native | `apps/app/app.json` plugins, regenerated `android/` prebuild, EAS iOS config, usage strings |
-| Export | `apps/app/src/export/check-in-export.ts`, new v4 fixture |
+| Export | `packages/logic/src/export/check-in-export.ts`, new v4 fixture |
 | Tests | `@bro/app:test`, real-SQLite suites for both stores, pure-math suites in `src/health/` |
 
 ## Automated acceptance matrix

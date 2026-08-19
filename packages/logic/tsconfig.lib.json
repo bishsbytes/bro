@@ -13,10 +13,10 @@
 	"exclude": ["src/**/*.test.ts"],
 	"references": [
 		{
-			"path": "../domain/tsconfig.lib.json"
+			"path": "../mobile-model/tsconfig.lib.json"
 		},
 		{
-			"path": "../database/app/tsconfig.lib.json"
+			"path": "../domain/tsconfig.lib.json"
 		}
 	]
 }

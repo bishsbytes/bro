@@ -1,25 +1,9 @@
+import type { DailyMetric, UpsertDailyMetric } from "@bro/mobile-model";
 import type { SQLiteDatabase } from "expo-sqlite";
 import { createDailyMetricId } from "../uuid-v5";
 import { BaseRepository, type RepositoryOptions } from "./base-repository";
 
-export type DailyMetric = {
-	id: string;
-	metricSlug: string;
-	localDay: string;
-	value: number;
-	source: string;
-	computedAt: number;
-	createdAt: number;
-	updatedAt: number;
-};
-
-export type UpsertDailyMetric = {
-	metricSlug: string;
-	localDay: string;
-	value: number;
-	source: string;
-	computedAt?: number;
-};
+export type { DailyMetric, UpsertDailyMetric } from "@bro/mobile-model";
 
 type DailyMetricRow = {
 	id: string;
