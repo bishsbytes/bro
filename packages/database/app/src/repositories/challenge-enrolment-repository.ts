@@ -1,7 +1,5 @@
-import type { SQLiteDatabase } from "expo-sqlite";
-import { createUuidV7 } from "../uuid-v7";
+import { isCalendarDay } from "@bro/domain";
 import { BaseRepository } from "./base-repository";
-import { isCalendarDay } from "./calendar-day";
 
 export type ChallengeEnrolment = {
 	id: string;
@@ -34,11 +32,6 @@ type ChallengeEnrolmentRow = {
 	updated_at: number;
 };
 
-type RepositoryOptions = {
-	now?: () => number;
-	createId?: (timestamp: number) => string;
-};
-
 const SELECT_COLUMNS = `
 	id, challenge_slug, title, duration_days, area_slug, started_on,
 	completed_at, abandoned_at, created_at, updated_at
@@ -69,16 +62,6 @@ function toChallengeEnrolment(row: ChallengeEnrolmentRow): ChallengeEnrolment {
 }
 
 export class ChallengeEnrolmentRepository extends BaseRepository {
-	private readonly now: () => number;
-	private readonly createId: (timestamp: number) => string;
-
-	constructor(db: SQLiteDatabase, options: RepositoryOptions = {}) {
-		super(db);
-		this.now = options.now ?? Date.now;
-		this.createId =
-			options.createId ?? ((timestamp) => createUuidV7(timestamp));
-	}
-
 	async enrol(input: CreateChallengeEnrolment): Promise<ChallengeEnrolment> {
 		const challengeSlug = required(input.challengeSlug, "Challenge slug");
 		if (!challengeSlug.startsWith("challenge:")) {

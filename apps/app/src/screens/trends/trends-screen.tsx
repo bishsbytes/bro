@@ -1,3 +1,4 @@
+import { TREND_PERIODS, type TrendPeriod } from "@bro/logic";
 import { type Href, router, useFocusEffect } from "expo-router";
 import { useCallback, useMemo, useState } from "react";
 import { ActivityIndicator, TouchableOpacity, View } from "react-native";
@@ -8,7 +9,6 @@ import { Screen } from "../../components/screen";
 import { SectionHeader } from "../../components/section-header";
 import { TrendChart } from "../../components/trend-chart";
 import { StyleSheet } from "../../theme/unistyles";
-import { TREND_PERIODS, type TrendPeriod } from "../../trends/trend-math";
 import {
 	createTrendsStore,
 	type TrendsSnapshot,

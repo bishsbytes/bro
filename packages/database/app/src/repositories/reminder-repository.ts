@@ -1,5 +1,3 @@
-import type { SQLiteDatabase } from "expo-sqlite";
-import { createUuidV7 } from "../uuid-v7";
 import { BaseRepository } from "./base-repository";
 
 export type Reminder = {
@@ -20,11 +18,6 @@ type ReminderRow = {
 	enabled: number;
 	created_at: number;
 	updated_at: number;
-};
-
-type RepositoryOptions = {
-	now?: () => number;
-	createId?: (timestamp: number) => string;
 };
 
 const SELECT_COLUMNS =
@@ -59,16 +52,6 @@ function toReminder(row: ReminderRow): Reminder {
 }
 
 export class ReminderRepository extends BaseRepository {
-	private readonly now: () => number;
-	private readonly createId: (timestamp: number) => string;
-
-	constructor(db: SQLiteDatabase, options: RepositoryOptions = {}) {
-		super(db);
-		this.now = options.now ?? Date.now;
-		this.createId =
-			options.createId ?? ((timestamp) => createUuidV7(timestamp));
-	}
-
 	async listAll(): Promise<Reminder[]> {
 		const rows = await this.all<ReminderRow>(
 			`SELECT ${SELECT_COLUMNS} FROM reminders

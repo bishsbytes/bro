@@ -1,41 +1,14 @@
 import { openDatabaseSync } from "expo-sqlite";
 import { SQLiteStorage } from "expo-sqlite/kv-store";
+import {
+	createDeviceSettings,
+	DEVICE_SETTINGS_DATABASE_NAME,
+} from "./device-settings-store";
 
-export const DEVICE_SETTINGS_DATABASE_NAME = "bro-device.db";
-
-/**
- * Device-local settings. Never replicated: everything in the product database
- * (`bro.db`) syncs once a user opts in, so onboarding state and lock
- * preferences kept there would propagate to their other devices and
- * `installationId` would stop identifying an install.
- *
- * Stored as key-value rather than as a schema, because it is seven flat scalars
- * — a relational shape would be ceremony without a table to justify it.
- */
-export type DeviceSettingsSnapshot = {
-	/** Random UUID for this install. Meaningless elsewhere; not a credential. */
-	installationId: string;
-	onboardingComplete: boolean;
-	appLockEnabled: boolean;
-	appLockTimeoutSeconds: number | null;
-	/** Lets startup skip all session work for a user who has never registered. */
-	hasStoredRemoteSession: boolean;
-	/** The account currently signed in on this device, or null. Not a claim on the data. */
-	lastRemoteUserId: string | null;
-};
-
-const KEYS = {
-	schemaVersion: "schemaVersion",
-	installationId: "installationId",
-	onboardingComplete: "onboardingComplete",
-	appLockEnabled: "appLockEnabled",
-	appLockTimeoutSeconds: "appLockTimeoutSeconds",
-	hasStoredRemoteSession: "hasStoredRemoteSession",
-	lastRemoteUserId: "lastRemoteUserId",
-} as const;
-
-/** Bumped only when stored values need reshaping, which nothing yet does. */
-const SCHEMA_VERSION = 1;
+export {
+	DEVICE_SETTINGS_DATABASE_NAME,
+	type DeviceSettingsSnapshot,
+} from "./device-settings-store";
 
 let store: SQLiteStorage | undefined;
 
@@ -71,89 +44,21 @@ function createUuid(): string {
 	}
 }
 
-function readBoolean(key: string): boolean {
-	return getStore().getItemSync(key) === "true";
-}
+const settings = createDeviceSettings({
+	getItem: (key) => getStore().getItemSync(key),
+	setItem: (key, value) => getStore().setItemSync(key, value),
+	removeItem: (key) => getStore().removeItemSync(key),
+	createUuid,
+	close: () => {
+		store?.closeSync();
+		store = undefined;
+	},
+});
 
-function readInteger(key: string): number | null {
-	const raw = getStore().getItemSync(key);
-	if (raw === null) {
-		return null;
-	}
-
-	const parsed = Number.parseInt(raw, 10);
-	return Number.isNaN(parsed) ? null : parsed;
-}
-
-/**
- * Reads device settings, creating this install's identity on first call.
- * Synchronous: the caller decides app entry from `onboardingComplete`, and that
- * decision should not wait on I/O.
- */
-export function readDeviceSettings(): DeviceSettingsSnapshot {
-	const kv = getStore();
-	const storedVersion = readInteger(KEYS.schemaVersion);
-
-	if (storedVersion !== null && storedVersion > SCHEMA_VERSION) {
-		throw new Error(
-			"Device settings were created by a newer version of the app.",
-		);
-	}
-
-	let installationId = kv.getItemSync(KEYS.installationId);
-
-	if (installationId === null) {
-		installationId = createUuid();
-		kv.setItemSync(KEYS.installationId, installationId);
-		kv.setItemSync(KEYS.schemaVersion, String(SCHEMA_VERSION));
-	}
-
-	return {
-		installationId,
-		onboardingComplete: readBoolean(KEYS.onboardingComplete),
-		appLockEnabled: readBoolean(KEYS.appLockEnabled),
-		appLockTimeoutSeconds: readInteger(KEYS.appLockTimeoutSeconds),
-		hasStoredRemoteSession: readBoolean(KEYS.hasStoredRemoteSession),
-		lastRemoteUserId: kv.getItemSync(KEYS.lastRemoteUserId),
-	};
-}
-
-export function setOnboardingComplete(complete: boolean): void {
-	getStore().setItemSync(KEYS.onboardingComplete, String(complete));
-}
-
-export function setAppLock(
-	enabled: boolean,
-	timeoutSeconds: number | null,
-): void {
-	const kv = getStore();
-	kv.setItemSync(KEYS.appLockEnabled, String(enabled));
-
-	if (timeoutSeconds === null) {
-		kv.removeItemSync(KEYS.appLockTimeoutSeconds);
-		return;
-	}
-
-	kv.setItemSync(KEYS.appLockTimeoutSeconds, String(timeoutSeconds));
-}
-
-export function setRemoteSessionMarker(
-	hasStoredRemoteSession: boolean,
-	lastRemoteUserId: string | null,
-): void {
-	const kv = getStore();
-	kv.setItemSync(KEYS.hasStoredRemoteSession, String(hasStoredRemoteSession));
-
-	if (lastRemoteUserId === null) {
-		kv.removeItemSync(KEYS.lastRemoteUserId);
-		return;
-	}
-
-	kv.setItemSync(KEYS.lastRemoteUserId, lastRemoteUserId);
-}
-
-/** Closes the handle so startup can retry after a storage failure. */
-export function closeDeviceSettings(): void {
-	store?.closeSync();
-	store = undefined;
-}
+export const {
+	readDeviceSettings,
+	setOnboardingComplete,
+	setAppLock,
+	setRemoteSessionMarker,
+	closeDeviceSettings,
+} = settings;

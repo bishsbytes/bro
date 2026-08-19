@@ -1,6 +1,5 @@
 import type { HealthPlatform } from "@bro/database-app";
-import type { PlatformHealthSample } from "./mapping";
-import type { HealthMetricSlug } from "./policy";
+import type { HealthMetricSlug, PlatformHealthSample } from "@bro/logic";
 
 export type HealthGatewayAvailability =
 	| { available: true; platform: HealthPlatform }

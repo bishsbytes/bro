@@ -1,6 +1,4 @@
 import type { ResolvedTrackedMetric, TrackedMetricDefault } from "@bro/domain";
-import type { SQLiteDatabase } from "expo-sqlite";
-import { createUuidV7 } from "../uuid-v7";
 import { BaseRepository } from "./base-repository";
 
 export type TrackedMetric = {
@@ -36,11 +34,6 @@ type TrackedMetricRow = {
 	updated_at: number;
 };
 
-type RepositoryOptions = {
-	now?: () => number;
-	createId?: (timestamp: number) => string;
-};
-
 function assertPosition(position: number): void {
 	if (!Number.isInteger(position) || position < 0) {
 		throw new RangeError(
@@ -63,16 +56,6 @@ function toTrackedMetric(row: TrackedMetricRow): TrackedMetric {
 }
 
 export class TrackedMetricsRepository extends BaseRepository {
-	private readonly now: () => number;
-	private readonly createId: (timestamp: number) => string;
-
-	constructor(db: SQLiteDatabase, options: RepositoryOptions = {}) {
-		super(db);
-		this.now = options.now ?? Date.now;
-		this.createId =
-			options.createId ?? ((timestamp) => createUuidV7(timestamp));
-	}
-
 	async listAll(): Promise<TrackedMetric[]> {
 		const rows = await this.all<TrackedMetricRow>(
 			`SELECT id, metric_slug, position, added_at, removed_at, custom_label,

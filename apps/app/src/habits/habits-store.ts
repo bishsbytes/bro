@@ -12,6 +12,7 @@ import {
 	ObservationRepository,
 	TrackedMetricsRepository,
 } from "@bro/database-app";
+import { shiftLocalDay } from "@bro/domain";
 import {
 	type ChallengeDay,
 	resolveChallenge,
@@ -25,15 +26,19 @@ import {
 	DEFAULT_LIFE_AREA_METRICS,
 	resolveLifeAreas,
 } from "@bro/domain/life-area-catalogue";
+import {
+	deriveHabitAdherence,
+	deriveHabitStreak,
+	type HabitAdherenceDay,
+	type HealthMetricSlug,
+	isHabitScheduled,
+	isHealthMetricSlug,
+	isMetricHabitComplete,
+	localDayAt,
+	resolveChallengePosition,
+	resolveMetricDay,
+} from "@bro/logic";
 import type { SQLiteDatabase } from "expo-sqlite";
-import { localDayAt } from "../health/mapping";
-import { type HealthMetricSlug, isHealthMetricSlug } from "../health/policy";
-import { resolveMetricDay } from "../health/resolved-day";
-import { deriveHabitAdherence, type HabitAdherenceDay } from "./adherence";
-import { isHabitScheduled, shiftLocalDay } from "./cadence";
-import { resolveChallengePosition } from "./challenge-position";
-import { isMetricHabitComplete } from "./completion";
-import { deriveHabitStreak } from "./streak";
 
 export type TodayHabit = {
 	habit: Habit;

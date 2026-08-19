@@ -172,6 +172,9 @@ importers:
       '@bro/domain':
         specifier: workspace:*
         version: link:../../packages/domain
+      '@bro/logic':
+        specifier: workspace:*
+        version: link:../../packages/logic
       '@expo/metro':
         specifier: '*'
         version: 56.0.0(supports-color@8.1.1)
@@ -379,7 +382,24 @@ importers:
         specifier: ^4.23.12
         version: 4.23.12
 
-  packages/domain: {}
+  packages/domain:
+    devDependencies:
+      vitest:
+        specifier: ^4.1.10
+        version: 4.1.10(@types/node@22.20.1)(jsdom@20.0.3(supports-color@7.2.0))(vite@8.2.1(@types/node@22.20.1)(esbuild@0.27.7)(jiti@2.7.0)(terser@5.49.2)(tsx@4.23.12)(yaml@2.9.0))
+
+  packages/logic:
+    dependencies:
+      '@bro/database-app':
+        specifier: workspace:*
+        version: link:../database/app
+      '@bro/domain':
+        specifier: workspace:*
+        version: link:../domain
+    devDependencies:
+      vitest:
+        specifier: ^4.1.10
+        version: 4.1.10(@types/node@22.20.1)(jsdom@20.0.3(supports-color@7.2.0))(vite@8.2.1(@types/node@22.20.1)(esbuild@0.27.7)(jiti@2.7.0)(terser@5.49.2)(tsx@4.23.12)(yaml@2.9.0))
 
 packages:
 
@@ -15254,7 +15274,7 @@ snapshots:
 
   expo-keep-awake@56.0.3(expo@56.0.19)(react@19.2.3):
     dependencies:
-      expo: 56.0.19(9bea14773e1d249348843add549b9337)
+      expo: 56.0.19(e2729fe0e28dc95f435bc6996bbe4206)
       react: 19.2.3
 
   expo-linking@56.0.16(expo@56.0.19)(react-native@0.85.3(@babel/core@7.29.7(supports-color@7.2.0))(@react-native/jest-preset@0.85.3(@babel/core@7.29.7(supports-color@7.2.0))(react@19.2.3)(supports-color@7.2.0))(@react-native/metro-config@0.85.3(@babel/core@7.29.7(supports-color@7.2.0))(supports-color@7.2.0))(@types/react@19.2.18)(react@19.2.3)(supports-color@7.2.0))(react@19.2.3)(supports-color@7.2.0):
@@ -19735,7 +19755,6 @@ snapshots:
       jsdom: 20.0.3(supports-color@7.2.0)
     transitivePeerDependencies:
       - msw
-    optional: true
 
   vitest@4.1.10(@types/node@22.20.1)(jsdom@20.0.3(supports-color@8.1.1))(vite@8.2.1(@types/node@22.20.1)(esbuild@0.27.7)(jiti@2.7.0)(terser@5.49.2)(tsx@4.23.12)(yaml@2.9.0)):
     dependencies:

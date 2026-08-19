@@ -1,4 +1,5 @@
 import type * as DatabaseApp from "@bro/database-app";
+import type { HealthMetricSlug, PlatformHealthSample } from "@bro/logic";
 import type { SQLiteDatabase } from "expo-sqlite";
 import { createNodeSqliteMock } from "../test-support/node-sqlite";
 import {
@@ -6,8 +7,6 @@ import {
 	type HealthGateway,
 	type HealthGatewayBatch,
 } from "./gateway";
-import type { PlatformHealthSample } from "./mapping";
-import type { HealthMetricSlug } from "./policy";
 
 const mockSqlite = createNodeSqliteMock();
 let mockRandomByte = 0;

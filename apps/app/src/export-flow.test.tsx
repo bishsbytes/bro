@@ -1,7 +1,7 @@
 import type * as DatabaseApp from "@bro/database-app";
+import { CHECK_IN_EXPORT_FORMAT_VERSION, parseCheckInExport } from "@bro/logic";
 import { fireEvent, render, waitFor } from "@testing-library/react-native";
 import type { SQLiteDatabase } from "expo-sqlite";
-import { parseCheckInExport } from "./export/check-in-export";
 import { createNodeSqliteMock } from "./test-support/node-sqlite";
 
 const mockSqlite = createNodeSqliteMock();
@@ -44,7 +44,7 @@ describe("export flow", () => {
 
 	afterAll(() => mockSqlite.cleanup());
 
-	it("round-trips v7 food data and applies the sensitive toggle", async () => {
+	it("round-trips food data and applies the sensitive toggle", async () => {
 		const observations = new databaseApp.ObservationRepository(db);
 		const consumptionEntries = new databaseApp.ConsumptionEntryRepository(db);
 		const customConsumables = new databaseApp.CustomConsumableRepository(db);
@@ -152,7 +152,9 @@ describe("export flow", () => {
 
 		const withoutSensitive = parseCheckInExport(await store.serialize(false));
 		const withSensitive = parseCheckInExport(await store.serialize(true));
-		expect(withoutSensitive.metadata.formatVersion).toBe(7);
+		expect(withoutSensitive.metadata.formatVersion).toBe(
+			CHECK_IN_EXPORT_FORMAT_VERSION,
+		);
 		expect(withoutSensitive.observations.map((row) => row.metricSlug)).toEqual([
 			"mood",
 		]);
@@ -161,31 +163,21 @@ describe("export flow", () => {
 			"weight",
 		]);
 		expect(
-			"consumptionEntries" in withoutSensitive
-				? withoutSensitive.consumptionEntries.map((entry) => entry.label)
-				: [],
+			withoutSensitive.consumptionEntries.map((entry) => entry.label),
 		).toEqual(["Coffee", "Chicken and rice"]);
 		expect(
-			"consumptionEntries" in withSensitive
-				? withSensitive.consumptionEntries.map((entry) => entry.label)
-				: [],
+			withSensitive.consumptionEntries.map((entry) => entry.label),
 		).toEqual(["Lager", "Coffee", "Chicken and rice"]);
 		expect(
-			"customConsumables" in withoutSensitive
-				? withoutSensitive.customConsumables.map(({ label }) => label)
-				: [],
+			withoutSensitive.customConsumables.map(({ label }) => label),
 		).toEqual(["Chicken and rice"]);
 		expect(
-			"customConsumableComponents" in withoutSensitive
-				? withoutSensitive.customConsumableComponents.map(({ fatG }) => fatG)
-				: [],
+			withoutSensitive.customConsumableComponents.map(({ fatG }) => fatG),
 		).toEqual([null]);
 		expect(
-			"consumptionEntries" in withoutSensitive
-				? withoutSensitive.consumptionEntries.find(
-						({ label }) => label === "Chicken and rice",
-					)
-				: null,
+			withoutSensitive.consumptionEntries.find(
+				({ label }) => label === "Chicken and rice",
+			),
 		).toMatchObject({ proteinG: 38, carbsG: 0, fatG: null });
 	});
 
@@ -209,7 +201,7 @@ describe("export flow", () => {
 		await waitFor(() => expect(serialize).toHaveBeenCalledWith(false));
 		expect(
 			parseCheckInExport(share.mock.calls[0]?.[0]).metadata.formatVersion,
-		).toBe(7);
+		).toBe(CHECK_IN_EXPORT_FORMAT_VERSION);
 
 		await fireEvent(
 			screen.getByLabelText("Include sensitive data"),
@@ -220,6 +212,6 @@ describe("export flow", () => {
 		await waitFor(() => expect(serialize).toHaveBeenLastCalledWith(true));
 		expect(
 			parseCheckInExport(share.mock.calls[1]?.[0]).metadata.formatVersion,
-		).toBe(7);
+		).toBe(CHECK_IN_EXPORT_FORMAT_VERSION);
 	});
 });

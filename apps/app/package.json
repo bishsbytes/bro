@@ -29,6 +29,7 @@
 		"@bro/auth-app": "workspace:*",
 		"@bro/database-app": "workspace:*",
 		"@bro/domain": "workspace:*",
+		"@bro/logic": "workspace:*",
 		"@expo/metro": "*",
 		"@expo/vector-icons": "*",
 		"@kingstinct/react-native-healthkit": "14.0.2",

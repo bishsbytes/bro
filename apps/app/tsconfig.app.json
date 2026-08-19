@@ -41,6 +41,9 @@
 			"path": "../../packages/domain/tsconfig.lib.json"
 		},
 		{
+			"path": "../../packages/logic/tsconfig.lib.json"
+		},
+		{
 			"path": "../../packages/auth/app/tsconfig.lib.json"
 		}
 	]

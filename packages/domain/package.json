@@ -57,6 +57,18 @@
 		"tags": [
 			"scope:shared",
 			"type:lib"
-		]
+		],
+		"targets": {
+			"test": {
+				"executor": "nx:run-commands",
+				"options": {
+					"cwd": "packages/domain",
+					"command": "vitest run"
+				}
+			}
+		}
+	},
+	"devDependencies": {
+		"vitest": "^4.1.10"
 	}
 }

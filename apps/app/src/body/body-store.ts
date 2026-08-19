@@ -8,57 +8,31 @@ import {
 	TrackedMetricsRepository,
 	UnitPreferenceRepository,
 } from "@bro/database-app";
-import {
-	type DisplayUnit,
-	type FractionDisplayUnit,
-	isDisplayUnitForDimension,
-	type LengthDisplayUnit,
-	type MassDisplayUnit,
-} from "@bro/domain";
+import { type DisplayUnit, localDayOf, systemLocale } from "@bro/domain";
 import {
 	listUserEnterableMeasurements,
 	type MeasurementMetricDefinition,
 	type MeasurementSlug,
 	resolveMetric,
 	type UserEnterableMeasurementMetricDefinition,
-	type UserEnterableMeasurementSlug,
 } from "@bro/domain/metric-registry";
-import type { SQLiteDatabase } from "expo-sqlite";
-import { localDayOf } from "../check-in/check-in-store";
 import {
+	buildTrendSeries,
+	formatMetricValue,
 	type GoalStatus,
 	goalProgressPercent,
 	goalStatus,
-} from "../goals/goal-progress";
-import {
-	formatMetricValue,
-	metricDisplayUnit,
-} from "../health/metric-presentation";
-import { isHealthMetricSlug } from "../health/policy";
-import {
 	importedDailyMetricAsObservation,
+	isHealthMetricSlug,
+	type MeasurementPresentation,
+	metricDisplayUnit,
 	resolveMetricObservations,
-} from "../health/resolved-series";
-import { buildTrendSeries, type TrendSeries } from "../trends/trend-math";
+	type TrendSeries,
+	toMeasurementPresentation,
+} from "@bro/logic";
+import type { SQLiteDatabase } from "expo-sqlite";
 
-type MeasurementPresentationBase = {
-	metricSlug: UserEnterableMeasurementSlug;
-	label: string;
-};
-
-export type MeasurementPresentation =
-	| (MeasurementPresentationBase & {
-			dimension: "mass";
-			displayUnit: MassDisplayUnit;
-	  })
-	| (MeasurementPresentationBase & {
-			dimension: "length";
-			displayUnit: LengthDisplayUnit;
-	  })
-	| (MeasurementPresentationBase & {
-			dimension: "fraction";
-			displayUnit: FractionDisplayUnit;
-	  });
+export type { MeasurementPresentation };
 
 export type BodyMetricPresentation = {
 	metricSlug: MeasurementSlug;
@@ -110,63 +84,12 @@ export type BodyMetricDetail = BodyMetricSummary & {
 
 const BODY_TREND_PERIOD = 30;
 
-function systemLocale(): string | undefined {
-	try {
-		return Intl.DateTimeFormat().resolvedOptions().locale;
-	} catch {
-		return undefined;
-	}
-}
-
 function measurementDefaults() {
 	return listUserEnterableMeasurements().map((metric) => ({
 		metricSlug: metric.slug,
 		position: metric.defaultPosition,
 		enabled: false,
 	}));
-}
-
-function toPresentation(
-	metric: UserEnterableMeasurementMetricDefinition,
-	label: string,
-	displayUnit: DisplayUnit,
-): MeasurementPresentation {
-	if (
-		metric.dimension === "mass" &&
-		isDisplayUnitForDimension(metric.dimension, displayUnit)
-	) {
-		return {
-			metricSlug: metric.slug,
-			label,
-			dimension: metric.dimension,
-			displayUnit,
-		};
-	}
-	if (
-		metric.dimension === "length" &&
-		isDisplayUnitForDimension(metric.dimension, displayUnit)
-	) {
-		return {
-			metricSlug: metric.slug,
-			label,
-			dimension: metric.dimension,
-			displayUnit,
-		};
-	}
-	if (
-		metric.dimension === "fraction" &&
-		isDisplayUnitForDimension(metric.dimension, displayUnit)
-	) {
-		return {
-			metricSlug: metric.slug,
-			label,
-			dimension: metric.dimension,
-			displayUnit,
-		};
-	}
-	throw new TypeError(
-		`Unit ${displayUnit} does not measure ${metric.dimension}.`,
-	);
 }
 
 export function formatPresentedMeasurement(
@@ -466,9 +389,10 @@ export class BodyStore {
 					inputLocale,
 				);
 				const editablePresentation = metric.userEnterable
-					? toPresentation(
-							metric,
+					? toMeasurementPresentation(
+							metric.slug,
 							overlay?.customLabel ?? metric.label,
+							metric.dimension,
 							displayUnit as DisplayUnit,
 						)
 					: null;

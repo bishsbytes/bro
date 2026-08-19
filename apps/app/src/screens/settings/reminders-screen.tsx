@@ -1,4 +1,10 @@
 import type { Reminder, ReminderSchedule } from "@bro/database-app";
+import {
+	EVERY_DAY_MASK,
+	ISO_WEEKDAYS,
+	type IsoWeekdayIndex,
+	weekdaysFromMask,
+} from "@bro/logic";
 import { useFocusEffect } from "expo-router";
 import { useCallback, useMemo, useState } from "react";
 import { ActivityIndicator, Linking, Switch, View } from "react-native";
@@ -9,12 +15,6 @@ import { EmptyState } from "../../components/empty-state";
 import { FormField } from "../../components/form-field";
 import { Screen } from "../../components/screen";
 import { SectionHeader } from "../../components/section-header";
-import {
-	EVERY_DAY_MASK,
-	ISO_WEEKDAYS,
-	type IsoWeekdayIndex,
-	weekdaysFromMask,
-} from "../../reminders/day-bitmask";
 import {
 	createReminderStore,
 	type ReminderScreenState,

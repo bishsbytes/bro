@@ -1,3 +1,4 @@
+import { REMINDER_NOTIFICATION_PREFIX } from "@bro/logic";
 import { router } from "expo-router";
 import { useEffect } from "react";
 import { AppState } from "react-native";
@@ -11,7 +12,6 @@ import {
 	refreshReminderNotifications,
 	reportReminderRefreshFailure,
 } from "./reminder-materialiser";
-import { REMINDER_NOTIFICATION_PREFIX } from "./reminder-planner";
 
 export function ReminderNotificationEffects({
 	onboardingComplete,

@@ -1,4 +1,3 @@
-import type { SQLiteDatabase } from "expo-sqlite";
 import { BaseRepository } from "./base-repository";
 
 export type FoodCacheEntry<Payload = unknown> = {
@@ -18,10 +17,6 @@ type FoodCacheRow = {
 	payload: string;
 	query: string | null;
 	fetched_at: number;
-};
-
-type RepositoryOptions = {
-	now?: () => number;
 };
 
 const SELECT_COLUMNS = "ref, payload, query, fetched_at";
@@ -73,13 +68,6 @@ function assertLimit(limit: number): void {
 }
 
 export class FoodCacheRepository extends BaseRepository {
-	private readonly now: () => number;
-
-	constructor(db: SQLiteDatabase, options: RepositoryOptions = {}) {
-		super(db);
-		this.now = options.now ?? Date.now;
-	}
-
 	async upsert<Payload>(
 		input: UpsertFoodCacheEntry<Payload>,
 	): Promise<FoodCacheEntry<Payload>> {

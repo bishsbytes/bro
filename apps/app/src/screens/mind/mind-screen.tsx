@@ -1,3 +1,4 @@
+import { renderInsightSummary, renderInsightTeaserProgress } from "@bro/logic";
 import { type Href, router, useFocusEffect } from "expo-router";
 import { useCallback, useMemo, useState } from "react";
 import { ActivityIndicator } from "react-native";
@@ -14,10 +15,6 @@ import {
 	type InsightSnapshot,
 	type InsightStore,
 } from "../../insight/insight-store";
-import {
-	renderInsightSummary,
-	renderInsightTeaserProgress,
-} from "../../insight/presentation";
 import { StyleSheet } from "../../theme/unistyles";
 import {
 	createTrendsStore,

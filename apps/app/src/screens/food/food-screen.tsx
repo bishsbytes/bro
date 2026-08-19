@@ -1,4 +1,5 @@
 import type { CreateCustomConsumableComponent } from "@bro/database-app";
+import { previousLocalDay } from "@bro/domain";
 import type { FoodSearchResult } from "@bro/domain/food-search";
 import { type Href, router, useFocusEffect } from "expo-router";
 import { useCallback, useMemo, useState } from "react";
@@ -20,7 +21,6 @@ import {
 	createFoodStore,
 	type FoodDaySnapshot,
 	type FoodStore,
-	previousFoodLocalDay,
 } from "../../food/food-store";
 import { StyleSheet } from "../../theme/unistyles";
 
@@ -840,7 +840,7 @@ export function FoodScreen({ store, searchStore }: FoodScreenProps) {
 							label="Yesterday"
 							variant="text"
 							onPress={() => {
-								setLocalDay(previousFoodLocalDay(snapshot.localDay));
+								setLocalDay(previousLocalDay(snapshot.localDay));
 								setTime("20:00");
 							}}
 						/>

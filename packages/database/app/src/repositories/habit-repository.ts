@@ -1,6 +1,4 @@
 import type { HabitDirection } from "@bro/domain";
-import type { SQLiteDatabase } from "expo-sqlite";
-import { createUuidV7 } from "../uuid-v7";
 import { BaseRepository } from "./base-repository";
 
 export type HabitKind = "manual" | "metric";
@@ -53,11 +51,6 @@ type HabitRow = {
 	removed_at: number | null;
 	created_at: number;
 	updated_at: number;
-};
-
-type RepositoryOptions = {
-	now?: () => number;
-	createId?: (timestamp: number) => string;
 };
 
 const SELECT_COLUMNS = `
@@ -151,16 +144,6 @@ function toHabit(row: HabitRow): Habit {
 }
 
 export class HabitRepository extends BaseRepository {
-	private readonly now: () => number;
-	private readonly createId: (timestamp: number) => string;
-
-	constructor(db: SQLiteDatabase, options: RepositoryOptions = {}) {
-		super(db);
-		this.now = options.now ?? Date.now;
-		this.createId =
-			options.createId ?? ((timestamp) => createUuidV7(timestamp));
-	}
-
 	async create(input: CreateHabit): Promise<Habit> {
 		const slug = required(input.slug, "Habit slug");
 		if (!slug.startsWith("habit:")) {

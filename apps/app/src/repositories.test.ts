@@ -232,7 +232,9 @@ describe("product repositories", () => {
 			updatedAt: 1_000,
 		});
 		await expect(repository.listByDay("2026-08-14")).resolves.toEqual([lager]);
-		await expect(repository.listRecent(1)).resolves.toEqual([coffee]);
+		await expect(repository.listRecentByKind("drink", 1)).resolves.toEqual([
+			coffee,
+		]);
 		await expect(repository.listRecentByKind("food", 1)).resolves.toEqual([
 			chicken,
 		]);

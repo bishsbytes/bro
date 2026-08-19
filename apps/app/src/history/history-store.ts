@@ -19,13 +19,13 @@ import {
 import { resolveChallenge } from "@bro/domain/challenge-catalogue";
 import { resolveHabit } from "@bro/domain/habit-catalogue";
 import { resolveMetric } from "@bro/domain/metric-registry";
-import type { SQLiteDatabase } from "expo-sqlite";
 import {
 	formatMetricValue,
+	isHealthMetricSlug,
 	metricDisplayUnit,
-} from "../health/metric-presentation";
-import { isHealthMetricSlug } from "../health/policy";
-import { resolveMetricDay } from "../health/resolved-day";
+	resolveMetricDay,
+} from "@bro/logic";
+import type { SQLiteDatabase } from "expo-sqlite";
 
 export type HistoryMeasurement = {
 	id: string;

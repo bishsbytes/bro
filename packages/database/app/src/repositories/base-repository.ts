@@ -1,6 +1,16 @@
 import type { SQLiteDatabase, SQLiteRunResult } from "expo-sqlite";
+import { createUuidV7 } from "../uuid-v7";
 
 export type SQLiteParam = string | number | null | Uint8Array;
+
+/**
+ * The clock and identity a repository writes with. Both are injectable so tests
+ * can pin timestamps and ids without reaching into the database.
+ */
+export type RepositoryOptions = {
+	now?: () => number;
+	createId?: (timestamp: number) => string;
+};
 
 /**
  * Base class for the app's data-domain repositories.
@@ -11,10 +21,27 @@ export type SQLiteParam = string | number | null | Uint8Array;
  * deliberately no public `execute(sql)` escape hatch, so all SQL for a domain
  * stays in that domain's repository.
  *
+ * Subclasses that need nothing beyond `db`, `now`, and `createId` can omit a
+ * constructor entirely and inherit this one.
+ *
  * See ./README.md for the recipe for adding a new one.
  */
 export abstract class BaseRepository {
-	protected constructor(protected readonly db: SQLiteDatabase) {}
+	protected readonly now: () => number;
+	/**
+	 * Time-ordered by default, so rows written in sequence sort in that order
+	 * without a separate index. A repository whose rows have a natural key
+	 * overrides this with its own deterministic id instead.
+	 */
+	protected readonly createId: (timestamp: number) => string;
+
+	constructor(
+		protected readonly db: SQLiteDatabase,
+		options: RepositoryOptions = {},
+	) {
+		this.now = options.now ?? Date.now;
+		this.createId = options.createId ?? createUuidV7;
+	}
 
 	/** Rows matching a query, or an empty array. */
 	protected async all<Row>(

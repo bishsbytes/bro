@@ -1,4 +1,5 @@
 import type { HabitTemplate } from "@bro/domain/habit-catalogue";
+import { ISO_WEEKDAYS } from "@bro/logic";
 import { type Href, router, useFocusEffect } from "expo-router";
 import { useCallback, useMemo, useState } from "react";
 import { ActivityIndicator, TouchableOpacity, View } from "react-native";
@@ -16,7 +17,6 @@ import {
 	type HabitSettingsSnapshot,
 	type HabitsStore,
 } from "../../habits/habits-store";
-import { ISO_WEEKDAYS } from "../../reminders/day-bitmask";
 import { StyleSheet } from "../../theme/unistyles";
 
 type HabitsScreenStore = Pick<

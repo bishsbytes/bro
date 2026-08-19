@@ -1,7 +1,5 @@
-import type { SQLiteDatabase } from "expo-sqlite";
-import { createUuidV7 } from "../uuid-v7";
+import { isCalendarDay } from "@bro/domain";
 import { BaseRepository } from "./base-repository";
-import { isCalendarDay } from "./calendar-day";
 
 export type GoalDirection = "increase" | "decrease";
 
@@ -34,11 +32,6 @@ type GoalRow = {
 	abandoned_at: number | null;
 	created_at: number;
 	updated_at: number;
-};
-
-type RepositoryOptions = {
-	now?: () => number;
-	createId?: (timestamp: number) => string;
 };
 
 const SELECT_COLUMNS = `
@@ -83,16 +76,6 @@ function assertGoal(input: CreateGoal): void {
 }
 
 export class GoalRepository extends BaseRepository {
-	private readonly now: () => number;
-	private readonly createId: (timestamp: number) => string;
-
-	constructor(db: SQLiteDatabase, options: RepositoryOptions = {}) {
-		super(db);
-		this.now = options.now ?? Date.now;
-		this.createId =
-			options.createId ?? ((timestamp) => createUuidV7(timestamp));
-	}
-
 	async create(input: CreateGoal): Promise<Goal> {
 		assertGoal(input);
 		const now = this.now();

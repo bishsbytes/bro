@@ -9,6 +9,7 @@ import {
 	ObservationRepository,
 	TrackedMetricsRepository,
 } from "@bro/database-app";
+import { localDayOf } from "@bro/domain";
 import {
 	DEFAULT_LIFE_AREA_METRICS,
 	listActiveLifeAreas,
@@ -16,12 +17,8 @@ import {
 } from "@bro/domain/life-area-catalogue";
 import { resolveMetric } from "@bro/domain/metric-registry";
 import { WHEEL_OF_LIFE_TEMPLATE } from "@bro/domain/wheel-template";
+import { type GoalStatus, goalProgressPercent, goalStatus } from "@bro/logic";
 import type { SQLiteDatabase } from "expo-sqlite";
-import {
-	type GoalStatus,
-	goalProgressPercent,
-	goalStatus,
-} from "../goals/goal-progress";
 
 export type ReviewDraft = {
 	startedAt: number;
@@ -70,13 +67,6 @@ export type GoalSetup = {
 	label: string;
 	currentValue: number;
 };
-
-function localDayOf(date: Date): string {
-	const year = date.getFullYear();
-	const month = String(date.getMonth() + 1).padStart(2, "0");
-	const day = String(date.getDate()).padStart(2, "0");
-	return `${year}-${month}-${day}`;
-}
 
 function valueOnWheelScale(observation: Observation): number {
 	if (

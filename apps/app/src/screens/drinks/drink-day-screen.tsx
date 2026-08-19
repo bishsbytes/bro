@@ -1,3 +1,4 @@
+import { localTimeOf } from "@bro/domain";
 import { type Href, router, useFocusEffect } from "expo-router";
 import { useCallback, useMemo, useState } from "react";
 import { ActivityIndicator, View } from "react-native";
@@ -12,7 +13,6 @@ import {
 	createDrinksStore,
 	type DrinkDaySnapshot,
 	type DrinksStore,
-	occurrenceTime,
 	type PresentedDrinkEntry,
 } from "../../drinks/drinks-store";
 import { StyleSheet } from "../../theme/unistyles";
@@ -44,7 +44,7 @@ function EntryEditor({
 	const [servingLabel, setServingLabel] = useState(entry.servingLabel ?? "");
 	const [quantity, setQuantity] = useState(String(entry.quantity));
 	const [localDay, setLocalDay] = useState(entry.localDay);
-	const [time, setTime] = useState(occurrenceTime(entry.occurredAt));
+	const [time, setTime] = useState(localTimeOf(entry.occurredAt));
 
 	return (
 		<Card style={styles.section}>

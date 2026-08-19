@@ -1,6 +1,6 @@
+import type { TrendSeries } from "@bro/logic";
 import Svg, { Circle, Line, Polyline } from "react-native-svg";
 import { useUnistyles } from "../theme/unistyles";
-import type { TrendSeries } from "../trends/trend-math";
 
 export function TrendChart({
 	series,

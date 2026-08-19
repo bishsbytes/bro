@@ -10,5 +10,6 @@
 		"moduleResolution": "bundler"
 	},
 	"include": ["src/**/*.ts"],
-	"references": []
+	"references": [],
+	"exclude": ["src/**/*.test.ts"]
 }

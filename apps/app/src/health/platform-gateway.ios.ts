@@ -1,4 +1,6 @@
 import type { HealthPlatform } from "@bro/database-app";
+import type { PlatformHealthSample } from "@bro/logic";
+import { type HealthMetricSlug, V1_HEALTH_METRIC_SLUGS } from "@bro/logic";
 import type {
 	CategorySample,
 	DeletedSample,
@@ -11,8 +13,6 @@ import type {
 	HealthGateway,
 	HealthGatewayBatch,
 } from "./gateway";
-import type { PlatformHealthSample } from "./mapping";
-import { type HealthMetricSlug, V1_HEALTH_METRIC_SLUGS } from "./policy";
 
 const PLATFORM = "healthkit" satisfies HealthPlatform;
 const SLEEP_IDENTIFIER = "HKCategoryTypeIdentifierSleepAnalysis" as const;

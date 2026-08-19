@@ -2,11 +2,16 @@ import type { Migration } from "./manifest";
 
 /**
  * bro-local.db owns a separate migration history because the file is disposable
- * and never participates in product-data replication.
+ * and never participates in product-data replication. It is hand-written rather
+ * than generated: local-schema.ts is a reference for the shape, not a codegen
+ * source, so there is no drizzle-kit output to bundle.
+ *
+ * Statements must stay idempotent for the same reason the generated product
+ * manifest normalises them — see scripts/generate-migrations-manifest.ts.
  */
 export const localMigrations: Migration[] = [
 	{
-		id: "L001_health_import",
+		id: "L000_local_store",
 		sql: `CREATE TABLE IF NOT EXISTS \`health_connections\` (
 	\`id\` text PRIMARY KEY NOT NULL,
 	\`platform\` text NOT NULL,
@@ -29,22 +34,15 @@ CREATE TABLE IF NOT EXISTS \`raw_samples\` (
 	\`local_day\` text NOT NULL,
 	\`source\` text NOT NULL,
 	\`source_record_id\` text NOT NULL,
+	\`origin\` text,
 	\`imported_at\` integer NOT NULL
 );
 --> statement-breakpoint
 CREATE UNIQUE INDEX IF NOT EXISTS \`idx_raw_samples_identity\` ON \`raw_samples\` (\`source\`,\`source_record_id\`);
 --> statement-breakpoint
-CREATE INDEX IF NOT EXISTS \`idx_raw_samples_metric_day\` ON \`raw_samples\` (\`metric_slug\`,\`local_day\`);`,
-	},
-	{
-		// The recording origin (app package / bundle id) lets sum rollups collapse
-		// the same activity recorded by two devices instead of double counting it.
-		id: "L002_raw_sample_origin",
-		sql: "ALTER TABLE `raw_samples` ADD COLUMN `origin` text;",
-	},
-	{
-		id: "L003_food_cache",
-		sql: `CREATE TABLE IF NOT EXISTS \`food_cache\` (
+CREATE INDEX IF NOT EXISTS \`idx_raw_samples_metric_day\` ON \`raw_samples\` (\`metric_slug\`,\`local_day\`);
+--> statement-breakpoint
+CREATE TABLE IF NOT EXISTS \`food_cache\` (
 	\`ref\` text PRIMARY KEY NOT NULL,
 	\`payload\` text NOT NULL,
 	\`query\` text,

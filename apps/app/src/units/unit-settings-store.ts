@@ -10,6 +10,7 @@ import {
 	formatMeasurement,
 	isDisplayUnitForPreferenceDimension,
 	resolveUnitPreference,
+	systemLocale,
 	type UnitPreferenceDimension,
 } from "@bro/domain";
 import type { SQLiteDatabase } from "expo-sqlite";
@@ -89,14 +90,6 @@ const SETTING_COPY: Record<
 		description: "Body fat is always displayed as a percentage.",
 	},
 };
-
-function systemLocale(): string | undefined {
-	try {
-		return Intl.DateTimeFormat().resolvedOptions().locale;
-	} catch {
-		return undefined;
-	}
-}
 
 /** Canonical values chosen to read naturally in every unit on offer. */
 const PREVIEW_CANONICAL_VALUES = {

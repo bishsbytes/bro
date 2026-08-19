@@ -58,6 +58,7 @@ export {
 export {
 	defaultUnitPreference,
 	resolveUnitPreference,
+	systemLocale,
 } from "./locale-defaults";
 export {
 	INVALID_MEASUREMENT_MESSAGE,

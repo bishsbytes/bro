@@ -35,6 +35,12 @@ This runs `drizzle-kit generate` and then regenerates
 can ship it to the device. Commit both the new `drizzle/*.sql` file and the
 updated manifest.
 
+Do not hand-edit either one. The manifest generator rewrites `CREATE TABLE` and
+`CREATE INDEX` into their `IF NOT EXISTS` forms as it bundles them, because the
+migrator has to tolerate replaying a migration whose marker write was not
+observed. A migration that adds a column has no `IF NOT EXISTS` form in SQLite;
+`migrator.ts` skips those statements when the column is already present.
+
 ## 3. Write the repository
 
 Create `<domain>-repository.ts` in this directory, extending `BaseRepository`.

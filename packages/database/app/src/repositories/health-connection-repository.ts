@@ -1,5 +1,3 @@
-import type { SQLiteDatabase } from "expo-sqlite";
-import { createUuidV7 } from "../uuid-v7";
 import { BaseRepository } from "./base-repository";
 
 export type HealthPlatform = "healthkit" | "health_connect";
@@ -24,11 +22,6 @@ type HealthConnectionRow = {
 	last_imported_at: number | null;
 	created_at: number;
 	updated_at: number;
-};
-
-type RepositoryOptions = {
-	now?: () => number;
-	createId?: (timestamp: number) => string;
 };
 
 const SELECT_COLUMNS =
@@ -62,16 +55,6 @@ function normalizedMetricSlug(metricSlug: string): string {
 }
 
 export class HealthConnectionRepository extends BaseRepository {
-	private readonly now: () => number;
-	private readonly createId: (timestamp: number) => string;
-
-	constructor(db: SQLiteDatabase, options: RepositoryOptions = {}) {
-		super(db);
-		this.now = options.now ?? Date.now;
-		this.createId =
-			options.createId ?? ((timestamp) => createUuidV7(timestamp));
-	}
-
 	async connect(
 		platform: HealthPlatform,
 		metricSlug: string,

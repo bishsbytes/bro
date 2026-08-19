@@ -1,7 +1,5 @@
-import type { SQLiteDatabase } from "expo-sqlite";
-import { createUuidV7 } from "../uuid-v7";
+import { isCalendarDay } from "@bro/domain";
 import { BaseRepository } from "./base-repository";
-import { isCalendarDay } from "./calendar-day";
 
 export type ChallengeProgress = {
 	id: string;
@@ -23,11 +21,6 @@ type ChallengeProgressRow = {
 	updated_at: number;
 };
 
-type RepositoryOptions = {
-	now?: () => number;
-	createId?: (timestamp: number) => string;
-};
-
 const SELECT_COLUMNS =
 	"id, enrolment_id, day_index, local_day, completed_at, created_at, updated_at";
 
@@ -44,16 +37,6 @@ function toChallengeProgress(row: ChallengeProgressRow): ChallengeProgress {
 }
 
 export class ChallengeProgressRepository extends BaseRepository {
-	private readonly now: () => number;
-	private readonly createId: (timestamp: number) => string;
-
-	constructor(db: SQLiteDatabase, options: RepositoryOptions = {}) {
-		super(db);
-		this.now = options.now ?? Date.now;
-		this.createId =
-			options.createId ?? ((timestamp) => createUuidV7(timestamp));
-	}
-
 	async completeDay(
 		enrolmentId: string,
 		dayIndex: number,

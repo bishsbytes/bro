@@ -5,57 +5,8 @@
     {
       "idx": 0,
       "version": "6",
-      "when": 1786734277424,
-      "tag": "0000_check_in",
-      "breakpoints": true
-    },
-    {
-      "idx": 1,
-      "version": "6",
-      "when": 1786746207763,
-      "tag": "0001_odd_lockheed",
-      "breakpoints": true
-    },
-    {
-      "idx": 2,
-      "version": "6",
-      "when": 1786833857651,
-      "tag": "0002_square_mikhail_rasputin",
-      "breakpoints": true
-    },
-    {
-      "idx": 3,
-      "version": "6",
-      "when": 1786874189674,
-      "tag": "0003_curly_tinkerer",
-      "breakpoints": true
-    },
-    {
-      "idx": 4,
-      "version": "6",
-      "when": 1786879777358,
-      "tag": "0004_brainy_maggott",
-      "breakpoints": true
-    },
-    {
-      "idx": 5,
-      "version": "6",
-      "when": 1786913572956,
-      "tag": "0005_red_wolfsbane",
-      "breakpoints": true
-    },
-    {
-      "idx": 6,
-      "version": "6",
-      "when": 1787145148198,
-      "tag": "0006_right_mother_askani",
-      "breakpoints": true
-    },
-    {
-      "idx": 7,
-      "version": "6",
-      "when": 1787151945711,
-      "tag": "0007_wooden_skreet",
+      "when": 1787159525651,
+      "tag": "0000_initial_schema",
       "breakpoints": true
     }
   ]

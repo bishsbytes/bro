@@ -1,7 +1,5 @@
-import type { SQLiteDatabase } from "expo-sqlite";
-import { createUuidV7 } from "../uuid-v7";
+import { isCalendarDay } from "@bro/domain";
 import { BaseRepository } from "./base-repository";
-import { isCalendarDay } from "./calendar-day";
 
 export type ConsumptionEntryKind = "drink" | "food";
 
@@ -9,7 +7,7 @@ export type ConsumptionEntry = {
 	id: string;
 	kind: ConsumptionEntryKind;
 	catalogueRef: string | null;
-	consumableRef?: string | null;
+	consumableRef: string | null;
 	label: string;
 	servingLabel: string | null;
 	quantity: number;
@@ -17,9 +15,9 @@ export type ConsumptionEntry = {
 	ethanolKg: number | null;
 	caffeineKg: number | null;
 	energyKcal: number | null;
-	proteinG?: number | null;
-	carbsG?: number | null;
-	fatG?: number | null;
+	proteinG: number | null;
+	carbsG: number | null;
+	fatG: number | null;
 	occurredAt: number;
 	localDay: string;
 	tzOffsetMinutes: number;
@@ -66,11 +64,6 @@ type ConsumptionEntryRow = {
 	tz_offset_minutes: number;
 	created_at: number;
 	updated_at: number;
-};
-
-type RepositoryOptions = {
-	now?: () => number;
-	createId?: (timestamp: number) => string;
 };
 
 const SELECT_COLUMNS = `
@@ -193,16 +186,6 @@ function toConsumptionEntry(row: ConsumptionEntryRow): ConsumptionEntry {
 }
 
 export class ConsumptionEntryRepository extends BaseRepository {
-	private readonly now: () => number;
-	private readonly createId: (timestamp: number) => string;
-
-	constructor(db: SQLiteDatabase, options: RepositoryOptions = {}) {
-		super(db);
-		this.now = options.now ?? Date.now;
-		this.createId =
-			options.createId ?? ((timestamp) => createUuidV7(timestamp));
-	}
-
 	async create(input: CreateConsumptionEntry): Promise<ConsumptionEntry> {
 		assertEntry(input);
 		const normalized = normalizeEntry(input);
@@ -276,10 +259,6 @@ export class ConsumptionEntryRepository extends BaseRepository {
 			[localDay],
 		);
 		return rows.map(toConsumptionEntry);
-	}
-
-	async listRecent(limit = 8): Promise<ConsumptionEntry[]> {
-		return await this.listRecentByKind("drink", limit);
 	}
 
 	async listRecentByKind(

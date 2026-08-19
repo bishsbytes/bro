@@ -1,5 +1,3 @@
-import type { SQLiteDatabase } from "expo-sqlite";
-import { createUuidV7 } from "../uuid-v7";
 import { BaseRepository } from "./base-repository";
 
 export type CustomConsumableKind = "food" | "drink";
@@ -78,11 +76,6 @@ type CustomConsumableComponentRow = {
 	fat_g: number | null;
 	created_at: number;
 	updated_at: number;
-};
-
-type RepositoryOptions = {
-	now?: () => number;
-	createId?: (timestamp: number) => string;
 };
 
 const CONSUMABLE_COLUMNS = `
@@ -258,16 +251,6 @@ function toComponent(
 }
 
 export class CustomConsumableRepository extends BaseRepository {
-	private readonly now: () => number;
-	private readonly createId: (timestamp: number) => string;
-
-	constructor(db: SQLiteDatabase, options: RepositoryOptions = {}) {
-		super(db);
-		this.now = options.now ?? Date.now;
-		this.createId =
-			options.createId ?? ((timestamp) => createUuidV7(timestamp));
-	}
-
 	async create(
 		input: CreateCustomConsumable,
 		components: readonly CreateCustomConsumableComponent[] = [],

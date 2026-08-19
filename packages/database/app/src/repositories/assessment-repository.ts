@@ -1,5 +1,3 @@
-import type { SQLiteDatabase } from "expo-sqlite";
-import { createUuidV7 } from "../uuid-v7";
 import { BaseRepository } from "./base-repository";
 import {
 	type CreateObservation,
@@ -54,11 +52,6 @@ type AssessmentRow = {
 	focus_item_slugs: string;
 	created_at: number;
 	updated_at: number;
-};
-
-type RepositoryOptions = {
-	now?: () => number;
-	createId?: (timestamp: number) => string;
 };
 
 const SELECT_COLUMNS = `
@@ -153,16 +146,6 @@ function assertAssessment(input: CreateAssessmentWithObservations): void {
 }
 
 export class AssessmentRepository extends BaseRepository {
-	private readonly now: () => number;
-	private readonly createId: (timestamp: number) => string;
-
-	constructor(db: SQLiteDatabase, options: RepositoryOptions = {}) {
-		super(db);
-		this.now = options.now ?? Date.now;
-		this.createId =
-			options.createId ?? ((timestamp) => createUuidV7(timestamp));
-	}
-
 	async createWithObservations(
 		input: CreateAssessmentWithObservations,
 	): Promise<SavedAssessment> {

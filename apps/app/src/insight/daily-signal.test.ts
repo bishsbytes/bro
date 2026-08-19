@@ -21,8 +21,8 @@ jest.mock("expo-crypto", () => ({
 }));
 
 const { readDailySignal } = jest.requireActual(
-	"./daily-signal",
-) as typeof import("./daily-signal");
+	"@bro/logic",
+) as typeof import("@bro/logic");
 
 describe("daily insight signal", () => {
 	beforeEach(async () => {

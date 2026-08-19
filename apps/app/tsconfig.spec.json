@@ -15,8 +15,17 @@
 		"src/**/*.d.ts"
 	],
 	"references": [
-		{ "path": "../../packages/auth/app" },
-		{ "path": "../../packages/database/app" },
-		{ "path": "../../packages/domain" }
+		{
+			"path": "../../packages/auth/app"
+		},
+		{
+			"path": "../../packages/database/app"
+		},
+		{
+			"path": "../../packages/domain"
+		},
+		{
+			"path": "../../packages/logic"
+		}
 	]
 }

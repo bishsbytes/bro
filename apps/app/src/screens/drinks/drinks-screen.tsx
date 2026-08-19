@@ -1,3 +1,4 @@
+import { previousLocalDay } from "@bro/domain";
 import { ethanolKgFromVolumeAndAbv } from "@bro/domain/drink-catalogue";
 import { type Href, router, useFocusEffect } from "expo-router";
 import { useCallback, useMemo, useState } from "react";
@@ -13,7 +14,6 @@ import {
 	createDrinksStore,
 	type DrinkDaySnapshot,
 	type DrinksStore,
-	previousLocalDay,
 } from "../../drinks/drinks-store";
 import { StyleSheet } from "../../theme/unistyles";
 

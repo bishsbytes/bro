@@ -1,6 +1,6 @@
 import type { SQLiteDatabase } from "expo-sqlite";
 import { createDailyMetricId } from "../uuid-v5";
-import { BaseRepository } from "./base-repository";
+import { BaseRepository, type RepositoryOptions } from "./base-repository";
 
 export type DailyMetric = {
 	id: string;
@@ -32,9 +32,17 @@ type DailyMetricRow = {
 	updated_at: number;
 };
 
-type RepositoryOptions = {
-	now?: () => number;
-	createId?: (metricSlug: string, localDay: string, source: string) => string;
+/**
+ * Ids here are derived from the natural key rather than the clock, so a metric
+ * recomputed for the same day and source overwrites its own row instead of
+ * accumulating duplicates.
+ */
+type DailyMetricRepositoryOptions = RepositoryOptions & {
+	createNaturalId?: (
+		metricSlug: string,
+		localDay: string,
+		source: string,
+	) => string;
 };
 
 const SELECT_COLUMNS =
@@ -79,13 +87,13 @@ function assertInput(input: UpsertDailyMetric): void {
 }
 
 export class DailyMetricRepository extends BaseRepository {
-	private readonly now: () => number;
-	private readonly createId: RepositoryOptions["createId"];
+	private readonly createNaturalId: NonNullable<
+		DailyMetricRepositoryOptions["createNaturalId"]
+	>;
 
-	constructor(db: SQLiteDatabase, options: RepositoryOptions = {}) {
-		super(db);
-		this.now = options.now ?? Date.now;
-		this.createId = options.createId ?? createDailyMetricId;
+	constructor(db: SQLiteDatabase, options: DailyMetricRepositoryOptions = {}) {
+		super(db, options);
+		this.createNaturalId = options.createNaturalId ?? createDailyMetricId;
 	}
 
 	async upsert(input: UpsertDailyMetric): Promise<DailyMetric> {
@@ -94,10 +102,7 @@ export class DailyMetricRepository extends BaseRepository {
 		const source = input.source.trim();
 		const now = this.now();
 		const computedAt = input.computedAt ?? now;
-		const id = this.createId?.(metricSlug, input.localDay, source);
-		if (!id) {
-			throw new Error("Could not create a daily metric id.");
-		}
+		const id = this.createNaturalId(metricSlug, input.localDay, source);
 
 		await this.run(
 			`INSERT INTO daily_metrics (

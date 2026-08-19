@@ -5,6 +5,19 @@ import {
 	type UnitPreferenceDimension,
 } from "./dimensions";
 
+/**
+ * The locale this device is formatting in, or undefined where the environment
+ * cannot say. Callers treat undefined as "use the fallback for the dimension"
+ * rather than guessing a region.
+ */
+export function systemLocale(): string | undefined {
+	try {
+		return Intl.DateTimeFormat().resolvedOptions().locale;
+	} catch {
+		return undefined;
+	}
+}
+
 function regionFromLocale(locale: string | undefined): string | null {
 	if (!locale?.trim()) return null;
 	const normalized = locale.trim().replaceAll("_", "-");

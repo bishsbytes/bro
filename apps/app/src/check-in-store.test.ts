@@ -1,12 +1,12 @@
 import type * as DatabaseApp from "@bro/database-app";
-import { KILOGRAMS_PER_POUND } from "@bro/domain";
+import { KILOGRAMS_PER_POUND, localDayOf } from "@bro/domain";
 import {
 	hasCompletedCheckIn,
 	resolveMetric,
 } from "@bro/domain/metric-registry";
+import { buildTrendSeries } from "@bro/logic";
 import type { SQLiteDatabase } from "expo-sqlite";
 import { createNodeSqliteMock } from "./test-support/node-sqlite";
-import { buildTrendSeries } from "./trends/trend-math";
 
 const mockSqlite = createNodeSqliteMock();
 let mockRandomSeed = 0;
@@ -26,7 +26,7 @@ jest.mock("expo-crypto", () => ({
 	}),
 }));
 
-const { CheckInStore, localDayOf } = jest.requireActual(
+const { CheckInStore } = jest.requireActual(
 	"./check-in/check-in-store",
 ) as typeof import("./check-in/check-in-store");
 

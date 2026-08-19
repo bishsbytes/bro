@@ -3,17 +3,17 @@ import {
 	ObservationRepository,
 	ReminderRepository,
 } from "@bro/database-app";
+import { localDayOf } from "@bro/domain";
 import { hasCompletedCheckIn } from "@bro/domain/metric-registry";
+import {
+	planReminderNotifications,
+	REMINDER_NOTIFICATION_PREFIX,
+} from "@bro/logic";
 import type { SQLiteDatabase } from "expo-sqlite";
 import {
 	notificationGateway,
 	type ReminderNotificationGateway,
 } from "./notification-gateway";
-import {
-	localDayOf,
-	planReminderNotifications,
-	REMINDER_NOTIFICATION_PREFIX,
-} from "./reminder-planner";
 
 export type MaterialiseResult = {
 	permission: "granted" | "denied" | "undetermined";

@@ -46,6 +46,7 @@ export {
 } from "./repositories/assessment-repository";
 export {
 	BaseRepository,
+	type RepositoryOptions,
 	type SQLiteParam,
 } from "./repositories/base-repository";
 export {

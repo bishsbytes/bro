@@ -1,5 +1,3 @@
-import type { SQLiteDatabase } from "expo-sqlite";
-import { createUuidV7 } from "../uuid-v7";
 import { BaseRepository } from "./base-repository";
 
 export type UnitPreference = {
@@ -16,11 +14,6 @@ type UnitPreferenceRow = {
 	unit: string;
 	created_at: number;
 	updated_at: number;
-};
-
-type RepositoryOptions = {
-	now?: () => number;
-	createId?: (timestamp: number) => string;
 };
 
 const SELECT_COLUMNS = "id, dimension, unit, created_at, updated_at";
@@ -49,16 +42,6 @@ function assertPreference(dimension: string, unit: string): void {
  * Known combinations are validated by the pure units module at the UI boundary.
  */
 export class UnitPreferenceRepository extends BaseRepository {
-	private readonly now: () => number;
-	private readonly createId: (timestamp: number) => string;
-
-	constructor(db: SQLiteDatabase, options: RepositoryOptions = {}) {
-		super(db);
-		this.now = options.now ?? Date.now;
-		this.createId =
-			options.createId ?? ((timestamp) => createUuidV7(timestamp));
-	}
-
 	async set(dimension: string, unit: string): Promise<UnitPreference> {
 		assertPreference(dimension, unit);
 		const normalizedDimension = dimension.trim();

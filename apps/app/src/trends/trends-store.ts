@@ -6,7 +6,7 @@ import {
 	TrackedMetricsRepository,
 	UnitPreferenceRepository,
 } from "@bro/database-app";
-import type { DisplayUnit } from "@bro/domain";
+import { type DisplayUnit, localDayOf } from "@bro/domain";
 import {
 	DEFAULT_TRACKED_METRICS,
 	listMeasurements,
@@ -14,19 +14,16 @@ import {
 	type MeasurementMetricDefinition,
 	type ScoredMetricDefinition,
 } from "@bro/domain/metric-registry";
-import type { SQLiteDatabase } from "expo-sqlite";
-import { localDayOf } from "../check-in/check-in-store";
-import {
-	formatMetricValue,
-	metricDisplayUnit,
-} from "../health/metric-presentation";
-import { resolveMetricObservations } from "../health/resolved-series";
 import {
 	buildTrendSeries,
+	formatMetricValue,
+	metricDisplayUnit,
+	resolveMetricObservations,
 	type TrendPeriod,
 	type TrendSeries,
 	trendRange,
-} from "./trend-math";
+} from "@bro/logic";
+import type { SQLiteDatabase } from "expo-sqlite";
 
 export type MetricTrend = {
 	metric: ScoredMetricDefinition | MeasurementMetricDefinition;

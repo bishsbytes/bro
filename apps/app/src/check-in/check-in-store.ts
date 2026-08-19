@@ -7,14 +7,10 @@ import {
 	UnitPreferenceRepository,
 } from "@bro/database-app";
 import {
-	type Dimension,
-	type DisplayUnit,
-	type FractionDisplayUnit,
 	formatMeasurement,
-	isDisplayUnitForDimension,
-	type LengthDisplayUnit,
-	type MassDisplayUnit,
+	localDayOf,
 	resolveUnitPreference,
+	systemLocale,
 } from "@bro/domain";
 import {
 	DEFAULT_TRACKED_METRICS,
@@ -22,8 +18,11 @@ import {
 	type FactorMetricDefinition,
 	listFactors,
 	resolveMetric,
-	type UserEnterableMeasurementSlug,
 } from "@bro/domain/metric-registry";
+import {
+	type MeasurementPresentation,
+	toMeasurementPresentation,
+} from "@bro/logic";
 import type { SQLiteDatabase } from "expo-sqlite";
 import {
 	refreshReminderNotifications,
@@ -48,24 +47,7 @@ export type TodayCheckIn = {
 	note: string;
 };
 
-type CheckInMeasurementBase = {
-	metricSlug: UserEnterableMeasurementSlug;
-	label: string;
-};
-
-export type CheckInMeasurement =
-	| (CheckInMeasurementBase & {
-			dimension: "mass";
-			displayUnit: MassDisplayUnit;
-	  })
-	| (CheckInMeasurementBase & {
-			dimension: "length";
-			displayUnit: LengthDisplayUnit;
-	  })
-	| (CheckInMeasurementBase & {
-			dimension: "fraction";
-			displayUnit: FractionDisplayUnit;
-	  });
+export type CheckInMeasurement = MeasurementPresentation;
 
 export type LoggedCheckInMeasurement = CheckInMeasurement & {
 	observation: Observation;
@@ -85,13 +67,6 @@ export type CheckInDraft = {
 	note: string;
 };
 
-export function localDayOf(date: Date): string {
-	const year = date.getFullYear();
-	const month = String(date.getMonth() + 1).padStart(2, "0");
-	const day = String(date.getDate()).padStart(2, "0");
-	return `${year}-${month}-${day}`;
-}
-
 function pairCheckIns(observations: readonly Observation[]): CheckInEntry[] {
 	const moods = observations.filter((row) => row.metricSlug === "mood");
 	const energies = observations.filter((row) => row.metricSlug === "energy");
@@ -110,51 +85,6 @@ function pairCheckIns(observations: readonly Observation[]): CheckInEntry[] {
 	}
 
 	return entries.reverse();
-}
-
-function systemLocale(): string | undefined {
-	try {
-		return Intl.DateTimeFormat().resolvedOptions().locale;
-	} catch {
-		return undefined;
-	}
-}
-
-function toCheckInMeasurement(
-	metricSlug: UserEnterableMeasurementSlug,
-	label: string,
-	dimension: Dimension,
-	displayUnit: DisplayUnit,
-): CheckInMeasurement {
-	if (
-		dimension === "mass" &&
-		isDisplayUnitForDimension(dimension, displayUnit)
-	) {
-		return {
-			metricSlug,
-			label,
-			dimension,
-			displayUnit,
-		};
-	}
-	if (
-		dimension === "length" &&
-		isDisplayUnitForDimension(dimension, displayUnit)
-	) {
-		return {
-			metricSlug,
-			label,
-			dimension,
-			displayUnit,
-		};
-	}
-	if (
-		dimension === "fraction" &&
-		isDisplayUnitForDimension(dimension, displayUnit)
-	) {
-		return { metricSlug, label, dimension, displayUnit };
-	}
-	throw new TypeError(`Unit ${displayUnit} does not measure ${dimension}.`);
 }
 
 function latestObservation(
@@ -286,7 +216,7 @@ export class CheckInStore {
 			);
 			return [
 				{
-					measurement: toCheckInMeasurement(
+					measurement: toMeasurementPresentation(
 						metric.slug,
 						overlay.customLabel ?? metric.label,
 						metric.dimension,

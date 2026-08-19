@@ -1,3 +1,5 @@
+import type { ShownInsight } from "@bro/logic";
+import { formatInsightValue, renderInsightSummary } from "@bro/logic";
 import { useFocusEffect } from "expo-router";
 import { useCallback, useMemo, useState } from "react";
 import { ActivityIndicator, View } from "react-native";
@@ -6,15 +8,10 @@ import { Card } from "../../components/card";
 import { EmptyState } from "../../components/empty-state";
 import { Screen } from "../../components/screen";
 import { SectionHeader } from "../../components/section-header";
-import type { ShownInsight } from "../../insight/engine";
 import {
 	createInsightStore,
 	type InsightStore,
 } from "../../insight/insight-store";
-import {
-	formatInsightValue,
-	renderInsightSummary,
-} from "../../insight/presentation";
 import { StyleSheet } from "../../theme/unistyles";
 
 type InsightDetailScreenProps = {

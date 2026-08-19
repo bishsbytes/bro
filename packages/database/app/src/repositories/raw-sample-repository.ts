@@ -1,5 +1,3 @@
-import type { SQLiteDatabase } from "expo-sqlite";
-import { createUuidV7 } from "../uuid-v7";
 import { BaseRepository } from "./base-repository";
 
 export type RawSample = {
@@ -35,11 +33,6 @@ type RawSampleRow = {
 	source_record_id: string;
 	origin: string | null;
 	imported_at: number;
-};
-
-type RepositoryOptions = {
-	now?: () => number;
-	createId?: (timestamp: number) => string;
 };
 
 const SELECT_COLUMNS =
@@ -88,16 +81,6 @@ function validate(input: UpsertRawSample): void {
 }
 
 export class RawSampleRepository extends BaseRepository {
-	private readonly now: () => number;
-	private readonly createId: (timestamp: number) => string;
-
-	constructor(db: SQLiteDatabase, options: RepositoryOptions = {}) {
-		super(db);
-		this.now = options.now ?? Date.now;
-		this.createId =
-			options.createId ?? ((timestamp) => createUuidV7(timestamp));
-	}
-
 	async upsert(input: UpsertRawSample): Promise<RawSample> {
 		validate(input);
 		const importedAt = input.importedAt ?? this.now();

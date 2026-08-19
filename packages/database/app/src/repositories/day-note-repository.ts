@@ -1,5 +1,3 @@
-import type { SQLiteDatabase } from "expo-sqlite";
-import { createUuidV7 } from "../uuid-v7";
 import { BaseRepository } from "./base-repository";
 
 export type DayNote = {
@@ -18,11 +16,6 @@ type DayNoteRow = {
 	updated_at: number;
 };
 
-type RepositoryOptions = {
-	now?: () => number;
-	createId?: (timestamp: number) => string;
-};
-
 function toDayNote(row: DayNoteRow): DayNote {
 	return {
 		id: row.id,
@@ -34,16 +27,6 @@ function toDayNote(row: DayNoteRow): DayNote {
 }
 
 export class DayNoteRepository extends BaseRepository {
-	private readonly now: () => number;
-	private readonly createId: (timestamp: number) => string;
-
-	constructor(db: SQLiteDatabase, options: RepositoryOptions = {}) {
-		super(db);
-		this.now = options.now ?? Date.now;
-		this.createId =
-			options.createId ?? ((timestamp) => createUuidV7(timestamp));
-	}
-
 	async create(localDay: string, body: string): Promise<DayNote> {
 		const now = this.now();
 		const note: DayNote = {

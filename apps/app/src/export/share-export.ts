@@ -1,7 +1,7 @@
+import { localDayAt } from "@bro/logic";
 import { File, Paths } from "expo-file-system";
 import { StorageAccessFramework } from "expo-file-system/legacy";
 import { Platform, Share } from "react-native";
-import { localDayAt } from "../health/mapping";
 
 export type ExportShareResult = {
 	message: string;

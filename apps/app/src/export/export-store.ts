@@ -15,9 +15,9 @@ import {
 	UnitPreferenceRepository,
 } from "@bro/database-app";
 import { METRIC_REGISTRY } from "@bro/domain/metric-registry";
+import { serializeCheckInExport } from "@bro/logic";
 import Constants from "expo-constants";
 import type { SQLiteDatabase } from "expo-sqlite";
-import { serializeCheckInExport } from "./check-in-export";
 
 export class ExportStore {
 	constructor(

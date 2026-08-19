@@ -5,26 +5,24 @@ import {
 	ObservationRepository,
 	TrackedMetricsRepository,
 } from "@bro/database-app";
+import { shiftLocalDay } from "@bro/domain";
 import {
 	INSIGHT_CATALOGUE,
 	resolveInsight,
 } from "@bro/domain/insight-catalogue";
 import { DEFAULT_TRACKED_METRICS } from "@bro/domain/metric-registry";
-import type { SQLiteDatabase } from "expo-sqlite";
-import { shiftLocalDay } from "../habits/cadence";
-import { localDayAt } from "../health/mapping";
-import {
-	createDailySignalReader,
-	type DailySignalReader,
-} from "./daily-signal";
 import {
 	aggregateInsightTeaser,
+	createDailySignalReader,
+	type DailySignalReader,
 	evaluateInsight,
 	INSIGHT_WINDOW_DAYS,
 	type InsightEvaluation,
 	type InsightTeaser,
+	localDayAt,
 	type ShownInsight,
-} from "./engine";
+} from "@bro/logic";
+import type { SQLiteDatabase } from "expo-sqlite";
 
 export type InsightSnapshot = {
 	state: "empty" | "not-yet" | "shown";
