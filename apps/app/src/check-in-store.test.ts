@@ -1,6 +1,9 @@
 import type * as DatabaseApp from "@bro/database-app";
 import { KILOGRAMS_PER_POUND } from "@bro/domain";
-import { hasCompletedCheckIn, resolveMetric } from "@bro/domain/metric-registry";
+import {
+	hasCompletedCheckIn,
+	resolveMetric,
+} from "@bro/domain/metric-registry";
 import type { SQLiteDatabase } from "expo-sqlite";
 import { createNodeSqliteMock } from "./test-support/node-sqlite";
 import { buildTrendSeries } from "./trends/trend-math";
@@ -346,8 +349,11 @@ describe("check-in store", () => {
 	it("keeps a check-in saved when the reminder refresh fails", async () => {
 		const observations = new databaseApp.ObservationRepository(db);
 		const warn = jest.spyOn(console, "warn").mockImplementation(() => {});
-		const store = new CheckInStore(db, () => CAPTURED_AT, undefined, () =>
-			Promise.reject(new Error("no notification permission")),
+		const store = new CheckInStore(
+			db,
+			() => CAPTURED_AT,
+			undefined,
+			() => Promise.reject(new Error("no notification permission")),
 		);
 
 		const saved = await store.save({

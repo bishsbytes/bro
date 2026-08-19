@@ -6,10 +6,10 @@ import type {
 	QuantitySample,
 } from "@kingstinct/react-native-healthkit";
 import { Linking } from "react-native";
-import {
-	type HealthBackfillRange,
-	type HealthGateway,
-	type HealthGatewayBatch,
+import type {
+	HealthBackfillRange,
+	HealthGateway,
+	HealthGatewayBatch,
 } from "./gateway";
 import type { PlatformHealthSample } from "./mapping";
 import { type HealthMetricSlug, V1_HEALTH_METRIC_SLUGS } from "./policy";

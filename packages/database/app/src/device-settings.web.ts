@@ -61,9 +61,8 @@ function removeItem(key: string): void {
 }
 
 function createUuid(): string {
-	const crypto = (
-		globalThis as typeof globalThis & { crypto?: BrowserCrypto }
-	).crypto;
+	const crypto = (globalThis as typeof globalThis & { crypto?: BrowserCrypto })
+		.crypto;
 
 	if (!crypto) {
 		throw new Error("Secure browser randomness is unavailable.");

@@ -174,9 +174,7 @@ describe("history and day view", () => {
 		);
 		expect(await notes.listByDay(localDay)).toHaveLength(1);
 		await fireEvent.press(view.getByText("Delete check-in"));
-		await waitFor(() =>
-			expect(view.queryByText("Delete check-in")).toBeNull(),
-		);
+		await waitFor(() => expect(view.queryByText("Delete check-in")).toBeNull());
 		rows = await observations.listByDay(localDay);
 		expect(rows.filter((row) => row.metricSlug === "mood")).toHaveLength(0);
 		expect(rows.filter((row) => row.metricSlug === "energy")).toHaveLength(0);

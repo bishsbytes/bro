@@ -163,13 +163,15 @@ describe("health import engine", () => {
 		expect(daily).toHaveLength(365);
 		expect(new Set(daily.map((row) => row.id))).toHaveProperty("size", 365);
 		const stepsTrend = (
-			await new TrendsStore(productDb, () => new Date(NOW), () => "en-GB").load(
-				30,
-			)
+			await new TrendsStore(
+				productDb,
+				() => new Date(NOW),
+				() => "en-GB",
+			).load(30)
 		).metrics.find(({ metric }) => metric.slug === "steps");
-		expect(stepsTrend?.series.points.filter((point) => point.value !== null)).toHaveLength(
-			30,
-		);
+		expect(
+			stepsTrend?.series.points.filter((point) => point.value !== null),
+		).toHaveLength(30);
 		expect(globalThis.fetch).not.toHaveBeenCalled();
 	});
 

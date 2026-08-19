@@ -1,77 +1,77 @@
 {
-  "expo": {
-    "name": "bro",
-    "slug": "app",
-    "version": "1.0.0",
-    "orientation": "portrait",
-    "icon": "./assets/images/icon.png",
-    "scheme": "app",
-    "userInterfaceStyle": "automatic",
-    "newArchEnabled": true,
-    "ios": {
-      "supportsTablet": true,
-      "bundleIdentifier": "com.anonymous.app"
-    },
-    "android": {
-      "adaptiveIcon": {
-        "foregroundImage": "./assets/images/adaptive-icon.png",
-        "backgroundColor": "#ffffff"
-      },
-      "edgeToEdgeEnabled": true,
-      "package": "com.anonymous.app",
-      "permissions": [
-        "android.permission.health.READ_SLEEP",
-        "android.permission.health.READ_STEPS",
-        "android.permission.health.READ_RESTING_HEART_RATE",
-        "android.permission.health.READ_WEIGHT",
-        "android.permission.health.READ_BODY_FAT",
-        "android.permission.health.READ_HEALTH_DATA_HISTORY"
-      ]
-    },
-    "web": {
-      "bundler": "metro",
-      "favicon": "./assets/images/favicon.png"
-    },
-    "plugins": [
-      [
-        "expo-splash-screen",
-        {
-          "image": "./assets/images/splash-icon.png",
-          "imageWidth": 200,
-          "resizeMode": "contain",
-          "backgroundColor": "#ffffff"
-        }
-      ],
-      "expo-router",
-      [
-        "expo-notifications",
-        {
-          "defaultChannel": "reminders"
-        }
-      ],
-      "react-native-edge-to-edge",
-      [
-        "expo-build-properties",
-        {
-          "android": {
-            "compileSdkVersion": 36,
-            "targetSdkVersion": 36,
-            "minSdkVersion": 26
-          }
-        }
-      ],
-      "react-native-health-connect",
-      [
-        "@kingstinct/react-native-healthkit",
-        {
-          "NSHealthShareUsageDescription": "Bro reads your sleep, steps, resting heart rate, weight and body fat from Apple Health to show your trends on this device.",
-          "NSHealthUpdateUsageDescription": false,
-          "background": false
-        }
-      ]
-    ],
-    "experiments": {
-      "typedRoutes": true
-    }
-  }
+	"expo": {
+		"name": "bro",
+		"slug": "app",
+		"version": "1.0.0",
+		"orientation": "portrait",
+		"icon": "./assets/images/icon.png",
+		"scheme": "app",
+		"userInterfaceStyle": "automatic",
+		"newArchEnabled": true,
+		"ios": {
+			"supportsTablet": true,
+			"bundleIdentifier": "com.anonymous.app"
+		},
+		"android": {
+			"adaptiveIcon": {
+				"foregroundImage": "./assets/images/adaptive-icon.png",
+				"backgroundColor": "#ffffff"
+			},
+			"edgeToEdgeEnabled": true,
+			"package": "com.anonymous.app",
+			"permissions": [
+				"android.permission.health.READ_SLEEP",
+				"android.permission.health.READ_STEPS",
+				"android.permission.health.READ_RESTING_HEART_RATE",
+				"android.permission.health.READ_WEIGHT",
+				"android.permission.health.READ_BODY_FAT",
+				"android.permission.health.READ_HEALTH_DATA_HISTORY"
+			]
+		},
+		"web": {
+			"bundler": "metro",
+			"favicon": "./assets/images/favicon.png"
+		},
+		"plugins": [
+			[
+				"expo-splash-screen",
+				{
+					"image": "./assets/images/splash-icon.png",
+					"imageWidth": 200,
+					"resizeMode": "contain",
+					"backgroundColor": "#ffffff"
+				}
+			],
+			"expo-router",
+			[
+				"expo-notifications",
+				{
+					"defaultChannel": "reminders"
+				}
+			],
+			"react-native-edge-to-edge",
+			[
+				"expo-build-properties",
+				{
+					"android": {
+						"compileSdkVersion": 36,
+						"targetSdkVersion": 36,
+						"minSdkVersion": 26
+					}
+				}
+			],
+			"react-native-health-connect",
+			[
+				"@kingstinct/react-native-healthkit",
+				{
+					"NSHealthShareUsageDescription": "Bro reads your sleep, steps, resting heart rate, weight and body fat from Apple Health to show your trends on this device.",
+					"NSHealthUpdateUsageDescription": false,
+					"background": false
+				}
+			]
+		],
+		"experiments": {
+			"typedRoutes": true
+		}
+	}
 }
