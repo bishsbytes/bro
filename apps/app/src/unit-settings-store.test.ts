@@ -10,10 +10,6 @@ jest.mock("expo-sqlite", () => ({
 	openDatabaseSync: mockSqlite.openDatabaseSync,
 	openDatabaseAsync: mockSqlite.openDatabaseAsync,
 }));
-jest.mock("expo-crypto", () => ({
-	getRandomBytes: jest.fn((length: number) => new Uint8Array(length)),
-}));
-
 const { UnitSettingsStore } = jest.requireActual(
 	"./units/unit-settings-store",
 ) as typeof import("./units/unit-settings-store");
