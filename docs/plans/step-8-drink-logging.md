@@ -152,7 +152,7 @@ Unchanged copy; the action now also clears `consumption_entries` via the shared 
 | Case | Expected result |
 | --- | --- |
 | Migration 007 on fresh and step-7 files | Fresh applies all seven; a step-7 device applies only 007; re-runs are no-ops. |
-| Canonical storage | A pint of 4.5% lager logs one row with ethanol mass from volume × ABV × the declared density; renders `2.6 units`, `1.5 standard drinks`, `20.5 g` under the three preferences; the stored value never changes. |
+| Canonical storage | A pint of 4.5% lager logs one row with ethanol mass from volume × ABV × the declared density; renders `2.6 units`, `1.4 standard drinks`, `20.2 g` under the three preferences; the stored value never changes. |
 | Snapshot fidelity | Editing or removing the catalogue entry a logged drink came from changes no logged day, no total, and no export. |
 | Derived totals | Three entries on one day sum to the day's value on Trends, goals, history, and insight; deleting one changes every one of them on the next read; nothing was written to `observations`. |
 | Source isolation | Consumption metrics never appear in scored, factor, assessment, or user-enterable measurement surfaces; observation- and import-backed metrics resolve exactly as before. |
@@ -199,5 +199,6 @@ Food logging (step 9) inherits the entry model finished and proven: `consumption
 - **The search endpoint's retention posture is a design item before it ships**, not after: no account required, no user identifier attached, and a decision recorded on whether queries are logged at all. We can see food searches now; the design should mean we do not keep them.
 - **Barcode scanning** (open decision 17) remains open and remains a native dependency and prebuild, batchable under the shared-prerequisites rule.
 - **Pair-count discipline**, per the step 7 hand-off, is now a standing review item: nutrition offers dozens of plausible pairs, and the curated-list posture is what keeps the premium surface from producing a wrong screenshot.
+- **Entry reads need a window before food doubles the row rate.** Trends loads `consumptionEntries.listAll()`, following the `dailyMetrics.listAll()` convention it inherited — a convention sized for tables growing at about one row per day. `consumption_entries` is the first table that grows per event, and food logging multiplies that rate again, so step 9 should take the range-scoped read (the `local_day` index is already there for it) rather than let an unbounded scan become load-bearing on two domains.
 
 Two further items carry forward. The **windowed-transform insight pair** — caffeine after a time of day against sleep — is the first genuinely new engine capability any step has asked for since step 7, and the entries now carry the `occurred_at` it needs. The **weekly-aggregation decision** (weekly unit caps, weekly habit cadence) is now wanted by two domains; whichever step takes it should take it once, for both. The `reminders` table remains kind-less after a fourth deferral.
