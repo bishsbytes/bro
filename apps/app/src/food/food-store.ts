@@ -19,6 +19,7 @@ import {
 	type ParsedMeasurement,
 	parseMeasurement,
 } from "@bro/domain";
+import type { FoodSearchResult } from "@bro/domain/food-search";
 import {
 	type ConsumptionDerivedMeasurementMetricDefinition,
 	type ConsumptionDerivedMeasurementSlug,
@@ -443,6 +444,41 @@ export class FoodStore {
 			catalogueRef: null,
 			consumableRef: `custom:${consumable.id}`,
 			label: consumable.label,
+			servingLabel: serving.label,
+			quantity,
+			volumeL: null,
+			ethanolKg: null,
+			caffeineKg: null,
+			energyKcal: scaleNullable(serving.energyKcal, quantity),
+			proteinG: scaleNullable(serving.proteinG, quantity),
+			carbsG: scaleNullable(serving.carbsG, quantity),
+			fatG: scaleNullable(serving.fatG, quantity),
+			...occurrenceOf(occurrence),
+		});
+	}
+
+	async logSearchResult(
+		result: FoodSearchResult,
+		servingId: string,
+		quantity: number,
+		occurrence: FoodOccurrence,
+	): Promise<ConsumptionEntry> {
+		assertQuantity(quantity);
+		const serving = result.servings.find(
+			(candidate) => candidate.id === servingId,
+		);
+		if (!/^[^:\s]+:.+$/.test(result.ref) || !serving) {
+			throw new TypeError("Choose a searched food and serving.");
+		}
+		assertFiniteNonNegative(serving.energyKcal, "Food energy");
+		assertFiniteNonNegative(serving.proteinG, "Food protein");
+		assertFiniteNonNegative(serving.carbsG, "Food carbohydrate");
+		assertFiniteNonNegative(serving.fatG, "Food fat");
+		return await this.entries.create({
+			kind: "food",
+			catalogueRef: null,
+			consumableRef: result.ref,
+			label: result.brand ? `${result.brand} · ${result.label}` : result.label,
 			servingLabel: serving.label,
 			quantity,
 			volumeL: null,

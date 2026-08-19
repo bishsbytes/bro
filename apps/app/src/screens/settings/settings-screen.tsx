@@ -135,6 +135,12 @@ export function SettingsScreen({
 				onPress={() => router.push("/settings/privacy" as Href)}
 			/>
 			<ListRow
+				title="Data licences"
+				detail="Attribution for data used in bro."
+				accessibilityLabel="Data licences"
+				onPress={() => router.push("/settings/licences" as Href)}
+			/>
+			<ListRow
 				title="Export your data"
 				detail="Share or save a copy of the record on this device."
 				accessibilityLabel="Export your data"

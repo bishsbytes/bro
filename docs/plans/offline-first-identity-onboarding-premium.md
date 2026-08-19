@@ -642,7 +642,7 @@ At minimum, cover:
 - Onboarding continue versus existing-user sign-in.
 - Relaunch before and after onboarding completion.
 - Auth API unavailable, slow, or returning an error — including at startup, where it must be invisible.
-- A local-only user causes no auth, API, sync, or product-data request to our backend at any point. Purchase-provider and consented-telemetry traffic are out of scope for this assertion and are documented separately.
+- A local-only user causes no auth, sync, or product-data request to our backend. The third documented carve-out is an explicit food search or provider-ref lookup: it calls bro's unauthenticated food endpoint with no account, session, device identifier, or credentials; the query is not retained; and every other food operation remains local. Purchase-provider and consented-telemetry traffic are out of scope for this assertion and are documented separately.
 - Local-only user signs into an existing account with data on both sides.
 - **Account A signs out, account B signs in on the same device.** B sees the device's local data, and adoption offers to upload it — the accepted trade. What must hold is that adoption says plainly how many records it is about to send, so the choice is informed.
 - A signs out and back in, and finds their data untouched and still open throughout.

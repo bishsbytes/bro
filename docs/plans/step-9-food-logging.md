@@ -2,7 +2,7 @@
 
 ## Status
 
-**In progress.** Slices 1–3 were implemented in code on 19 August 2026: migration 008 and both stores' repositories; the offline food, recipe, and custom-drink surfaces with derived nutrition metrics; and export v7, delete-local-data coverage, and the privacy rewrite. Slice 4 — provider-backed search, cache-through, offline degradation, attribution, and its privacy sign-off gate — remains. This is the delivery plan for [sequencing step 9 of the product domains plan](product-domains-and-data.md#sequencing) — the last product step, and the one the plan has always described as "the largest, carries the external dependency, and is the easiest to get wrong in a way users abandon".
+**Complete.** Slices 1–4 were implemented in code on 19 August 2026: migration 008 and both stores' repositories; the offline food, recipe, and custom-drink surfaces with derived nutrition metrics; export v7, delete-local-data coverage, and the privacy rewrite; then provider-backed search, cache-through, offline degradation, attribution, and the privacy sign-off gate. This is the delivery plan for [sequencing step 9 of the product domains plan](product-domains-and-data.md#sequencing) — the last product step, and the one the plan has always described as "the largest, carries the external dependency, and is the easiest to get wrong in a way users abandon".
 
 It consumes the [step 8 hand-off](step-8-drink-logging.md#step-9-hand-off): `consumption_entries` with its snapshot rule, its hard-delete rule, and its read-time derived-totals projection, all proven against a domain with no provider. Step 8 existed to take that design decision away from this step, and it did. **The one hard thing step 9 adds is the provider**, and every decision below is aimed at keeping it the only one.
 
@@ -196,6 +196,14 @@ Unchanged copy; now also clears `custom_consumables`, `custom_consumable_compone
 2. Client search: cache-through into `bro-local.db`, the offline degradation path, attribution on the surface and in the licences screen.
 3. The acceptance matrix below, the third documented carve-out in the [offline-first acceptance matrix](offline-first-identity-onboarding-premium.md#acceptance-test-matrix), and the product plan updated (open decisions 16, 17, 24; sequencing step 9).
 4. **The retention posture, the absence of any user identifier, the normalised response shape, and the licence attribution are the sign-off gate for this slice.**
+
+### Slice 4 implementation sign-off — 19 August 2026
+
+- **Retention:** approved as no query retention. The Hono food subtree has no request-logging middleware, never passes a query or caught upstream error to its aggregate observer, returns `Cache-Control: no-store`, and tests assert that the query is absent from success and error observations. The Node entry point logs only its startup address. Any future ingress or request logger must preserve this route-specific no-query rule.
+- **Identity:** approved as anonymous. Food routes are mounted outside session middleware, the client uses `credentials: "omit"` with only an `Accept` header, and tests prove supplied account/session/device headers are neither resolved nor forwarded. Rate limiting retains only a coarse `/24` IPv4 or `/64`-style IPv6 bucket in process memory for one short window.
+- **Response:** approved as provider-neutral. `FoodSearchResult` is shared by API and client through `@bro/domain/food-search`; Open Food Facts is normalised server-side into namespaced refs, nullable nutrition, and serving choices. Logged entries copy the selected label, serving, quantity, and nutrition values and never read their display from the cache.
+- **Licence:** approved for the initial Open Food Facts source. Every result carries `source: "Open Food Facts"` and `licence: "ODbL-1.0"`; the search card displays both and links to a permanent Data licences settings screen. Provider requests use an identified `User-Agent`, as required by [Open Food Facts' API conditions](https://support.openfoodfacts.org/help/en-gb/12-api-data-reuse/94-are-there-conditions-to-use-the-api).
+- **Offline behavior:** approved. An explicit search is the only client path that makes a request. Successful results cache in `bro-local.db`; failure returns the exact-query cache, keeps the input intact, stops the spinner, and leaves recents, custom foods, recipes, free entry, correction, totals, Trends, goals, insight, and export untouched.
 
 ## Expected touchpoints
 

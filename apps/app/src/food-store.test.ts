@@ -195,6 +195,47 @@ describe("food store", () => {
 		).toMatchObject({ label: "Chicken bowl", energyKcal: 600 });
 	});
 
+	it("snapshots a provider result and preserves unknown nutrients", async () => {
+		const store = new FoodStore(
+			db,
+			() => now,
+			() => "en-GB",
+		);
+		const logged = await store.logSearchResult(
+			{
+				ref: "off:12345678",
+				label: "Chicken thighs",
+				brand: "Example",
+				source: "Open Food Facts",
+				licence: "ODbL-1.0",
+				servings: [
+					{
+						id: "100g",
+						label: "100 g",
+						energyKcal: 210,
+						proteinG: 26,
+						carbsG: 0,
+						fatG: null,
+					},
+				],
+			},
+			"100g",
+			2,
+			{ localDay: "2026-08-19", time: "12:00" },
+		);
+
+		expect(logged).toMatchObject({
+			consumableRef: "off:12345678",
+			label: "Example · Chicken thighs",
+			servingLabel: "100 g",
+			quantity: 2,
+			energyKcal: 420,
+			proteinG: 52,
+			carbsG: 0,
+			fatG: null,
+		});
+	});
+
 	it("keeps nutrition metrics default-off and creates goals in both directions", async () => {
 		const store = new FoodStore(
 			db,

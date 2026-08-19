@@ -10,6 +10,9 @@
 	"exclude": ["src/**/*.test.ts", "out-tsc", "dist"],
 	"references": [
 		{
+			"path": "../../packages/domain/tsconfig.lib.json"
+		},
+		{
 			"path": "../../packages/database/api/tsconfig.lib.json"
 		},
 		{

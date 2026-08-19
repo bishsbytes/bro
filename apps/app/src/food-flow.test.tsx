@@ -71,6 +71,10 @@ const mockedUseSession = (authClient as unknown as { useSession: jest.Mock })
 	.useSession;
 
 describe("food logging flow", () => {
+	afterEach(() => {
+		delete process.env.EXPO_PUBLIC_API_URL;
+	});
+
 	afterAll(async () => {
 		await databaseApp.closeDb();
 		mockSqlite.cleanup();
@@ -169,5 +173,95 @@ describe("food logging flow", () => {
 		);
 		expect(globalThis.fetch).not.toHaveBeenCalled();
 		expect(mockedUseSession).not.toHaveBeenCalled();
+	});
+
+	it("searches anonymously, shows attribution, logs a snapshot, and falls back to cache", async () => {
+		process.env.EXPO_PUBLIC_API_URL = "https://api.example.test";
+		(globalThis.fetch as jest.Mock).mockReset();
+		(globalThis.fetch as jest.Mock).mockResolvedValueOnce(
+			new Response(
+				JSON.stringify({
+					results: [
+						{
+							ref: "off:12345678",
+							label: "Provider chicken thighs",
+							brand: "Example",
+							source: "Open Food Facts",
+							licence: "ODbL-1.0",
+							servings: [
+								{
+									id: "100g",
+									label: "100 g",
+									energyKcal: 210,
+									proteinG: 26,
+									carbsG: 0,
+									fatG: null,
+								},
+							],
+						},
+					],
+				}),
+				{ status: 200, headers: { "content-type": "application/json" } },
+			),
+		);
+
+		const router = renderRouter("src/app", { initialUrl: "/food" });
+		const view = await router;
+		await fireEvent.changeText(
+			await view.findByLabelText("Food search"),
+			"chicken thighs",
+		);
+		await fireEvent.press(view.getByText("Search"));
+		expect(await view.findByText("Open Food Facts · ODbL-1.0")).toBeTruthy();
+		expect(globalThis.fetch).toHaveBeenCalledWith(
+			"https://api.example.test/api/food/search?q=chicken+thighs",
+			expect.objectContaining({
+				method: "GET",
+				credentials: "omit",
+				headers: { Accept: "application/json" },
+			}),
+		);
+		await fireEvent.press(
+			view.getByLabelText("Choose Provider chicken thighs"),
+		);
+		await fireEvent.changeText(view.getByLabelText("Number of servings"), "2");
+		await fireEvent.press(view.getByText("Save searched food"));
+		expect(
+			(
+				await new databaseApp.ConsumptionEntryRepository(
+					databaseApp.getDb(),
+				).listAll()
+			).find(({ consumableRef }) => consumableRef === "off:12345678"),
+		).toMatchObject({
+			label: "Example · Provider chicken thighs",
+			energyKcal: 420,
+			proteinG: 52,
+			carbsG: 0,
+			fatG: null,
+		});
+
+		(globalThis.fetch as jest.Mock).mockRejectedValueOnce(
+			new TypeError("Network request failed"),
+		);
+		await fireEvent.press(view.getByText("Search"));
+		expect(
+			await view.findByText(
+				"Search needs a connection. Your recents, custom foods, and saved results are still available.",
+			),
+		).toBeTruthy();
+		expect(view.getByLabelText("Food search").props.value).toBe(
+			"chicken thighs",
+		);
+		await fireEvent.press(
+			view.getByText(
+				"Food data from Open Food Facts under ODbL 1.0 · Licence details",
+			),
+		);
+		await waitFor(() =>
+			expect(router.getPathname()).toBe("/settings/licences"),
+		);
+		expect(
+			await view.findByText("Source: Open Food Facts · Licence: ODbL-1.0"),
+		).toBeTruthy();
 	});
 });

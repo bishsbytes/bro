@@ -21,6 +21,11 @@
 			"import": "./src/content/drink-catalogue.ts",
 			"default": "./src/content/drink-catalogue.ts"
 		},
+		"./food-search": {
+			"types": "./src/content/food-search.ts",
+			"import": "./src/content/food-search.ts",
+			"default": "./src/content/food-search.ts"
+		},
 		"./habit-catalogue": {
 			"types": "./src/content/habit-catalogue.ts",
 			"import": "./src/content/habit-catalogue.ts",

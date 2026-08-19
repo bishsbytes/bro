@@ -1,4 +1,5 @@
 import type { CreateCustomConsumableComponent } from "@bro/database-app";
+import type { FoodSearchResult } from "@bro/domain/food-search";
 import { type Href, router, useFocusEffect } from "expo-router";
 import { useCallback, useMemo, useState } from "react";
 import { ActivityIndicator, TouchableOpacity, View } from "react-native";
@@ -9,6 +10,11 @@ import { EmptyState } from "../../components/empty-state";
 import { FormField } from "../../components/form-field";
 import { StackScreen as Screen } from "../../components/screen";
 import { SectionHeader } from "../../components/section-header";
+import {
+	createFoodSearchStore,
+	type FoodSearchSnapshot,
+	type FoodSearchStore,
+} from "../../food/food-search-store";
 import {
 	type CustomFood,
 	createFoodStore,
@@ -24,6 +30,7 @@ type FoodScreenProps = {
 		| "loadToday"
 		| "logFree"
 		| "logCustom"
+		| "logSearchResult"
 		| "repeatEntry"
 		| "saveCustom"
 		| "deleteCustom"
@@ -31,6 +38,7 @@ type FoodScreenProps = {
 		| "achieveGoal"
 		| "abandonGoal"
 	>;
+	searchStore?: Pick<FoodSearchStore, "loadCached" | "search">;
 };
 
 type AddMode = "custom" | "free" | null;
@@ -296,11 +304,21 @@ function CustomFoodEditor({
 	);
 }
 
-export function FoodScreen({ store }: FoodScreenProps) {
+export function FoodScreen({ store, searchStore }: FoodScreenProps) {
 	const food = useMemo(() => store ?? createFoodStore(), [store]);
+	const foodSearch = useMemo(
+		() => searchStore ?? createFoodSearchStore(),
+		[searchStore],
+	);
 	const [snapshot, setSnapshot] = useState<FoodDaySnapshot | null>(null);
+	const [searchSnapshot, setSearchSnapshot] =
+		useState<FoodSearchSnapshot | null>(null);
 	const [error, setError] = useState<string | null>(null);
 	const [busy, setBusy] = useState(false);
+	const [searchBusy, setSearchBusy] = useState(false);
+	const [searchQuery, setSearchQuery] = useState("");
+	const [selectedSearchRef, setSelectedSearchRef] = useState("");
+	const [searchServingId, setSearchServingId] = useState("");
 	const [mode, setMode] = useState<AddMode>(null);
 	const [customId, setCustomId] = useState("");
 	const [servingId, setServingId] = useState("");
@@ -323,14 +341,18 @@ export function FoodScreen({ store }: FoodScreenProps) {
 	const load = useCallback(async () => {
 		setError(null);
 		try {
-			const next = await food.loadToday();
+			const [next, cached] = await Promise.all([
+				food.loadToday(),
+				foodSearch.loadCached(),
+			]);
 			setSnapshot(next);
+			setSearchSnapshot((current) => current ?? cached);
 			setLocalDay((current) => current || next.localDay);
 			setTime((current) => current || next.defaultTime);
 		} catch (caught) {
 			setError(caught instanceof Error ? caught.message : String(caught));
 		}
-	}, [food]);
+	}, [food, foodSearch]);
 
 	useFocusEffect(useCallback(() => void load(), [load]));
 
@@ -369,6 +391,47 @@ export function FoodScreen({ store }: FoodScreenProps) {
 		setProtein("");
 		setCarbs("");
 		setFat("");
+	}
+
+	async function runSearch() {
+		if (searchBusy) return;
+		setSearchBusy(true);
+		setError(null);
+		try {
+			setSearchSnapshot(await foodSearch.search(searchQuery));
+			setSelectedSearchRef("");
+			setSearchServingId("");
+		} catch (caught) {
+			setError(caught instanceof Error ? caught.message : String(caught));
+		} finally {
+			setSearchBusy(false);
+		}
+	}
+
+	function selectSearchResult(result: FoodSearchResult) {
+		setSelectedSearchRef(result.ref);
+		setSearchServingId(result.servings[0]?.id ?? "");
+		setMode(null);
+	}
+
+	async function saveSearchResult() {
+		const result = searchSnapshot?.results.find(
+			(candidate) => candidate.ref === selectedSearchRef,
+		);
+		if (!result) return;
+		const savedDay = localDay;
+		const saved = await mutate(() =>
+			food.logSearchResult(result, searchServingId, Number(quantity), {
+				localDay,
+				time,
+			}),
+		);
+		if (!saved) return;
+		setSelectedSearchRef("");
+		setSearchServingId("");
+		setQuantity("1");
+		if (savedDay !== snapshot?.localDay)
+			router.push(`/food/${savedDay}` as Href);
 	}
 
 	async function saveEntry() {
@@ -421,6 +484,9 @@ export function FoodScreen({ store }: FoodScreenProps) {
 		({ consumable }) => consumable.id === customId,
 	)?.consumable;
 	const trackedMetrics = snapshot.metrics.filter((metric) => metric.tracked);
+	const selectedSearchResult = searchSnapshot?.results.find(
+		(result) => result.ref === selectedSearchRef,
+	);
 
 	return (
 		<Screen scroll padded gap="lg" keyboardShouldPersistTaps="handled">
@@ -536,6 +602,118 @@ export function FoodScreen({ store }: FoodScreenProps) {
 					/>
 				) : null}
 			</View>
+
+			<Card style={styles.section}>
+				<SectionHeader
+					title="Search foods"
+					eyebrow={
+						searchSnapshot?.fromCache && searchSnapshot.results.length > 0
+							? "SAVED FOR OFFLINE"
+							: undefined
+					}
+				/>
+				<FormField
+					label="Food search"
+					value={searchQuery}
+					onChangeText={setSearchQuery}
+					placeholder="Chicken thighs"
+					onSubmitEditing={() => void runSearch()}
+				/>
+				<Button
+					label="Search"
+					loading={searchBusy}
+					disabled={searchQuery.trim().length < 2}
+					onPress={() => void runSearch()}
+				/>
+				{searchSnapshot?.message ? (
+					<AppText color={searchSnapshot.offline ? "muted" : "subtle"}>
+						{searchSnapshot.message}
+					</AppText>
+				) : null}
+				{searchSnapshot?.results.map((result) => (
+					<Card key={result.ref} style={styles.searchResult}>
+						<View style={styles.grow}>
+							<AppText variant="label">{result.label}</AppText>
+							{result.brand ? (
+								<AppText variant="caption" color="muted">
+									{result.brand}
+								</AppText>
+							) : null}
+							<AppText variant="micro" color="subtle">
+								{result.source} · {result.licence}
+							</AppText>
+						</View>
+						<Button
+							label="Choose"
+							variant="secondary"
+							accessibilityLabel={`Choose ${result.label}`}
+							onPress={() => selectSearchResult(result)}
+						/>
+					</Card>
+				))}
+				{selectedSearchResult ? (
+					<View style={styles.section}>
+						<AppText variant="label">Serving</AppText>
+						<View style={styles.wrap}>
+							{selectedSearchResult.servings.map((serving) => (
+								<Button
+									key={serving.id}
+									label={serving.label}
+									variant={
+										searchServingId === serving.id ? "primary" : "secondary"
+									}
+									onPress={() => setSearchServingId(serving.id)}
+								/>
+							))}
+						</View>
+						<FormField
+							label="Number of servings"
+							value={quantity}
+							onChangeText={setQuantity}
+							keyboardType="decimal-pad"
+						/>
+						<View style={styles.actions}>
+							<FormField
+								label="Date"
+								value={localDay}
+								onChangeText={setLocalDay}
+								placeholder="YYYY-MM-DD"
+								containerStyle={styles.grow}
+							/>
+							<FormField
+								label="Time"
+								value={time}
+								onChangeText={setTime}
+								placeholder="HH:mm"
+								containerStyle={styles.grow}
+							/>
+						</View>
+						<View style={styles.actions}>
+							<Button
+								label="Cancel"
+								variant="text"
+								style={styles.grow}
+								onPress={() => setSelectedSearchRef("")}
+							/>
+							<Button
+								label="Save searched food"
+								loading={busy}
+								disabled={!searchServingId}
+								style={styles.grow}
+								onPress={() => void saveSearchResult()}
+							/>
+						</View>
+					</View>
+				) : null}
+				<TouchableOpacity
+					accessibilityRole="button"
+					onPress={() => router.push("/settings/licences" as Href)}
+				>
+					<AppText variant="caption" color="brand">
+						Food data from Open Food Facts under ODbL 1.0 · Licence details
+					</AppText>
+				</TouchableOpacity>
+			</Card>
 
 			<Card style={styles.section}>
 				<SectionHeader title="Log food" />
@@ -844,6 +1022,11 @@ const styles = StyleSheet.create((theme) => ({
 		flexDirection: "row",
 		alignItems: "center",
 		gap: theme.spacing.sm,
+	},
+	searchResult: {
+		flexDirection: "row",
+		alignItems: "center",
+		gap: theme.spacing.md,
 	},
 	grow: { flex: 1 },
 	entry: { gap: theme.spacing.xs },
