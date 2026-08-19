@@ -1,4 +1,4 @@
-import { router, useFocusEffect } from "expo-router";
+import { type Href, router, useFocusEffect } from "expo-router";
 import { useCallback, useMemo, useState } from "react";
 import { ActivityIndicator, TouchableOpacity, View } from "react-native";
 import { AppText } from "../../components/app-text";
@@ -67,10 +67,19 @@ export function TrendsScreen({ store }: TrendsScreenProps) {
 						onPress={() => router.push("/body")}
 					/>
 				</Card>
+				<Card style={styles.destinationCard}>
+					<SectionHeader title="Drinks" eyebrow="CONSUMPTION" />
+					<AppText color="muted">Log drinks and review daily totals.</AppText>
+					<Button
+						label="Open Drinks"
+						variant="secondary"
+						onPress={() => router.push("/drinks" as Href)}
+					/>
+				</Card>
 			</View>
 			<AppText color="muted">
-				Daily summaries; scored metrics use averages and measurements use the
-				last reading. Missing days stay as gaps.
+				Daily summaries; scored metrics use averages, body metrics use the last
+				reading, and consumption totals are summed. Missing days stay as gaps.
 			</AppText>
 			<View style={styles.periodRow}>
 				{TREND_PERIODS.map((option) => (
@@ -130,8 +139,12 @@ export function TrendsScreen({ store }: TrendsScreenProps) {
 
 const styles = StyleSheet.create((theme) => ({
 	content: { gap: theme.spacing.lg },
-	destinationRow: { flexDirection: "row", gap: theme.spacing.md },
-	destinationCard: { flex: 1, gap: theme.spacing.sm },
+	destinationRow: {
+		flexDirection: "row",
+		flexWrap: "wrap",
+		gap: theme.spacing.md,
+	},
+	destinationCard: { flexGrow: 1, minWidth: "44%", gap: theme.spacing.sm },
 	periodRow: { flexDirection: "row", gap: theme.spacing.sm },
 	periodButton: {
 		paddingHorizontal: theme.spacing.lg,

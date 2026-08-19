@@ -1,4 +1,5 @@
 import {
+	ConsumptionEntryRepository,
 	DailyMetricRepository,
 	getDb,
 	ObservationRepository,
@@ -9,7 +10,7 @@ import type { DisplayUnit } from "@bro/domain";
 import {
 	listMeasurements,
 	listScoredMetrics,
-	listUserEnterableMeasurements,
+	DEFAULT_TRACKED_METRICS,
 	type MeasurementMetricDefinition,
 	type ScoredMetricDefinition,
 } from "@bro/domain/metric-registry";
@@ -19,7 +20,6 @@ import {
 	formatMetricValue,
 	metricDisplayUnit,
 } from "../health/metric-presentation";
-import { isHealthMetricSlug } from "../health/policy";
 import { resolveMetricObservations } from "../health/resolved-series";
 import {
 	buildTrendSeries,
@@ -46,6 +46,7 @@ export type TrendsSnapshot = {
 export class TrendsStore {
 	private readonly observations: ObservationRepository;
 	private readonly dailyMetrics: DailyMetricRepository;
+	private readonly consumptionEntries: ConsumptionEntryRepository;
 	private readonly trackedMetrics: TrackedMetricsRepository;
 	private readonly unitPreferences: UnitPreferenceRepository;
 
@@ -62,6 +63,7 @@ export class TrendsStore {
 	) {
 		this.observations = new ObservationRepository(db);
 		this.dailyMetrics = new DailyMetricRepository(db);
+		this.consumptionEntries = new ConsumptionEntryRepository(db);
 		this.trackedMetrics = new TrackedMetricsRepository(db);
 		this.unitPreferences = new UnitPreferenceRepository(db);
 	}
@@ -69,17 +71,18 @@ export class TrendsStore {
 	async load(period: TrendPeriod): Promise<TrendsSnapshot> {
 		const throughLocalDay = localDayOf(this.now());
 		const range = trendRange(throughLocalDay, period);
-		const measurementDefaults = listUserEnterableMeasurements().map(
-			(metric) => ({
-				metricSlug: metric.slug,
-				position: metric.defaultPosition,
-				enabled: false,
-			}),
+		const measurementSlugs = new Set<string>(
+			listMeasurements().map((metric) => metric.slug),
 		);
-		const [overlays, preferences, dailyMetrics] = await Promise.all([
+		const measurementDefaults = DEFAULT_TRACKED_METRICS.filter((metric) =>
+			measurementSlugs.has(metric.metricSlug),
+		);
+		const [overlays, preferences, dailyMetrics, consumptionEntries] =
+			await Promise.all([
 			this.trackedMetrics.listResolved(measurementDefaults),
 			this.unitPreferences.resolveLatestPerDimension(),
 			this.dailyMetrics.listAll(),
+			this.consumptionEntries.listAll(),
 		]);
 		const overlayBySlug = new Map(
 			overlays.map((overlay) => [overlay.metricSlug, overlay]),
@@ -131,8 +134,13 @@ export class TrendsStore {
 			metrics: metrics.map(({ metric, label, displayUnit }, index) => {
 				const metricRows = rows[index] ?? [];
 				const resolvedRows =
-					metric.kind === "measurement" && isHealthMetricSlug(metric.slug)
-						? resolveMetricObservations(metric.slug, metricRows, dailyMetrics)
+					metric.kind === "measurement"
+						? resolveMetricObservations(
+								metric.slug,
+								metricRows,
+								dailyMetrics,
+								consumptionEntries,
+							)
 						: metricRows;
 				const series = buildTrendSeries(
 					resolvedRows,

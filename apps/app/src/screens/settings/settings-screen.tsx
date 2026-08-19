@@ -93,6 +93,12 @@ export function SettingsScreen({
 		<Screen scroll padded gap="md">
 			<HealthSettingsEntry availability={healthAvailability} />
 			<ListRow
+				title="Drinks"
+				detail="Choose drink totals and the units they use."
+				accessibilityLabel="Manage drink logging"
+				onPress={() => router.push("/settings/drinks" as Href)}
+			/>
+			<ListRow
 				title="Habits"
 				detail="Choose routines, days, and your own habits."
 				accessibilityLabel="Manage habits"

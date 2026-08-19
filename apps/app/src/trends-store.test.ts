@@ -169,4 +169,53 @@ describe("trends store", () => {
 			),
 		).toMatchObject({ latestFormatted: "61.5 bpm" });
 	});
+
+	it("adds opted-in consumption totals without writing observations", async () => {
+		const now = new Date("2026-08-19T22:00:00.000Z");
+		await new databaseApp.TrackedMetricsRepository(db).configure(
+			"alcohol_intake",
+			6,
+			true,
+		);
+		await new databaseApp.UnitPreferenceRepository(db).set(
+			"alcohol",
+			"uk_unit",
+		);
+		const entries = new databaseApp.ConsumptionEntryRepository(db);
+		for (const [id, localDay, ethanolKg] of [
+			["first", "2026-08-18", 0.01],
+			["second", "2026-08-19", 0.02],
+			["third", "2026-08-19", 0.005],
+		] as const) {
+			await entries.create({
+				kind: "drink",
+				catalogueRef: `drink:${id}`,
+				label: id,
+				servingLabel: "serving",
+				quantity: 1,
+				volumeL: 0.25,
+				ethanolKg,
+				caffeineKg: 0,
+				energyKcal: 100,
+				occurredAt: Date.parse(`${localDay}T20:00:00.000Z`),
+				localDay,
+				tzOffsetMinutes: 0,
+			});
+		}
+
+		const alcohol = (
+			await new TrendsStore(
+				db,
+				() => now,
+				() => "en-GB",
+			).load(7)
+		).metrics.find(({ metric }) => metric.slug === "alcohol_intake");
+		expect(alcohol).toMatchObject({ latestFormatted: "3.2 units" });
+		expect(
+			alcohol?.series.points
+				.filter((point) => point.value !== null)
+				.map((point) => point.value),
+		).toEqual([0.01, 0.025]);
+		expect(await new databaseApp.ObservationRepository(db).listAll()).toEqual([]);
+	});
 });
