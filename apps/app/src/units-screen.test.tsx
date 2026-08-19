@@ -3,7 +3,7 @@ import { UnitsScreen } from "./screens/settings/units-screen";
 import type { UnitSettingsSnapshot } from "./units/unit-settings-store";
 
 jest.mock("expo-router", () => ({
-	useFocusEffect: (effect: () => void | (() => void)) => {
+	useFocusEffect: (effect: () => undefined | (() => void)) => {
 		const React = jest.requireActual("react");
 		React.useEffect(effect, [effect]);
 	},

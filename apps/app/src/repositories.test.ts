@@ -81,7 +81,10 @@ describe("product repositories", () => {
 		let nextId = 0;
 		const repository = new databaseApp.ObservationRepository(db, {
 			now: () => now,
-			createId: () => `observation-${(nextId += 1)}`,
+			createId: () => {
+				nextId += 1;
+				return `observation-${nextId}`;
+			},
 		});
 		const first = await repository.create(
 			observation({ localDay: "2026-08-13" }),
@@ -126,7 +129,10 @@ describe("product repositories", () => {
 	it("hard-deletes factor taps without touching scored observations", async () => {
 		let nextId = 0;
 		const repository = new databaseApp.ObservationRepository(db, {
-			createId: () => `observation-${(nextId += 1)}`,
+			createId: () => {
+				nextId += 1;
+				return `observation-${nextId}`;
+			},
 		});
 		await repository.create(
 			observation({
@@ -157,7 +163,10 @@ describe("product repositories", () => {
 		let nextId = 0;
 		const repository = new databaseApp.DayNoteRepository(db, {
 			now: () => now,
-			createId: () => `note-${(nextId += 1)}`,
+			createId: () => {
+				nextId += 1;
+				return `note-${nextId}`;
+			},
 		});
 		const first = await repository.upsertForDay("2026-08-14", "First");
 

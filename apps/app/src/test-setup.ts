@@ -9,7 +9,8 @@ let mockRandomByte = 0;
 jest.mock("expo-crypto", () => ({
 	getRandomBytes: jest.fn((length: number) => {
 		const bytes = new Uint8Array(length);
-		bytes.fill((mockRandomByte = (mockRandomByte + 1) % 256));
+		mockRandomByte = (mockRandomByte + 1) % 256;
+		bytes.fill(mockRandomByte);
 		return bytes;
 	}),
 }));

@@ -7,7 +7,7 @@ const mockPush = jest.fn();
 
 jest.mock("expo-router", () => ({
 	router: { push: mockPush, replace: jest.fn() },
-	useFocusEffect: (effect: () => void | (() => void)) => {
+	useFocusEffect: (effect: () => undefined | (() => void)) => {
 		const React = jest.requireActual("react");
 		React.useEffect(effect, [effect]);
 	},

@@ -3,7 +3,7 @@ import { fireEvent, render, waitFor } from "@testing-library/react-native";
 import { RemindersScreen } from "./screens/settings/reminders-screen";
 
 jest.mock("expo-router", () => ({
-	useFocusEffect: (effect: () => void | (() => void)) => {
+	useFocusEffect: (effect: () => undefined | (() => void)) => {
 		const React = jest.requireActual("react");
 		React.useEffect(effect, [effect]);
 	},

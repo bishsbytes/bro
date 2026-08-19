@@ -51,7 +51,7 @@ export function HealthSettingsScreen({ store }: HealthSettingsScreenProps) {
 
 	async function run(
 		action: Exclude<typeof busy, null>,
-		work: () => Promise<HealthSettingsSnapshot | void>,
+		work: () => Promise<HealthSettingsSnapshot | undefined>,
 	) {
 		if (busy) return;
 		setBusy(action);

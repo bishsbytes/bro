@@ -39,7 +39,7 @@ function importedObservation(
 
 function userObservation(day: ResolvedMetricDay): ResolvedMetricObservation {
 	const selected = day.selected;
-	if (!selected || selected.kind !== "user") {
+	if (selected?.kind !== "user") {
 		throw new TypeError("A resolved user day must contain user observations.");
 	}
 	const metric = resolveMetric(day.metricSlug);
