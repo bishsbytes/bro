@@ -42,4 +42,13 @@ CREATE INDEX IF NOT EXISTS \`idx_raw_samples_metric_day\` ON \`raw_samples\` (\`
 		id: "L002_raw_sample_origin",
 		sql: "ALTER TABLE `raw_samples` ADD COLUMN `origin` text;",
 	},
+	{
+		id: "L003_food_cache",
+		sql: `CREATE TABLE IF NOT EXISTS \`food_cache\` (
+	\`ref\` text PRIMARY KEY NOT NULL,
+	\`payload\` text NOT NULL,
+	\`query\` text,
+	\`fetched_at\` integer NOT NULL
+);`,
+	},
 ];

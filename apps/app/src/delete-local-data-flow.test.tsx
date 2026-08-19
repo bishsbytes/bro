@@ -97,6 +97,7 @@ describe("delete local data", () => {
 		);
 		const challengeProgress = new databaseApp.ChallengeProgressRepository(db);
 		const consumptionEntries = new databaseApp.ConsumptionEntryRepository(db);
+		const customConsumables = new databaseApp.CustomConsumableRepository(db);
 		await observations.create({
 			metricSlug: "mood",
 			value: 4,
@@ -180,10 +181,43 @@ describe("delete local data", () => {
 			localDay: "2026-08-14",
 			tzOffsetMinutes: -60,
 		});
+		const recipe = await customConsumables.create(
+			{
+				kind: "food",
+				label: "Traybake",
+				brand: null,
+				isRecipe: true,
+				servings: [
+					{
+						id: "plate",
+						label: "1 plate",
+						volumeL: null,
+						ethanolKg: null,
+						caffeineKg: null,
+						energyKcal: 500,
+						proteinG: 40,
+						carbsG: 50,
+						fatG: 20,
+					},
+				],
+			},
+			[
+				{
+					position: 0,
+					label: "Chicken",
+					quantity: 2,
+					energyKcal: 500,
+					proteinG: 40,
+					carbsG: 50,
+					fatG: 20,
+				},
+			],
+		);
 		const healthConnections = new databaseApp.HealthConnectionRepository(
 			localDb,
 		);
 		const rawSamples = new databaseApp.RawSampleRepository(localDb);
+		const foodCache = new databaseApp.FoodCacheRepository(localDb);
 		await healthConnections.connect("health_connect", "weight");
 		await rawSamples.upsert({
 			metricSlug: "weight",
@@ -194,6 +228,11 @@ describe("delete local data", () => {
 			source: "health_connect",
 			sourceRecordId: "scale-1",
 		});
+		await foodCache.upsert({
+			ref: "off:delete-me",
+			query: "traybake",
+			payload: { ref: "off:delete-me", label: "Traybake" },
+		});
 		(
 			Notifications.getAllScheduledNotificationsAsync as jest.Mock
 		).mockResolvedValue([
@@ -202,6 +241,9 @@ describe("delete local data", () => {
 		]);
 		const markerBefore = await db.getFirstAsync<{ count: number }>(
 			"SELECT COUNT(*) AS count FROM __app_migrations",
+		);
+		const localMarkerBefore = await localDb.getFirstAsync<{ count: number }>(
+			"SELECT COUNT(*) AS count FROM __local_migrations",
 		);
 		const transaction = jest.spyOn(db, "withTransactionAsync");
 		const localTransaction = jest.spyOn(localDb, "withTransactionAsync");
@@ -218,6 +260,9 @@ describe("delete local data", () => {
 		expect(await notes.listAll()).toHaveLength(1);
 		expect(await trackedMetrics.listAll()).toHaveLength(1);
 		expect(await consumptionEntries.listAll()).toHaveLength(1);
+		expect(await customConsumables.listAll()).toHaveLength(1);
+		expect(await customConsumables.listComponents(recipe.id)).toHaveLength(1);
+		expect(await foodCache.listRecent()).toHaveLength(1);
 
 		await fireEvent.press(view.getByText("Cancel"));
 		expect(view.queryByText(DELETE_COPY)).toBeNull();
@@ -240,10 +285,13 @@ describe("delete local data", () => {
 		expect(await challengeEnrolments.listAll()).toEqual([]);
 		expect(await challengeProgress.listByDay("2026-08-14")).toEqual([]);
 		expect(await consumptionEntries.listAll()).toEqual([]);
+		expect(await customConsumables.listAll()).toEqual([]);
+		expect(await customConsumables.listComponents(recipe.id)).toEqual([]);
 		expect(await healthConnections.list()).toEqual([]);
 		expect(await rawSamples.listByMetricDay("weight", "2026-08-14")).toEqual(
 			[],
 		);
+		expect(await foodCache.listRecent()).toEqual([]);
 		expect(transaction).toHaveBeenCalledTimes(1);
 		expect(localTransaction).toHaveBeenCalledTimes(1);
 		const cancelMock =
@@ -266,7 +314,7 @@ describe("delete local data", () => {
 			await localDb.getFirstAsync<{ count: number }>(
 				"SELECT COUNT(*) AS count FROM __local_migrations",
 			),
-		).toEqual({ count: 2 });
+		).toEqual(localMarkerBefore);
 		expect(databaseApp.readDeviceSettings()).toEqual(settingsBefore);
 		expect(mockedAuthClient.signOut).not.toHaveBeenCalled();
 		expect(mockedAuthClient.deleteUser).not.toHaveBeenCalled();

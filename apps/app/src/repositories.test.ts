@@ -203,6 +203,26 @@ describe("product repositories", () => {
 				localDay: "2026-08-15",
 			}),
 		);
+		now = 2_500;
+		const chicken = await repository.create(
+			consumptionEntry({
+				kind: "food",
+				catalogueRef: null,
+				consumableRef: "off:123456",
+				label: "Chicken thighs",
+				servingLabel: "2 thighs",
+				quantity: 2,
+				volumeL: null,
+				ethanolKg: null,
+				caffeineKg: null,
+				energyKcal: 436,
+				proteinG: 52,
+				carbsG: 0,
+				fatG: null,
+				occurredAt: Date.parse("2026-08-15T12:00:00.000Z"),
+				localDay: "2026-08-15",
+			}),
+		);
 
 		expect(lager).toMatchObject({
 			id: "consumption-1",
@@ -213,6 +233,15 @@ describe("product repositories", () => {
 		});
 		await expect(repository.listByDay("2026-08-14")).resolves.toEqual([lager]);
 		await expect(repository.listRecent(1)).resolves.toEqual([coffee]);
+		await expect(repository.listRecentByKind("food", 1)).resolves.toEqual([
+			chicken,
+		]);
+		expect(chicken).toMatchObject({
+			consumableRef: "off:123456",
+			proteinG: 52,
+			carbsG: 0,
+			fatG: null,
+		});
 
 		now = 3_000;
 		const corrected = await repository.update(lager.id, {
@@ -236,13 +265,103 @@ describe("product repositories", () => {
 		});
 		await expect(repository.delete(lager.id)).resolves.toBe(true);
 		await expect(repository.delete(lager.id)).resolves.toBe(false);
-		await expect(repository.listAll()).resolves.toEqual([coffee]);
+		await expect(repository.listAll()).resolves.toEqual([chicken, coffee]);
 		await expect(
 			repository.create(consumptionEntry({ quantity: 0 })),
 		).rejects.toThrow("quantity must be a positive finite value");
 		await expect(repository.listByDay("2026-02-30")).rejects.toThrow(
 			"real YYYY-MM-DD date",
 		);
+	});
+
+	it("stores custom foods and edits recipe components without rewriting snapshots", async () => {
+		let now = 1_000;
+		let nextId = 0;
+		const repository = new databaseApp.CustomConsumableRepository(db, {
+			now: () => now,
+			createId: () => `custom-${++nextId}`,
+		});
+		const recipe = await repository.create(
+			{
+				kind: "food",
+				label: "  Chicken traybake  ",
+				brand: null,
+				isRecipe: true,
+				servings: [
+					{
+						id: "plate",
+						label: "1 plate",
+						volumeL: null,
+						ethanolKg: null,
+						caffeineKg: null,
+						energyKcal: 610,
+						proteinG: 48,
+						carbsG: 54,
+						fatG: 22,
+					},
+				],
+			},
+			[
+				{
+					position: 0,
+					label: "Chicken thighs",
+					quantity: 2,
+					energyKcal: 436,
+					proteinG: 52,
+					carbsG: 0,
+					fatG: 24,
+				},
+				{
+					position: 1,
+					label: "Potatoes",
+					quantity: 250,
+					energyKcal: 174,
+					proteinG: 4,
+					carbsG: 54,
+					fatG: 0,
+				},
+			],
+		);
+
+		expect(recipe).toMatchObject({
+			id: "custom-1",
+			label: "Chicken traybake",
+			isRecipe: true,
+		});
+		const originalComponents = await repository.listComponents(recipe.id);
+		expect(originalComponents.map(({ id }) => id)).toEqual([
+			"custom-2",
+			"custom-3",
+		]);
+
+		now = 2_000;
+		await expect(
+			repository.updateComponent(originalComponents[1].id, {
+				position: 1,
+				label: "Roast potatoes",
+				quantity: 300,
+				energyKcal: 209,
+				proteinG: 5,
+				carbsG: 65,
+				fatG: 0,
+			}),
+		).resolves.toMatchObject({
+			id: "custom-3",
+			label: "Roast potatoes",
+			updatedAt: 2_000,
+		});
+		expect(await repository.findById(recipe.id)).toMatchObject({
+			createdAt: 1_000,
+			updatedAt: 2_000,
+		});
+		expect(originalComponents[1]).toMatchObject({
+			label: "Potatoes",
+			energyKcal: 174,
+		});
+
+		await expect(repository.delete(recipe.id)).resolves.toBe(true);
+		await expect(repository.listComponents(recipe.id)).resolves.toEqual([]);
+		await expect(repository.findById(recipe.id)).resolves.toBeNull();
 	});
 
 	it("upserts the UI note while retaining manufactured duplicates", async () => {

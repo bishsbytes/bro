@@ -215,6 +215,10 @@ export const consumptionEntries = sqliteTable(
 		ethanolKg: real("ethanol_kg"),
 		caffeineKg: real("caffeine_kg"),
 		energyKcal: real("energy_kcal"),
+		proteinG: real("protein_g"),
+		carbsG: real("carbs_g"),
+		fatG: real("fat_g"),
+		consumableRef: text("consumable_ref"),
 		occurredAt: integer("occurred_at").notNull(),
 		localDay: text("local_day").notNull(),
 		tzOffsetMinutes: integer("tz_offset_minutes").notNull(),
@@ -224,5 +228,42 @@ export const consumptionEntries = sqliteTable(
 	(table) => [
 		index("idx_consumption_entries_day").on(table.localDay),
 		index("idx_consumption_entries_kind_day").on(table.kind, table.localDay),
+	],
+);
+
+export const customConsumables = sqliteTable(
+	PRODUCT_TABLE_NAMES.customConsumables,
+	{
+		id: text("id").primaryKey(),
+		kind: text("kind").notNull(),
+		label: text("label").notNull(),
+		brand: text("brand"),
+		isRecipe: integer("is_recipe").notNull(),
+		servings: text("servings").notNull(),
+		createdAt: integer("created_at").notNull(),
+		updatedAt: integer("updated_at").notNull(),
+	},
+);
+
+export const customConsumableComponents = sqliteTable(
+	PRODUCT_TABLE_NAMES.customConsumableComponents,
+	{
+		id: text("id").primaryKey(),
+		consumableId: text("consumable_id").notNull(),
+		position: integer("position").notNull(),
+		label: text("label").notNull(),
+		quantity: real("quantity").notNull(),
+		energyKcal: real("energy_kcal"),
+		proteinG: real("protein_g"),
+		carbsG: real("carbs_g"),
+		fatG: real("fat_g"),
+		createdAt: integer("created_at").notNull(),
+		updatedAt: integer("updated_at").notNull(),
+	},
+	(table) => [
+		index("idx_custom_consumable_components_parent").on(
+			table.consumableId,
+			table.position,
+		),
 	],
 );

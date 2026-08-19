@@ -65,6 +65,17 @@ export {
 	type UpdateConsumptionEntry,
 } from "./repositories/consumption-entry-repository";
 export {
+	type CreateCustomConsumable,
+	type CreateCustomConsumableComponent,
+	type CustomConsumable,
+	type CustomConsumableComponent,
+	type CustomConsumableKind,
+	CustomConsumableRepository,
+	type CustomConsumableServing,
+	type UpdateCustomConsumable,
+	type UpdateCustomConsumableComponent,
+} from "./repositories/custom-consumable-repository";
+export {
 	type DailyMetric,
 	DailyMetricRepository,
 	type UpsertDailyMetric,
@@ -79,6 +90,11 @@ export {
 	type GoalDirection,
 	GoalRepository,
 } from "./repositories/goal-repository";
+export {
+	type FoodCacheEntry,
+	FoodCacheRepository,
+	type UpsertFoodCacheEntry,
+} from "./repositories/food-cache-repository";
 export {
 	type HabitCompletion,
 	HabitCompletionRepository,

@@ -54,3 +54,10 @@ export const rawSamples = sqliteTable(
 		index("idx_raw_samples_metric_day").on(table.metricSlug, table.localDay),
 	],
 );
+
+export const foodCache = sqliteTable(LOCAL_TABLE_NAMES.foodCache, {
+	ref: text("ref").primaryKey(),
+	payload: text("payload").notNull(),
+	query: text("query"),
+	fetchedAt: integer("fetched_at").notNull(),
+});

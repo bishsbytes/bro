@@ -2,6 +2,7 @@
 export const LOCAL_TABLE_NAMES = {
 	healthConnections: "health_connections",
 	rawSamples: "raw_samples",
+	foodCache: "food_cache",
 } as const;
 
 export type LocalTableName =
