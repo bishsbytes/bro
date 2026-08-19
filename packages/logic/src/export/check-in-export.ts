@@ -182,6 +182,7 @@ function copyHabit(habit: Habit): Habit {
 		metricSlug: habit.metricSlug,
 		direction: habit.direction,
 		targetValue: habit.targetValue,
+		areaSlug: habit.areaSlug,
 		daysOfWeek: habit.daysOfWeek,
 		position: habit.position,
 		addedAt: habit.addedAt,
@@ -309,9 +310,19 @@ export function buildCheckInExport(
 		registryBySlug.get(slug)?.sensitive !== true;
 	const includeHabit = (habit: Habit): boolean => {
 		if (!options.excludeSensitiveMetrics) return true;
+		// Custom habits sit out even with a stored non-sensitive area: the
+		// user-authored label is itself an unclassifiable disclosure.
 		if (habit.slug.startsWith("habit:custom:")) return false;
-		if (resolveHabit(habit.slug)?.sensitive === true) return false;
-		return habit.metricSlug === null || includeSlug(habit.metricSlug);
+		const template = resolveHabit(habit.slug);
+		if (template?.sensitive === true) return false;
+		if (habit.metricSlug !== null && !includeSlug(habit.metricSlug)) {
+			return false;
+		}
+		// Fail closed like challenges: a habit whose area sensitivity is
+		// unknowable (retired template and no resolvable snapshot) sits out.
+		const areaSlug = habit.areaSlug ?? template?.areaSlug ?? null;
+		const area = areaSlug === null ? undefined : lifeAreaBySlug.get(areaSlug);
+		return area !== undefined && area.sensitive !== true;
 	};
 	const includeChallenge = (enrolment: ChallengeEnrolment): boolean => {
 		if (!options.excludeSensitiveMetrics) return true;

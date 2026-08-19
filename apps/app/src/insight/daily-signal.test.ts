@@ -39,7 +39,7 @@ describe("daily insight signal", () => {
 
 	afterAll(() => mockSqlite.cleanup());
 
-	it("resolves scored, imported, and consumption signals with derived factor presence", async () => {
+	it("resolves scored, imported, factor, and consumption-derived signals", async () => {
 		const observations = new databaseApp.ObservationRepository(db);
 		const daily = new databaseApp.DailyMetricRepository(db);
 		const consumption = new databaseApp.ConsumptionEntryRepository(db);
@@ -131,22 +131,26 @@ describe("daily insight signal", () => {
 		};
 
 		expect(readDailySignal("mood", base.localDay, source)?.value).toBe(3);
-		expect(readDailySignal("alcohol", base.localDay, source)?.value).toBe(1);
 		expect(
 			readDailySignal("alcohol_intake", base.localDay, source)?.value,
 		).toBe(0.020_181_999);
-		expect(readDailySignal("caffeine", "2026-08-15", source)?.value).toBe(1);
 		expect(
 			readDailySignal("caffeine_intake", "2026-08-15", source)?.value,
 		).toBe(0.000_095);
+		// A check-in day with no entries reads as zero intake; a day without a
+		// check-in stays unknown rather than claiming abstinence.
+		expect(readDailySignal("alcohol_intake", "2026-08-16", source)?.value).toBe(
+			0,
+		);
+		expect(readDailySignal("alcohol_intake", "2026-08-17", source)).toBeNull();
 		expect(
-			readDailySignal("alcohol", "2026-08-16", {
+			readDailySignal("training", "2026-08-16", {
 				...source,
 				factorActive: () => false,
 			}),
 		).toBeNull();
-		expect(readDailySignal("alcohol", "2026-08-16", source)?.value).toBe(0);
-		expect(readDailySignal("alcohol", "2026-08-17", source)).toBeNull();
+		expect(readDailySignal("training", "2026-08-16", source)?.value).toBe(0);
+		expect(readDailySignal("training", "2026-08-17", source)).toBeNull();
 		expect(
 			readDailySignal("sleep_duration", base.localDay, source)?.value,
 		).toBe(25_200);

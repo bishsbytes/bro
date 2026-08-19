@@ -1,6 +1,9 @@
 import type { HabitDirection } from "../tracking";
 import type { LifeAreaSlug } from "./life-area-catalogue";
-import type { ImportedOnlyMeasurementSlug } from "./metric-registry";
+import type {
+	ConsumptionDerivedMeasurementSlug,
+	ImportedOnlyMeasurementSlug,
+} from "./metric-registry";
 
 export type { HabitDirection } from "../tracking";
 
@@ -23,7 +26,7 @@ export type ManualHabitTemplate = HabitTemplateBase & {
 
 export type MetricHabitTemplate = HabitTemplateBase & {
 	kind: "metric";
-	metricSlug: ImportedOnlyMeasurementSlug;
+	metricSlug: ImportedOnlyMeasurementSlug | ConsumptionDerivedMeasurementSlug;
 	direction: HabitDirection;
 	defaultTargetValue: number;
 };
@@ -71,11 +74,12 @@ export const HABIT_CATALOGUE = [
 	{
 		slug: "habit:alcohol-free",
 		label: "Have an alcohol-free day",
-		description: "Deliberately confirm each alcohol-free weekday.",
-		kind: "manual",
-		metricSlug: null,
-		direction: null,
-		defaultTargetValue: null,
+		description:
+			"Counts automatically from your drink log: a day with no alcohol logged is alcohol-free.",
+		kind: "metric",
+		metricSlug: "alcohol_intake",
+		direction: "at_most",
+		defaultTargetValue: 0,
 		defaultDaysOfWeek: WEEKDAYS,
 		areaSlug: "wheel:sobriety",
 		sensitive: true,
@@ -225,6 +229,34 @@ export const HABIT_CATALOGUE = [
 		areaSlug: "wheel:fun",
 		sensitive: false,
 		defaultPosition: 13,
+	},
+	{
+		slug: "habit:quiet-reflection",
+		label: "Take a quiet moment",
+		description:
+			"Spend a few minutes in prayer, contemplation, or simple stillness.",
+		kind: "manual",
+		metricSlug: null,
+		direction: null,
+		defaultTargetValue: null,
+		defaultDaysOfWeek: EVERY_DAY,
+		areaSlug: "wheel:faith",
+		sensitive: true,
+		defaultPosition: 14,
+	},
+	{
+		slug: "habit:fatherhood-moment",
+		label: "Be present as a dad",
+		description:
+			"Give your child a stretch of full attention and let them lead it.",
+		kind: "manual",
+		metricSlug: null,
+		direction: null,
+		defaultTargetValue: null,
+		defaultDaysOfWeek: EVERY_DAY,
+		areaSlug: "wheel:fatherhood",
+		sensitive: false,
+		defaultPosition: 15,
 	},
 ] as const satisfies readonly HabitTemplate[];
 

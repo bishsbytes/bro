@@ -1,5 +1,5 @@
 import type { Habit } from "@bro/database-app";
-import { isMetricHabitComplete } from "./completion";
+import { habitMetricDayValue, isMetricHabitComplete } from "./completion";
 
 function metricHabit(overrides: Partial<Habit> = {}): Habit {
 	return {
@@ -10,6 +10,7 @@ function metricHabit(overrides: Partial<Habit> = {}): Habit {
 		metricSlug: "steps",
 		direction: "at_least",
 		targetValue: 10_000,
+		areaSlug: null,
 		daysOfWeek: 0b111_1111,
 		position: 0,
 		addedAt: 1,
@@ -40,6 +41,38 @@ describe("derived metric habit completion", () => {
 		const afterImport = { metricSlug: "steps" as const, value: 10_012 };
 		expect(isMetricHabitComplete(habit, beforeImport)).toBe(false);
 		expect(isMetricHabitComplete(habit, afterImport)).toBe(true);
+	});
+
+	it("reads an unlogged day as zero only for consumption ceilings", () => {
+		const alcoholFree = metricHabit({
+			slug: "habit:alcohol-free",
+			metricSlug: "alcohol_intake",
+			direction: "at_most",
+			targetValue: 0,
+		});
+		expect(habitMetricDayValue(alcoholFree, null)).toBe(0);
+		expect(habitMetricDayValue(alcoholFree, 0.02)).toBe(0.02);
+		expect(
+			isMetricHabitComplete(alcoholFree, {
+				metricSlug: "alcohol_intake",
+				value: habitMetricDayValue(alcoholFree, null),
+			}),
+		).toBe(true);
+
+		// A consumption floor must never succeed on silence…
+		const fluidFloor = metricHabit({
+			metricSlug: "fluid_intake",
+			direction: "at_least",
+			targetValue: 2,
+		});
+		expect(habitMetricDayValue(fluidFloor, null)).toBeNull();
+		// …and an imported-metric ceiling keeps honest missing-device-data days.
+		const heartCeiling = metricHabit({
+			metricSlug: "resting_heart_rate",
+			direction: "at_most",
+			targetValue: 60,
+		});
+		expect(habitMetricDayValue(heartCeiling, null)).toBeNull();
 	});
 
 	it("supports at-most targets and rejects mismatched series", () => {

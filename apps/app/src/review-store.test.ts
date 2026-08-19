@@ -1,4 +1,5 @@
 import type * as DatabaseApp from "@bro/database-app";
+import { KILOGRAMS_ETHANOL_PER_UK_UNIT } from "@bro/domain";
 import type { SQLiteDatabase } from "expo-sqlite";
 import { createNodeSqliteMock } from "./test-support/node-sqlite";
 
@@ -271,6 +272,99 @@ describe("review store", () => {
 			goal: { id: decreasing.id },
 			status: "abandoned",
 		});
+	});
+
+	it("presents body and consumption goals on the overview in their own units", async () => {
+		const now = new Date("2026-08-14T12:00:00.000Z");
+		const store = new ReviewStore(
+			db,
+			() => now,
+			() => "en-GB",
+		);
+		await new databaseApp.UnitPreferenceRepository(db).set("mass", "kg");
+		await new databaseApp.UnitPreferenceRepository(db).set(
+			"alcohol",
+			"uk_unit",
+		);
+
+		const observations = new databaseApp.ObservationRepository(db);
+		const observationBase = {
+			scaleMin: null,
+			scaleMax: null,
+			tzOffsetMinutes: 0,
+			source: "user" as const,
+			sourceRecordId: null,
+			assessmentId: null,
+		};
+		await observations.create({
+			...observationBase,
+			metricSlug: "weight",
+			value: 85,
+			observedAt: Date.parse("2026-08-01T09:00:00.000Z"),
+			localDay: "2026-08-01",
+		});
+		const goals = new databaseApp.GoalRepository(db);
+		const weightGoal = await goals.create({
+			metricSlug: "weight",
+			direction: "decrease",
+			targetValue: 80,
+			targetDate: null,
+			startedAt: Date.parse("2026-08-02T09:00:00.000Z"),
+		});
+		await observations.create({
+			...observationBase,
+			metricSlug: "weight",
+			value: 82,
+			observedAt: Date.parse("2026-08-10T09:00:00.000Z"),
+			localDay: "2026-08-10",
+		});
+
+		const alcoholGoal = await goals.create({
+			metricSlug: "alcohol_intake",
+			direction: "decrease",
+			targetValue: 2 * KILOGRAMS_ETHANOL_PER_UK_UNIT,
+			targetDate: null,
+			startedAt: Date.parse("2026-08-02T09:00:00.000Z"),
+		});
+		await new databaseApp.ConsumptionEntryRepository(db).create({
+			kind: "drink",
+			catalogueRef: "drink:lager",
+			label: "Lager",
+			servingLabel: "pint",
+			quantity: 1,
+			volumeL: 0.568_261_25,
+			ethanolKg: 0.020_181_999,
+			caffeineKg: 0,
+			energyKcal: 227,
+			occurredAt: Date.parse("2026-08-12T18:00:00.000Z"),
+			localDay: "2026-08-12",
+			tzOffsetMinutes: 0,
+		});
+
+		const overview = await store.loadOverview();
+		const weight = overview.goals.find(
+			(progress) => progress.goal.id === weightGoal.id,
+		);
+		// The regression this guards: every goal used to render as "X/10".
+		expect(weight).toMatchObject({
+			label: "Weight",
+			startValue: 85,
+			currentValue: 82,
+			progressPercent: 60,
+			targetReached: false,
+		});
+		expect(weight?.targetFormatted).toMatch(/kg$/);
+		expect(weight?.currentFormatted).toMatch(/kg$/);
+
+		const alcohol = overview.goals.find(
+			(progress) => progress.goal.id === alcoholGoal.id,
+		);
+		// Consumption goals live in consumption_entries, not observations; the
+		// overview used to show them with no current value at all.
+		expect(alcohol?.label).toBe("Alcohol");
+		expect(alcohol?.currentValue).toBeCloseTo(0.020_181_999 / 7, 12);
+		expect(alcohol?.currentFormatted).toMatch(/units$/);
+		expect(alcohol?.targetReached).toBe(true);
 	});
 
 	it("only creates goals from a saved focus area", async () => {

@@ -47,6 +47,7 @@ describe("habits store", () => {
 			db,
 			() => now,
 			() => "UTC",
+			() => "en-GB",
 		);
 	});
 
@@ -61,11 +62,13 @@ describe("habits store", () => {
 			label: "Read",
 			daysOfWeek: 0b111_1111,
 			targetValue: null,
+			areaSlug: null,
 		});
 		await store.addTemplate(habit("habit:steps-10k"), {
 			label: "Walk 10,000 steps",
 			daysOfWeek: 0b111_1111,
 			targetValue: 10_000,
+			areaSlug: null,
 		});
 		await new databaseApp.DailyMetricRepository(db).upsert({
 			metricSlug: "steps",
@@ -93,12 +96,69 @@ describe("habits store", () => {
 		expect(today.habits.map(({ streak }) => streak)).toEqual([1, 1]);
 	});
 
+	it("self-completes an alcohol-free day from the drink log", async () => {
+		const alcoholFree = await store.addTemplate(habit("habit:alcohol-free"), {
+			label: "Have an alcohol-free day",
+			daysOfWeek: 0b111_1111,
+			targetValue: 0,
+			areaSlug: null,
+		});
+		expect(alcoholFree).toMatchObject({
+			kind: "metric",
+			metricSlug: "alcohol_intake",
+			direction: "at_most",
+			targetValue: 0,
+		});
+
+		// Nothing logged: the scheduled day reads as zero intake and completes.
+		let today = await store.loadToday();
+		expect(today.habits[0]).toMatchObject({
+			completed: true,
+			streak: 1,
+			progressLabel: null,
+		});
+
+		// Silence over unlogged days extends the streak.
+		now = new Date("2026-08-19T12:00:00.000Z");
+		today = await store.loadToday();
+		expect(today.habits[0]).toMatchObject({ completed: true, streak: 3 });
+
+		// A logged drink with ethanol breaks the day and shows what was logged.
+		await new databaseApp.ConsumptionEntryRepository(db).create({
+			kind: "drink",
+			catalogueRef: "drink:lager",
+			label: "Lager",
+			servingLabel: "pint",
+			quantity: 1,
+			volumeL: 0.568_261_25,
+			ethanolKg: 0.020_181_999,
+			caffeineKg: 0,
+			energyKcal: 227,
+			occurredAt: now.getTime(),
+			localDay: "2026-08-19",
+			tzOffsetMinutes: 0,
+		});
+		today = await store.loadToday();
+		// Today's slip is not a recorded miss yet, so the streak still counts
+		// the completed days through yesterday.
+		expect(today.habits[0]).toMatchObject({ completed: false, streak: 2 });
+		expect(today.habits[0].progressLabel).toMatch(/logged$/);
+
+		const detail = await store.loadHabitDetail(alcoholFree.id);
+		expect(detail?.days.slice(-3).map(({ state }) => state)).toEqual([
+			"done",
+			"done",
+			"missed",
+		]);
+	});
+
 	it("heals a metric streak after a late resolved-day import without logging completion", async () => {
 		now = new Date("2026-08-14T12:00:00.000Z");
 		const steps = await store.addTemplate(habit("habit:steps-10k"), {
 			label: "Daily steps",
 			daysOfWeek: 0b111_1111,
 			targetValue: 10_000,
+			areaSlug: null,
 		});
 		const metrics = new databaseApp.DailyMetricRepository(db);
 		await metrics.upsert({
@@ -140,25 +200,46 @@ describe("habits store", () => {
 			label: "Books",
 			daysOfWeek: 0b111_1111,
 			targetValue: null,
+			areaSlug: null,
 		});
+		// Template habits snapshot the authored area regardless of the draft.
+		expect(reading.areaSlug).toBe("wheel:growth");
 		const custom = await store.addCustom({
 			label: "Practise piano",
 			daysOfWeek: 0b001_0101,
 			targetValue: null,
+			areaSlug: "wheel:fun",
 		});
 		expect(custom.slug).toMatch(/^habit:custom:/);
+		expect(custom.areaSlug).toBe("wheel:fun");
 		await store.moveHabit(custom.id, -1);
 		let settings = await store.loadSettings();
 		expect(settings.active.map(({ label }) => label)).toEqual([
 			"Practise piano",
 			"Books",
 		]);
+		expect(settings.active.map(({ areaLabel }) => areaLabel)).toEqual([
+			"Fun & recreation",
+			"Learning & growth",
+		]);
+		expect(settings.areas.map(({ slug }) => slug)).toContain("wheel:growth");
 
-		await store.updateHabit(reading, {
+		// A template habit keeps its snapshot even if the draft claims otherwise;
+		// only custom habits are user-classifiable.
+		const updatedReading = await store.updateHabit(reading, {
 			label: "Read fiction",
 			daysOfWeek: 0b100_0000,
 			targetValue: null,
+			areaSlug: null,
 		});
+		expect(updatedReading.areaSlug).toBe("wheel:growth");
+		const reclassified = await store.updateHabit(custom, {
+			label: "Practise piano",
+			daysOfWeek: 0b001_0101,
+			targetValue: null,
+			areaSlug: "wheel:growth",
+		});
+		expect(reclassified.areaSlug).toBe("wheel:growth");
 		await store.removeHabit(custom.id);
 		settings = await store.loadSettings();
 		expect(settings.active).toHaveLength(1);
@@ -171,6 +252,7 @@ describe("habits store", () => {
 			label: "Read",
 			daysOfWeek: 0b111_1111,
 			targetValue: null,
+			areaSlug: null,
 		});
 		await store.toggleManual(reading.id, "2026-08-14");
 		now = new Date("2026-08-15T12:00:00.000Z");

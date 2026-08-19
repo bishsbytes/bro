@@ -14,6 +14,7 @@
 export {
 	type ConsumptionMetricDayTotal,
 	consumptionMetricDayTotal,
+	consumptionMetricTrailingDailyMean,
 } from "./consumption/daily-totals";
 export {
 	buildCheckInExport,
@@ -24,6 +25,12 @@ export {
 	parseCheckInExport,
 	serializeCheckInExport,
 } from "./export/check-in-export";
+export {
+	type GoalSeriesPoint,
+	goalTargetReached,
+	type ResolvedGoalProgress,
+	resolveGoalProgress,
+} from "./goals/goal-presentation";
 export {
 	type GoalStatus,
 	goalProgressPercent,
@@ -43,7 +50,15 @@ export {
 	type ChallengePosition,
 	resolveChallengePosition,
 } from "./habits/challenge-position";
-export { isMetricHabitComplete, type MetricHabit } from "./habits/completion";
+export {
+	habitMetricDayValue,
+	isMetricHabitComplete,
+	type MetricHabit,
+} from "./habits/completion";
+export {
+	type HabitMetricSlug,
+	isHabitMetricSlug,
+} from "./habits/metric-support";
 export { deriveHabitStreak, type HabitStreakInput } from "./habits/streak";
 export {
 	type CanonicalHealthSample,

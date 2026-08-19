@@ -180,9 +180,11 @@ export function BodyScreen({ store }: BodyScreenProps) {
 					{metric.activeGoal ? (
 						<AppText variant="caption" color="brand">
 							Target {metric.activeGoal.targetFormatted}
-							{metric.activeGoal.progressPercent === null
-								? ""
-								: ` · ${metric.activeGoal.progressPercent}% of the way`}
+							{metric.activeGoal.targetReached
+								? " · Target reached — mark it achieved?"
+								: metric.activeGoal.progressPercent === null
+									? ""
+									: ` · ${metric.activeGoal.progressPercent}% of the way`}
 						</AppText>
 					) : null}
 

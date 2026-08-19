@@ -1,7 +1,7 @@
-import type { HabitTemplate } from "@bro/domain/habit-catalogue";
+import { type HabitTemplate, resolveHabit } from "@bro/domain/habit-catalogue";
 import { ISO_WEEKDAYS } from "@bro/logic";
 import { type Href, router, useFocusEffect } from "expo-router";
-import { useCallback, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { ActivityIndicator, TouchableOpacity, View } from "react-native";
 import { AppText } from "../../components/app-text";
 import { Button } from "../../components/button";
@@ -34,13 +34,21 @@ type Editor =
 	| { kind: "custom" }
 	| { kind: "existing"; item: HabitSettingsItem };
 
-export function HabitsScreen({ store }: { store?: HabitsScreenStore }) {
+export function HabitsScreen({
+	store,
+	addTemplateSlug = null,
+}: {
+	store?: HabitsScreenStore;
+	addTemplateSlug?: string | null;
+}) {
 	const habits = useMemo(() => store ?? createHabitsStore(), [store]);
 	const [snapshot, setSnapshot] = useState<HabitSettingsSnapshot | null>(null);
 	const [editor, setEditor] = useState<Editor | null>(null);
+	const consumedAddParam = useRef(false);
 	const [label, setLabel] = useState("");
 	const [daysOfWeek, setDaysOfWeek] = useState(0b111_1111);
 	const [target, setTarget] = useState("");
+	const [areaSlug, setAreaSlug] = useState<string | null>(null);
 	const [busy, setBusy] = useState(false);
 	const [error, setError] = useState<string | null>(null);
 
@@ -59,6 +67,20 @@ export function HabitsScreen({ store }: { store?: HabitsScreenStore }) {
 		}, [load]),
 	);
 
+	// A push from the review flow can preselect a catalogue habit to add. The
+	// param is consumed once, after the first load, and an already-active slug
+	// is a no-op (addTemplate has no uniqueness guard).
+	useEffect(() => {
+		if (!addTemplateSlug || consumedAddParam.current || !snapshot) return;
+		consumedAddParam.current = true;
+		const template = resolveHabit(addTemplateSlug);
+		if (!template) return;
+		if (snapshot.active.some((item) => item.habit.slug === template.slug)) {
+			return;
+		}
+		beginTemplate(template);
+	});
+
 	function beginTemplate(template: HabitTemplate) {
 		setEditor({ kind: "template", template });
 		setLabel(template.label);
@@ -68,6 +90,7 @@ export function HabitsScreen({ store }: { store?: HabitsScreenStore }) {
 				? ""
 				: String(template.defaultTargetValue),
 		);
+		setAreaSlug(template.areaSlug);
 		setError(null);
 	}
 
@@ -76,6 +99,7 @@ export function HabitsScreen({ store }: { store?: HabitsScreenStore }) {
 		setLabel("");
 		setDaysOfWeek(0b111_1111);
 		setTarget("");
+		setAreaSlug(null);
 		setError(null);
 	}
 
@@ -86,6 +110,7 @@ export function HabitsScreen({ store }: { store?: HabitsScreenStore }) {
 		setTarget(
 			item.habit.targetValue === null ? "" : String(item.habit.targetValue),
 		);
+		setAreaSlug(item.areaSlug);
 		setError(null);
 	}
 
@@ -123,17 +148,30 @@ export function HabitsScreen({ store }: { store?: HabitsScreenStore }) {
 				: editor.kind === "existing"
 					? editor.item.habit.kind === "metric"
 					: false;
+		const direction =
+			editor.kind === "template"
+				? editor.template.direction
+				: editor.kind === "existing"
+					? editor.item.habit.direction
+					: null;
 		const targetValue = metric && target.trim() ? Number(target) : null;
+		// A ceiling habit may target zero ("none at all"); a floor habit of zero
+		// would complete on silence, so it stays invalid.
 		if (
 			metric &&
 			(targetValue === null ||
 				!Number.isFinite(targetValue) ||
-				targetValue <= 0)
+				(direction === "at_most" ? targetValue < 0 : targetValue <= 0))
 		) {
 			setError("Enter a valid target.");
 			return;
 		}
-		const draft: HabitEditorDraft = { label, daysOfWeek, targetValue };
+		const draft: HabitEditorDraft = {
+			label,
+			daysOfWeek,
+			targetValue,
+			areaSlug,
+		};
 		await mutate(async () => {
 			if (editor.kind === "template") {
 				await habits.addTemplate(editor.template, draft);
@@ -205,6 +243,31 @@ export function HabitsScreen({ store }: { store?: HabitsScreenStore }) {
 							onChangeText={setTarget}
 						/>
 					) : null}
+					{editor.kind === "custom" ||
+					(editor.kind === "existing" &&
+						editor.item.habit.slug.startsWith("habit:custom:")) ? (
+						<View style={styles.areaPicker}>
+							<AppText variant="label">Life area</AppText>
+							<View style={styles.areaChips}>
+								{snapshot.areas.map((area) => {
+									const selected = areaSlug === area.slug;
+									return (
+										<TouchableOpacity
+											key={area.slug}
+											accessibilityRole="button"
+											accessibilityLabel={`Life area ${area.label}`}
+											accessibilityState={{ selected }}
+											style={[styles.areaChip, selected && styles.selected]}
+											disabled={busy}
+											onPress={() => setAreaSlug(selected ? null : area.slug)}
+										>
+											<AppText variant="caption">{area.label}</AppText>
+										</TouchableOpacity>
+									);
+								})}
+							</View>
+						</View>
+					) : null}
 					<AppText variant="label">Scheduled days</AppText>
 					<View style={styles.weekdays}>
 						{ISO_WEEKDAYS.map((day) => {
@@ -252,7 +315,14 @@ export function HabitsScreen({ store }: { store?: HabitsScreenStore }) {
 						<View style={styles.copy}>
 							<AppText variant="section">{item.label}</AppText>
 							<AppText variant="caption" color="subtle">
-								{item.habit.kind === "metric" ? "Automatic" : "Tap to complete"}
+								{[
+									item.habit.kind === "metric"
+										? "Automatic"
+										: "Tap to complete",
+									item.areaLabel,
+								]
+									.filter(Boolean)
+									.join(" · ")}
 							</AppText>
 						</View>
 						<Button
@@ -348,6 +418,15 @@ const styles = StyleSheet.create((theme) => ({
 	},
 	copy: { flex: 1, gap: theme.spacing.xs },
 	weekdays: { flexDirection: "row", gap: theme.spacing.xs },
+	areaPicker: { gap: theme.spacing.xs },
+	areaChips: { flexDirection: "row", flexWrap: "wrap", gap: theme.spacing.xs },
+	areaChip: {
+		paddingHorizontal: theme.spacing.sm,
+		paddingVertical: theme.spacing.xs,
+		borderWidth: 1,
+		borderColor: theme.colors.border,
+		borderRadius: theme.radius.sm,
+	},
 	weekday: {
 		flex: 1,
 		minHeight: 42,

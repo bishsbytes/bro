@@ -19,13 +19,13 @@ import {
 import {
 	buildTrendSeries,
 	formatMetricValue,
-	type GoalStatus,
-	goalProgressPercent,
 	goalStatus,
 	importedDailyMetricAsObservation,
 	isHealthMetricSlug,
 	type MeasurementPresentation,
 	metricDisplayUnit,
+	type ResolvedGoalProgress,
+	resolveGoalProgress,
 	resolveMetricObservations,
 	type TrendSeries,
 	toMeasurementPresentation,
@@ -41,16 +41,7 @@ export type BodyMetricPresentation = {
 	displayUnit: DisplayUnit | null;
 };
 
-export type BodyGoalProgress = {
-	goal: Goal;
-	status: GoalStatus;
-	startValue: number | null;
-	currentValue: number | null;
-	progressPercent: number | null;
-	targetFormatted: string;
-	startFormatted: string | null;
-	currentFormatted: string | null;
-};
+export type BodyGoalProgress = ResolvedGoalProgress;
 
 export type BodyMetricSummary = BodyMetricPresentation & {
 	userEnterable: boolean;
@@ -121,28 +112,11 @@ function progressFor(
 	rows: readonly Observation[],
 	presentation: BodyMetricPresentation,
 ): BodyGoalProgress {
-	const ordered = ascendingObservations(rows);
-	const startValue =
-		ordered
-			.filter((observation) => observation.observedAt <= goal.startedAt)
-			.at(-1)?.value ?? null;
-	const currentValue = ordered.at(-1)?.value ?? null;
-	return {
+	return resolveGoalProgress({
 		goal,
-		status: goalStatus(goal),
-		startValue,
-		currentValue,
-		progressPercent: goalProgressPercent(goal, startValue, currentValue),
-		targetFormatted: formatPresentedMeasurement(goal.targetValue, presentation),
-		startFormatted:
-			startValue === null
-				? null
-				: formatPresentedMeasurement(startValue, presentation),
-		currentFormatted:
-			currentValue === null
-				? null
-				: formatPresentedMeasurement(currentValue, presentation),
-	};
+		series: ascendingObservations(rows),
+		format: (value) => formatPresentedMeasurement(value, presentation),
+	});
 }
 
 function assertCanonicalValue(

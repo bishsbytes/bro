@@ -2,22 +2,35 @@ import {
 	type Assessment,
 	type AssessmentItemSnapshot,
 	AssessmentRepository,
+	ConsumptionEntryRepository,
+	DailyMetricRepository,
 	type Goal,
 	GoalRepository,
 	getDb,
 	type Observation,
 	ObservationRepository,
 	TrackedMetricsRepository,
+	UnitPreferenceRepository,
 } from "@bro/database-app";
-import { localDayOf } from "@bro/domain";
+import { localDayOf, systemLocale } from "@bro/domain";
 import {
 	DEFAULT_LIFE_AREA_METRICS,
 	listActiveLifeAreas,
 	resolveLifeAreas,
 } from "@bro/domain/life-area-catalogue";
-import { resolveMetric } from "@bro/domain/metric-registry";
+import {
+	isConsumptionDerivedMeasurementSlug,
+	resolveMetric,
+} from "@bro/domain/metric-registry";
 import { WHEEL_OF_LIFE_TEMPLATE } from "@bro/domain/wheel-template";
-import { type GoalStatus, goalProgressPercent, goalStatus } from "@bro/logic";
+import {
+	consumptionMetricTrailingDailyMean,
+	formatMetricValue,
+	metricDisplayUnit,
+	type ResolvedGoalProgress,
+	resolveGoalProgress,
+	resolveMetricObservations,
+} from "@bro/logic";
 import type { SQLiteDatabase } from "expo-sqlite";
 
 export type ReviewDraft = {
@@ -47,13 +60,8 @@ export type ReviewResult = {
 	comparisons: WheelComparison[];
 };
 
-export type GoalProgress = {
-	goal: Goal;
+export type GoalProgress = ResolvedGoalProgress & {
 	label: string;
-	status: GoalStatus;
-	startValue: number | null;
-	currentValue: number | null;
-	progressPercent: number | null;
 };
 
 export type ReviewOverview = {
@@ -67,6 +75,13 @@ export type GoalSetup = {
 	label: string;
 	currentValue: number;
 };
+
+/** Rolling window a consumption goal's "current level" is averaged over. */
+const GOAL_MEAN_WINDOW_DAYS = 7;
+
+function formatWheelScore(value: number): string {
+	return `${Number.isInteger(value) ? value : value.toFixed(1)}/10`;
+}
 
 function valueOnWheelScale(observation: Observation): number {
 	if (
@@ -178,15 +193,22 @@ export class ReviewStore {
 	private readonly goals: GoalRepository;
 	private readonly observations: ObservationRepository;
 	private readonly trackedMetrics: TrackedMetricsRepository;
+	private readonly dailyMetrics: DailyMetricRepository;
+	private readonly consumptionEntries: ConsumptionEntryRepository;
+	private readonly unitPreferences: UnitPreferenceRepository;
 
 	constructor(
 		db: SQLiteDatabase,
 		private readonly now: () => Date = () => new Date(),
+		private readonly locale: () => string | undefined = systemLocale,
 	) {
 		this.assessments = new AssessmentRepository(db);
 		this.goals = new GoalRepository(db);
 		this.observations = new ObservationRepository(db);
 		this.trackedMetrics = new TrackedMetricsRepository(db);
+		this.dailyMetrics = new DailyMetricRepository(db);
+		this.consumptionEntries = new ConsumptionEntryRepository(db);
+		this.unitPreferences = new UnitPreferenceRepository(db);
 	}
 
 	async listSittings(): Promise<Assessment[]> {
@@ -196,11 +218,22 @@ export class ReviewStore {
 	}
 
 	async loadOverview(): Promise<ReviewOverview> {
-		const [sittings, goals, observations, overlays] = await Promise.all([
+		const [
+			sittings,
+			goals,
+			observations,
+			overlays,
+			dailyMetrics,
+			consumptionEntries,
+			preferences,
+		] = await Promise.all([
 			this.listSittings(),
 			this.goals.listAll(),
 			this.observations.listAll(),
 			this.trackedMetrics.listResolved(DEFAULT_LIFE_AREA_METRICS),
+			this.dailyMetrics.listAll(),
+			this.consumptionEntries.listAll(),
+			this.unitPreferences.resolveLatestPerDimension(),
 		]);
 		const labels = new Map<string, string>(
 			resolveLifeAreas(overlays).map((area) => [area.slug, area.label]),
@@ -213,6 +246,10 @@ export class ReviewStore {
 			const resolved = resolveMetric(metricSlug);
 			return resolved.kind === "known" ? resolved.metric.label : metricSlug;
 		};
+		const preferenceByDimension = new Map(
+			preferences.map((preference) => [preference.dimension, preference.unit]),
+		);
+		const inputLocale = this.locale();
 		const observationsByMetric = new Map<string, Observation[]>();
 		for (const observation of observations) {
 			const metricObservations =
@@ -220,41 +257,89 @@ export class ReviewStore {
 			metricObservations.push(observation);
 			observationsByMetric.set(observation.metricSlug, metricObservations);
 		}
+		const sortedObservations = (metricSlug: string): Observation[] =>
+			[...(observationsByMetric.get(metricSlug) ?? [])].sort(
+				(left, right) =>
+					left.observedAt - right.observedAt ||
+					left.createdAt - right.createdAt ||
+					left.id.localeCompare(right.id),
+			);
+
+		// Goals come from three subsystems (wheel areas, body measurements,
+		// consumption metrics); this overview is the one place all of them show
+		// together, so each kind resolves through its own series and units.
+		const progressFor = (goal: Goal): ResolvedGoalProgress => {
+			const resolved = resolveMetric(goal.metricSlug);
+			if (resolved.kind === "known" && resolved.metric.kind === "assessment") {
+				return resolveGoalProgress({
+					goal,
+					series: sortedObservations(goal.metricSlug).map((observation) => ({
+						observedAt: observation.observedAt,
+						value: valueOnWheelScale(observation),
+					})),
+					format: formatWheelScore,
+				});
+			}
+			if (resolved.kind === "known" && resolved.metric.kind === "measurement") {
+				const metric = resolved.metric;
+				const displayUnit = metricDisplayUnit(
+					metric,
+					preferenceByDimension,
+					inputLocale,
+				);
+				const format = (value: number) =>
+					formatMetricValue(metric, value, displayUnit);
+				const slug = metric.slug;
+				if (isConsumptionDerivedMeasurementSlug(slug)) {
+					const series = resolveMetricObservations(
+						slug,
+						[],
+						[],
+						consumptionEntries,
+					);
+					const hasEntries = series.length > 0;
+					const mean = (throughLocalDay: string) =>
+						consumptionMetricTrailingDailyMean(
+							slug,
+							throughLocalDay,
+							GOAL_MEAN_WINDOW_DAYS,
+							consumptionEntries,
+						);
+					return resolveGoalProgress({
+						goal,
+						series,
+						startValue: hasEntries
+							? mean(localDayOf(new Date(goal.startedAt)))
+							: null,
+						currentValue: hasEntries ? mean(localDayOf(this.now())) : null,
+						format,
+					});
+				}
+				return resolveGoalProgress({
+					goal,
+					series: resolveMetricObservations(
+						metric.slug,
+						sortedObservations(metric.slug),
+						dailyMetrics.filter((row) => row.metricSlug === metric.slug),
+					),
+					format,
+				});
+			}
+			// A goal against a slug this build no longer knows still shows its
+			// stored numbers rather than disappearing or crashing.
+			return resolveGoalProgress({
+				goal,
+				series: sortedObservations(goal.metricSlug),
+				format: (value) => String(value),
+			});
+		};
 
 		return {
 			sittings,
-			goals: goals.map((goal) => {
-				const metricObservations = [
-					...(observationsByMetric.get(goal.metricSlug) ?? []),
-				].sort(
-					(left, right) =>
-						left.observedAt - right.observedAt ||
-						left.createdAt - right.createdAt ||
-						left.id.localeCompare(right.id),
-				);
-				const startObservation = metricObservations
-					.filter((observation) => observation.observedAt <= goal.startedAt)
-					.at(-1);
-				const currentObservation = metricObservations.at(-1);
-				const goalValue = (observation: Observation) =>
-					goal.metricSlug.startsWith("wheel:")
-						? valueOnWheelScale(observation)
-						: observation.value;
-				const startValue = startObservation
-					? goalValue(startObservation)
-					: null;
-				const currentValue = currentObservation
-					? goalValue(currentObservation)
-					: null;
-				return {
-					goal,
-					label: labelFor(goal.metricSlug),
-					status: goalStatus(goal),
-					startValue,
-					currentValue,
-					progressPercent: goalProgressPercent(goal, startValue, currentValue),
-				};
-			}),
+			goals: goals.map((goal) => ({
+				...progressFor(goal),
+				label: labelFor(goal.metricSlug),
+			})),
 		};
 	}
 

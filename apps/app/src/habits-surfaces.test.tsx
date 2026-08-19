@@ -42,6 +42,7 @@ describe("habit and challenge surfaces", () => {
 			metricSlug: reading.metricSlug,
 			direction: reading.direction,
 			targetValue: reading.defaultTargetValue,
+			areaSlug: reading.areaSlug,
 			daysOfWeek: reading.defaultDaysOfWeek,
 			position: 0,
 			addedAt: 1,
@@ -61,6 +62,7 @@ describe("habit and challenge surfaces", () => {
 						habits: [reading],
 					},
 				],
+				areas: [{ slug: reading.areaSlug, label: "Growth" }],
 			})),
 			addTemplate,
 			addCustom: jest.fn(),
@@ -79,6 +81,144 @@ describe("habit and challenge surfaces", () => {
 				label: "Read",
 				daysOfWeek: reading.defaultDaysOfWeek,
 				targetValue: null,
+				areaSlug: reading.areaSlug,
+			}),
+		);
+	});
+
+	it("opens a prefilled editor once from an add param", async () => {
+		const reading = resolveHabit("habit:reading");
+		if (!reading)
+			throw new Error("Reading habit is missing from the catalogue.");
+		const store = {
+			loadSettings: jest.fn(async () => ({
+				active: [],
+				groups: [
+					{
+						areaSlug: reading.areaSlug,
+						areaLabel: "Growth",
+						more: false,
+						habits: [reading],
+					},
+				],
+				areas: [{ slug: reading.areaSlug, label: "Growth" }],
+			})),
+			addTemplate: jest.fn(),
+			addCustom: jest.fn(),
+			updateHabit: jest.fn(),
+			removeHabit: jest.fn(),
+			moveHabit: jest.fn(),
+		};
+		const screen = await render(
+			<HabitsScreen store={store} addTemplateSlug={reading.slug} />,
+		);
+		expect(await screen.findByDisplayValue("Read")).toBeTruthy();
+		// Cancelling must not reopen the editor: the param is consumed once.
+		await fireEvent.press(screen.getByText("Cancel"));
+		await waitFor(() => expect(screen.queryByDisplayValue("Read")).toBeNull());
+	});
+
+	it("treats an add param for an already-active habit as a no-op", async () => {
+		const reading = resolveHabit("habit:reading");
+		if (!reading)
+			throw new Error("Reading habit is missing from the catalogue.");
+		const activeHabit: Habit = {
+			id: "habit-1",
+			slug: reading.slug,
+			customLabel: null,
+			kind: reading.kind,
+			metricSlug: reading.metricSlug,
+			direction: reading.direction,
+			targetValue: reading.defaultTargetValue,
+			areaSlug: reading.areaSlug,
+			daysOfWeek: reading.defaultDaysOfWeek,
+			position: 0,
+			addedAt: 1,
+			removedAt: null,
+			createdAt: 1,
+			updatedAt: 1,
+		};
+		const store = {
+			loadSettings: jest.fn(async () => ({
+				active: [
+					{
+						habit: activeHabit,
+						label: "Read",
+						template: reading,
+						areaSlug: reading.areaSlug,
+						areaLabel: "Growth",
+					},
+				],
+				groups: [],
+				areas: [{ slug: reading.areaSlug, label: "Growth" }],
+			})),
+			addTemplate: jest.fn(),
+			addCustom: jest.fn(),
+			updateHabit: jest.fn(),
+			removeHabit: jest.fn(),
+			moveHabit: jest.fn(),
+		};
+		const screen = await render(
+			<HabitsScreen store={store} addTemplateSlug={reading.slug} />,
+		);
+		await screen.findByText("Read");
+		expect(screen.queryByDisplayValue("Read")).toBeNull();
+	});
+
+	it("saves a zero-target ceiling habit from the editor", async () => {
+		const alcoholFree = resolveHabit("habit:alcohol-free");
+		if (!alcoholFree)
+			throw new Error("Alcohol-free habit is missing from the catalogue.");
+		const savedHabit: Habit = {
+			id: "habit-2",
+			slug: alcoholFree.slug,
+			customLabel: null,
+			kind: alcoholFree.kind,
+			metricSlug: alcoholFree.metricSlug,
+			direction: alcoholFree.direction,
+			targetValue: alcoholFree.defaultTargetValue,
+			areaSlug: alcoholFree.areaSlug,
+			daysOfWeek: alcoholFree.defaultDaysOfWeek,
+			position: 0,
+			addedAt: 1,
+			removedAt: null,
+			createdAt: 1,
+			updatedAt: 1,
+		};
+		const addTemplate = jest.fn(async () => savedHabit);
+		const store = {
+			loadSettings: jest.fn(async () => ({
+				active: [],
+				groups: [
+					{
+						areaSlug: alcoholFree.areaSlug,
+						areaLabel: "Sobriety & recovery",
+						more: true,
+						habits: [alcoholFree],
+					},
+				],
+				areas: [{ slug: alcoholFree.areaSlug, label: "Sobriety & recovery" }],
+			})),
+			addTemplate,
+			addCustom: jest.fn(),
+			updateHabit: jest.fn(),
+			removeHabit: jest.fn(),
+			moveHabit: jest.fn(),
+		};
+		const screen = await render(<HabitsScreen store={store} />);
+
+		await fireEvent.press(
+			await screen.findByLabelText("Add Have an alcohol-free day"),
+		);
+		expect(screen.getByDisplayValue("0")).toBeTruthy();
+		await fireEvent.press(screen.getByText("Save habit"));
+
+		await waitFor(() =>
+			expect(addTemplate).toHaveBeenCalledWith(alcoholFree, {
+				label: "Have an alcohol-free day",
+				daysOfWeek: alcoholFree.defaultDaysOfWeek,
+				targetValue: 0,
+				areaSlug: alcoholFree.areaSlug,
 			}),
 		);
 	});
@@ -170,6 +310,7 @@ describe("habit and challenge surfaces", () => {
 			metricSlug: "steps",
 			direction: "at_least",
 			targetValue: 10_000,
+			areaSlug: "wheel:health",
 			daysOfWeek: 0b111_1111,
 			position: 0,
 			addedAt: 1,

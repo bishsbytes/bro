@@ -1,8 +1,8 @@
 import type { Habit } from "@bro/database-app";
 import { shiftLocalDay } from "@bro/domain";
-import { isHealthMetricSlug } from "../health/policy";
 import { isHabitScheduled } from "./cadence";
 import { isMetricHabitComplete } from "./completion";
+import { isHabitMetricSlug } from "./metric-support";
 
 export type HabitAdherenceState = "done" | "missed" | "unscheduled" | "no-data";
 
@@ -54,7 +54,7 @@ export function deriveHabitAdherence({
 		}
 		if (
 			!habit.metricSlug ||
-			!isHealthMetricSlug(habit.metricSlug) ||
+			!isHabitMetricSlug(habit.metricSlug) ||
 			!metricValue
 		) {
 			days.push({ localDay, state: "no-data" });

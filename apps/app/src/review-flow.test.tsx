@@ -87,6 +87,19 @@ describe("wheel-of-life review flow", () => {
 		expect(firstRun.getByText("Name what matters")).toBeTruthy();
 		await fireEvent.press(firstRun.getByText("Back to my wheel"));
 
+		// A focused area also suggests its catalogue habits, prefilled for adding.
+		await fireEvent.press(
+			await firstRun.findByText("Add habit “Choose the week's priority”"),
+		);
+		expect(
+			await firstRun.findByDisplayValue("Choose the week's priority"),
+		).toBeTruthy();
+		await fireEvent.press(firstRun.getByText("Save habit"));
+		expect(
+			await firstRun.findByText("Tap to complete · Work & career"),
+		).toBeTruthy();
+		await act(async () => expoRouter.back());
+
 		await fireEvent.press(
 			await firstRun.findByText("Set a goal for Work & career"),
 		);

@@ -5,7 +5,10 @@ import type {
 } from "@bro/database-app";
 import { resolveMetricDay } from "../health/resolved-day";
 import { resolveMetricObservations } from "../health/resolved-series";
-import { consumptionMetricDayTotal } from "./daily-totals";
+import {
+	consumptionMetricDayTotal,
+	consumptionMetricTrailingDailyMean,
+} from "./daily-totals";
 
 function entry(
 	id: string,
@@ -172,6 +175,36 @@ describe("consumption-derived daily totals", () => {
 		expect(resolved.value).toBe(lager.ethanolKg);
 		expect(resolved.userRows).toEqual([]);
 		expect(resolved.importedRows).toEqual([]);
+	});
+
+	it("averages a trailing window with unlogged days counting as zero", () => {
+		const entries = [lager, coffee, anotherLager, nextDayWater];
+		// Window 2026-08-10..2026-08-16: one drinking day among seven.
+		expect(
+			consumptionMetricTrailingDailyMean(
+				"alcohol_intake",
+				"2026-08-16",
+				7,
+				entries,
+			),
+		).toBeCloseTo(0.031_900_213 / 7, 12);
+		// The window is bounded: entries after throughLocalDay do not leak in.
+		expect(
+			consumptionMetricTrailingDailyMean(
+				"alcohol_intake",
+				"2026-08-14",
+				7,
+				entries,
+			),
+		).toBe(0);
+		expect(
+			consumptionMetricTrailingDailyMean("alcohol_intake", "2026-08-16", 1, [
+				nextDayWater,
+			]),
+		).toBe(0);
+		expect(() =>
+			consumptionMetricTrailingDailyMean("alcohol_intake", "2026-08-16", 0, []),
+		).toThrow("positive integer");
 	});
 
 	it("produces one summed series point per entry day", () => {

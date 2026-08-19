@@ -470,7 +470,7 @@ describe("product repositories", () => {
 		let now = 1_000;
 		const repository = new databaseApp.TrackedMetricsRepository(db, {
 			now: () => now,
-			createId: () => "tracked-alcohol",
+			createId: () => "tracked-training",
 		});
 
 		const initial = await repository.listResolved(DEFAULT_TRACKED_METRICS);
@@ -503,20 +503,20 @@ describe("product repositories", () => {
 		).toBe(true);
 		expect(await repository.listAll()).toEqual([]);
 
-		const alcohol = initial.find((metric) => metric.metricSlug === "alcohol");
-		expect(alcohol).toBeDefined();
+		const training = initial.find((metric) => metric.metricSlug === "training");
+		expect(training).toBeDefined();
 		now = 2_000;
-		await repository.configure("alcohol", alcohol?.position ?? 0, false);
+		await repository.configure("training", training?.position ?? 0, false);
 
 		await databaseApp.closeDb();
 		await openDatabase();
 		const relaunched = new databaseApp.TrackedMetricsRepository(db);
 		const resolved = await relaunched.listResolved(DEFAULT_TRACKED_METRICS);
 		expect(
-			resolved.find((metric) => metric.metricSlug === "alcohol"),
+			resolved.find((metric) => metric.metricSlug === "training"),
 		).toMatchObject({
 			enabled: false,
-			overlayId: "tracked-alcohol",
+			overlayId: "tracked-training",
 			removedAt: 2_000,
 		});
 	});

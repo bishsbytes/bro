@@ -31,17 +31,20 @@ import {
 } from "@bro/domain/metric-registry";
 import {
 	consumptionMetricDayTotal,
+	consumptionMetricTrailingDailyMean,
 	formatMetricValue,
-	type GoalStatus,
-	goalProgressPercent,
 	goalStatus,
 	metricDisplayUnit,
+	type ResolvedGoalProgress,
+	resolveGoalProgress,
 	resolveMetricObservations,
 } from "@bro/logic";
 import type { SQLiteDatabase } from "expo-sqlite";
 
 /** How many days of history the week totals on a day screen cover. */
 const WEEK_DAYS = 7;
+/** Rolling window a consumption goal's "current level" is averaged over. */
+const GOAL_MEAN_WINDOW_DAYS = 7;
 /** Recent entries read before de-duplication, and kept after it. */
 const RECENTS_READ_LIMIT = 24;
 const RECENTS_SHOWN = 8;
@@ -57,16 +60,7 @@ export type PresentedConsumptionEntry = {
 	contributions: string;
 };
 
-export type ConsumptionGoalProgress = {
-	goal: Goal;
-	status: GoalStatus;
-	startValue: number | null;
-	currentValue: number | null;
-	progressPercent: number | null;
-	targetFormatted: string;
-	startFormatted: string | null;
-	currentFormatted: string | null;
-};
+export type ConsumptionGoalProgress = ResolvedGoalProgress;
 
 export type ConsumptionEntryEdit = ConsumptionOccurrence & {
 	label: string;
@@ -341,7 +335,9 @@ export abstract class ConsumptionStore<
 						: formatMetricValue(metric, weekValue, displayUnit),
 				goals: goals
 					.filter((goal) => goal.metricSlug === metric.slug)
-					.map((goal) => this.goalProgress(goal, metric, displayUnit, series)),
+					.map((goal) =>
+						this.goalProgress(goal, metric, displayUnit, series, allEntries),
+					),
 			};
 		});
 		const ofKind = (entry: ConsumptionEntry) => entry.kind === this.kind;
@@ -622,28 +618,41 @@ export abstract class ConsumptionStore<
 		return resolved.metric as Metric;
 	}
 
+	/**
+	 * Progress against a rolling daily mean rather than the last logged day's
+	 * total: a single light (or heavy) day should not fully define "current",
+	 * and days with nothing logged count as zero consumed. Both ends of the
+	 * comparison use the same window so the percentage stays like-for-like.
+	 */
 	private goalProgress(
 		goal: Goal,
 		metric: Metric,
 		displayUnit: DisplayUnit,
 		series: ReturnType<typeof resolveMetricObservations>,
+		entries: readonly ConsumptionEntry[],
 	): ConsumptionGoalProgress {
-		const startValue =
-			series.filter((row) => row.observedAt <= goal.startedAt).at(-1)?.value ??
-			null;
-		const currentValue = series.at(-1)?.value ?? null;
-		const format = (value: number) =>
-			formatMetricValue(metric, value, displayUnit);
-		return {
+		const hasEntries = series.length > 0;
+		return resolveGoalProgress({
 			goal,
-			status: goalStatus(goal),
-			startValue,
-			currentValue,
-			progressPercent: goalProgressPercent(goal, startValue, currentValue),
-			targetFormatted: format(goal.targetValue),
-			startFormatted: startValue === null ? null : format(startValue),
-			currentFormatted: currentValue === null ? null : format(currentValue),
-		};
+			series,
+			startValue: hasEntries
+				? consumptionMetricTrailingDailyMean(
+						metric.slug,
+						localDayOf(new Date(goal.startedAt)),
+						GOAL_MEAN_WINDOW_DAYS,
+						entries,
+					)
+				: null,
+			currentValue: hasEntries
+				? consumptionMetricTrailingDailyMean(
+						metric.slug,
+						localDayOf(this.now()),
+						GOAL_MEAN_WINDOW_DAYS,
+						entries,
+					)
+				: null,
+			format: (value) => formatMetricValue(metric, value, displayUnit),
+		});
 	}
 
 	private presentEntry(

@@ -1,10 +1,33 @@
 import type { Habit } from "@bro/database-app";
+import { isConsumptionDerivedMeasurementSlug } from "@bro/domain/metric-registry";
 import type { ResolvedMetricDay } from "../health/resolved-day";
 
 export type MetricHabit = Pick<
 	Habit,
 	"kind" | "metricSlug" | "direction" | "targetValue"
 >;
+
+/**
+ * The value a habit judges a day by. Consumption metrics have no "not logged"
+ * state a user can express, so for an at_most habit an entry-less day reads as
+ * zero intake — an alcohol-free day self-completes. Everything else keeps
+ * null (= no data): an at_least habit must never succeed on silence, and
+ * imported metrics stay honest about missing device data.
+ */
+export function habitMetricDayValue(
+	habit: MetricHabit,
+	value: number | null,
+): number | null {
+	if (
+		value === null &&
+		habit.direction === "at_most" &&
+		habit.metricSlug !== null &&
+		isConsumptionDerivedMeasurementSlug(habit.metricSlug)
+	) {
+		return 0;
+	}
+	return value;
+}
 
 /** Compares one resolved local-day value with a snapshotted metric target. */
 export function isMetricHabitComplete(

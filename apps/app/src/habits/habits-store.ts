@@ -1,6 +1,8 @@
 import {
 	ChallengeEnrolmentRepository,
 	ChallengeProgressRepository,
+	type ConsumptionEntry,
+	ConsumptionEntryRepository,
 	createUuidV7,
 	type DailyMetric,
 	DailyMetricRepository,
@@ -11,8 +13,9 @@ import {
 	type Observation,
 	ObservationRepository,
 	TrackedMetricsRepository,
+	UnitPreferenceRepository,
 } from "@bro/database-app";
-import { shiftLocalDay } from "@bro/domain";
+import { shiftLocalDay, systemLocale } from "@bro/domain";
 import {
 	type ChallengeDay,
 	resolveChallenge,
@@ -27,14 +30,21 @@ import {
 	resolveLifeAreas,
 } from "@bro/domain/life-area-catalogue";
 import {
+	isConsumptionDerivedMeasurementSlug,
+	resolveMetric,
+} from "@bro/domain/metric-registry";
+import {
 	deriveHabitAdherence,
 	deriveHabitStreak,
+	formatMetricValue,
 	type HabitAdherenceDay,
-	type HealthMetricSlug,
+	type HabitMetricSlug,
+	habitMetricDayValue,
+	isHabitMetricSlug,
 	isHabitScheduled,
-	isHealthMetricSlug,
 	isMetricHabitComplete,
 	localDayAt,
+	metricDisplayUnit,
 	resolveChallengePosition,
 	resolveMetricDay,
 } from "@bro/logic";
@@ -69,6 +79,8 @@ export type HabitSettingsItem = {
 	habit: Habit;
 	label: string;
 	template: HabitTemplate | null;
+	areaSlug: string | null;
+	areaLabel: string | null;
 };
 
 export type HabitCatalogueGroup = {
@@ -78,9 +90,15 @@ export type HabitCatalogueGroup = {
 	habits: HabitTemplate[];
 };
 
+export type HabitAreaOption = {
+	slug: string;
+	label: string;
+};
+
 export type HabitSettingsSnapshot = {
 	active: HabitSettingsItem[];
 	groups: HabitCatalogueGroup[];
+	areas: HabitAreaOption[];
 };
 
 export type HabitDetail = {
@@ -95,6 +113,7 @@ export type HabitEditorDraft = {
 	label: string;
 	daysOfWeek: number;
 	targetValue: number | null;
+	areaSlug: string | null;
 };
 
 export type ChallengeDetail = {
@@ -131,7 +150,11 @@ function formatDuration(seconds: number): string {
 	return minutes === 0 ? `${hours}h` : `${hours}h ${minutes}m`;
 }
 
-function formatProgress(habit: Habit, value: number | null): string | null {
+function formatProgress(
+	habit: Habit,
+	value: number | null,
+	formatValue: ((value: number) => string) | null = null,
+): string | null {
 	if (habit.kind !== "metric" || habit.targetValue === null) return null;
 	if (habit.metricSlug === "steps") {
 		return `${Math.round(value ?? 0).toLocaleString("en-GB")} / ${Math.round(
@@ -141,6 +164,14 @@ function formatProgress(habit: Habit, value: number | null): string | null {
 	if (habit.metricSlug === "sleep_duration") {
 		return `${formatDuration(value ?? 0)} / ${formatDuration(habit.targetValue)}`;
 	}
+	if (formatValue) {
+		// A zero-target ceiling habit needs no counter on a clean day; the card's
+		// completion state already says it. A slip shows what was logged.
+		if (habit.direction === "at_most" && habit.targetValue === 0) {
+			return (value ?? 0) === 0 ? null : `${formatValue(value ?? 0)} logged`;
+		}
+		return `${formatValue(value ?? 0)} / ${formatValue(habit.targetValue)}`;
+	}
 	return `${value ?? 0} / ${habit.targetValue}`;
 }
 
@@ -148,6 +179,7 @@ function habitUpdateInput(habit: Habit) {
 	return {
 		customLabel: habit.customLabel,
 		targetValue: habit.targetValue,
+		areaSlug: habit.areaSlug,
 		daysOfWeek: habit.daysOfWeek,
 		position: habit.position,
 	};
@@ -167,11 +199,14 @@ export class HabitsStore {
 	private readonly observations: ObservationRepository;
 	private readonly dailyMetrics: DailyMetricRepository;
 	private readonly trackedMetrics: TrackedMetricsRepository;
+	private readonly consumptionEntries: ConsumptionEntryRepository;
+	private readonly unitPreferences: UnitPreferenceRepository;
 
 	constructor(
 		private readonly db: SQLiteDatabase,
 		private readonly now: () => Date = () => new Date(),
 		private readonly timeZone: () => string = systemTimeZone,
+		private readonly locale: () => string | undefined = systemLocale,
 	) {
 		const nowMs = () => this.now().getTime();
 		this.habits = new HabitRepository(db, { now: nowMs });
@@ -181,6 +216,8 @@ export class HabitsStore {
 		this.observations = new ObservationRepository(db);
 		this.dailyMetrics = new DailyMetricRepository(db);
 		this.trackedMetrics = new TrackedMetricsRepository(db);
+		this.consumptionEntries = new ConsumptionEntryRepository(db);
+		this.unitPreferences = new UnitPreferenceRepository(db);
 	}
 
 	private today(): string {
@@ -188,10 +225,30 @@ export class HabitsStore {
 	}
 
 	private async metricDayValues(
-		metricSlug: HealthMetricSlug,
+		metricSlug: HabitMetricSlug,
 		fromLocalDay: string,
 		throughLocalDay: string,
 	): Promise<(localDay: string) => number | null> {
+		if (isConsumptionDerivedMeasurementSlug(metricSlug)) {
+			const entries = (await this.consumptionEntries.listAll()).filter(
+				(entry) =>
+					entry.localDay >= fromLocalDay && entry.localDay <= throughLocalDay,
+			);
+			const entriesByDay = new Map<string, ConsumptionEntry[]>();
+			for (const entry of entries) {
+				const rows = entriesByDay.get(entry.localDay);
+				if (rows) rows.push(entry);
+				else entriesByDay.set(entry.localDay, [entry]);
+			}
+			return (localDay) =>
+				resolveMetricDay(
+					metricSlug,
+					localDay,
+					[],
+					[],
+					entriesByDay.get(localDay) ?? [],
+				).value;
+		}
 		const [observations, metrics] = await Promise.all([
 			this.observations.listByMetricAndDayRange(
 				metricSlug,
@@ -228,6 +285,33 @@ export class HabitsStore {
 		};
 	}
 
+	/** Display-unit formatter for a consumption-derived habit metric, else null. */
+	private async metricValueFormatter(
+		metricSlug: string,
+	): Promise<((value: number) => string) | null> {
+		const resolved = resolveMetric(metricSlug);
+		if (
+			resolved.kind !== "known" ||
+			resolved.metric.kind !== "measurement" ||
+			!isConsumptionDerivedMeasurementSlug(metricSlug)
+		) {
+			return null;
+		}
+		const metric = resolved.metric;
+		const preferences = await this.unitPreferences.resolveLatestPerDimension();
+		const displayUnit = metricDisplayUnit(
+			metric,
+			new Map(
+				preferences.map((preference) => [
+					preference.dimension,
+					preference.unit,
+				]),
+			),
+			this.locale(),
+		);
+		return (value) => formatMetricValue(metric, value, displayUnit);
+	}
+
 	async loadToday(localDay = this.today()): Promise<TodayHabitsSnapshot> {
 		const [activeHabits, activeEnrolments] = await Promise.all([
 			this.habits.listActive(),
@@ -257,14 +341,16 @@ export class HabitsStore {
 				}
 
 				const metricSlug = habit.metricSlug;
-				if (!metricSlug || !isHealthMetricSlug(metricSlug)) {
+				if (!metricSlug || !isHabitMetricSlug(metricSlug)) {
 					throw new TypeError(`Unsupported metric habit: ${habit.metricSlug}`);
 				}
-				const metricValue = await this.metricDayValues(
+				const rawValue = await this.metricDayValues(
 					metricSlug,
 					startedOn,
 					localDay,
 				);
+				const metricValue = (day: string) =>
+					habitMetricDayValue(habit, rawValue(day));
 				const complete = (day: string) =>
 					isMetricHabitComplete(habit, {
 						metricSlug,
@@ -280,7 +366,11 @@ export class HabitsStore {
 						daysOfWeek: habit.daysOfWeek,
 						isComplete: complete,
 					}),
-					progressLabel: formatProgress(habit, metricValue(localDay)),
+					progressLabel: formatProgress(
+						habit,
+						metricValue(localDay),
+						await this.metricValueFormatter(metricSlug),
+					),
 				};
 			}),
 		);
@@ -327,13 +417,22 @@ export class HabitsStore {
 			this.habits.listActive(),
 			this.trackedMetrics.listResolved(DEFAULT_LIFE_AREA_METRICS),
 		]);
-		const active = activeHabits.map((habit) => ({
-			habit,
-			label: displayLabel(habit),
-			template: resolveHabit(habit.slug),
-		}));
-		const activeSlugs = new Set(activeHabits.map((habit) => habit.slug));
 		const areas = resolveLifeAreas(overlays);
+		const areaLabels = new Map<string, string>(
+			areas.map((area) => [area.slug, area.label]),
+		);
+		const active = activeHabits.map((habit): HabitSettingsItem => {
+			const template = resolveHabit(habit.slug);
+			const areaSlug = habit.areaSlug ?? template?.areaSlug ?? null;
+			return {
+				habit,
+				label: displayLabel(habit),
+				template,
+				areaSlug,
+				areaLabel: areaSlug ? (areaLabels.get(areaSlug) ?? null) : null,
+			};
+		});
+		const activeSlugs = new Set(activeHabits.map((habit) => habit.slug));
 		const groups = areas
 			.map(
 				(area): HabitCatalogueGroup => ({
@@ -348,7 +447,11 @@ export class HabitsStore {
 			)
 			.filter((group) => group.habits.length > 0)
 			.sort((left, right) => Number(left.more) - Number(right.more));
-		return { active, groups };
+		return {
+			active,
+			groups,
+			areas: areas.map((area) => ({ slug: area.slug, label: area.label })),
+		};
 	}
 
 	async loadHabitDetail(id: string): Promise<HabitDetail | null> {
@@ -381,10 +484,10 @@ export class HabitsStore {
 		}
 
 		const metricSlug = habit.metricSlug;
-		if (!metricSlug || !isHealthMetricSlug(metricSlug)) {
+		if (!metricSlug || !isHabitMetricSlug(metricSlug)) {
 			throw new TypeError(`Unsupported metric habit: ${habit.metricSlug}`);
 		}
-		const metricValue = await this.metricDayValues(
+		const rawValue = await this.metricDayValues(
 			metricSlug,
 			fromLocalDay,
 			throughLocalDay,
@@ -400,7 +503,7 @@ export class HabitsStore {
 				throughLocalDay,
 				startedOn,
 				removedOn,
-				metricValue,
+				metricValue: (day) => habitMetricDayValue(habit, rawValue(day)),
 			}),
 		};
 	}
@@ -419,6 +522,7 @@ export class HabitsStore {
 			metricSlug: template.metricSlug,
 			direction: template.direction,
 			targetValue: template.kind === "metric" ? draft.targetValue : null,
+			areaSlug: template.areaSlug,
 			daysOfWeek: draft.daysOfWeek,
 			position: nextHabitPosition(active),
 		});
@@ -436,6 +540,7 @@ export class HabitsStore {
 			metricSlug: null,
 			direction: null,
 			targetValue: null,
+			areaSlug: draft.areaSlug,
 			daysOfWeek: draft.daysOfWeek,
 			position: nextHabitPosition(active),
 		});
@@ -449,6 +554,9 @@ export class HabitsStore {
 					? null
 					: draft.label.trim(),
 			targetValue: habit.kind === "metric" ? draft.targetValue : null,
+			// A template habit's area stays the authored snapshot; only custom
+			// habits let the user classify (and re-classify) the area themselves.
+			areaSlug: template ? habit.areaSlug : draft.areaSlug,
 			daysOfWeek: draft.daysOfWeek,
 			position: habit.position,
 		});

@@ -719,7 +719,11 @@ export function DrinksScreen({ store }: DrinksScreenProps) {
 										Target {activeGoal.targetFormatted} · Latest{" "}
 										{activeGoal.currentFormatted ?? "—"}
 									</AppText>
-									{activeGoal.progressPercent !== null ? (
+									{activeGoal.targetReached ? (
+										<AppText variant="caption" color="brand">
+											Target reached — mark it achieved?
+										</AppText>
+									) : activeGoal.progressPercent !== null ? (
 										<AppText variant="caption" color="brand">
 											{activeGoal.progressPercent}% of the way
 										</AppText>

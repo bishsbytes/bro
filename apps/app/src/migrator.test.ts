@@ -5,7 +5,7 @@ import { createNodeSqliteMock } from "./test-support/node-sqlite";
 const mockSqlite = createNodeSqliteMock();
 let activeDatabaseApp: typeof DatabaseApp | undefined;
 
-const MIGRATION_IDS = ["0000_initial_schema"] as const;
+const MIGRATION_IDS = ["0000_initial_schema", "0001_bored_giant_man"] as const;
 const LOCAL_MIGRATION_IDS = ["L000_local_store"] as const;
 
 jest.mock("expo-sqlite", () => ({
@@ -99,6 +99,12 @@ describe("product database migrations", () => {
 			{ name: "fat_g" },
 			{ name: "protein_g" },
 		]);
+		expect(
+			await db.getFirstAsync<{ name: string }>(
+				`SELECT name FROM pragma_table_info('habits')
+				 WHERE name = 'area_slug'`,
+			),
+		).toEqual({ name: "area_slug" });
 	});
 
 	it("is a no-op when the same database is migrated again", async () => {
@@ -160,8 +166,8 @@ describe("product database migrations", () => {
 		`);
 
 		await expect(databaseApp.runMigrations(db)).resolves.toEqual({
-			applied: MIGRATION_IDS,
-			skipped: [],
+			applied: ["0000_initial_schema"],
+			skipped: ["0001_bored_giant_man"],
 		});
 		expect(
 			await db.getFirstAsync<{ name: string }>(
@@ -169,6 +175,25 @@ describe("product database migrations", () => {
 				 WHERE type = 'table' AND name = 'unit_preferences'`,
 			),
 		).toEqual({ name: "unit_preferences" });
+	});
+
+	it("replays a column-adding migration without failing on the live column", async () => {
+		const { databaseApp, db } = await migratedDatabase("column-replay.db");
+		await databaseApp.runMigrations(db);
+		await db.execAsync(
+			`DELETE FROM __app_migrations WHERE id = '0001_bored_giant_man';`,
+		);
+
+		await expect(databaseApp.runMigrations(db)).resolves.toEqual({
+			applied: ["0001_bored_giant_man"],
+			skipped: ["0000_initial_schema"],
+		});
+		expect(
+			await db.getAllAsync<{ name: string }>(
+				`SELECT name FROM pragma_table_info('habits')
+				 WHERE name = 'area_slug'`,
+			),
+		).toEqual([{ name: "area_slug" }]);
 	});
 
 	it("creates and safely re-runs the independent local-store manifest", async () => {

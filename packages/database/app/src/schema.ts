@@ -141,6 +141,9 @@ export const habits = sqliteTable(PRODUCT_TABLE_NAMES.habits, {
 	metricSlug: text("metric_slug"),
 	direction: text("direction"),
 	targetValue: real("target_value"),
+	// Snapshotted at creation like challenge enrolments: the association must
+	// survive catalogue changes, and custom habits have no template to consult.
+	areaSlug: text("area_slug"),
 	daysOfWeek: integer("days_of_week").notNull(),
 	position: integer("position").notNull(),
 	addedAt: integer("added_at").notNull(),

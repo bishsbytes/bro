@@ -44,19 +44,6 @@ function groupByKey<Row extends { metricSlug: string; localDay: string }>(
 	return byKey;
 }
 
-function consumptionFactorPresent(
-	metricSlug: string,
-	entries: readonly ConsumptionEntry[],
-): boolean {
-	if (metricSlug === "alcohol") {
-		return entries.some((entry) => (entry.ethanolKg ?? 0) > 0);
-	}
-	if (metricSlug === "caffeine") {
-		return entries.some((entry) => (entry.caffeineKg ?? 0) > 0);
-	}
-	return false;
-}
-
 /** Indexes the source once so each per-day read costs a map lookup, not a scan. */
 export function createDailySignalReader(
 	source: DailySignalSource,
@@ -88,11 +75,7 @@ export function createDailySignalReader(
 			const present = dayRows.some(
 				(row) => row.value === FACTOR_PRESENCE_VALUE,
 			);
-			const derivedPresent = consumptionFactorPresent(
-				metricSlug,
-				consumptionEntriesByDay.get(localDay) ?? [],
-			);
-			if (present || derivedPresent) {
+			if (present) {
 				return { metricSlug, localDay, value: 1 };
 			}
 			return checkInDays.has(localDay) &&
@@ -109,7 +92,19 @@ export function createDailySignalReader(
 				metricsByKey.get(signalKey(metricSlug, localDay)) ?? [],
 				consumptionEntriesByDay.get(localDay) ?? [],
 			).value;
-			return value === null ? null : { metricSlug, localDay, value };
+			if (value !== null) {
+				return { metricSlug, localDay, value };
+			}
+			// A consumption-derived metric has no "not logged" state a user can
+			// express, so a check-in day with no entries reads as zero intake —
+			// the denominator both intake presence and threshold insights need.
+			// Imported measurements (sleep, steps) keep dropping absent days.
+			const consumptionDerived =
+				"measurementSource" in metric &&
+				metric.measurementSource === "consumption";
+			return consumptionDerived && checkInDays.has(localDay)
+				? { metricSlug, localDay, value: 0 }
+				: null;
 		}
 
 		const rows = dayRows.filter(

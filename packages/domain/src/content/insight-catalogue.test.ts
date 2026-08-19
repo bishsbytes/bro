@@ -15,9 +15,20 @@ describe("insight catalogue", () => {
 			expect(input.kind).toBe("known");
 			expect(output.kind).toBe("known");
 			if (input.kind === "known") {
-				expect(input.metric.kind).toBe(
-					entry.input.kind === "presence" ? "factor" : "measurement",
-				);
+				// Presence inputs read user-ticked factors or consumption-derived
+				// intake metrics (a day's entries prove presence; a check-in day
+				// without entries proves absence). Thresholds need a quantity.
+				if (entry.input.kind === "presence") {
+					const consumptionDerived =
+						input.metric.kind === "measurement" &&
+						"measurementSource" in input.metric &&
+						input.metric.measurementSource === "consumption";
+					expect(input.metric.kind === "factor" || consumptionDerived).toBe(
+						true,
+					);
+				} else {
+					expect(input.metric.kind).toBe("measurement");
+				}
 			}
 			if (output.kind === "known") {
 				expect(["scored", "measurement"]).toContain(output.metric.kind);

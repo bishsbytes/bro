@@ -1,4 +1,5 @@
 import { challengeForArea } from "@bro/domain/challenge-catalogue";
+import { habitsForArea } from "@bro/domain/habit-catalogue";
 import { router } from "expo-router";
 import { useEffect, useMemo, useState } from "react";
 import { ActivityIndicator, View } from "react-native";
@@ -175,6 +176,21 @@ export function ReviewResultScreen({
 										}
 									/>
 								) : null}
+								{habitsForArea(score.slug)
+									.slice(0, 2)
+									.map((template) => (
+										<Button
+											key={template.slug}
+											label={`Add habit “${template.label}”`}
+											variant="text"
+											onPress={() =>
+												router.push({
+													pathname: "/settings/habits",
+													params: { add: template.slug },
+												})
+											}
+										/>
+									))}
 							</View>
 						) : null}
 					</Card>

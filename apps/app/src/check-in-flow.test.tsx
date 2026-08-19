@@ -94,7 +94,7 @@ describe("daily check-in flow", () => {
 
 		await fireEvent.press(view.getByLabelText("Mood 4"));
 		await fireEvent.press(view.getByLabelText("Energy 3"));
-		await fireEvent.press(view.getByLabelText("Alcohol"));
+		await fireEvent.press(view.getByLabelText("Outdoors"));
 		await fireEvent.changeText(view.getByLabelText("Weight (stones)"), "12");
 		await fireEvent.changeText(view.getByLabelText("Weight (pounds)"), "4");
 		await fireEvent.changeText(
@@ -110,9 +110,9 @@ describe("daily check-in flow", () => {
 			(await new CheckInStore(db).loadToday()).localDay,
 		);
 		expect(firstDay.map((row) => row.metricSlug).sort()).toEqual([
-			"alcohol",
 			"energy",
 			"mood",
+			"outdoors",
 			"weight",
 		]);
 		expect(firstDay.find((row) => row.metricSlug === "weight")).toMatchObject({
@@ -131,7 +131,7 @@ describe("daily check-in flow", () => {
 		await fireEvent.press(view.getByText("Add another check-in"));
 		await fireEvent.press(view.getByLabelText("Mood 5"));
 		await fireEvent.press(view.getByLabelText("Energy 4"));
-		await fireEvent.press(view.getByLabelText("Alcohol"));
+		await fireEvent.press(view.getByLabelText("Outdoors"));
 		await fireEvent.press(view.getByLabelText("Training"));
 		await fireEvent.changeText(view.getByLabelText("Weight (stones)"), "12");
 		await fireEvent.changeText(view.getByLabelText("Weight (pounds)"), "3");
@@ -146,7 +146,7 @@ describe("daily check-in flow", () => {
 			2,
 		);
 		expect(
-			secondDay.filter((row) => row.metricSlug === "alcohol"),
+			secondDay.filter((row) => row.metricSlug === "outdoors"),
 		).toHaveLength(0);
 		expect(
 			secondDay.filter((row) => row.metricSlug === "training"),

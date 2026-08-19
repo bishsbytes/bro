@@ -45,9 +45,27 @@ describe("habit and challenge repositories", () => {
 			metricSlug: "steps",
 			direction: "at_least",
 			targetValue: 10_000,
+			areaSlug: "wheel:health",
 			daysOfWeek: 0b111_1111,
 			position: 1,
 		});
+		expect(steps.areaSlug).toBe("wheel:health");
+		expect((await repository.findById(steps.id))?.areaSlug).toBe(
+			"wheel:health",
+		);
+		await expect(
+			repository.create({
+				slug: "habit:mislabelled",
+				customLabel: null,
+				kind: "manual",
+				metricSlug: null,
+				direction: null,
+				targetValue: null,
+				areaSlug: "growth",
+				daysOfWeek: 0b111_1111,
+				position: 9,
+			}),
+		).rejects.toThrow("wheel: namespace");
 		const reading = await repository.create({
 			slug: "habit:reading",
 			customLabel: null,
@@ -55,6 +73,7 @@ describe("habit and challenge repositories", () => {
 			metricSlug: null,
 			direction: null,
 			targetValue: null,
+			areaSlug: null,
 			daysOfWeek: 0b111_1111,
 			position: 0,
 		});
@@ -68,6 +87,7 @@ describe("habit and challenge repositories", () => {
 			repository.update(steps.id, {
 				customLabel: "  Daily movement  ",
 				targetValue: 8_000,
+				areaSlug: "wheel:health",
 				daysOfWeek: 0b001_1111,
 				position: 0,
 			}),
@@ -76,6 +96,7 @@ describe("habit and challenge repositories", () => {
 			metricSlug: "steps",
 			direction: "at_least",
 			targetValue: 8_000,
+			areaSlug: "wheel:health",
 			customLabel: "Daily movement",
 			createdAt: 1_000,
 			updatedAt: 2_000,
@@ -101,6 +122,7 @@ describe("habit and challenge repositories", () => {
 			metricSlug: null,
 			direction: null,
 			targetValue: null,
+			areaSlug: null,
 			daysOfWeek: 0b111_1111,
 			position: 0,
 		});
@@ -111,6 +133,7 @@ describe("habit and challenge repositories", () => {
 			metricSlug: "sleep_duration",
 			direction: "at_least",
 			targetValue: 25_200,
+			areaSlug: null,
 			daysOfWeek: 0b111_1111,
 			position: 1,
 		});

@@ -123,9 +123,10 @@ export type MetricResolution =
 
 /**
  * The only value a factor observation ever carries. A factor that later needs
- * quantity gets a separate quantified-counterpart metric (`alcohol` →
- * `alcohol_intake`); reusing the factor's value would make existing rows
- * ambiguous. Convention: product plan, check-in domain.
+ * quantity gets a separate quantified-counterpart metric — as when the alcohol
+ * and caffeine factors were replaced outright by the consumption-derived
+ * `alcohol_intake`/`caffeine_intake`; reusing a factor's value would make
+ * existing rows ambiguous. Convention: product plan, check-in domain.
  */
 export const FACTOR_PRESENCE_VALUE = 1;
 
@@ -266,8 +267,6 @@ export const METRIC_REGISTRY = [
 	factor("training", "Training", "body", 2),
 	factor("illness", "Illness", "body", 3),
 	factor("poor_sleep_environment", "Poor sleep environment", "body", 4),
-	factor("caffeine", "Caffeine", "lifestyle", 5),
-	factor("alcohol", "Alcohol", "lifestyle", 6),
 	factor("late_screen", "Late screen", "lifestyle", 7),
 	factor("junk_food", "Junk food", "lifestyle", 8),
 	factor("stress", "Stress", "mind", 9),
@@ -349,6 +348,18 @@ export function hasCompletedCheckIn(
 export function resolveMetric(slug: string): MetricResolution {
 	const metric = metricsBySlug.get(slug);
 	return metric ? { kind: "known", metric } : { kind: "unknown", slug };
+}
+
+export function isConsumptionDerivedMeasurementSlug(
+	slug: string,
+): slug is ConsumptionDerivedMeasurementSlug {
+	const resolved = metricsBySlug.get(slug);
+	return (
+		resolved !== undefined &&
+		resolved.kind === "measurement" &&
+		"measurementSource" in resolved &&
+		resolved.measurementSource === "consumption"
+	);
 }
 
 export function listScoredMetrics(): ScoredMetricDefinition[] {

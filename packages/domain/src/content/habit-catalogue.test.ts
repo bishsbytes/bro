@@ -26,6 +26,8 @@ describe("habit catalogue", () => {
 			"habit:money-check-in",
 			"habit:family-moment",
 			"habit:fun-break",
+			"habit:quiet-reflection",
+			"habit:fatherhood-moment",
 		]);
 		expect(new Set(positions).size).toBe(positions.length);
 		for (const habit of HABIT_CATALOGUE) {
@@ -55,15 +57,22 @@ describe("habit catalogue", () => {
 				userEnterable: false,
 			});
 			expect(["sum", "mean"]).toContain(resolved.metric.aggregation);
-			expect(habit.direction).toBe("at_least");
+			expect(["at_least", "at_most"]).toContain(habit.direction);
 			expect(Number.isFinite(habit.defaultTargetValue)).toBe(true);
+			// A floor of zero would complete on silence; only ceilings may be zero.
+			if (habit.direction === "at_least") {
+				expect(habit.defaultTargetValue).toBeGreaterThan(0);
+			} else {
+				expect(habit.defaultTargetValue).toBeGreaterThanOrEqual(0);
+			}
 		}
 	});
 
-	it("covers every default area and keeps sensitivity aligned", () => {
+	it("covers every area and keeps sensitivity aligned", () => {
 		for (const area of LIFE_AREA_CATALOGUE) {
 			const habits = habitsForArea(area.slug);
-			if (area.defaultEnabled) expect(habits.length).toBeGreaterThan(0);
+			// Every area a user can focus deserves at least one habit to adopt.
+			expect(habits.length).toBeGreaterThan(0);
 			for (const habit of habits) {
 				const metric =
 					habit.kind === "metric" ? resolveMetric(habit.metricSlug) : null;

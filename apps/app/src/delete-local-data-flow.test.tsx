@@ -155,6 +155,7 @@ describe("delete local data", () => {
 			metricSlug: null,
 			direction: null,
 			targetValue: null,
+			areaSlug: null,
 			daysOfWeek: 0b111_1111,
 			position: 0,
 		});

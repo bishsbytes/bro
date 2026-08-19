@@ -54,7 +54,7 @@ describe("metric registry", () => {
 			"mood",
 			"energy",
 		]);
-		expect(listFactors()).toHaveLength(12);
+		expect(listFactors()).toHaveLength(10);
 		expect(listMeasurements()).toEqual([
 			expect.objectContaining({
 				slug: "weight",

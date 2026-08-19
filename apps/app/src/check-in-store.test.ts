@@ -130,7 +130,7 @@ describe("check-in store", () => {
 		await store.save({
 			mood: 4,
 			energy: 3,
-			selectedFactorSlugs: ["alcohol", "training"],
+			selectedFactorSlugs: ["outdoors", "training"],
 			measurements: [],
 			note: "",
 		});

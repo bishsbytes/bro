@@ -12,6 +12,7 @@ export type Habit = {
 	metricSlug: string | null;
 	direction: HabitDirection | null;
 	targetValue: number | null;
+	areaSlug: string | null;
 	daysOfWeek: number;
 	position: number;
 	addedAt: number;
@@ -28,13 +29,14 @@ export type CreateHabit = Pick<
 	| "metricSlug"
 	| "direction"
 	| "targetValue"
+	| "areaSlug"
 	| "daysOfWeek"
 	| "position"
 >;
 
 export type UpdateHabit = Pick<
 	Habit,
-	"customLabel" | "targetValue" | "daysOfWeek" | "position"
+	"customLabel" | "targetValue" | "areaSlug" | "daysOfWeek" | "position"
 >;
 
 type HabitRow = {
@@ -45,6 +47,7 @@ type HabitRow = {
 	metric_slug: string | null;
 	direction: string | null;
 	target_value: number | null;
+	area_slug: string | null;
 	days_of_week: number;
 	position: number;
 	added_at: number;
@@ -55,7 +58,8 @@ type HabitRow = {
 
 const SELECT_COLUMNS = `
 	id, slug, custom_label, kind, metric_slug, direction, target_value,
-	days_of_week, position, added_at, removed_at, created_at, updated_at
+	area_slug, days_of_week, position, added_at, removed_at, created_at,
+	updated_at
 `;
 
 function required(value: string, label: string): string {
@@ -85,6 +89,14 @@ function assertCadence(daysOfWeek: number): void {
 function assertPosition(position: number): void {
 	if (!Number.isInteger(position) || position < 0) {
 		throw new RangeError("Habit position must be a non-negative integer.");
+	}
+}
+
+// Accepts any wheel: slug, resolvable or not: a snapshot must outlive the
+// catalogue that authored it.
+function assertAreaSlug(areaSlug: string | null): void {
+	if (areaSlug !== null && !areaSlug.startsWith("wheel:")) {
+		throw new TypeError("Habit areaSlug must use the wheel: namespace.");
 	}
 }
 
@@ -134,6 +146,7 @@ function toHabit(row: HabitRow): Habit {
 		metricSlug: row.metric_slug,
 		direction: row.direction,
 		targetValue: row.target_value,
+		areaSlug: row.area_slug,
 		daysOfWeek: row.days_of_week,
 		position: row.position,
 		addedAt: row.added_at,
@@ -151,6 +164,7 @@ export class HabitRepository extends BaseRepository {
 		}
 		assertCadence(input.daysOfWeek);
 		assertPosition(input.position);
+		assertAreaSlug(input.areaSlug);
 		assertShape(
 			input.kind,
 			input.metricSlug,
@@ -174,8 +188,9 @@ export class HabitRepository extends BaseRepository {
 		await this.run(
 			`INSERT INTO habits (
 				id, slug, custom_label, kind, metric_slug, direction, target_value,
-				days_of_week, position, added_at, removed_at, created_at, updated_at
-			) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+				area_slug, days_of_week, position, added_at, removed_at, created_at,
+				updated_at
+			) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
 			[
 				habit.id,
 				habit.slug,
@@ -184,6 +199,7 @@ export class HabitRepository extends BaseRepository {
 				habit.metricSlug,
 				habit.direction,
 				habit.targetValue,
+				habit.areaSlug,
 				habit.daysOfWeek,
 				habit.position,
 				habit.addedAt,
@@ -227,6 +243,7 @@ export class HabitRepository extends BaseRepository {
 		}
 		assertCadence(input.daysOfWeek);
 		assertPosition(input.position);
+		assertAreaSlug(input.areaSlug);
 		assertShape(
 			existing.kind,
 			existing.metricSlug,
@@ -237,12 +254,13 @@ export class HabitRepository extends BaseRepository {
 		const now = this.now();
 		await this.run(
 			`UPDATE habits
-			 SET custom_label = ?, target_value = ?, days_of_week = ?, position = ?,
-			 	updated_at = ?
+			 SET custom_label = ?, target_value = ?, area_slug = ?, days_of_week = ?,
+			 	position = ?, updated_at = ?
 			 WHERE id = ?`,
 			[
 				normalizeLabel(input.customLabel),
 				input.targetValue,
+				input.areaSlug,
 				input.daysOfWeek,
 				input.position,
 				now,

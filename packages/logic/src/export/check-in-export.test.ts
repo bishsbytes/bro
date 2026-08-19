@@ -138,6 +138,7 @@ const readingHabit: Habit = {
 	metricSlug: null,
 	direction: null,
 	targetValue: null,
+	areaSlug: "wheel:growth",
 	daysOfWeek: 0b111_1111,
 	position: 0,
 	addedAt: 1_786_621_000_000,
@@ -436,13 +437,17 @@ describe("check-in export", () => {
 			id: "habit-alcohol-free",
 			slug: "habit:alcohol-free",
 			customLabel: null,
+			areaSlug: "wheel:sobriety",
 			position: 1,
 		};
+		// A stored non-sensitive area does not rescue a custom habit: its
+		// user-authored label is itself a disclosure.
 		const customHabit: Habit = {
 			...readingHabit,
 			id: "habit-custom",
 			slug: "habit:custom:private",
 			customLabel: "Private routine",
+			areaSlug: "wheel:growth",
 			position: 2,
 		};
 		const sensitiveMetricHabit: Habit = {
@@ -454,7 +459,34 @@ describe("check-in export", () => {
 			metricSlug: "resting_heart_rate",
 			direction: "at_most",
 			targetValue: 60,
+			areaSlug: "wheel:health",
 			position: 3,
+		};
+		// Retired template, no snapshot: sensitivity is unknowable, so it sits
+		// out like a retired-area challenge instead of leaking.
+		const retiredUnknowableHabit: Habit = {
+			...readingHabit,
+			id: "habit-retired-unknowable",
+			slug: "habit:retired",
+			customLabel: null,
+			areaSlug: null,
+			position: 4,
+		};
+		const retiredClassifiedHabit: Habit = {
+			...readingHabit,
+			id: "habit-retired-classified",
+			slug: "habit:retired-classified",
+			customLabel: null,
+			areaSlug: "wheel:growth",
+			position: 5,
+		};
+		const retiredSensitiveAreaHabit: Habit = {
+			...readingHabit,
+			id: "habit-retired-sensitive",
+			slug: "habit:retired-sensitive",
+			customLabel: null,
+			areaSlug: "wheel:faith",
+			position: 6,
 		};
 		const completionFor = (habit: Habit): HabitCompletion => ({
 			...readingCompletion,
@@ -499,12 +531,18 @@ describe("check-in export", () => {
 				sensitiveCatalogueHabit,
 				customHabit,
 				sensitiveMetricHabit,
+				retiredUnknowableHabit,
+				retiredClassifiedHabit,
+				retiredSensitiveAreaHabit,
 			],
 			habitCompletions: [
 				readingCompletion,
 				completionFor(sensitiveCatalogueHabit),
 				completionFor(customHabit),
 				completionFor(sensitiveMetricHabit),
+				completionFor(retiredUnknowableHabit),
+				completionFor(retiredClassifiedHabit),
+				completionFor(retiredSensitiveAreaHabit),
 			],
 			challengeEnrolments: [
 				healthEnrolment,
@@ -541,8 +579,8 @@ describe("check-in export", () => {
 			"resting_heart_rate",
 			"steps",
 		]);
-		expect(included.habits).toHaveLength(4);
-		expect(included.habitCompletions).toHaveLength(4);
+		expect(included.habits).toHaveLength(7);
+		expect(included.habitCompletions).toHaveLength(7);
 		expect(included.challengeEnrolments).toHaveLength(3);
 		expect(included.challengeProgress).toHaveLength(3);
 
@@ -572,8 +610,11 @@ describe("check-in export", () => {
 		expect(exported.goals).toEqual([]);
 		expect(exported.unitPreferences).toEqual(unitPreferences);
 		expect(exported.dailyMetrics).toEqual([stepsDailyMetric]);
-		expect(exported.habits).toEqual([readingHabit]);
-		expect(exported.habitCompletions).toEqual([readingCompletion]);
+		expect(exported.habits).toEqual([readingHabit, retiredClassifiedHabit]);
+		expect(exported.habitCompletions).toEqual([
+			completionFor(retiredClassifiedHabit),
+			readingCompletion,
+		]);
 		expect(exported.challengeEnrolments).toEqual([healthEnrolment]);
 		expect(exported.challengeProgress).toEqual([healthProgress]);
 	});

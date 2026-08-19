@@ -102,22 +102,26 @@ export function ReviewScreen({ store }: ReviewScreenProps) {
 								</AppText>
 							</View>
 							<AppText color="muted">
-								{progress.startValue === null
-									? "No starting score"
-									: `Started at ${progress.startValue}/10`}
+								{progress.startFormatted === null
+									? "No starting value"
+									: `Started at ${progress.startFormatted}`}
 								{" · "}
-								{progress.currentValue === null
-									? "No current score"
-									: `Latest ${progress.currentValue}/10`}
-								{" · "}Target {progress.goal.targetValue}/10
+								{progress.currentFormatted === null
+									? "No current value"
+									: `Latest ${progress.currentFormatted}`}
+								{" · "}Target {progress.targetFormatted}
 							</AppText>
 							{progress.goal.targetDate ? (
 								<AppText variant="caption" color="subtle">
 									Target date {progress.goal.targetDate}
 								</AppText>
 							) : null}
-							{progress.status === "active" &&
-							progress.progressPercent !== null ? (
+							{progress.targetReached ? (
+								<AppText variant="caption" color="brand">
+									Target reached — mark it achieved?
+								</AppText>
+							) : progress.status === "active" &&
+								progress.progressPercent !== null ? (
 								<AppText variant="caption" color="brand">
 									{progress.progressPercent}% of the way
 								</AppText>

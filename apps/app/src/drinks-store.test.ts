@@ -223,9 +223,12 @@ describe("drinks store", () => {
 		const alcohol = (await store.loadToday()).metrics.find(
 			({ metric }) => metric.slug === "alcohol_intake",
 		);
+		// The goal's "current" level is a 7-day daily mean with unlogged days as
+		// zero, not the latest day's spike: one 1.4-drink day averages to 0.2.
 		expect(alcohol?.goals[0]).toMatchObject({
 			targetFormatted: "1.1 standard drinks",
-			currentFormatted: "1.4 standard drinks",
+			currentFormatted: "0.2 standard drinks",
+			targetReached: true,
 		});
 		expect(
 			(await new databaseApp.GoalRepository(db).findById(goal.id))?.targetValue,

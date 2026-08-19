@@ -144,7 +144,7 @@ describe("home screen", () => {
 
 		await fireEvent.press(screen.getByLabelText("Mood 4"));
 		await fireEvent.press(screen.getByLabelText("Energy 3"));
-		await fireEvent.press(screen.getByLabelText("Alcohol"));
+		await fireEvent.press(screen.getByLabelText("Training"));
 		await fireEvent.press(screen.getByText("Save check-in"));
 
 		await waitFor(() =>
@@ -152,7 +152,7 @@ describe("home screen", () => {
 				{
 					mood: 4,
 					energy: 3,
-					selectedFactorSlugs: ["alcohol"],
+					selectedFactorSlugs: ["training"],
 					measurements: [],
 					note: "",
 				},

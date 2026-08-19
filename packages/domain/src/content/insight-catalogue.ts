@@ -37,7 +37,7 @@ export type InsightCatalogueEntry = {
 export const INSIGHT_CATALOGUE = [
 	{
 		id: "insight:alcohol-energy-lag1",
-		input: { kind: "presence", metricSlug: "alcohol" },
+		input: { kind: "presence", metricSlug: "alcohol_intake" },
 		outputMetricSlug: "energy",
 		lagDays: 1,
 		tier: "premium",
@@ -50,7 +50,7 @@ export const INSIGHT_CATALOGUE = [
 	},
 	{
 		id: "insight:alcohol-mood-lag1",
-		input: { kind: "presence", metricSlug: "alcohol" },
+		input: { kind: "presence", metricSlug: "alcohol_intake" },
 		outputMetricSlug: "mood",
 		lagDays: 1,
 		tier: "premium",
@@ -89,7 +89,7 @@ export const INSIGHT_CATALOGUE = [
 	},
 	{
 		id: "insight:caffeine-sleep_duration-lag1",
-		input: { kind: "presence", metricSlug: "caffeine" },
+		input: { kind: "presence", metricSlug: "caffeine_intake" },
 		outputMetricSlug: "sleep_duration",
 		lagDays: 1,
 		tier: "premium",
