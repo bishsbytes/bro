@@ -132,9 +132,9 @@ Not everything fits — though more fits than it first appears: a multi-select i
 
 This is not tidiness. A series holding a mix of kilograms and pounds is unrecoverable once you can no longer tell which row is which, and it is the sort of bug that arrives quietly through an import mapping years after the decision.
 
-**The registry declares a *dimension*, not a unit.** `weight` is mass; `sleep_duration` is time; `mood` is dimensionless. The unit a user sees is dimension plus preference, resolved at render.
+**The registry declares a *dimension*, not a unit.** `weight` is mass; `sleep_duration` is time; `mood` is dimensionless. The unit a user sees is its physical dimension plus an optional preference-dimension override, resolved at render. Most share the same key, but height deliberately uses its own preference while remaining canonical length in storage.
 
-**Preferences are per dimension, not one metric-versus-imperial switch.** The UK is the proof that a single toggle is wrong: the same person will want stones and pounds for body weight, kilometres for a run, and centimetres — or feet and inches — for height. Modelling it as one flag guarantees an argument with reality.
+**Preferences are per measurement context, not one metric-versus-imperial switch.** The UK is the proof that a single toggle is wrong: the same person may want stones and pounds for body weight, feet and inches for height, and inches for a waist measurement. Height therefore has `cm`/`ft` choices independently of the `cm`/`in` choice for other body lengths. Modelling it as one flag guarantees an argument with reality.
 
 ```ts
 unitPreferences = { id, dimension, unit, createdAt, updatedAt }

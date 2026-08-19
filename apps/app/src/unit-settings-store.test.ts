@@ -49,6 +49,13 @@ describe("unit settings store", () => {
 				preview: "12 st 4 lb",
 			},
 			{
+				dimension: "height",
+				resolvedUnit: "ft",
+				explicitUnit: null,
+				resolutionSource: "locale",
+				preview: "5 ft 7 in",
+			},
+			{
 				dimension: "length",
 				resolvedUnit: "cm",
 				explicitUnit: null,
@@ -64,6 +71,29 @@ describe("unit settings store", () => {
 			},
 		]);
 		expect(await repository.list()).toEqual([]);
+	});
+
+	it("keeps height independent from other body measurements", async () => {
+		const repository = new databaseApp.UnitPreferenceRepository(db);
+		const store = new UnitSettingsStore(repository, () => "en-GB");
+
+		await store.set("height", "cm");
+		const snapshot = await store.set("length", "in");
+
+		expect(snapshot.settings).toEqual(
+			expect.arrayContaining([
+				expect.objectContaining({
+					dimension: "height",
+					resolvedUnit: "cm",
+					preview: "170.0 cm",
+				}),
+				expect.objectContaining({
+					dimension: "length",
+					resolvedUnit: "in",
+					preview: "33.00 in",
+				}),
+			]),
+		);
 	});
 
 	it("persists a valid choice and refreshes the live preview", async () => {

@@ -18,6 +18,10 @@ import { StackScreen as Screen } from "../../components/screen";
 import { SectionHeader } from "../../components/section-header";
 import { TrendChart } from "../../components/trend-chart";
 import { StyleSheet } from "../../theme/unistyles";
+import {
+	compoundUnitExample,
+	measurementKeyboardType,
+} from "../../units/measurement-input";
 
 type BodyMetricScreenProps = {
 	metricSlug: string;
@@ -117,9 +121,7 @@ function HistoryEditor({
 				value={value}
 				error={error}
 				editable={!busy}
-				keyboardType={
-					presentation.displayUnit === "st" ? "default" : "decimal-pad"
-				}
+				keyboardType={measurementKeyboardType(presentation.displayUnit)}
 				onChangeText={setValue}
 			/>
 			<AppText variant="micro" color="subtle">
@@ -348,12 +350,8 @@ export function BodyMetricScreen({ metricSlug, store }: BodyMetricScreenProps) {
 								label={`Target (${detail.displayUnit})`}
 								value={target}
 								error={targetError}
-								placeholder={
-									detail.displayUnit === "st" ? "e.g. 12 st 0 lb" : undefined
-								}
-								keyboardType={
-									detail.displayUnit === "st" ? "default" : "decimal-pad"
-								}
+								placeholder={compoundUnitExample(detail.displayUnit)}
+								keyboardType={measurementKeyboardType(detail.displayUnit)}
 								onChangeText={setTarget}
 							/>
 							<FormField

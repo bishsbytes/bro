@@ -4,7 +4,7 @@ import {
 	formatIntrinsicMeasurement,
 	formatMeasurement,
 	INTRINSIC_DIMENSIONS,
-	resolveDisplayUnit,
+	resolveUnitPreference,
 } from "@bro/domain";
 import type { MeasurementMetricDefinition } from "@bro/domain/metric-registry";
 
@@ -22,9 +22,11 @@ export function metricDisplayUnit(
 	locale: string | undefined,
 ): DisplayUnit | null {
 	if (isIntrinsicDimension(metric.dimension)) return null;
-	return resolveDisplayUnit(
-		metric.dimension,
-		preferenceByDimension.get(metric.dimension),
+	const preferenceDimension =
+		metric.unitPreferenceDimension ?? metric.dimension;
+	return resolveUnitPreference(
+		preferenceDimension,
+		preferenceByDimension.get(preferenceDimension),
 		locale,
 	);
 }

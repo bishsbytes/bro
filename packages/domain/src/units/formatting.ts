@@ -1,4 +1,4 @@
-import { fromCanonical, POUNDS_PER_STONE } from "./conversion";
+import { fromCanonical, INCHES_PER_FOOT, POUNDS_PER_STONE } from "./conversion";
 import {
 	DISPLAY_RESOLUTIONS,
 	type Dimension,
@@ -6,6 +6,7 @@ import {
 	type DisplayUnitForDimension,
 	type IntrinsicDimension,
 	isDisplayUnitForDimension,
+	type SimpleDisplayUnit,
 } from "./dimensions";
 
 function assertCanonicalValue(value: number): void {
@@ -23,10 +24,7 @@ function decimalPlaces(resolution: number): number {
 	return text.includes(".") ? (text.split(".")[1]?.length ?? 0) : 0;
 }
 
-function formatRounded(
-	value: number,
-	unit: Exclude<DisplayUnit, "st">,
-): string {
+function formatRounded(value: number, unit: SimpleDisplayUnit): string {
 	const resolution = DISPLAY_RESOLUTIONS[unit];
 	const rounded = roundToResolution(value, resolution);
 	const formatted = rounded.toFixed(decimalPlaces(resolution));
@@ -47,6 +45,14 @@ export function formatMeasurement<D extends Dimension>(
 		const pounds = totalPounds % POUNDS_PER_STONE;
 		return `${stones} st ${pounds} lb`;
 	}
+	if (unit === "ft") {
+		const totalInches = Math.round(
+			fromCanonical(canonicalValue, "length", "in"),
+		);
+		const feet = Math.floor(totalInches / INCHES_PER_FOOT);
+		const inches = totalInches % INCHES_PER_FOOT;
+		return `${feet} ft ${inches} in`;
+	}
 
 	return formatRounded(
 		fromCanonical(
@@ -54,7 +60,7 @@ export function formatMeasurement<D extends Dimension>(
 			dimension,
 			unit as DisplayUnitForDimension<D>,
 		),
-		unit as Exclude<DisplayUnit, "st">,
+		unit as SimpleDisplayUnit,
 	);
 }
 

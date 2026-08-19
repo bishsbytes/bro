@@ -1,8 +1,8 @@
 import {
-	type Dimension,
-	type DisplayUnitForDimension,
-	FALLBACK_DISPLAY_UNITS,
-	isDisplayUnitForDimension,
+	type DisplayUnitForPreferenceDimension,
+	FALLBACK_DISPLAY_UNITS_BY_PREFERENCE_DIMENSION,
+	isDisplayUnitForPreferenceDimension,
+	type UnitPreferenceDimension,
 } from "./dimensions";
 
 function regionFromLocale(locale: string | undefined): string | null {
@@ -24,20 +24,27 @@ function regionFromLocale(locale: string | undefined): string | null {
 	return null;
 }
 
-export function defaultDisplayUnit<D extends Dimension>(
+export function defaultUnitPreference<D extends UnitPreferenceDimension>(
 	dimension: D,
 	locale?: string,
-): DisplayUnitForDimension<D> {
+): DisplayUnitForPreferenceDimension<D> {
 	const region = regionFromLocale(locale);
 	if (dimension === "mass") {
 		return (
 			region === "US" ? "lb" : region === "GB" ? "st" : "kg"
-		) as DisplayUnitForDimension<D>;
+		) as DisplayUnitForPreferenceDimension<D>;
+	}
+	if (dimension === "height") {
+		return (
+			region === "US" || region === "GB" ? "ft" : "cm"
+		) as DisplayUnitForPreferenceDimension<D>;
 	}
 	if (dimension === "length") {
-		return (region === "US" ? "in" : "cm") as DisplayUnitForDimension<D>;
+		return (
+			region === "US" ? "in" : "cm"
+		) as DisplayUnitForPreferenceDimension<D>;
 	}
-	return "%" as DisplayUnitForDimension<D>;
+	return "%" as DisplayUnitForPreferenceDimension<D>;
 }
 
 /**
@@ -45,16 +52,16 @@ export function defaultDisplayUnit<D extends Dimension>(
  * not: they fall back to today's safe display unit instead of changing with the
  * device region or throwing during render.
  */
-export function resolveDisplayUnit<D extends Dimension>(
+export function resolveUnitPreference<D extends UnitPreferenceDimension>(
 	dimension: D,
 	storedUnit: string | null | undefined,
 	locale?: string,
-): DisplayUnitForDimension<D> {
+): DisplayUnitForPreferenceDimension<D> {
 	if (storedUnit === null || storedUnit === undefined) {
-		return defaultDisplayUnit(dimension, locale);
+		return defaultUnitPreference(dimension, locale);
 	}
-	if (isDisplayUnitForDimension(dimension, storedUnit)) {
+	if (isDisplayUnitForPreferenceDimension(dimension, storedUnit)) {
 		return storedUnit;
 	}
-	return FALLBACK_DISPLAY_UNITS[dimension];
+	return FALLBACK_DISPLAY_UNITS_BY_PREFERENCE_DIMENSION[dimension];
 }

@@ -1,18 +1,26 @@
 import {
 	CANONICAL_STORAGE_UNITS,
+	DIMENSION_BY_UNIT_PREFERENCE,
 	DISPLAY_RESOLUTIONS,
 	DISPLAY_UNITS_BY_DIMENSION,
-	defaultDisplayUnit,
+	DISPLAY_UNITS_BY_PREFERENCE_DIMENSION,
+	defaultUnitPreference,
 	formatIntrinsicMeasurement,
 	formatMeasurement,
 	fromCanonical,
 	INVALID_MEASUREMENT_MESSAGE,
+	isCompoundDisplayUnit,
+	isDisplayUnitForDimension,
 	KILOGRAMS_PER_POUND,
+	METRES_PER_FOOT,
 	METRES_PER_INCH,
 	parseMeasurement,
-	resolveDisplayUnit,
+	resolveUnitPreference,
 	toCanonical,
+	UNIT_PREFERENCE_DIMENSIONS,
 } from "@bro/domain";
+import { resolveMetric } from "@bro/domain/metric-registry";
+import { metricDisplayUnit } from "../health/metric-presentation";
 
 function canonicalValueOf(result: ReturnType<typeof parseMeasurement>): number {
 	if (!result.ok) throw new Error(result.error);
@@ -31,8 +39,20 @@ describe("measurement units", () => {
 		});
 		expect(DISPLAY_UNITS_BY_DIMENSION).toEqual({
 			mass: ["kg", "lb", "st"],
+			length: ["cm", "in", "ft"],
+			fraction: ["%"],
+		});
+		expect(DISPLAY_UNITS_BY_PREFERENCE_DIMENSION).toEqual({
+			mass: ["kg", "lb", "st"],
+			height: ["cm", "ft"],
 			length: ["cm", "in"],
 			fraction: ["%"],
+		});
+		expect(DIMENSION_BY_UNIT_PREFERENCE).toEqual({
+			mass: "mass",
+			height: "length",
+			length: "length",
+			fraction: "fraction",
 		});
 		expect(DISPLAY_RESOLUTIONS).toEqual({
 			kg: 0.1,
@@ -40,6 +60,7 @@ describe("measurement units", () => {
 			st: 1,
 			cm: 0.5,
 			in: 0.25,
+			ft: 1,
 			"%": 0.1,
 		});
 	});
@@ -55,8 +76,10 @@ describe("measurement units", () => {
 	it("uses exact mass and length definitions", () => {
 		expect(toCanonical(1, "mass", "lb")).toBe(KILOGRAMS_PER_POUND);
 		expect(toCanonical(1, "length", "in")).toBe(METRES_PER_INCH);
+		expect(toCanonical(1, "length", "ft")).toBe(METRES_PER_FOOT);
 		expect(fromCanonical(KILOGRAMS_PER_POUND, "mass", "lb")).toBe(1);
 		expect(fromCanonical(METRES_PER_INCH, "length", "in")).toBe(1);
+		expect(fromCanonical(METRES_PER_FOOT, "length", "ft")).toBe(1);
 	});
 
 	it.each(["12 st 4", "12st 4lb", "12 stones 4 pounds"])(
@@ -81,6 +104,20 @@ describe("measurement units", () => {
 		);
 	});
 
+	it.each(["5 ft 11 in", "5ft 11", "5' 11\""])(
+		"parses compound height input %s into metres",
+		(input) => {
+			const parsed = parseMeasurement(input, "length", "ft");
+			expect(canonicalValueOf(parsed)).toBeCloseTo(
+				(5 + 11 / 12) * METRES_PER_FOOT,
+				12,
+			);
+			expect(formatMeasurement(canonicalValueOf(parsed), "length", "ft")).toBe(
+				"5 ft 11 in",
+			);
+		},
+	);
+
 	it("parses unit suffixes and locale decimal separators", () => {
 		expect(canonicalValueOf(parseMeasurement("172 lb", "mass", "lb"))).toBe(
 			172 * KILOGRAMS_PER_POUND,
@@ -102,6 +139,8 @@ describe("measurement units", () => {
 		["78,0", "mass", "kg"],
 		["12 st 14 lb", "mass", "st"],
 		["12.5 st 4 lb", "mass", "st"],
+		["5 ft 12 in", "length", "ft"],
+		["5.5 ft 4 in", "length", "ft"],
 		["-1", "length", "cm"],
 		["101%", "fraction", "%"],
 	] as const)(
@@ -119,6 +158,7 @@ describe("measurement units", () => {
 		expect(formatMeasurement(80, "mass", "lb")).toBe("176.4 lb");
 		expect(formatMeasurement(0.8, "length", "cm")).toBe("80.0 cm");
 		expect(formatMeasurement(0.8, "length", "in")).toBe("31.50 in");
+		expect(formatMeasurement(1.8, "length", "ft")).toBe("5 ft 11 in");
 		expect(formatMeasurement(0.1846, "fraction", "%")).toBe("18.5%");
 	});
 
@@ -143,20 +183,61 @@ describe("measurement units", () => {
 	});
 
 	it("uses regional defaults only when no preference exists", () => {
-		expect(defaultDisplayUnit("mass", "en-US")).toBe("lb");
-		expect(defaultDisplayUnit("length", "en-US")).toBe("in");
-		expect(defaultDisplayUnit("mass", "en-GB")).toBe("st");
-		expect(defaultDisplayUnit("length", "en-GB")).toBe("cm");
-		expect(defaultDisplayUnit("mass", "fr-FR")).toBe("kg");
-		expect(defaultDisplayUnit("length", "fr-FR")).toBe("cm");
-		expect(defaultDisplayUnit("fraction", "en-US")).toBe("%");
+		expect(defaultUnitPreference("mass", "en-US")).toBe("lb");
+		expect(defaultUnitPreference("length", "en-US")).toBe("in");
+		expect(defaultUnitPreference("mass", "en-GB")).toBe("st");
+		expect(defaultUnitPreference("length", "en-GB")).toBe("cm");
+		expect(defaultUnitPreference("mass", "fr-FR")).toBe("kg");
+		expect(defaultUnitPreference("length", "fr-FR")).toBe("cm");
+		expect(defaultUnitPreference("fraction", "en-US")).toBe("%");
+		expect(defaultUnitPreference("height", "en-US")).toBe("ft");
+		expect(defaultUnitPreference("height", "en-GB")).toBe("ft");
+		expect(defaultUnitPreference("height", "fr-FR")).toBe("cm");
 
-		expect(resolveDisplayUnit("mass", null, "en-US")).toBe("lb");
-		expect(resolveDisplayUnit("mass", "kg", "en-US")).toBe("kg");
-		expect(resolveDisplayUnit("mass", "future-mass-unit", "en-US")).toBe("kg");
-		expect(resolveDisplayUnit("length", "future-length-unit", "en-US")).toBe(
-			"cm",
+		expect(resolveUnitPreference("mass", null, "en-US")).toBe("lb");
+		expect(resolveUnitPreference("mass", "kg", "en-US")).toBe("kg");
+		expect(resolveUnitPreference("mass", "future-mass-unit", "en-US")).toBe(
+			"kg",
 		);
+		expect(resolveUnitPreference("height", "ft", "fr-FR")).toBe("ft");
+		expect(resolveUnitPreference("height", "in", "en-US")).toBe("cm");
+		expect(resolveUnitPreference("length", "ft", "en-GB")).toBe("cm");
+	});
+
+	it("keeps every preference choice usable at its physical dimension", () => {
+		for (const preference of UNIT_PREFERENCE_DIMENSIONS) {
+			const dimension = DIMENSION_BY_UNIT_PREFERENCE[preference];
+			for (const unit of DISPLAY_UNITS_BY_PREFERENCE_DIMENSION[preference]) {
+				expect(isDisplayUnitForDimension(dimension, unit)).toBe(true);
+			}
+		}
+	});
+
+	it("names the units that are entered as two parts", () => {
+		expect(isCompoundDisplayUnit("st")).toBe(true);
+		expect(isCompoundDisplayUnit("ft")).toBe(true);
+		expect(isCompoundDisplayUnit("kg")).toBe(false);
+		expect(isCompoundDisplayUnit("in")).toBe(false);
+	});
+
+	it("lets a length metric opt into the independent height preference", () => {
+		const resolved = resolveMetric("waist");
+		if (resolved.kind !== "known" || resolved.metric.kind !== "measurement") {
+			throw new Error("Expected the waist measurement metric.");
+		}
+		const preferences = new Map([
+			["height", "ft"],
+			["length", "cm"],
+		]);
+
+		expect(metricDisplayUnit(resolved.metric, preferences, "en-GB")).toBe("cm");
+		expect(
+			metricDisplayUnit(
+				{ ...resolved.metric, unitPreferenceDimension: "height" },
+				preferences,
+				"en-GB",
+			),
+		).toBe("ft");
 	});
 
 	it("rejects non-finite and negative conversion values", () => {

@@ -26,9 +26,22 @@ const localeSnapshot: UnitSettingsSnapshot = {
 			preview: "12 st 4 lb",
 		},
 		{
+			dimension: "height",
+			title: "Height",
+			description: "Used for height measurements.",
+			options: [
+				{ unit: "cm", label: "Centimetres" },
+				{ unit: "ft", label: "Feet & inches" },
+			],
+			resolvedUnit: "ft",
+			explicitUnit: null,
+			resolutionSource: "locale",
+			preview: "5 ft 7 in",
+		},
+		{
 			dimension: "length",
-			title: "Length",
-			description: "Used for waist measurements.",
+			title: "Other body measurements",
+			description: "Used for waist and other circumference measurements.",
 			options: [
 				{ unit: "cm", label: "Centimetres" },
 				{ unit: "in", label: "Inches" },
@@ -63,6 +76,10 @@ describe("units screen", () => {
 			expect(view.getByText("Example: 12 st 4 lb")).toBeTruthy(),
 		);
 		expect(view.getByText(/Device default: Stones & pounds/)).toBeTruthy();
+		expect(view.getByLabelText("Use Feet & inches for Height")).toBeTruthy();
+		expect(
+			view.getByLabelText("Use Inches for Other body measurements"),
+		).toBeTruthy();
 		expect(
 			view.getByLabelText("Use Stones & pounds for Weight").props
 				.accessibilityState,

@@ -8,7 +8,13 @@ import {
 	TrackedMetricsRepository,
 	UnitPreferenceRepository,
 } from "@bro/database-app";
-import { type DisplayUnit, isDisplayUnitForDimension } from "@bro/domain";
+import {
+	type DisplayUnit,
+	type FractionDisplayUnit,
+	isDisplayUnitForDimension,
+	type LengthDisplayUnit,
+	type MassDisplayUnit,
+} from "@bro/domain";
 import {
 	listUserEnterableMeasurements,
 	type MeasurementMetricDefinition,
@@ -43,15 +49,15 @@ type MeasurementPresentationBase = {
 export type MeasurementPresentation =
 	| (MeasurementPresentationBase & {
 			dimension: "mass";
-			displayUnit: "kg" | "lb" | "st";
+			displayUnit: MassDisplayUnit;
 	  })
 	| (MeasurementPresentationBase & {
 			dimension: "length";
-			displayUnit: "cm" | "in";
+			displayUnit: LengthDisplayUnit;
 	  })
 	| (MeasurementPresentationBase & {
 			dimension: "fraction";
-			displayUnit: "%";
+			displayUnit: FractionDisplayUnit;
 	  });
 
 export type BodyMetricPresentation = {

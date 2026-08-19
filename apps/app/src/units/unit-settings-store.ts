@@ -4,13 +4,14 @@ import {
 	type UnitPreferenceRepository,
 } from "@bro/database-app";
 import {
-	DIMENSIONS,
-	DISPLAY_UNITS_BY_DIMENSION,
-	type Dimension,
+	DIMENSION_BY_UNIT_PREFERENCE,
+	DISPLAY_UNITS_BY_PREFERENCE_DIMENSION,
 	type DisplayUnit,
 	formatMeasurement,
-	isDisplayUnitForDimension,
-	resolveDisplayUnit,
+	isDisplayUnitForPreferenceDimension,
+	resolveUnitPreference,
+	UNIT_PREFERENCE_DIMENSIONS,
+	type UnitPreferenceDimension,
 } from "@bro/domain";
 import type { SQLiteDatabase } from "expo-sqlite";
 
@@ -20,7 +21,7 @@ export type UnitOption = {
 };
 
 export type UnitSetting = {
-	dimension: Dimension;
+	dimension: UnitPreferenceDimension;
 	title: string;
 	description: string;
 	options: UnitOption[];
@@ -45,24 +46,31 @@ const UNIT_LABELS: Record<DisplayUnit, string> = {
 	st: "Stones & pounds",
 	cm: "Centimetres",
 	in: "Inches",
+	ft: "Feet & inches",
 	"%": "Percent",
 };
 
-const SETTING_COPY: Record<Dimension, { title: string; description: string }> =
-	{
-		mass: {
-			title: "Weight",
-			description: "Used for weight entries, history, trends, and goals.",
-		},
-		length: {
-			title: "Length",
-			description: "Used for waist measurements.",
-		},
-		fraction: {
-			title: "Body fat",
-			description: "Body fat is always displayed as a percentage.",
-		},
-	};
+const SETTING_COPY: Record<
+	UnitPreferenceDimension,
+	{ title: string; description: string }
+> = {
+	mass: {
+		title: "Weight",
+		description: "Used for weight entries, history, trends, and goals.",
+	},
+	height: {
+		title: "Height",
+		description: "Used for height measurements.",
+	},
+	length: {
+		title: "Other body measurements",
+		description: "Used for waist and other circumference measurements.",
+	},
+	fraction: {
+		title: "Body fat",
+		description: "Body fat is always displayed as a percentage.",
+	},
+};
 
 function systemLocale(): string | undefined {
 	try {
@@ -72,29 +80,27 @@ function systemLocale(): string | undefined {
 	}
 }
 
+/** Canonical values chosen to read naturally in every unit on offer. */
+const PREVIEW_CANONICAL_VALUES = {
+	mass: 78,
+	height: 1.7,
+	length: 0.84,
+	fraction: 0.185,
+} as const satisfies Record<UnitPreferenceDimension, number>;
+
 function previewFor(
-	dimension: Dimension,
+	dimension: UnitPreferenceDimension,
 	storedUnit: string | null | undefined,
 	locale: string | undefined,
 ): { resolvedUnit: DisplayUnit; preview: string } {
-	if (dimension === "mass") {
-		const resolvedUnit = resolveDisplayUnit(dimension, storedUnit, locale);
-		return {
-			resolvedUnit,
-			preview: formatMeasurement(78, dimension, resolvedUnit),
-		};
-	}
-	if (dimension === "length") {
-		const resolvedUnit = resolveDisplayUnit(dimension, storedUnit, locale);
-		return {
-			resolvedUnit,
-			preview: formatMeasurement(0.84, dimension, resolvedUnit),
-		};
-	}
-	const resolvedUnit = resolveDisplayUnit(dimension, storedUnit, locale);
+	const resolvedUnit = resolveUnitPreference(dimension, storedUnit, locale);
 	return {
 		resolvedUnit,
-		preview: formatMeasurement(0.185, dimension, resolvedUnit),
+		preview: formatMeasurement(
+			PREVIEW_CANONICAL_VALUES[dimension],
+			DIMENSION_BY_UNIT_PREFERENCE[dimension],
+			resolvedUnit,
+		),
 	};
 }
 
@@ -111,11 +117,11 @@ export class UnitSettingsStore {
 		);
 		const locale = this.locale();
 		return {
-			settings: DIMENSIONS.map((dimension) => {
+			settings: UNIT_PREFERENCE_DIMENSIONS.map((dimension) => {
 				const storedUnit = storedByDimension.get(dimension);
 				const explicitUnit =
 					storedUnit !== undefined &&
-					isDisplayUnitForDimension(dimension, storedUnit)
+					isDisplayUnitForPreferenceDimension(dimension, storedUnit)
 						? storedUnit
 						: null;
 				const { resolvedUnit, preview } = previewFor(
@@ -126,10 +132,12 @@ export class UnitSettingsStore {
 				return {
 					dimension,
 					...SETTING_COPY[dimension],
-					options: DISPLAY_UNITS_BY_DIMENSION[dimension].map((unit) => ({
-						unit,
-						label: UNIT_LABELS[unit],
-					})),
+					options: DISPLAY_UNITS_BY_PREFERENCE_DIMENSION[dimension].map(
+						(unit) => ({
+							unit,
+							label: UNIT_LABELS[unit],
+						}),
+					),
 					resolvedUnit,
 					explicitUnit,
 					resolutionSource:
@@ -144,8 +152,11 @@ export class UnitSettingsStore {
 		};
 	}
 
-	async set(dimension: Dimension, unit: string): Promise<UnitSettingsSnapshot> {
-		if (!isDisplayUnitForDimension(dimension, unit)) {
+	async set(
+		dimension: UnitPreferenceDimension,
+		unit: string,
+	): Promise<UnitSettingsSnapshot> {
+		if (!isDisplayUnitForPreferenceDimension(dimension, unit)) {
 			throw new TypeError(`Unit ${unit} does not measure ${dimension}.`);
 		}
 		await this.preferences.set(dimension, unit);

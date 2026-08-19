@@ -9,9 +9,12 @@ import {
 import {
 	type Dimension,
 	type DisplayUnit,
+	type FractionDisplayUnit,
 	formatMeasurement,
 	isDisplayUnitForDimension,
-	resolveDisplayUnit,
+	type LengthDisplayUnit,
+	type MassDisplayUnit,
+	resolveUnitPreference,
 } from "@bro/domain";
 import {
 	DEFAULT_TRACKED_METRICS,
@@ -53,15 +56,15 @@ type CheckInMeasurementBase = {
 export type CheckInMeasurement =
 	| (CheckInMeasurementBase & {
 			dimension: "mass";
-			displayUnit: "kg" | "lb" | "st";
+			displayUnit: MassDisplayUnit;
 	  })
 	| (CheckInMeasurementBase & {
 			dimension: "length";
-			displayUnit: "cm" | "in";
+			displayUnit: LengthDisplayUnit;
 	  })
 	| (CheckInMeasurementBase & {
 			dimension: "fraction";
-			displayUnit: "%";
+			displayUnit: FractionDisplayUnit;
 	  });
 
 export type LoggedCheckInMeasurement = CheckInMeasurement & {
@@ -274,9 +277,11 @@ export class CheckInStore {
 				return [];
 			}
 			const metric = resolved.metric;
-			const displayUnit = resolveDisplayUnit(
-				metric.dimension,
-				preferenceByDimension.get(metric.dimension),
+			const preferenceDimension =
+				metric.unitPreferenceDimension ?? metric.dimension;
+			const displayUnit = resolveUnitPreference(
+				preferenceDimension,
+				preferenceByDimension.get(preferenceDimension),
 				inputLocale,
 			);
 			return [

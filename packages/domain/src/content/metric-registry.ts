@@ -1,4 +1,9 @@
-import type { Dimension, IntrinsicDimension, MetricDimension } from "../units";
+import type {
+	Dimension,
+	IntrinsicDimension,
+	MetricDimension,
+	UnitPreferenceDimension,
+} from "../units";
 import { LIFE_AREA_CATALOGUE, type LifeAreaSlug } from "./life-area-catalogue";
 
 export type MetricKind = "scored" | "factor" | "assessment" | "measurement";
@@ -59,6 +64,8 @@ type MeasurementMetricDefinitionBase = MetricDefinitionBase & {
 	scaleMin: null;
 	scaleMax: null;
 	category: null;
+	/** Overrides the physical dimension when display preferences need splitting. */
+	unitPreferenceDimension?: UnitPreferenceDimension;
 };
 
 export type UserEnterableMeasurementMetricDefinition =

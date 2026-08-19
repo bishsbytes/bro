@@ -10,6 +10,8 @@ export const KILOGRAMS_PER_POUND = 0.45359237;
 export const POUNDS_PER_STONE = 14;
 /** Exact international-inch definition. */
 export const METRES_PER_INCH = 0.0254;
+export const INCHES_PER_FOOT = 12;
+export const METRES_PER_FOOT = METRES_PER_INCH * INCHES_PER_FOOT;
 
 function assertValue(value: number): void {
 	if (!Number.isFinite(value) || value < 0) {
@@ -42,7 +44,8 @@ export function toCanonical(
 		return value * POUNDS_PER_STONE * KILOGRAMS_PER_POUND;
 	}
 	if (dimension === "length") {
-		return unit === "cm" ? value / 100 : value * METRES_PER_INCH;
+		if (unit === "cm") return value / 100;
+		return value * (unit === "in" ? METRES_PER_INCH : METRES_PER_FOOT);
 	}
 	return value / 100;
 }
@@ -66,9 +69,8 @@ export function fromCanonical(
 		return unit === "lb" ? pounds : pounds / POUNDS_PER_STONE;
 	}
 	if (dimension === "length") {
-		return unit === "cm"
-			? canonicalValue * 100
-			: canonicalValue / METRES_PER_INCH;
+		if (unit === "cm") return canonicalValue * 100;
+		return canonicalValue / (unit === "in" ? METRES_PER_INCH : METRES_PER_FOOT);
 	}
 	return canonicalValue * 100;
 }

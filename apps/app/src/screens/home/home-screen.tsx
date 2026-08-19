@@ -25,6 +25,10 @@ import {
 	type TodayHabitsSnapshot,
 } from "../../habits/habits-store";
 import { StyleSheet } from "../../theme/unistyles";
+import {
+	compoundUnitExample,
+	measurementKeyboardType,
+} from "../../units/measurement-input";
 
 type HomeScreenProps = {
 	store?: Pick<CheckInStore, "loadToday" | "save">;
@@ -73,9 +77,10 @@ function parseMeasurementInput(
 }
 
 function measurementPlaceholder(measurement: CheckInMeasurement): string {
-	return measurement.displayUnit === "st"
-		? "e.g. 12 st 4 lb"
-		: `Enter ${measurement.displayUnit}`;
+	return (
+		compoundUnitExample(measurement.displayUnit) ??
+		`Enter ${measurement.displayUnit}`
+	);
 }
 
 export function HomeScreen({ store, habitsStore }: HomeScreenProps) {
@@ -424,9 +429,7 @@ export function HomeScreen({ store, habitsStore }: HomeScreenProps) {
 								updateMeasurementInput(measurement.metricSlug, value)
 							}
 							placeholder={measurementPlaceholder(measurement)}
-							keyboardType={
-								measurement.displayUnit === "st" ? "default" : "decimal-pad"
-							}
+							keyboardType={measurementKeyboardType(measurement.displayUnit)}
 							autoCapitalize="none"
 							error={measurementErrors[measurement.metricSlug]}
 						/>

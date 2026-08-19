@@ -1,9 +1,10 @@
-import { POUNDS_PER_STONE, toCanonical } from "./conversion";
+import { INCHES_PER_FOOT, POUNDS_PER_STONE, toCanonical } from "./conversion";
 import {
 	type Dimension,
 	type DisplayUnit,
 	type DisplayUnitForDimension,
 	isDisplayUnitForDimension,
+	type SimpleDisplayUnit,
 } from "./dimensions";
 
 export const INVALID_MEASUREMENT_MESSAGE = "Enter a valid measurement.";
@@ -12,7 +13,7 @@ export type ParsedMeasurement =
 	| { ok: true; canonicalValue: number }
 	| { ok: false; error: typeof INVALID_MEASUREMENT_MESSAGE };
 
-const SUFFIXES: Record<Exclude<DisplayUnit, "st">, string> = {
+const SUFFIXES: Record<SimpleDisplayUnit, string> = {
 	kg: "kg",
 	lb: "(?:lb|lbs)",
 	cm: "cm",
@@ -75,9 +76,30 @@ function parseStones(value: string, locale: string | undefined): number | null {
 	return stones + pounds / POUNDS_PER_STONE;
 }
 
+function parseFeet(value: string, locale: string | undefined): number | null {
+	const number = numberPattern(locale);
+	const compound = new RegExp(
+		`^(${number})\\s*(?:ft|foot|feet|')(?:\\s*(${number})\\s*(?:in|inch|inches|")?)?$`,
+		"i",
+	).exec(value.trim());
+	if (!compound) return parseNumber(value, locale);
+
+	const feet = parseNumber(compound[1] ?? "", locale);
+	const inches = compound[2] ? parseNumber(compound[2], locale) : 0;
+	if (
+		feet === null ||
+		inches === null ||
+		(compound[2] !== undefined && !Number.isInteger(feet)) ||
+		inches >= INCHES_PER_FOOT
+	) {
+		return null;
+	}
+	return feet + inches / INCHES_PER_FOOT;
+}
+
 function parseSingleUnit(
 	value: string,
-	unit: Exclude<DisplayUnit, "st">,
+	unit: SimpleDisplayUnit,
 	locale: string | undefined,
 ): number | null {
 	const match = new RegExp(
@@ -103,7 +125,9 @@ export function parseMeasurement<D extends Dimension>(
 	const displayValue =
 		unit === "st"
 			? parseStones(input, locale)
-			: parseSingleUnit(input, unit as Exclude<DisplayUnit, "st">, locale);
+			: unit === "ft"
+				? parseFeet(input, locale)
+				: parseSingleUnit(input, unit as SimpleDisplayUnit, locale);
 	if (displayValue === null) {
 		return { ok: false, error: INVALID_MEASUREMENT_MESSAGE };
 	}
