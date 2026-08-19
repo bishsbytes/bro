@@ -1,5 +1,10 @@
 import type { Observation } from "@bro/database-app";
-import { type ParsedMeasurement, parseMeasurement } from "@bro/domain";
+import {
+	type MeasurementEntry,
+	measurementEntryOf,
+	type ParsedMeasurement,
+	parseMeasurementEntry,
+} from "@bro/domain";
 import { router, useFocusEffect } from "expo-router";
 import { useCallback, useMemo, useState } from "react";
 import { ActivityIndicator, View } from "react-native";
@@ -14,14 +19,11 @@ import { Button } from "../../components/button";
 import { Card } from "../../components/card";
 import { EmptyState } from "../../components/empty-state";
 import { FormField } from "../../components/form-field";
+import { MeasurementField } from "../../components/measurement-field";
 import { StackScreen as Screen } from "../../components/screen";
 import { SectionHeader } from "../../components/section-header";
 import { TrendChart } from "../../components/trend-chart";
 import { StyleSheet } from "../../theme/unistyles";
-import {
-	compoundUnitExample,
-	measurementKeyboardType,
-} from "../../units/measurement-input";
 
 type BodyMetricScreenProps = {
 	metricSlug: string;
@@ -36,32 +38,59 @@ type BodyMetricScreenProps = {
 	>;
 };
 
+const EMPTY_ENTRY: MeasurementEntry = { major: "", minor: "" };
+
 function parsePresentedMeasurement(
-	input: string,
+	entry: MeasurementEntry,
 	presentation: MeasurementPresentation,
 	locale: string | undefined,
 ): ParsedMeasurement {
 	if (presentation.dimension === "mass") {
-		return parseMeasurement(
-			input,
+		return parseMeasurementEntry(
+			entry,
 			presentation.dimension,
 			presentation.displayUnit,
 			locale,
 		);
 	}
 	if (presentation.dimension === "length") {
-		return parseMeasurement(
-			input,
+		return parseMeasurementEntry(
+			entry,
 			presentation.dimension,
 			presentation.displayUnit,
 			locale,
 		);
 	}
-	return parseMeasurement(
-		input,
+	return parseMeasurementEntry(
+		entry,
 		presentation.dimension,
 		presentation.displayUnit,
 		locale,
+	);
+}
+
+function presentedEntryOf(
+	canonicalValue: number,
+	presentation: MeasurementPresentation,
+): MeasurementEntry {
+	if (presentation.dimension === "mass") {
+		return measurementEntryOf(
+			canonicalValue,
+			presentation.dimension,
+			presentation.displayUnit,
+		);
+	}
+	if (presentation.dimension === "length") {
+		return measurementEntryOf(
+			canonicalValue,
+			presentation.dimension,
+			presentation.displayUnit,
+		);
+	}
+	return measurementEntryOf(
+		canonicalValue,
+		presentation.dimension,
+		presentation.displayUnit,
 	);
 }
 
@@ -97,7 +126,9 @@ function HistoryEditor({
 	onSave: (canonicalValue: number) => void;
 	onDelete: () => void;
 }) {
-	const [value, setValue] = useState(entry.formattedValue);
+	const [value, setValue] = useState(() =>
+		presentedEntryOf(entry.observation.value, presentation),
+	);
 	const [error, setError] = useState<string | null>(null);
 
 	function save() {
@@ -115,14 +146,14 @@ function HistoryEditor({
 			<AppText variant="caption" color="muted">
 				{dateTimeLabel(entry.observation)}
 			</AppText>
-			<FormField
-				label={`Value (${presentation.displayUnit})`}
+			<MeasurementField
+				label="Value"
+				unit={presentation.displayUnit}
 				accessibilityLabel={`Edit ${presentation.label} ${entry.observation.id}`}
-				value={value}
+				entry={value}
 				error={error}
 				editable={!busy}
-				keyboardType={measurementKeyboardType(presentation.displayUnit)}
-				onChangeText={setValue}
+				onChangeEntry={setValue}
 			/>
 			<AppText variant="micro" color="subtle">
 				Source: {entry.observation.source}
@@ -176,7 +207,7 @@ export function BodyMetricScreen({ metricSlug, store }: BodyMetricScreenProps) {
 	const [detail, setDetail] = useState<BodyMetricDetail | null | undefined>(
 		undefined,
 	);
-	const [target, setTarget] = useState("");
+	const [target, setTarget] = useState<MeasurementEntry>(EMPTY_ENTRY);
 	const [targetDate, setTargetDate] = useState("");
 	const [targetError, setTargetError] = useState<string | null>(null);
 	const [error, setError] = useState<string | null>(null);
@@ -246,7 +277,7 @@ export function BodyMetricScreen({ metricSlug, store }: BodyMetricScreenProps) {
 				parsed.canonicalValue,
 				targetDate.trim() || null,
 			);
-			setTarget("");
+			setTarget(EMPTY_ENTRY);
 			setTargetDate("");
 			setDetail(await body.loadMetric(metricSlug));
 		} catch (caught) {
@@ -346,13 +377,12 @@ export function BodyMetricScreen({ metricSlug, store }: BodyMetricScreenProps) {
 						</Card>
 					) : detail.latest ? (
 						<Card style={styles.goalCard}>
-							<FormField
-								label={`Target (${detail.displayUnit})`}
-								value={target}
+							<MeasurementField
+								label="Target"
+								unit={detail.editablePresentation.displayUnit}
+								entry={target}
 								error={targetError}
-								placeholder={compoundUnitExample(detail.displayUnit)}
-								keyboardType={measurementKeyboardType(detail.displayUnit)}
-								onChangeText={setTarget}
+								onChangeEntry={setTarget}
 							/>
 							<FormField
 								label="Target date (optional)"

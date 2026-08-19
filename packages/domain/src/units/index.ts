@@ -1,4 +1,11 @@
 export {
+	COMPOUND_UNIT_PARTS,
+	type CompoundUnitParts,
+	fromCompoundParts,
+	type MeasurementEntry,
+	toCompoundParts,
+} from "./compound";
+export {
 	fromCanonical,
 	INCHES_PER_FOOT,
 	KILOGRAMS_PER_POUND,
@@ -35,7 +42,11 @@ export {
 	UNIT_PREFERENCE_DIMENSIONS,
 	type UnitPreferenceDimension,
 } from "./dimensions";
-export { formatIntrinsicMeasurement, formatMeasurement } from "./formatting";
+export {
+	formatIntrinsicMeasurement,
+	formatMeasurement,
+	measurementEntryOf,
+} from "./formatting";
 export {
 	defaultUnitPreference,
 	resolveUnitPreference,
@@ -44,4 +55,5 @@ export {
 	INVALID_MEASUREMENT_MESSAGE,
 	type ParsedMeasurement,
 	parseMeasurement,
+	parseMeasurementEntry,
 } from "./parsing";

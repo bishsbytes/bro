@@ -1,10 +1,17 @@
-import { fromCanonical, INCHES_PER_FOOT, POUNDS_PER_STONE } from "./conversion";
 import {
+	COMPOUND_UNIT_PARTS,
+	type MeasurementEntry,
+	toCompoundParts,
+} from "./compound";
+import { fromCanonical } from "./conversion";
+import {
+	type CompoundDisplayUnit,
 	DISPLAY_RESOLUTIONS,
 	type Dimension,
 	type DisplayUnit,
 	type DisplayUnitForDimension,
 	type IntrinsicDimension,
+	isCompoundDisplayUnit,
 	isDisplayUnitForDimension,
 	type SimpleDisplayUnit,
 } from "./dimensions";
@@ -39,19 +46,9 @@ export function formatMeasurement<D extends Dimension>(
 	if (!isDisplayUnitForDimension(dimension, unit as DisplayUnit)) {
 		throw new TypeError(`Unit ${unit} does not measure ${dimension}.`);
 	}
-	if (unit === "st") {
-		const totalPounds = Math.round(fromCanonical(canonicalValue, "mass", "lb"));
-		const stones = Math.floor(totalPounds / POUNDS_PER_STONE);
-		const pounds = totalPounds % POUNDS_PER_STONE;
-		return `${stones} st ${pounds} lb`;
-	}
-	if (unit === "ft") {
-		const totalInches = Math.round(
-			fromCanonical(canonicalValue, "length", "in"),
-		);
-		const feet = Math.floor(totalInches / INCHES_PER_FOOT);
-		const inches = totalInches % INCHES_PER_FOOT;
-		return `${feet} ft ${inches} in`;
+	if (isCompoundDisplayUnit(unit)) {
+		const { major, minor } = toCompoundParts(canonicalValue, dimension, unit);
+		return `${major} ${unit} ${minor} ${COMPOUND_UNIT_PARTS[unit].minor}`;
 	}
 
 	return formatRounded(
@@ -62,6 +59,39 @@ export function formatMeasurement<D extends Dimension>(
 		),
 		unit as SimpleDisplayUnit,
 	);
+}
+
+/**
+ * Splits a stored value into the fields a person edits, without unit suffixes.
+ * Compound units seed both fields; simple units seed `major` alone.
+ */
+export function measurementEntryOf<D extends Dimension>(
+	canonicalValue: number,
+	dimension: D,
+	unit: DisplayUnitForDimension<D>,
+): MeasurementEntry {
+	if (!isDisplayUnitForDimension(dimension, unit as DisplayUnit)) {
+		throw new TypeError(`Unit ${unit} does not measure ${dimension}.`);
+	}
+	if (isCompoundDisplayUnit(unit as DisplayUnit)) {
+		const parts = toCompoundParts(
+			canonicalValue,
+			dimension,
+			unit as CompoundDisplayUnit,
+		);
+		return { major: String(parts.major), minor: String(parts.minor) };
+	}
+
+	const simple = unit as SimpleDisplayUnit;
+	const resolution = DISPLAY_RESOLUTIONS[simple];
+	const rounded = roundToResolution(
+		fromCanonical(canonicalValue, dimension, unit),
+		resolution,
+	);
+	return {
+		major: rounded.toFixed(decimalPlaces(resolution)),
+		minor: "",
+	};
 }
 
 /** Formats dimensions that deliberately have no user preference in v1. */

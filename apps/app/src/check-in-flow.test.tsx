@@ -95,7 +95,8 @@ describe("daily check-in flow", () => {
 		await fireEvent.press(view.getByLabelText("Mood 4"));
 		await fireEvent.press(view.getByLabelText("Energy 3"));
 		await fireEvent.press(view.getByLabelText("Alcohol"));
-		await fireEvent.changeText(view.getByLabelText("Weight (st)"), "12 st 4");
+		await fireEvent.changeText(view.getByLabelText("Weight (stones)"), "12");
+		await fireEvent.changeText(view.getByLabelText("Weight (pounds)"), "4");
 		await fireEvent.changeText(
 			view.getByPlaceholderText("Anything worth remembering?"),
 			"Strong finish",
@@ -132,7 +133,8 @@ describe("daily check-in flow", () => {
 		await fireEvent.press(view.getByLabelText("Energy 4"));
 		await fireEvent.press(view.getByLabelText("Alcohol"));
 		await fireEvent.press(view.getByLabelText("Training"));
-		await fireEvent.changeText(view.getByLabelText("Weight (st)"), "12 st 3");
+		await fireEvent.changeText(view.getByLabelText("Weight (stones)"), "12");
+		await fireEvent.changeText(view.getByLabelText("Weight (pounds)"), "3");
 		await fireEvent.press(view.getByText("Save check-in"));
 
 		expect(await view.findByText("2 check-ins")).toBeTruthy();

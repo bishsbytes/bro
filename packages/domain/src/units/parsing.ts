@@ -1,8 +1,15 @@
+import {
+	COMPOUND_UNIT_PARTS,
+	fromCompoundParts,
+	type MeasurementEntry,
+} from "./compound";
 import { INCHES_PER_FOOT, POUNDS_PER_STONE, toCanonical } from "./conversion";
 import {
+	type CompoundDisplayUnit,
 	type Dimension,
 	type DisplayUnit,
 	type DisplayUnitForDimension,
+	isCompoundDisplayUnit,
 	isDisplayUnitForDimension,
 	type SimpleDisplayUnit,
 } from "./dimensions";
@@ -73,7 +80,7 @@ function parseStones(value: string, locale: string | undefined): number | null {
 	) {
 		return null;
 	}
-	return stones + pounds / POUNDS_PER_STONE;
+	return fromCompoundParts(stones, pounds, "st");
 }
 
 function parseFeet(value: string, locale: string | undefined): number | null {
@@ -94,7 +101,7 @@ function parseFeet(value: string, locale: string | undefined): number | null {
 	) {
 		return null;
 	}
-	return feet + inches / INCHES_PER_FOOT;
+	return fromCompoundParts(feet, inches, "ft");
 }
 
 function parseSingleUnit(
@@ -141,4 +148,45 @@ export function parseMeasurement<D extends Dimension>(
 		return { ok: false, error: INVALID_MEASUREMENT_MESSAGE };
 	}
 	return { ok: true, canonicalValue };
+}
+
+/**
+ * Parses the fields a measurement is typed into. Compound units are entered as
+ * two whole numbers rather than as text, so the remainder is checked against
+ * its major here instead of being teased back out of a sentence.
+ */
+export function parseMeasurementEntry<D extends Dimension>(
+	entry: MeasurementEntry,
+	dimension: D,
+	unit: DisplayUnitForDimension<D>,
+	locale?: string,
+): ParsedMeasurement {
+	if (!isDisplayUnitForDimension(dimension, unit as DisplayUnit)) {
+		return { ok: false, error: INVALID_MEASUREMENT_MESSAGE };
+	}
+	if (!isCompoundDisplayUnit(unit as DisplayUnit)) {
+		return parseMeasurement(entry.major, dimension, unit, locale);
+	}
+
+	const compoundUnit = unit as CompoundDisplayUnit;
+	const major = parseNumber(entry.major, locale);
+	const minorInput = entry.minor.trim();
+	const minor = minorInput ? parseNumber(minorInput, locale) : 0;
+	if (
+		major === null ||
+		minor === null ||
+		!Number.isInteger(major) ||
+		!Number.isInteger(minor) ||
+		minor >= COMPOUND_UNIT_PARTS[compoundUnit].minorsPerMajor
+	) {
+		return { ok: false, error: INVALID_MEASUREMENT_MESSAGE };
+	}
+	return {
+		ok: true,
+		canonicalValue: toCanonical(
+			fromCompoundParts(major, minor, compoundUnit),
+			dimension,
+			unit,
+		),
+	};
 }

@@ -95,7 +95,8 @@ describe("body metrics flow", () => {
 		await act(async () => expoRouter.replace("/"));
 		await fireEvent.press(await view.findByLabelText("Mood 4"));
 		await fireEvent.press(view.getByLabelText("Energy 3"));
-		await fireEvent.changeText(view.getByLabelText("Weight (st)"), "12 st 4");
+		await fireEvent.changeText(view.getByLabelText("Weight (stones)"), "12");
+		await fireEvent.changeText(view.getByLabelText("Weight (pounds)"), "4");
 		await fireEvent.press(view.getByText("Save check-in"));
 		expect(await view.findByText("1 check-in")).toBeTruthy();
 
@@ -107,7 +108,8 @@ describe("body metrics flow", () => {
 		await fireEvent.press(view.getByText("Open Weight"));
 		expect(await view.findByText("12 st 4 lb")).toBeTruthy();
 
-		await fireEvent.changeText(view.getByLabelText("Target (st)"), "12 st 0");
+		await fireEvent.changeText(view.getByLabelText("Target (stones)"), "12");
+		await fireEvent.changeText(view.getByLabelText("Target (pounds)"), "0");
 		await fireEvent.changeText(
 			view.getByLabelText("Target date (optional)"),
 			"2026-12-25",
@@ -129,7 +131,8 @@ describe("body metrics flow", () => {
 		await fireEvent.press(await view.findByText("Add another check-in"));
 		await fireEvent.press(view.getByLabelText("Mood 5"));
 		await fireEvent.press(view.getByLabelText("Energy 4"));
-		await fireEvent.changeText(view.getByLabelText("Weight (st)"), "12 st 3");
+		await fireEvent.changeText(view.getByLabelText("Weight (stones)"), "12");
+		await fireEvent.changeText(view.getByLabelText("Weight (pounds)"), "3");
 		await fireEvent.press(view.getByText("Save check-in"));
 		expect(await view.findByText("2 check-ins")).toBeTruthy();
 
@@ -142,8 +145,8 @@ describe("body metrics flow", () => {
 			.at(-1);
 		if (!observation) throw new Error("Expected a saved weight observation.");
 		await fireEvent.changeText(
-			view.getByLabelText(`Edit Weight ${observation.id}`),
-			"12 st 2",
+			view.getByLabelText(`Edit Weight ${observation.id} (pounds)`),
+			"2",
 		);
 		await fireEvent.press(
 			view.getByLabelText(`Save measurement ${observation.id}`),

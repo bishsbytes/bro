@@ -1,4 +1,8 @@
-import { type ParsedMeasurement, parseMeasurement } from "@bro/domain";
+import {
+	type MeasurementEntry,
+	type ParsedMeasurement,
+	parseMeasurementEntry,
+} from "@bro/domain";
 import {
 	type FactorCategory,
 	resolveMetric,
@@ -17,6 +21,7 @@ import { AppText } from "../../components/app-text";
 import { Button } from "../../components/button";
 import { Card } from "../../components/card";
 import { FormField } from "../../components/form-field";
+import { MeasurementField } from "../../components/measurement-field";
 import { Screen } from "../../components/screen";
 import { SectionHeader } from "../../components/section-header";
 import {
@@ -25,10 +30,6 @@ import {
 	type TodayHabitsSnapshot,
 } from "../../habits/habits-store";
 import { StyleSheet } from "../../theme/unistyles";
-import {
-	compoundUnitExample,
-	measurementKeyboardType,
-} from "../../units/measurement-input";
 
 type HomeScreenProps = {
 	store?: Pick<CheckInStore, "loadToday" | "save">;
@@ -47,40 +48,39 @@ const CATEGORY_LABELS: Record<FactorCategory, string> = {
 	social: "Social",
 };
 
+const EMPTY_ENTRY: MeasurementEntry = { major: "", minor: "" };
+
 function parseMeasurementInput(
-	input: string,
+	entry: MeasurementEntry,
 	measurement: CheckInMeasurement,
 	locale: string | undefined,
 ): ParsedMeasurement {
 	if (measurement.dimension === "mass") {
-		return parseMeasurement(
-			input,
+		return parseMeasurementEntry(
+			entry,
 			measurement.dimension,
 			measurement.displayUnit,
 			locale,
 		);
 	}
 	if (measurement.dimension === "length") {
-		return parseMeasurement(
-			input,
+		return parseMeasurementEntry(
+			entry,
 			measurement.dimension,
 			measurement.displayUnit,
 			locale,
 		);
 	}
-	return parseMeasurement(
-		input,
+	return parseMeasurementEntry(
+		entry,
 		measurement.dimension,
 		measurement.displayUnit,
 		locale,
 	);
 }
 
-function measurementPlaceholder(measurement: CheckInMeasurement): string {
-	return (
-		compoundUnitExample(measurement.displayUnit) ??
-		`Enter ${measurement.displayUnit}`
-	);
+function isBlankEntry(entry: MeasurementEntry): boolean {
+	return !entry.major.trim() && !entry.minor.trim();
 }
 
 export function HomeScreen({ store, habitsStore }: HomeScreenProps) {
@@ -103,7 +103,7 @@ export function HomeScreen({ store, habitsStore }: HomeScreenProps) {
 	const [selectedFactors, setSelectedFactors] = useState<string[]>([]);
 	const [note, setNote] = useState("");
 	const [measurementInputs, setMeasurementInputs] = useState<
-		Record<string, string>
+		Record<string, MeasurementEntry>
 	>({});
 	const [measurementErrors, setMeasurementErrors] = useState<
 		Record<string, string>
@@ -209,8 +209,8 @@ export function HomeScreen({ store, habitsStore }: HomeScreenProps) {
 		setFormOpen(true);
 	}
 
-	function updateMeasurementInput(slug: string, value: string) {
-		setMeasurementInputs((current) => ({ ...current, [slug]: value }));
+	function updateMeasurementInput(slug: string, entry: MeasurementEntry) {
+		setMeasurementInputs((current) => ({ ...current, [slug]: entry }));
 		setMeasurementErrors((current) => {
 			if (!(slug in current)) return current;
 			const next = { ...current };
@@ -227,10 +227,10 @@ export function HomeScreen({ store, habitsStore }: HomeScreenProps) {
 		const fieldErrors: Record<string, string> = {};
 		if (!editing) {
 			for (const measurement of today.availableMeasurements) {
-				const input = measurementInputs[measurement.metricSlug]?.trim() ?? "";
-				if (!input) continue;
+				const entry = measurementInputs[measurement.metricSlug] ?? EMPTY_ENTRY;
+				if (isBlankEntry(entry)) continue;
 				const parsed = parseMeasurementInput(
-					input,
+					entry,
 					measurement,
 					today.inputLocale,
 				);
@@ -421,16 +421,15 @@ export function HomeScreen({ store, habitsStore }: HomeScreenProps) {
 						Optional — leave a field blank to skip it today.
 					</AppText>
 					{today.availableMeasurements.map((measurement) => (
-						<FormField
+						<MeasurementField
 							key={measurement.metricSlug}
-							label={`${measurement.label} (${measurement.displayUnit})`}
-							value={measurementInputs[measurement.metricSlug] ?? ""}
-							onChangeText={(value) =>
-								updateMeasurementInput(measurement.metricSlug, value)
+							label={measurement.label}
+							unit={measurement.displayUnit}
+							entry={measurementInputs[measurement.metricSlug] ?? EMPTY_ENTRY}
+							onChangeEntry={(entry) =>
+								updateMeasurementInput(measurement.metricSlug, entry)
 							}
-							placeholder={measurementPlaceholder(measurement)}
-							keyboardType={measurementKeyboardType(measurement.displayUnit)}
-							autoCapitalize="none"
+							placeholder={`Enter ${measurement.displayUnit}`}
 							error={measurementErrors[measurement.metricSlug]}
 						/>
 					))}

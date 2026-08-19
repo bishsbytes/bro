@@ -171,14 +171,12 @@ describe("home screen", () => {
 				store={{ loadToday: jest.fn(async () => measurementToday), save }}
 			/>,
 		);
-		await screen.findByLabelText("Weight (st)");
+		await screen.findByLabelText("Weight (stones)");
 
 		await fireEvent.press(screen.getByLabelText("Mood 4"));
 		await fireEvent.press(screen.getByLabelText("Energy 3"));
-		await fireEvent.changeText(
-			screen.getByLabelText("Weight (st)"),
-			"12 st 4 lb",
-		);
+		await fireEvent.changeText(screen.getByLabelText("Weight (stones)"), "12");
+		await fireEvent.changeText(screen.getByLabelText("Weight (pounds)"), "4");
 		await fireEvent.press(screen.getByText("Save check-in"));
 
 		await waitFor(() => expect(save).toHaveBeenCalledTimes(1));
@@ -200,11 +198,14 @@ describe("home screen", () => {
 				store={{ loadToday: jest.fn(async () => measurementToday), save }}
 			/>,
 		);
-		await screen.findByLabelText("Weight (st)");
+		await screen.findByLabelText("Weight (stones)");
 
 		await fireEvent.press(screen.getByLabelText("Mood 4"));
 		await fireEvent.press(screen.getByLabelText("Energy 3"));
-		await fireEvent.changeText(screen.getByLabelText("Weight (st)"), "nope");
+		await fireEvent.changeText(
+			screen.getByLabelText("Weight (stones)"),
+			"nope",
+		);
 		await fireEvent.press(screen.getByText("Save check-in"));
 		expect(await screen.findByText("Enter a valid measurement.")).toBeTruthy();
 		expect(save).not.toHaveBeenCalled();

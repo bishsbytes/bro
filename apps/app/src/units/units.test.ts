@@ -14,7 +14,9 @@ import {
 	KILOGRAMS_PER_POUND,
 	METRES_PER_FOOT,
 	METRES_PER_INCH,
+	measurementEntryOf,
 	parseMeasurement,
+	parseMeasurementEntry,
 	resolveUnitPreference,
 	toCanonical,
 	UNIT_PREFERENCE_DIMENSIONS,
@@ -211,6 +213,59 @@ describe("measurement units", () => {
 				expect(isDisplayUnitForDimension(dimension, unit)).toBe(true);
 			}
 		}
+	});
+
+	it("round-trips a compound unit through its two entry fields", () => {
+		const weight = measurementEntryOf(78, "mass", "st");
+		expect(weight).toEqual({ major: "12", minor: "4" });
+		expect(
+			canonicalValueOf(parseMeasurementEntry(weight, "mass", "st")),
+		).toBeCloseTo(172 * KILOGRAMS_PER_POUND, 12);
+
+		const height = measurementEntryOf(1.8, "length", "ft");
+		expect(height).toEqual({ major: "5", minor: "11" });
+		expect(
+			formatMeasurement(
+				canonicalValueOf(parseMeasurementEntry(height, "length", "ft")),
+				"length",
+				"ft",
+			),
+		).toBe("5 ft 11 in");
+	});
+
+	it("gives a simple unit one entry field at its display resolution", () => {
+		expect(measurementEntryOf(0.8, "length", "cm")).toEqual({
+			major: "80.0",
+			minor: "",
+		});
+		expect(
+			canonicalValueOf(
+				parseMeasurementEntry({ major: "80", minor: "" }, "length", "cm"),
+			),
+		).toBeCloseTo(0.8, 12);
+	});
+
+	it("reads a blank remainder as zero and rejects one that overflows", () => {
+		expect(
+			canonicalValueOf(
+				parseMeasurementEntry({ major: "12", minor: "" }, "mass", "st"),
+			),
+		).toBeCloseTo(168 * KILOGRAMS_PER_POUND, 12);
+
+		for (const entry of [
+			{ major: "12", minor: "14" },
+			{ major: "12.5", minor: "4" },
+			{ major: "", minor: "4" },
+			{ major: "nope", minor: "4" },
+		]) {
+			expect(parseMeasurementEntry(entry, "mass", "st")).toEqual({
+				ok: false,
+				error: INVALID_MEASUREMENT_MESSAGE,
+			});
+		}
+		expect(
+			parseMeasurementEntry({ major: "5", minor: "12" }, "length", "ft").ok,
+		).toBe(false);
 	});
 
 	it("names the units that are entered as two parts", () => {
