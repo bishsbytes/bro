@@ -90,7 +90,12 @@ export class HealthSettingsStore {
 		return await this.load();
 	}
 
-	async openSettings(): Promise<void> {
+	/**
+	 * Returns `undefined` rather than `void` so screens can treat every store
+	 * action as "a fresh snapshot, or nothing" in one union; `void` in that
+	 * union is what biome's noConfusingVoidType refuses.
+	 */
+	async openSettings(): Promise<undefined> {
 		await this.engine.openSettings();
 	}
 }
