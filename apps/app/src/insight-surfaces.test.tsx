@@ -46,7 +46,7 @@ describe("insight surfaces", () => {
 			shown: [],
 			evaluations: [],
 			teaser: {
-				watchedCount: 14,
+				watchedCount: 16,
 				nearest: {
 					kind: "not-yet",
 					pair,
@@ -66,7 +66,7 @@ describe("insight surfaces", () => {
 			/>,
 		);
 
-		expect(await screen.findByText("Watching 14 patterns")).toBeTruthy();
+		expect(await screen.findByText("Watching 16 patterns")).toBeTruthy();
 		expect(
 			screen.getByText(
 				"The closest needs 6 more days matching “Days after drinking”.",
@@ -81,7 +81,7 @@ describe("insight surfaces", () => {
 			shown: [],
 			evaluations: [],
 			teaser: {
-				watchedCount: 14,
+				watchedCount: 16,
 				nearest: {
 					kind: "not-yet",
 					pair,

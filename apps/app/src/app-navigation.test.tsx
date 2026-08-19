@@ -89,7 +89,7 @@ jest.mock("./insight/insight-store", () => ({
 			throughLocalDay: "2026-08-14",
 			evaluations: [],
 			shown: [],
-			teaser: { watchedCount: 14, nearest: null },
+			teaser: { watchedCount: 16, nearest: null },
 		}),
 	}),
 }));

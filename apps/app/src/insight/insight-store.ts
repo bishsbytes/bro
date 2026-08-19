@@ -1,4 +1,5 @@
 import {
+	ConsumptionEntryRepository,
 	DailyMetricRepository,
 	getDb,
 	ObservationRepository,
@@ -45,6 +46,7 @@ function systemTimeZone(): string {
 export class InsightStore {
 	private readonly observations: ObservationRepository;
 	private readonly dailyMetrics: DailyMetricRepository;
+	private readonly consumptionEntries: ConsumptionEntryRepository;
 	private readonly trackedMetrics: TrackedMetricsRepository;
 
 	constructor(
@@ -54,6 +56,7 @@ export class InsightStore {
 	) {
 		this.observations = new ObservationRepository(db);
 		this.dailyMetrics = new DailyMetricRepository(db);
+		this.consumptionEntries = new ConsumptionEntryRepository(db);
 		this.trackedMetrics = new TrackedMetricsRepository(db);
 	}
 
@@ -66,11 +69,13 @@ export class InsightStore {
 		);
 		const inWindow = (row: { localDay: string }) =>
 			row.localDay >= earliestLocalDay && row.localDay <= throughLocalDay;
-		const [observations, dailyMetrics, trackedMetrics] = await Promise.all([
-			this.observations.listAll(),
-			this.dailyMetrics.listAll(),
-			this.trackedMetrics.listAll(),
-		]);
+		const [observations, dailyMetrics, consumptionEntries, trackedMetrics] =
+			await Promise.all([
+				this.observations.listAll(),
+				this.dailyMetrics.listAll(),
+				this.consumptionEntries.listAll(),
+				this.trackedMetrics.listAll(),
+			]);
 		const factorWindows = new Map<
 			string,
 			{ addedOn: string | null; removedOn: string | null }
@@ -109,6 +114,7 @@ export class InsightStore {
 		return createDailySignalReader({
 			observations: observations.filter(inWindow),
 			dailyMetrics: dailyMetrics.filter(inWindow),
+			consumptionEntries: consumptionEntries.filter(inWindow),
 			factorActive,
 		});
 	}

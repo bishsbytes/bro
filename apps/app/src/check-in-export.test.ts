@@ -4,6 +4,7 @@ import type {
 	Assessment,
 	ChallengeEnrolment,
 	ChallengeProgress,
+	ConsumptionEntry,
 	DailyMetric,
 	DayNote,
 	Goal,
@@ -175,8 +176,56 @@ const healthProgress: ChallengeProgress = {
 	updatedAt: 1_786_621_500_000,
 };
 
+const caffeineEntry: ConsumptionEntry = {
+	id: "consumption-coffee",
+	kind: "drink",
+	catalogueRef: "drink:filter-coffee",
+	label: "Filter coffee",
+	servingLabel: "mug",
+	quantity: 1,
+	volumeL: 0.25,
+	ethanolKg: 0,
+	caffeineKg: 0.000_095,
+	energyKcal: 2,
+	occurredAt: 1_786_621_600_000,
+	localDay: "2026-08-13",
+	tzOffsetMinutes: -60,
+	createdAt: 1_786_621_600_100,
+	updatedAt: 1_786_621_600_100,
+};
+
+const alcoholEntry: ConsumptionEntry = {
+	...caffeineEntry,
+	id: "consumption-lager",
+	catalogueRef: "drink:lager",
+	label: "Lager",
+	servingLabel: "pint",
+	volumeL: 0.568_261_25,
+	ethanolKg: 0.020_181_999,
+	caffeineKg: 0,
+	energyKcal: 227,
+	occurredAt: 1_786_621_500_000,
+	createdAt: 1_786_621_500_100,
+	updatedAt: 1_786_621_500_100,
+};
+
+const fluidEntry: ConsumptionEntry = {
+	...caffeineEntry,
+	id: "consumption-water",
+	catalogueRef: "drink:water",
+	label: "Water",
+	servingLabel: "glass",
+	volumeL: 0.3,
+	ethanolKg: null,
+	caffeineKg: null,
+	energyKcal: 0,
+	occurredAt: 1_786_621_700_000,
+	createdAt: 1_786_621_700_100,
+	updatedAt: 1_786_621_700_100,
+};
+
 describe("check-in export", () => {
-	it("matches the version 5 golden file and round-trips habit and challenge data", () => {
+	it("matches the version 6 golden file and round-trips consumption data", () => {
 		const input = {
 			observations: [],
 			dayNotes: [],
@@ -184,19 +233,20 @@ describe("check-in export", () => {
 			assessments: [],
 			goals: [],
 			unitPreferences: [],
-			dailyMetrics: [stepsDailyMetric, restingHeartRateDailyMetric],
-			habits: [readingHabit],
-			habitCompletions: [readingCompletion],
-			challengeEnrolments: [healthEnrolment],
-			challengeProgress: [healthProgress],
-			registry: [knownMetric("resting_heart_rate"), knownMetric("steps")],
+			dailyMetrics: [],
+			habits: [],
+			habitCompletions: [],
+			challengeEnrolments: [],
+			challengeProgress: [],
+			consumptionEntries: [caffeineEntry],
+			registry: [knownMetric("caffeine_intake")],
 		};
 		const serialized = serializeCheckInExport(input, {
 			appVersion: "1.0.0",
 			exportedAt: 1_786_708_800_000,
 		});
 		const golden = readFileSync(
-			join(__dirname, "export", "__fixtures__", "check-in-export-v5.json"),
+			join(__dirname, "export", "__fixtures__", "check-in-export-v6.json"),
 			"utf8",
 		);
 
@@ -222,6 +272,18 @@ describe("check-in export", () => {
 		expect(parsed.metadata.formatVersion).toBe(4);
 		expect("dailyMetrics" in parsed ? parsed.dailyMetrics : []).toHaveLength(2);
 		expect("habits" in parsed).toBe(false);
+	});
+
+	it("continues to parse the committed version 5 fixture", () => {
+		const fixture = readFileSync(
+			join(__dirname, "export", "__fixtures__", "check-in-export-v5.json"),
+			"utf8",
+		);
+
+		const parsed = parseCheckInExport(fixture);
+		expect(parsed.metadata.formatVersion).toBe(5);
+		expect("challengeProgress" in parsed).toBe(true);
+		expect("consumptionEntries" in parsed).toBe(false);
 	});
 
 	it("continues to parse the committed version 3 fixture", () => {
@@ -387,6 +449,7 @@ describe("check-in export", () => {
 				retiredAreaEnrolment,
 			],
 			challengeProgress: [healthProgress, faithProgress, retiredAreaProgress],
+			consumptionEntries: [],
 			registry: [
 				knownMetric("mood"),
 				sensitiveMetric,
@@ -450,6 +513,75 @@ describe("check-in export", () => {
 		expect(exported.challengeProgress).toEqual([healthProgress]);
 	});
 
+	it("excludes whole ethanol entries and every alcohol metric reference", () => {
+		const trackedAlcoholIntake: TrackedMetric = {
+			...trackedAlcohol,
+			id: "tracked-alcohol-intake",
+			metricSlug: "alcohol_intake",
+		};
+		const trackedCaffeine: TrackedMetric = {
+			...trackedAlcohol,
+			id: "tracked-caffeine-intake",
+			metricSlug: "caffeine_intake",
+		};
+		const alcoholGoal: Goal = {
+			...goal,
+			id: "goal-alcohol",
+			metricSlug: "alcohol_intake",
+		};
+		const caffeineGoal: Goal = {
+			...goal,
+			id: "goal-caffeine",
+			metricSlug: "caffeine_intake",
+		};
+		const input = {
+			observations: [],
+			dayNotes: [],
+			trackedMetrics: [trackedAlcoholIntake, trackedCaffeine],
+			assessments: [],
+			goals: [alcoholGoal, caffeineGoal],
+			unitPreferences: [],
+			dailyMetrics: [],
+			habits: [],
+			habitCompletions: [],
+			challengeEnrolments: [],
+			challengeProgress: [],
+			consumptionEntries: [fluidEntry, alcoholEntry, caffeineEntry],
+			registry: [
+				knownMetric("alcohol_intake"),
+				knownMetric("caffeine_intake"),
+				knownMetric("fluid_intake"),
+			],
+		};
+
+		const included = buildCheckInExport(input, {
+			appVersion: "1.0.0",
+			exportedAt: 1_786_708_800_000,
+		});
+		expect(included.consumptionEntries).toEqual([
+			alcoholEntry,
+			caffeineEntry,
+			fluidEntry,
+		]);
+
+		const excluded = buildCheckInExport(input, {
+			appVersion: "1.0.0",
+			exportedAt: 1_786_708_800_000,
+			excludeSensitiveMetrics: true,
+		});
+		expect(excluded.consumptionEntries).toEqual([caffeineEntry, fluidEntry]);
+		expect(excluded.registry.metrics.map(({ slug }) => slug)).toEqual([
+			"caffeine_intake",
+			"fluid_intake",
+		]);
+		expect(excluded.trackedMetrics.map(({ metricSlug }) => metricSlug)).toEqual([
+			"caffeine_intake",
+		]);
+		expect(excluded.goals.map(({ metricSlug }) => metricSlug)).toEqual([
+			"caffeine_intake",
+		]);
+	});
+
 	it("produces a valid versioned export for an empty database", () => {
 		const exported = buildCheckInExport(
 			{
@@ -464,6 +596,7 @@ describe("check-in export", () => {
 				habitCompletions: [],
 				challengeEnrolments: [],
 				challengeProgress: [],
+				consumptionEntries: [],
 				registry: [knownMetric("mood")],
 			},
 			{ appVersion: "1.0.0", exportedAt: 0 },
@@ -471,7 +604,7 @@ describe("check-in export", () => {
 
 		expect(exported).toMatchObject({
 			metadata: {
-				formatVersion: 5,
+				formatVersion: 6,
 				exportedAt: "1970-01-01T00:00:00.000Z",
 				appVersion: "1.0.0",
 			},
@@ -486,6 +619,7 @@ describe("check-in export", () => {
 			habitCompletions: [],
 			challengeEnrolments: [],
 			challengeProgress: [],
+			consumptionEntries: [],
 		});
 		expect(exported.registry.metrics).toHaveLength(1);
 	});

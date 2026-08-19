@@ -2,6 +2,7 @@ import {
 	AssessmentRepository,
 	ChallengeEnrolmentRepository,
 	ChallengeProgressRepository,
+	ConsumptionEntryRepository,
 	DailyMetricRepository,
 	DayNoteRepository,
 	GoalRepository,
@@ -37,6 +38,7 @@ export class ExportStore {
 			habitCompletions,
 			challengeEnrolments,
 			challengeProgress,
+			consumptionEntries,
 		] = await Promise.all([
 			new ObservationRepository(this.db).listAll(),
 			new DayNoteRepository(this.db).listAll(),
@@ -49,6 +51,7 @@ export class ExportStore {
 			new HabitCompletionRepository(this.db).listAll(),
 			new ChallengeEnrolmentRepository(this.db).listAll(),
 			new ChallengeProgressRepository(this.db).listAll(),
+			new ConsumptionEntryRepository(this.db).listAll(),
 		]);
 
 		return serializeCheckInExport(
@@ -64,6 +67,7 @@ export class ExportStore {
 				habitCompletions,
 				challengeEnrolments,
 				challengeProgress,
+				consumptionEntries,
 				registry: METRIC_REGISTRY,
 			},
 			{

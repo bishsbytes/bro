@@ -2,7 +2,7 @@
 
 ## Status
 
-**In progress, 19 August 2026. Slices 1–3 complete.**
+**Complete, 19 August 2026.** Migration 007, the snapshotted consumption-entry repository, canonical drink units and authored catalogue, read-time daily totals, drinks/settings/Trends/goals surfaces, entry-derived insight signals, the sixteen-pair catalogue, and export format v6 are delivered. Real-SQLite, pure-domain, store, interaction, export, migration, typecheck, and lint coverage are green. No native dependency, prebuild, account, network request, or stored daily total was added.
 
 This is the delivery plan for the first half of [sequencing step 8 of the product domains plan](product-domains-and-data.md#sequencing), which this plan splits in two. The product plan's step 8 — food logging — is "the largest, carries the external dependency, and is the easiest to get wrong in a way users abandon". That description is true of food and false of drink: alcohol, caffeine, and fluid need no food database, no barcode, no network, and no new store, and they are the consumption signals the [insight engine](step-7-insight.md) already has authored pairs for. So **step 8 is drink logging, and step 9 is food logging**, and step 8 exists to design and prove the consumption entry model — the entry table, the snapshot rule, the entry-to-daily-signal projection — with zero external dependency, so that step 9's one hard thing is genuinely only the provider.
 
@@ -130,6 +130,8 @@ Unchanged copy; the action now also clears `consumption_entries` via the shared 
 1. Factor presence derivation from entries in the daily-signal adapter; the two new catalogue pairs with copy; teaser arithmetic unchanged.
 2. Export format v6: `consumptionEntries`, entry-level sensitive exclusion, new fixture, v1–v5 fixtures still parsing.
 3. Full automated acceptance matrix below; update the product plan (sequencing split, step 8 status, open decisions 5-energy and 16 resolved) and record the step 9 hand-off.
+
+**Delivered 19 August 2026.** Alcohol and caffeine factor presence now derives from positive canonical quantities on logged entries without changing the false-arm check-in rule. Two four-UK-unit threshold pairs join the authored catalogue, taking the teaser and evaluation pool from fourteen to sixteen without an engine change. Export v6 adds sorted snapshot-complete `consumptionEntries`; sensitive exclusion removes whole ethanol-carrying entries together with the alcohol metric, tracked row, and goals, while v1–v5 fixtures continue to parse. The acceptance matrix is covered across the existing focused suites and the product plan records the resolved unit/provider decisions and completed sequencing step.
 
 ## Expected touchpoints
 

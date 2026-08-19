@@ -39,9 +39,10 @@ describe("daily insight signal", () => {
 
 	afterAll(() => mockSqlite.cleanup());
 
-	it("means scored rows, excludes old bounds, derives absence, and resolves imports", async () => {
+	it("resolves scored, imported, and consumption signals with derived factor presence", async () => {
 		const observations = new databaseApp.ObservationRepository(db);
 		const daily = new databaseApp.DailyMetricRepository(db);
+		const consumption = new databaseApp.ConsumptionEntryRepository(db);
 		const base = {
 			observedAt: Date.parse("2026-08-14T09:00:00.000Z"),
 			localDay: "2026-08-14",
@@ -75,6 +76,15 @@ describe("daily insight signal", () => {
 		});
 		await observations.create({
 			...base,
+			observedAt: base.observedAt + 2 * 86_400_000,
+			localDay: "2026-08-16",
+			metricSlug: "mood",
+			value: 3,
+			scaleMin: 1,
+			scaleMax: 5,
+		});
+		await observations.create({
+			...base,
 			metricSlug: "sleep_duration",
 			value: 18_000,
 			scaleMin: null,
@@ -86,19 +96,57 @@ describe("daily insight signal", () => {
 			value: 25_200,
 			source: "health_connect",
 		});
+		await consumption.create({
+			kind: "drink",
+			catalogueRef: "drink:lager",
+			label: "Lager",
+			servingLabel: "pint",
+			quantity: 1,
+			volumeL: 0.568_261_25,
+			ethanolKg: 0.020_181_999,
+			caffeineKg: 0,
+			energyKcal: 227,
+			occurredAt: base.observedAt,
+			localDay: base.localDay,
+			tzOffsetMinutes: -60,
+		});
+		await consumption.create({
+			kind: "drink",
+			catalogueRef: "drink:coffee",
+			label: "Coffee",
+			servingLabel: "mug",
+			quantity: 1,
+			volumeL: 0.25,
+			ethanolKg: 0,
+			caffeineKg: 0.000_095,
+			energyKcal: 2,
+			occurredAt: base.observedAt + 86_400_000,
+			localDay: "2026-08-15",
+			tzOffsetMinutes: -60,
+		});
 		const source = {
 			observations: await observations.listAll(),
 			dailyMetrics: await daily.listAll(),
+			consumptionEntries: await consumption.listAll(),
 		};
 
 		expect(readDailySignal("mood", base.localDay, source)?.value).toBe(3);
-		expect(readDailySignal("alcohol", base.localDay, source)?.value).toBe(0);
+		expect(readDailySignal("alcohol", base.localDay, source)?.value).toBe(1);
 		expect(
-			readDailySignal("alcohol", base.localDay, {
+			readDailySignal("alcohol_intake", base.localDay, source)?.value,
+		).toBe(0.020_181_999);
+		expect(readDailySignal("caffeine", "2026-08-15", source)?.value).toBe(1);
+		expect(
+			readDailySignal("caffeine_intake", "2026-08-15", source)?.value,
+		).toBe(0.000_095);
+		expect(
+			readDailySignal("alcohol", "2026-08-16", {
 				...source,
 				factorActive: () => false,
 			}),
 		).toBeNull();
+		expect(readDailySignal("alcohol", "2026-08-16", source)?.value).toBe(0);
+		expect(readDailySignal("alcohol", "2026-08-17", source)).toBeNull();
 		expect(
 			readDailySignal("sleep_duration", base.localDay, source)?.value,
 		).toBe(25_200);

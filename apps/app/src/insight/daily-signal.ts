@@ -1,9 +1,12 @@
-import type { DailyMetric, Observation } from "@bro/database-app";
+import type {
+	ConsumptionEntry,
+	DailyMetric,
+	Observation,
+} from "@bro/database-app";
 import {
 	FACTOR_PRESENCE_VALUE,
 	resolveMetric,
 } from "@bro/domain/metric-registry";
-import { isHealthMetricSlug } from "../health/policy";
 import { resolveMetricDay } from "../health/resolved-day";
 
 export type DailySignal = {
@@ -15,6 +18,7 @@ export type DailySignal = {
 export type DailySignalSource = {
 	observations: readonly Observation[];
 	dailyMetrics: readonly DailyMetric[];
+	consumptionEntries?: readonly ConsumptionEntry[];
 	factorActive?: (metricSlug: string, localDay: string) => boolean;
 };
 
@@ -40,12 +44,31 @@ function groupByKey<Row extends { metricSlug: string; localDay: string }>(
 	return byKey;
 }
 
+function consumptionFactorPresent(
+	metricSlug: string,
+	entries: readonly ConsumptionEntry[],
+): boolean {
+	if (metricSlug === "alcohol") {
+		return entries.some((entry) => (entry.ethanolKg ?? 0) > 0);
+	}
+	if (metricSlug === "caffeine") {
+		return entries.some((entry) => (entry.caffeineKg ?? 0) > 0);
+	}
+	return false;
+}
+
 /** Indexes the source once so each per-day read costs a map lookup, not a scan. */
 export function createDailySignalReader(
 	source: DailySignalSource,
 ): DailySignalReader {
 	const observationsByKey = groupByKey(source.observations);
 	const metricsByKey = groupByKey(source.dailyMetrics);
+	const consumptionEntriesByDay = new Map<string, ConsumptionEntry[]>();
+	for (const entry of source.consumptionEntries ?? []) {
+		const entries = consumptionEntriesByDay.get(entry.localDay);
+		if (entries) entries.push(entry);
+		else consumptionEntriesByDay.set(entry.localDay, [entry]);
+	}
 	const checkInDays = new Set<string>();
 	for (const row of source.observations) {
 		const resolved = resolveMetric(row.metricSlug);
@@ -65,19 +88,26 @@ export function createDailySignalReader(
 			const present = dayRows.some(
 				(row) => row.value === FACTOR_PRESENCE_VALUE,
 			);
-			if (present) return { metricSlug, localDay, value: 1 };
+			const derivedPresent = consumptionFactorPresent(
+				metricSlug,
+				consumptionEntriesByDay.get(localDay) ?? [],
+			);
+			if (present || derivedPresent) {
+				return { metricSlug, localDay, value: 1 };
+			}
 			return checkInDays.has(localDay) &&
 				(source.factorActive?.(metricSlug, localDay) ?? true)
 				? { metricSlug, localDay, value: 0 }
 				: null;
 		}
 
-		if (metric.kind === "measurement" && isHealthMetricSlug(metricSlug)) {
+		if (metric.kind === "measurement") {
 			const value = resolveMetricDay(
-				metricSlug,
+				metric.slug,
 				localDay,
 				dayRows,
 				metricsByKey.get(signalKey(metricSlug, localDay)) ?? [],
+				consumptionEntriesByDay.get(localDay) ?? [],
 			).value;
 			return value === null ? null : { metricSlug, localDay, value };
 		}
@@ -88,20 +118,11 @@ export function createDailySignalReader(
 				(row.scaleMin === metric.scaleMin && row.scaleMax === metric.scaleMax),
 		);
 		if (rows.length === 0) return null;
-		if (metric.aggregation === "last") {
-			const latest = [...rows].sort(
-				(left, right) =>
-					right.observedAt - left.observedAt ||
-					right.createdAt - left.createdAt ||
-					right.id.localeCompare(left.id),
-			)[0];
-			return latest ? { metricSlug, localDay, value: latest.value } : null;
-		}
 		const total = rows.reduce((sum, row) => sum + row.value, 0);
 		return {
 			metricSlug,
 			localDay,
-			value: metric.aggregation === "sum" ? total : total / rows.length,
+			value: total / rows.length,
 		};
 	};
 }

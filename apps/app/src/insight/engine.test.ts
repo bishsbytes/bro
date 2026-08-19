@@ -1,4 +1,7 @@
-import type { InsightCatalogueEntry } from "@bro/domain/insight-catalogue";
+import {
+	INSIGHT_CATALOGUE,
+	type InsightCatalogueEntry,
+} from "@bro/domain/insight-catalogue";
 import { shiftLocalDay } from "../habits/cadence";
 import {
 	aggregateInsightTeaser,
@@ -189,5 +192,63 @@ describe("insight engine", () => {
 
 		data.values.set(`training:${from}`, 1);
 		expect(evaluateInsight(pair, "2026-04-30", data.read).kind).toBe("shown");
+	});
+
+	it("clears and fails the gates for both four-unit alcohol pairs", () => {
+		const alcoholPairs = INSIGHT_CATALOGUE.filter(
+			(candidate) =>
+				candidate.input.kind === "threshold" &&
+				candidate.input.metricSlug === "alcohol_intake",
+		);
+		expect(alcoholPairs).toHaveLength(2);
+
+		for (const alcoholPair of alcoholPairs) {
+			if (alcoholPair.input.kind !== "threshold") {
+				throw new Error("Expected an alcohol threshold pair.");
+			}
+			const values = new Map<string, number>();
+			const throughLocalDay = "2026-04-30";
+			const from = shiftLocalDay(throughLocalDay, -(INSIGHT_WINDOW_DAYS - 1));
+			for (let offset = 0; offset < INSIGHT_WINDOW_DAYS; offset += 1) {
+				const outputDay = shiftLocalDay(from, offset);
+				const inputDay = shiftLocalDay(outputDay, -alcoholPair.lagDays);
+				const active = offset % 3 === 0;
+				values.set(
+					`alcohol_intake:${inputDay}`,
+					active ? alcoholPair.input.value : alcoholPair.input.value / 2,
+				);
+				values.set(
+					`${alcoholPair.outputMetricSlug}:${outputDay}`,
+					alcoholPair.outputMetricSlug === "sleep_duration"
+						? active
+							? 6 * 3_600
+							: 8 * 3_600
+						: active
+							? 2
+							: 4,
+				);
+			}
+			const read = (metricSlug: string, localDay: string) => {
+				const value = values.get(`${metricSlug}:${localDay}`);
+				return value === undefined ? null : { value };
+			};
+
+			expect(evaluateInsight(alcoholPair, throughLocalDay, read)).toMatchObject({
+				kind: "shown",
+				trueArm: { count: 30 },
+				falseArm: { count: 60 },
+			});
+
+			for (const key of values.keys()) {
+				if (key.startsWith("alcohol_intake:")) {
+					values.set(key, alcoholPair.input.value / 2);
+				}
+			}
+			expect(evaluateInsight(alcoholPair, throughLocalDay, read)).toMatchObject({
+				kind: "not-yet",
+				gate: "true-arm-days",
+				remaining: 7,
+			});
+		}
 	});
 });

@@ -1,3 +1,5 @@
+import { KILOGRAMS_ETHANOL_PER_UK_UNIT } from "../units";
+
 export type InsightTier = "premium";
 
 export type InsightPresenceInput = {
@@ -10,7 +12,7 @@ export type InsightThresholdInput = {
 	metricSlug: string;
 	operator: "below" | "at_least";
 	value: number;
-	unit: "seconds" | "count";
+	unit: "seconds" | "count" | "kilograms";
 };
 
 export type InsightCopyTemplate = {
@@ -231,6 +233,44 @@ export const INSIGHT_CATALOGUE = [
 				"Your energy averaged {trueMean} on days after junk food ({trueCount} days), against {falseMean} otherwise ({falseCount} days).",
 			trueArmLabel: "Days after junk food",
 			falseArmLabel: "After other days",
+		},
+	},
+	{
+		id: "insight:alcohol_intake-at_least-four-units-energy-lag1",
+		input: {
+			kind: "threshold",
+			metricSlug: "alcohol_intake",
+			operator: "at_least",
+			value: 4 * KILOGRAMS_ETHANOL_PER_UK_UNIT,
+			unit: "kilograms",
+		},
+		outputMetricSlug: "energy",
+		lagDays: 1,
+		tier: "premium",
+		copy: {
+			summary:
+				"Your energy averaged {trueMean} on days after logging 4 or more units ({trueCount} days), against {falseMean} after lower-alcohol days ({falseCount} days).",
+			trueArmLabel: "After 4 or more units",
+			falseArmLabel: "After fewer than 4 units",
+		},
+	},
+	{
+		id: "insight:alcohol_intake-at_least-four-units-sleep_duration-lag1",
+		input: {
+			kind: "threshold",
+			metricSlug: "alcohol_intake",
+			operator: "at_least",
+			value: 4 * KILOGRAMS_ETHANOL_PER_UK_UNIT,
+			unit: "kilograms",
+		},
+		outputMetricSlug: "sleep_duration",
+		lagDays: 1,
+		tier: "premium",
+		copy: {
+			summary:
+				"Your sleep averaged {trueMean} after logging 4 or more units ({trueCount} days), against {falseMean} after lower-alcohol days ({falseCount} days).",
+			trueArmLabel: "After 4 or more units",
+			falseArmLabel: "After fewer than 4 units",
 		},
 	},
 ] as const satisfies readonly InsightCatalogueEntry[];

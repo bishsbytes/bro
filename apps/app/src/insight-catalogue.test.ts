@@ -1,10 +1,11 @@
 import { INSIGHT_CATALOGUE } from "@bro/domain/insight-catalogue";
 import { resolveMetric } from "@bro/domain/metric-registry";
+import { KILOGRAMS_ETHANOL_PER_UK_UNIT } from "@bro/domain";
 
 describe("insight catalogue", () => {
 	it("keeps the signed-off pairs stable, premium, and type-compatible", () => {
-		expect(INSIGHT_CATALOGUE).toHaveLength(14);
-		expect(new Set(INSIGHT_CATALOGUE.map((entry) => entry.id)).size).toBe(14);
+		expect(INSIGHT_CATALOGUE).toHaveLength(16);
+		expect(new Set(INSIGHT_CATALOGUE.map((entry) => entry.id)).size).toBe(16);
 
 		for (const entry of INSIGHT_CATALOGUE) {
 			expect(entry.tier).toBe("premium");
@@ -23,8 +24,25 @@ describe("insight catalogue", () => {
 			}
 			if (entry.input.kind === "threshold") {
 				expect(entry.input.value).toBeGreaterThan(0);
-				expect(["seconds", "count"]).toContain(entry.input.unit);
+				expect(["seconds", "count", "kilograms"]).toContain(entry.input.unit);
 			}
+		}
+	});
+
+	it("uses exactly four canonical UK units for the two alcohol thresholds", () => {
+		const alcoholThresholds = INSIGHT_CATALOGUE.filter(
+			(entry) =>
+				entry.input.kind === "threshold" &&
+				entry.input.metricSlug === "alcohol_intake",
+		);
+		expect(alcoholThresholds).toHaveLength(2);
+		for (const pair of alcoholThresholds) {
+			if (pair.input.kind !== "threshold") throw new Error("Expected threshold");
+			expect(pair.input).toMatchObject({
+				operator: "at_least",
+				value: 4 * KILOGRAMS_ETHANOL_PER_UK_UNIT,
+				unit: "kilograms",
+			});
 		}
 	});
 

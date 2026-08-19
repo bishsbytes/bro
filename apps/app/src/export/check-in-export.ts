@@ -2,6 +2,7 @@ import type {
 	Assessment,
 	ChallengeEnrolment,
 	ChallengeProgress,
+	ConsumptionEntry,
 	DailyMetric,
 	DayNote,
 	Goal,
@@ -15,7 +16,7 @@ import { resolveHabit } from "@bro/domain/habit-catalogue";
 import { LIFE_AREA_CATALOGUE } from "@bro/domain/life-area-catalogue";
 import type { MetricDefinition } from "@bro/domain/metric-registry";
 
-export const CHECK_IN_EXPORT_FORMAT_VERSION = 5 as const;
+export const CHECK_IN_EXPORT_FORMAT_VERSION = 6 as const;
 
 export type CheckInExportInput = {
 	observations: readonly Observation[];
@@ -29,6 +30,7 @@ export type CheckInExportInput = {
 	habitCompletions: readonly HabitCompletion[];
 	challengeEnrolments: readonly ChallengeEnrolment[];
 	challengeProgress: readonly ChallengeProgress[];
+	consumptionEntries: readonly ConsumptionEntry[];
 	registry: readonly MetricDefinition[];
 };
 
@@ -42,7 +44,7 @@ type VersionOneTrackedMetric = Omit<TrackedMetric, "customLabel">;
 /** Registry dimensions join the serialized contract with the planned v3 bump. */
 type LegacyMetricDefinition = Omit<MetricDefinition, "dimension">;
 
-type ExportMetadata<Version extends 1 | 2 | 3 | 4 | 5> = {
+type ExportMetadata<Version extends 1 | 2 | 3 | 4 | 5 | 6> = {
 	formatVersion: Version;
 	exportedAt: string;
 	appVersion: string;
@@ -92,12 +94,17 @@ export type CheckInExportV4 = Omit<CheckInExportV3, "metadata"> & {
 	dailyMetrics: DailyMetric[];
 };
 
-export type CheckInExport = Omit<CheckInExportV4, "metadata"> & {
-	metadata: ExportMetadata<typeof CHECK_IN_EXPORT_FORMAT_VERSION>;
+export type CheckInExportV5 = Omit<CheckInExportV4, "metadata"> & {
+	metadata: ExportMetadata<5>;
 	habits: Habit[];
 	habitCompletions: HabitCompletion[];
 	challengeEnrolments: ChallengeEnrolment[];
 	challengeProgress: ChallengeProgress[];
+};
+
+export type CheckInExport = Omit<CheckInExportV5, "metadata"> & {
+	metadata: ExportMetadata<typeof CHECK_IN_EXPORT_FORMAT_VERSION>;
+	consumptionEntries: ConsumptionEntry[];
 };
 
 export type ParsedCheckInExport =
@@ -105,6 +112,7 @@ export type ParsedCheckInExport =
 	| CheckInExportV2
 	| CheckInExportV3
 	| CheckInExportV4
+	| CheckInExportV5
 	| CheckInExport;
 
 function compareText(left: string, right: string): number {
@@ -266,6 +274,26 @@ function copyChallengeProgress(progress: ChallengeProgress): ChallengeProgress {
 		completedAt: progress.completedAt,
 		createdAt: progress.createdAt,
 		updatedAt: progress.updatedAt,
+	};
+}
+
+function copyConsumptionEntry(entry: ConsumptionEntry): ConsumptionEntry {
+	return {
+		id: entry.id,
+		kind: entry.kind,
+		catalogueRef: entry.catalogueRef,
+		label: entry.label,
+		servingLabel: entry.servingLabel,
+		quantity: entry.quantity,
+		volumeL: entry.volumeL,
+		ethanolKg: entry.ethanolKg,
+		caffeineKg: entry.caffeineKg,
+		energyKcal: entry.energyKcal,
+		occurredAt: entry.occurredAt,
+		localDay: entry.localDay,
+		tzOffsetMinutes: entry.tzOffsetMinutes,
+		createdAt: entry.createdAt,
+		updatedAt: entry.updatedAt,
 	};
 }
 
@@ -439,6 +467,19 @@ export function buildCheckInExport(
 					left.dayIndex - right.dayIndex ||
 					compareText(left.id, right.id),
 			),
+		consumptionEntries: input.consumptionEntries
+			.filter(
+				(entry) =>
+					!options.excludeSensitiveMetrics || (entry.ethanolKg ?? 0) <= 0,
+			)
+			.map(copyConsumptionEntry)
+			.sort(
+				(left, right) =>
+					compareText(left.localDay, right.localDay) ||
+					left.occurredAt - right.occurredAt ||
+					left.createdAt - right.createdAt ||
+					compareText(left.id, right.id),
+			),
 	};
 }
 
@@ -498,6 +539,17 @@ export function parseCheckInExport(serialized: string): ParsedCheckInExport {
 		requireArray(parsed, "dailyMetrics");
 		return parsed as CheckInExportV4;
 	}
+	if (parsed.metadata.formatVersion === 5) {
+		requireArray(parsed, "assessments");
+		requireArray(parsed, "goals");
+		requireArray(parsed, "unitPreferences");
+		requireArray(parsed, "dailyMetrics");
+		requireArray(parsed, "habits");
+		requireArray(parsed, "habitCompletions");
+		requireArray(parsed, "challengeEnrolments");
+		requireArray(parsed, "challengeProgress");
+		return parsed as CheckInExportV5;
+	}
 	if (parsed.metadata.formatVersion === CHECK_IN_EXPORT_FORMAT_VERSION) {
 		requireArray(parsed, "assessments");
 		requireArray(parsed, "goals");
@@ -507,6 +559,7 @@ export function parseCheckInExport(serialized: string): ParsedCheckInExport {
 		requireArray(parsed, "habitCompletions");
 		requireArray(parsed, "challengeEnrolments");
 		requireArray(parsed, "challengeProgress");
+		requireArray(parsed, "consumptionEntries");
 		return parsed as CheckInExport;
 	}
 	throw new RangeError(

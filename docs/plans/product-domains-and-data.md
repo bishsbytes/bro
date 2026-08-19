@@ -335,17 +335,18 @@ All the user-side tables live in `bro.db` and replicate. Streaks are derived.
 
 **Resolved: challenges are solo, always.** They are private, local-first programmes with no sharing, competition, leaderboard, or participant identity. A future social product would be a separate opt-in server feature over authored templates; it would require accounts and its own identity/privacy design rather than adding authorship or visibility fields to these replicating rows.
 
-### 8. Food logging
+### 8. Consumption logging — drinks, then food
 
-The largest domain, and the one with an external dependency.
+Sequencing splits this domain in two. **Drink logging shipped first as step 8** because alcohol, caffeine, fluid, and energy need no provider: migration 007 established the shared snapshot entry, canonical quantities, read-time daily totals, and offline correction path. **Food logging is step 9** and remains the largest part, carrying the external dependency while extending the proven table instead of introducing a parallel model.
 
 ```ts
-foodEntries = {
-  id, occurredAt, localDay, mealSlot,
-  foodRef,                      // provider id, custom-food id, or null
-  label,                        // what to display, snapshotted
-  quantity, unit,
-  kcal, proteinG, carbsG, fatG, // snapshotted at log time
+consumptionEntries = {
+  id, kind, occurredAt, localDay,
+  catalogueRef,                 // authored drink, provider, custom-food, or null
+  label, servingLabel, quantity,// what was displayed, snapshotted
+  volumeL, ethanolKg,
+  caffeineKg, energyKcal,       // canonical quantities, snapshotted
+  proteinG, carbsG, fatG,       // step 9 extension
   createdAt, updatedAt,
 }
 ```
@@ -376,7 +377,7 @@ Two things to be careful with, because this is a health product:
 - **Sample size gates the claim.** An insight from nine days is noise. Define the threshold before building the screen, not after someone screenshots a bad one.
 - **And sample size alone is not enough.** Thirty tracked metrics is four-hundred-odd pairs, and testing them all at conventional thresholds guarantees a couple of dozen spurious correlations — each one a screenshot of the paid feature being wrong. Decide the multiple-comparisons posture before the screen exists: an effect-size floor plus a curated list of pairs worth testing beats a blanket correction, and it makes the copy writable.
 
-**Resolved in sequencing step 7.** V1 evaluates fourteen authored daily-signal pairs over the trailing 90 local days. A result needs at least 20 output days, at least 7 days in each arm, an effect of at least 0.5 points on a 5-point score or 30 minutes of sleep, and the same direction in both window halves with at least 3 days per arm in each half. Presence-factor absence counts only on a check-in day when that factor was active in the panel. Results and teaser progress are derived at read and never stored. Habit adherence stays out of the correlation pool because it duplicates its source signals and invites direction-ambiguous, guilt-shaped copy; it is rendered descriptively over eight weeks instead. Every authored pair carries `tier: "premium"`: per-metric history and trends remain free, while cross-metric interpretation is the paid boundary. Entitlement enforcement still waits for umbrella Phase 4.
+**Resolved in sequencing steps 7 and 8.** V1 evaluates sixteen authored daily-signal pairs over the trailing 90 local days: step 8 added energy and sleep comparisons after at least four UK units of canonical alcohol mass. A result needs at least 20 output days, at least 7 days in each arm, an effect of at least 0.5 points on a 5-point score or 30 minutes of sleep, and the same direction in both window halves with at least 3 days per arm in each half. Logged ethanol and caffeine derive true presence days; absence still counts only on a check-in day when that factor was active in the panel. Results and teaser progress are derived at read and never stored. Habit adherence stays out of the correlation pool because it duplicates its source signals and invites direction-ambiguous, guilt-shaped copy; it is rendered descriptively over eight weeks instead. Every authored pair carries `tier: "premium"`: per-metric history and trends remain free, while cross-metric interpretation is the paid boundary. Entitlement enforcement still waits for umbrella Phase 4.
 
 ### 10. AI reflection
 
@@ -450,7 +451,7 @@ A health record spanning years, some of it imported, is exactly the data a user 
 | Reminder schedule | `bro.db` | Yes | A preference about the person; a new phone should not mean setting it up again. |
 | Goals | `bro.db` | Yes | Intent, not measurement. |
 | Habits, completions, challenge enrolments and progress | `bro.db` | Yes | User-originated. |
-| Food entries, custom foods, recipes | `bro.db` | Yes | User-originated, nutrition snapshotted at log time. |
+| Consumption entries, custom foods, recipes | `bro.db` | Yes | User-originated; displayed serving and canonical nutrition are snapshotted at log time. |
 | AI replies | `bro.db` | Yes | Kept against the day they concern. |
 | **Raw imported health samples** | **`bro-local.db`** | **No** | Orders of magnitude larger than anything typed, and never read at that granularity. Rebuildable by re-importing. |
 | **Daily rollups** (`dailyMetrics`) | `bro.db` | Yes | What the insight layer actually consumes; small, stably keyed, and the only imported figures worth carrying to a new phone. |
@@ -525,7 +526,7 @@ Proposals for the [umbrella plan](offline-first-identity-onboarding-premium.md),
 2. **One check-in per day, or several?** Recommendation: several, enforced in UI.
 3. **Is `observations` the spine, or a hybrid?** The recommendation above, confirmed or rejected.
 4. **Does the check-in ship a fixed set of metrics, or a user-chosen one?** A fixed set is simpler for a first release; a chosen one is what keeps the daily loop short as the registry grows, and retrofitting it means migrating everyone's implied selection. The factor panel sharpens this: whatever the answer for scored metrics, factors ship in the first release — correlation needs input signal as much as output, and mood and energy alone starve it.
-5. **Which canonical units,** and kilocalories or kilojoules for energy. **Resolved for body metrics:** mass is stored in kilograms, length in metres, and body fat as a fraction of one. Energy and future quantified metrics remain per-metric decisions taken before their first write: each quantified factor counterpart (alcohol units, caffeine milligrams — see [Check-in](#1-check-in--mood-energy-and-factors)) picks its canonical unit when it ships.
+5. **Which canonical units, and kilocalories or kilojoules for energy — resolved.** Body mass is stored in kilograms, length in metres, and body fat as a fraction of one. Step 8 fixed consumption storage before its first write: ethanol and caffeine are kilograms of mass, fluid is litres, and energy is kilocalories. Alcohol units/standard drinks, caffeine milligrams, volume units, and future kilojoule display are edge conversions only; stored entries and goals never move when preferences change.
 6. **Do unit preferences sync, or stay device-local?** **Resolved: sync in `bro.db`.** They describe the person rather than the handset; canonical storage keeps this cosmetically reversible without rewriting observations or goals.
 7. **The shared area vocabulary** — **resolved.** The shipped factor set from step 1 is the input half; the wheel and authored challenge tags share thirteen permanent `wheel:*` slugs: career, money, health, partner, family, friends, growth, fun, environment, purpose, fatherhood, faith, and sobriety. The first eight are enabled by default, and settings caps active areas at ten. Labels and the exact catalogue are pinned in the [step 3 plan](step-3-wheel-of-life.md#decisions-locked-for-this-step).
 8. **How far does customisation go at v1?** **Resolved: relabel, reorder and disable.** User-created areas remain out of scope; namespaced slugs and unknown-slug tolerance leave that addition migration-free later.
@@ -575,7 +576,7 @@ Each step adds exactly one hard thing.
 5. **Health import — code-complete, native acceptance pending.** Delivered on 16 August 2026: migration 005 and the disposable `bro-local.db`; deterministic daily rollups; registry-owned mapping and aggregation; Health Connect and HealthKit gateways over one transactional, token-aware engine; connect/foreground/refresh triggers; imported Trends, Body/goals, and History series with provenance and imported-wins precedence; Health settings and honest disconnect; delete-local-data across both stores; and export format v4 with continued v1–v3 parsing. Real-SQLite acceptance covers 365-day backfill, pruning with durable history, token failure, deletion, replay, and recovery after losing the local import store without a backend request. Automated tests, typecheck, lint, migration regeneration, and all-platform Expo export are green. Physical-device flows, backup inspection, the authenticated EAS iOS build, and Play Console declaration remain. Detailed delivery plan: [Step 5: Health import](step-5-health-import.md).
 6. **Habits and challenges — complete.** Delivered on 17 August 2026: migration 006 and four repositories; a generous, area-tagged habit catalogue plus custom manual habits; scheduled manual and resolved-series metric completion; derived streaks that heal after late imports; Today and settings habit loops; solo challenge enrolment, pause-by-completion, abandonment, finish, and snapshot-faithful history; delete-local-data coverage; and export format v5 with sensitive habit/challenge exclusion and continued v1–v4 parsing. Automated migration, real-SQLite, pure-domain, interaction, isolation, offline, export, typecheck, and lint coverage are green. Detailed delivery plan: [Step 6: Habits and challenges](step-6-habits-and-challenges.md).
 7. **Insight — complete.** Delivered on 18 August 2026: a fourteen-pair premium catalogue and one scale-aware daily-signal boundary; read-time 90-day alignment, arm, effect-floor, and split-window stability gates; arithmetic empty/not-yet/shown states on Mind; evidence detail with both means and counts; an eight-week four-state habit adherence record that stays outside correlation; and a platform-split v5 export share/save UI with sensitive data off by default. Insights add no schema, cache, or stored truth, and late-arriving rows change them on the next read. Real-SQLite signal and export coverage, pure gate/lag/stability/healing tests, interaction tests, typecheck, and lint are green. Entitlement enforcement remains Phase 4. Detailed delivery plan: [Step 7: Insight](step-7-insight.md).
-8. **Drink logging.** Alcohol, caffeine, and fluid. Split out of the original step 8 on 19 August 2026, because that description of food is false of drink: drinks need no food database, no barcode, no network, and no new store, and they are consumption signals the insight engine already has authored pairs for. It exists to design and prove the consumption entry model — the entry table, the snapshot rule, the entry-to-daily-total projection — with zero external dependency, so step 9's one hard thing is genuinely only the provider. Detailed delivery plan: [Step 8: Drink logging](step-8-drink-logging.md).
+8. **Drink logging — complete.** Delivered on 19 August 2026: migration 007 and the replicating `consumption_entries` repository; snapshot-faithful catalogue and free entries; canonical ethanol/caffeine mass, volume, and energy; read-time totals shared by drinks, Trends, goals, history, and insight; default-off drinks and settings surfaces; entry-derived alcohol/caffeine presence plus two four-unit premium pairs; and export format v6 with whole-entry alcohol exclusion and continued v1–v5 parsing. Everything remains local and offline, no observation or stored daily-total row is written, and no native dependency or prebuild was required. Detailed delivery plan: [Step 8: Drink logging](step-8-drink-logging.md).
 9. **Food logging.** Last, because it is the largest, carries the external dependency, and is the easiest to get wrong in a way users abandon. It extends step 8's table rather than designing one.
 
 Sync (Phase 5) is orthogonal and can land whenever entitlement is ready — but note it should not land before step 5, or the [three-store split](#three-stores-not-two) will be retrofitted under a running replica rather than designed in.

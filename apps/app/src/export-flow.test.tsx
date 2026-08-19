@@ -44,8 +44,9 @@ describe("export flow", () => {
 
 	afterAll(() => mockSqlite.cleanup());
 
-	it("round-trips v5 and applies the sensitive toggle to the emitted payload", async () => {
+	it("round-trips v6 and applies the sensitive toggle to metrics and entries", async () => {
 		const observations = new databaseApp.ObservationRepository(db);
+		const consumptionEntries = new databaseApp.ConsumptionEntryRepository(db);
 		const base = {
 			observedAt: Date.parse("2026-08-18T09:00:00.000Z"),
 			localDay: "2026-08-18",
@@ -68,11 +69,39 @@ describe("export flow", () => {
 			scaleMin: null,
 			scaleMax: null,
 		});
+		await consumptionEntries.create({
+			kind: "drink",
+			catalogueRef: "drink:lager",
+			label: "Lager",
+			servingLabel: "pint",
+			quantity: 1,
+			volumeL: 0.568_261_25,
+			ethanolKg: 0.020_181_999,
+			caffeineKg: 0,
+			energyKcal: 227,
+			occurredAt: base.observedAt,
+			localDay: base.localDay,
+			tzOffsetMinutes: -60,
+		});
+		await consumptionEntries.create({
+			kind: "drink",
+			catalogueRef: "drink:coffee",
+			label: "Coffee",
+			servingLabel: "mug",
+			quantity: 1,
+			volumeL: 0.25,
+			ethanolKg: 0,
+			caffeineKg: 0.000_095,
+			energyKcal: 2,
+			occurredAt: base.observedAt + 1,
+			localDay: base.localDay,
+			tzOffsetMinutes: -60,
+		});
 		const store = new ExportStore(db, "1.0.0", () => 1_787_040_000_000);
 
 		const withoutSensitive = parseCheckInExport(await store.serialize(false));
 		const withSensitive = parseCheckInExport(await store.serialize(true));
-		expect(withoutSensitive.metadata.formatVersion).toBe(5);
+		expect(withoutSensitive.metadata.formatVersion).toBe(6);
 		expect(withoutSensitive.observations.map((row) => row.metricSlug)).toEqual([
 			"mood",
 		]);
@@ -80,6 +109,16 @@ describe("export flow", () => {
 			"mood",
 			"weight",
 		]);
+		expect(
+			"consumptionEntries" in withoutSensitive
+				? withoutSensitive.consumptionEntries.map((entry) => entry.label)
+				: [],
+		).toEqual(["Coffee"]);
+		expect(
+			"consumptionEntries" in withSensitive
+				? withSensitive.consumptionEntries.map((entry) => entry.label)
+				: [],
+		).toEqual(["Lager", "Coffee"]);
 	});
 
 	it("defaults sensitive data off and hands each generated file to the share action", async () => {
@@ -102,7 +141,7 @@ describe("export flow", () => {
 		await waitFor(() => expect(serialize).toHaveBeenCalledWith(false));
 		expect(
 			parseCheckInExport(share.mock.calls[0]?.[0]).metadata.formatVersion,
-		).toBe(5);
+		).toBe(6);
 
 		await fireEvent(
 			screen.getByLabelText("Include sensitive data"),
@@ -113,6 +152,6 @@ describe("export flow", () => {
 		await waitFor(() => expect(serialize).toHaveBeenLastCalledWith(true));
 		expect(
 			parseCheckInExport(share.mock.calls[1]?.[0]).metadata.formatVersion,
-		).toBe(5);
+		).toBe(6);
 	});
 });
