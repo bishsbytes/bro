@@ -102,7 +102,8 @@ function RootNavigator() {
 				<Stack.Screen name="settings" options={{ headerShown: false }} />
 				<Stack.Screen name="drinks" options={{ headerShown: false }} />
 				<Stack.Screen name="food" options={{ headerShown: false }} />
-				<Stack.Screen name="trends" options={{ title: "Trends" }} />
+				<Stack.Screen name="habits" options={{ headerShown: false }} />
+				<Stack.Screen name="life-areas" options={{ title: "Life areas" }} />
 				<Stack.Screen name="body/[slug]" options={{ title: "Measurement" }} />
 				<Stack.Screen name="challenges" options={{ headerShown: false }} />
 				<Stack.Screen name="insights/[id]" options={{ title: "Insight" }} />

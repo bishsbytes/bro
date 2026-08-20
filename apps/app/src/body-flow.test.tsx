@@ -84,13 +84,12 @@ describe("body metrics flow", () => {
 		await databaseApp.runMigrations(db);
 		await new databaseApp.UnitPreferenceRepository(db).set("mass", "st");
 
-		const router = renderRouter("src/app", { initialUrl: "/body" });
+		const router = renderRouter("src/app", { initialUrl: "/log" });
 		const view = await router;
 		await act(async () => undefined);
 		expect(await view.findByText("No body metrics tracked")).toBeTruthy();
-		expect(view.getByText("Food and drink")).toBeTruthy();
-		expect(view.getByText("Open Drinks")).toBeTruthy();
-		expect(view.getByText("Open Food")).toBeTruthy();
+		expect(view.getByLabelText("Open Drinks")).toBeTruthy();
+		expect(view.getByLabelText("Open Food")).toBeTruthy();
 
 		await fireEvent(view.getByLabelText("Track Weight"), "valueChange", true);
 		expect(await view.findByText("Nothing logged yet")).toBeTruthy();
@@ -103,10 +102,10 @@ describe("body metrics flow", () => {
 		await fireEvent.press(view.getByText("Save check-in"));
 		expect(await view.findByText("1 check-in")).toBeTruthy();
 
-		await act(async () => expoRouter.replace("/trends"));
+		await act(async () => expoRouter.replace("/insights"));
 		expect(await view.findByText("Latest 12 st 4 lb")).toBeTruthy();
 		expect(view.getByLabelText("weight trend chart")).toBeTruthy();
-		await fireEvent.press(view.getByText("Open Body"));
+		await act(async () => expoRouter.replace("/log"));
 		expect(await view.findByText(/Latest 12 st 4 lb/)).toBeTruthy();
 		await fireEvent.press(view.getByText("Open Weight"));
 		expect(await view.findByText("12 st 4 lb")).toBeTruthy();
@@ -188,11 +187,11 @@ describe("body metrics flow", () => {
 
 		await act(async () => expoRouter.replace("/"));
 		expect(await view.findByText("Measurements: Weight 77.1 kg")).toBeTruthy();
-		await act(async () => expoRouter.replace("/body"));
+		await act(async () => expoRouter.replace("/log"));
 		expect(await view.findByText(/Latest 77.1 kg/)).toBeTruthy();
 		await act(async () => expoRouter.replace("/body/weight"));
 		expect(await view.findByText(/Achieved: target 76.2 kg/)).toBeTruthy();
-		await act(async () => expoRouter.replace("/trends"));
+		await act(async () => expoRouter.replace("/insights"));
 		expect(await view.findByText("Latest 77.1 kg")).toBeTruthy();
 		expect(globalThis.fetch).not.toHaveBeenCalled();
 		expect(mockedUseSession).not.toHaveBeenCalled();

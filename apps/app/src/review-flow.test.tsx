@@ -98,6 +98,16 @@ describe("wheel-of-life review flow", () => {
 		expect(
 			await firstRun.findByText("Tap to complete · Work & career"),
 		).toBeTruthy();
+		const habits = new databaseApp.HabitRepository(databaseApp.getDb());
+		const [habit] = await habits.listActive();
+		if (!habit) throw new Error("Expected a saved starter habit.");
+		await habits.update(habit.id, {
+			customLabel: habit.customLabel,
+			targetValue: habit.targetValue,
+			areaSlug: habit.areaSlug,
+			daysOfWeek: 0b111_1111,
+			position: habit.position,
+		});
 		await act(async () => expoRouter.back());
 
 		await fireEvent.press(
@@ -145,17 +155,17 @@ describe("wheel-of-life review flow", () => {
 		expect(await assessments.listAll()).toHaveLength(1);
 
 		await act(async () => expoRouter.replace("/"));
+		await fireEvent.press(await secondRun.findByText("Mark done"));
 		await fireEvent.press(secondRun.getByText("Life"));
-		expect(await secondRun.findByText("YOUR BIGGER PICTURE")).toBeTruthy();
-		await fireEvent.press(secondRun.getByText("Take stock"));
-		expect(
-			await secondRun.findByText("Nothing is saved until you finish."),
-		).toBeTruthy();
-		await act(async () => expoRouter.back());
+		expect(await secondRun.findByText("Your wheel")).toBeTruthy();
+		expect(secondRun.getByLabelText("Wheel of life chart")).toBeTruthy();
+		expect(secondRun.getByText("1 today · 1 complete")).toBeTruthy();
+		expect(secondRun.queryByText("Time to take stock")).toBeNull();
 
-		await act(async () => expoRouter.replace("/trends"));
-		await fireEvent.press(await secondRun.findByText("Open wheel reviews"));
-		expect(await secondRun.findByText("Review history")).toBeTruthy();
+		await act(async () => expoRouter.replace("/insights"));
+		await fireEvent.press(await secondRun.findByLabelText("Open history"));
+		await waitFor(() => expect(expoRouter.canGoBack()).toBe(true));
+		expect(await secondRun.findByLabelText("Open Today")).toBeTruthy();
 		expect(globalThis.fetch).not.toHaveBeenCalled();
 	});
 });

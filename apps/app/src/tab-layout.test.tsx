@@ -68,10 +68,10 @@ describe("TabLayout", () => {
 		expect(screenOptions.tabBarStyle).not.toHaveProperty("paddingTop");
 		expect(screenOptions.tabBarItemStyle).toBeUndefined();
 
-		mockPathname = "/body";
+		mockPathname = "/log";
 		await screen.rerender(<TabLayout />);
 
-		expect(screen.getByText("Body")).toBeTruthy();
+		expect(screen.getByText("Log")).toBeTruthy();
 		expect(screen.queryByText(currentMonth)).toBeNull();
 	});
 

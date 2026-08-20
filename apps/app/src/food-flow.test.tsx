@@ -130,9 +130,9 @@ describe("food logging flow", () => {
 			targetValue: 0.06,
 		});
 
-		await act(async () => expoRouter.replace("/trends"));
+		await act(async () => expoRouter.replace("/insights"));
 		expect(await view.findByText("Latest 52.0 g")).toBeTruthy();
-		await fireEvent.press(view.getByText("Open Food"));
+		await act(async () => expoRouter.replace("/food"));
 		await fireEvent.press(await view.findByLabelText("Edit Chicken thighs"));
 		await fireEvent.changeText(view.getByLabelText("Quantity"), "1");
 		await fireEvent.press(view.getByText("Save changes"));

@@ -343,6 +343,11 @@ export class ReviewStore {
 		};
 	}
 
+	async loadLatestWheel(): Promise<ReviewResult | null> {
+		const latest = (await this.listSittings())[0];
+		return latest ? await this.loadResult(latest.id) : null;
+	}
+
 	async beginSitting(): Promise<ReviewDraft> {
 		const overlays = await this.trackedMetrics.listResolved(
 			DEFAULT_LIFE_AREA_METRICS,

@@ -1,9 +1,9 @@
 import { INSIGHT_CATALOGUE } from "@bro/domain/insight-catalogue";
 import type { ShownInsight } from "@bro/logic";
-import { fireEvent, render } from "@testing-library/react-native";
+import { fireEvent, render, waitFor } from "@testing-library/react-native";
 import type { InsightSnapshot } from "./insight/insight-store";
 import { InsightDetailScreen } from "./screens/insights/insight-detail-screen";
-import { MindScreen } from "./screens/mind/mind-screen";
+import { InsightsScreen } from "./screens/insights/insights-screen";
 
 const mockPush = jest.fn();
 
@@ -60,7 +60,7 @@ describe("insight surfaces", () => {
 			},
 		};
 		const screen = await render(
-			<MindScreen
+			<InsightsScreen
 				store={trends}
 				insightStore={{ load: jest.fn(async () => snapshot) }}
 			/>,
@@ -95,7 +95,7 @@ describe("insight surfaces", () => {
 			},
 		};
 		const screen = await render(
-			<MindScreen
+			<InsightsScreen
 				store={trends}
 				insightStore={{ load: jest.fn(async () => snapshot) }}
 			/>,
@@ -114,13 +114,13 @@ describe("insight surfaces", () => {
 			evaluations: [shown],
 			teaser: { watchedCount: 1, nearest: null },
 		};
-		const mind = await render(
-			<MindScreen
+		const insights = await render(
+			<InsightsScreen
 				store={trends}
 				insightStore={{ load: jest.fn(async () => snapshot) }}
 			/>,
 		);
-		const card = await mind.findByLabelText(/^Open insight:/);
+		const card = await insights.findByLabelText(/^Open insight:/);
 		expect(card.props.accessibilityLabel).toContain("11 days");
 		await fireEvent.press(card);
 		expect(mockPush).toHaveBeenCalledWith(
@@ -139,5 +139,28 @@ describe("insight surfaces", () => {
 		expect(
 			detail.getByText(/does not show that one thing caused/),
 		).toBeTruthy();
+	});
+
+	it("reloads the full trend list for a new period and opens history", async () => {
+		const snapshot: InsightSnapshot = {
+			state: "empty",
+			throughLocalDay: "2026-08-18",
+			shown: [],
+			evaluations: [],
+			teaser: { watchedCount: 16, nearest: null },
+		};
+		const screen = await render(
+			<InsightsScreen
+				store={trends}
+				insightStore={{ load: jest.fn(async () => snapshot) }}
+			/>,
+		);
+
+		await screen.findByText("Your patterns start with check-ins");
+		await fireEvent.press(screen.getByText("30 days"));
+		await waitFor(() => expect(trends.load).toHaveBeenLastCalledWith(30));
+
+		await fireEvent.press(screen.getByLabelText("Open history"));
+		expect(mockPush).toHaveBeenLastCalledWith("/history");
 	});
 });

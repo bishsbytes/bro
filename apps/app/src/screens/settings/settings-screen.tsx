@@ -105,18 +105,6 @@ export function SettingsScreen({
 				onPress={() => router.push("/settings/food" as Href)}
 			/>
 			<ListRow
-				title="Habits"
-				detail="Choose routines, days, and your own habits."
-				accessibilityLabel="Manage habits"
-				onPress={() => router.push("/settings/habits")}
-			/>
-			<ListRow
-				title="Life areas"
-				detail="Choose, order, and rename the areas in your wheel."
-				accessibilityLabel="Manage life areas"
-				onPress={() => router.push("/settings/life-areas")}
-			/>
-			<ListRow
 				title="Units & format"
 				detail="Choose how weeks and body measurements appear."
 				accessibilityLabel="Manage units and format"

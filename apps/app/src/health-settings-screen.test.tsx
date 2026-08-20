@@ -67,7 +67,7 @@ describe("health settings", () => {
 		expect(globalThis.fetch).not.toHaveBeenCalled();
 	});
 
-	it("keeps Settings unchanged when the platform is unsupported", async () => {
+	it("keeps Settings to configuration when the platform is unsupported", async () => {
 		const view = await render(
 			<SettingsScreen
 				healthAvailability={async () => ({
@@ -77,9 +77,10 @@ describe("health settings", () => {
 				})}
 			/>,
 		);
-		await waitFor(() => expect(view.getByText("Life areas")).toBeTruthy());
+		await waitFor(() => expect(view.getByText("Units & format")).toBeTruthy());
 		expect(view.queryByText("Health data")).toBeNull();
-		expect(view.getByText("Units & format")).toBeTruthy();
+		expect(view.queryByText("Life areas")).toBeNull();
+		expect(view.queryByText("Habits")).toBeNull();
 		expect(view.getByText("Reminders")).toBeTruthy();
 	});
 

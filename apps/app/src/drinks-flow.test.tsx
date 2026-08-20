@@ -127,9 +127,9 @@ describe("drink logging flow", () => {
 			direction: "decrease",
 		});
 
-		await act(async () => expoRouter.replace("/trends"));
+		await act(async () => expoRouter.replace("/insights"));
 		expect(await view.findByText("Latest 2.6 units")).toBeTruthy();
-		await fireEvent.press(view.getByText("Open Drinks"));
+		await act(async () => expoRouter.replace("/drinks"));
 		expect(await view.findByText(/^1 × pint ·/)).toBeTruthy();
 		await fireEvent.press(view.getByLabelText("Edit Lager, 4.5%"));
 		await fireEvent.changeText(view.getByLabelText("Quantity"), "2");

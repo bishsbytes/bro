@@ -189,7 +189,7 @@ describe("history and day view", () => {
 	});
 
 	it("renders free trends with both periods and a plain empty state", async () => {
-		const trendsRouter = renderRouter("src/app", { initialUrl: "/trends" });
+		const trendsRouter = renderRouter("src/app", { initialUrl: "/insights" });
 		const trendsView = await trendsRouter;
 		await act(async () => undefined);
 		expect(await trendsView.findByText("Mood")).toBeTruthy();

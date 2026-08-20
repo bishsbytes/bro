@@ -57,6 +57,55 @@ describe("review store", () => {
 		expect(await new databaseApp.ObservationRepository(db).listAll()).toEqual(
 			[],
 		);
+		expect(await store.loadLatestWheel()).toBeNull();
+	});
+
+	it("loads the latest completed wheel and skips incomplete sittings", async () => {
+		let now = new Date("2026-06-01T12:00:00.000Z");
+		const store = new ReviewStore(db, () => now);
+		expect(await store.loadLatestWheel()).toBeNull();
+
+		const firstDraft = await store.beginSitting();
+		now = new Date("2026-06-01T12:05:00.000Z");
+		const first = await store.completeSitting(
+			firstDraft,
+			Object.fromEntries(firstDraft.items.map((item) => [item.slug, 5])),
+		);
+		expect((await store.loadLatestWheel())?.assessment.id).toBe(
+			first.assessment.id,
+		);
+
+		now = new Date("2026-07-01T12:00:00.000Z");
+		const secondDraft = await store.beginSitting();
+		now = new Date("2026-07-01T12:05:00.000Z");
+		const second = await store.completeSitting(
+			secondDraft,
+			Object.fromEntries(secondDraft.items.map((item) => [item.slug, 7])),
+		);
+
+		await new databaseApp.AssessmentRepository(db).createWithObservations({
+			templateSlug: "wheel-of-life",
+			templateVersion: 1,
+			startedAt: Date.parse("2026-08-01T12:00:00.000Z"),
+			completedAt: null,
+			items: secondDraft.items,
+			focusItemSlugs: [],
+			observations: secondDraft.items.map((item) => ({
+				metricSlug: item.slug,
+				value: 9,
+				scaleMin: 1,
+				scaleMax: 10,
+				observedAt: Date.parse("2026-08-01T12:00:00.000Z"),
+				localDay: "2026-08-01",
+				tzOffsetMinutes: 0,
+				source: "user",
+				sourceRecordId: null,
+			})),
+		});
+
+		const latest = await store.loadLatestWheel();
+		expect(latest?.assessment.id).toBe(second.assessment.id);
+		expect(latest?.previousAssessment?.id).toBe(first.assessment.id);
 	});
 
 	it("uses persisted life-area order, enabled state, and labels in a new sitting", async () => {

@@ -10,7 +10,7 @@ import {
 	type FactorCategory,
 	resolveMetric,
 } from "@bro/domain/metric-registry";
-import { formatLocalDayLabel } from "@bro/logic";
+import { formatLocalDayLabel, isWheelReviewDue } from "@bro/logic";
 import { type Href, router, useFocusEffect } from "expo-router";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { ActivityIndicator, TouchableOpacity, View } from "react-native";
@@ -43,6 +43,11 @@ import {
 	type HistoryDay,
 	type HistoryStore,
 } from "../../history/history-store";
+import {
+	createReviewStore,
+	type ReviewResult,
+	type ReviewStore,
+} from "../../review/review-store";
 import { StyleSheet } from "../../theme/unistyles";
 import {
 	createUnitSettingsStore,
@@ -56,6 +61,7 @@ type HomeScreenProps = {
 		"loadToday" | "toggleManual" | "completeChallengeDay" | "loadAdherenceRange"
 	>;
 	historyStore?: Pick<HistoryStore, "loadDay">;
+	reviewStore?: Pick<ReviewStore, "loadLatestWheel">;
 	unitSettingsStore?: Pick<UnitSettingsStore, "loadWeekStart">;
 	now?: () => Date;
 };
@@ -251,6 +257,7 @@ export function HomeScreen({
 	store,
 	habitsStore,
 	historyStore,
+	reviewStore,
 	unitSettingsStore,
 	now,
 }: HomeScreenProps) {
@@ -265,6 +272,10 @@ export function HomeScreen({
 	const history = useMemo(
 		() => historyStore ?? createHistoryStore(),
 		[historyStore],
+	);
+	const reviews = useMemo(
+		() => reviewStore ?? createReviewStore(),
+		[reviewStore],
 	);
 	const settings = useMemo(
 		() => unitSettingsStore ?? createUnitSettingsStore(),
@@ -297,6 +308,10 @@ export function HomeScreen({
 	);
 	const [routineBusy, setRoutineBusy] = useState<string | null>(null);
 	const [routineError, setRoutineError] = useState<string | null>(null);
+	const [latestWheel, setLatestWheel] = useState<
+		ReviewResult | null | undefined
+	>(undefined);
+	const [wheelError, setWheelError] = useState<string | null>(null);
 	const [finishedChallenge, setFinishedChallenge] = useState<string | null>(
 		null,
 	);
@@ -339,6 +354,15 @@ export function HomeScreen({
 		}
 	}, [routines]);
 
+	const loadWheel = useCallback(async () => {
+		setWheelError(null);
+		try {
+			setLatestWheel(await reviews.loadLatestWheel());
+		} catch (caught) {
+			setWheelError(caught instanceof Error ? caught.message : String(caught));
+		}
+	}, [reviews]);
+
 	useEffect(() => {
 		const current = clock();
 		const nextMidnight = new Date(current);
@@ -348,11 +372,12 @@ export function HomeScreen({
 				setTodayLocalDay(localDayOf(clock()));
 				void load();
 				void loadRoutines();
+				void loadWheel();
 			},
 			Math.max(1_000, nextMidnight.getTime() - current.getTime()),
 		);
 		return () => clearTimeout(timeout);
-	}, [clock, load, loadRoutines, todayLocalDay]);
+	}, [clock, load, loadRoutines, loadWheel, todayLocalDay]);
 
 	const loadIndicatorRange = useCallback(
 		async (fromLocalDay: string, throughLocalDay: string) => {
@@ -482,6 +507,7 @@ export function HomeScreen({
 
 			void load();
 			void loadRoutines();
+			void loadWheel();
 			void settings
 				.loadWeekStart()
 				.then(setWeekStart)
@@ -491,7 +517,7 @@ export function HomeScreen({
 						caught instanceof Error ? caught.message : String(caught),
 					);
 				});
-		}, [clock, load, loadIndicatorRange, loadRoutines, settings]),
+		}, [clock, load, loadIndicatorRange, loadRoutines, loadWheel, settings]),
 	);
 
 	async function toggleHabit(habitId: string) {
@@ -896,7 +922,7 @@ export function HomeScreen({
 								<Button
 									label="Choose a habit"
 									variant="secondary"
-									onPress={() => router.push("/settings/habits")}
+									onPress={() => router.push("/habits")}
 								/>
 							</Card>
 						) : null}
@@ -905,9 +931,7 @@ export function HomeScreen({
 								<SectionHeader
 									title="Habits"
 									action={
-										<TouchableOpacity
-											onPress={() => router.push("/settings/habits")}
-										>
+										<TouchableOpacity onPress={() => router.push("/habits")}>
 											<AppText variant="label" color="brand">
 												Manage
 											</AppText>
@@ -972,7 +996,11 @@ export function HomeScreen({
 						{routineError ? (
 							<AppText color="danger">{routineError}</AppText>
 						) : null}
-						{!formOpen && today.entries.length === 0 ? (
+						{latestWheel !== undefined &&
+						isWheelReviewDue(
+							latestWheel?.assessment.completedAt ?? null,
+							clock().getTime(),
+						) ? (
 							<Card style={styles.stockCard}>
 								<AppText variant="section">
 									Take stock of the bigger picture
@@ -986,6 +1014,11 @@ export function HomeScreen({
 									onPress={() => router.push("/review/new")}
 								/>
 							</Card>
+						) : null}
+						{wheelError ? (
+							<AppText color="danger">
+								Wheel review status could not be loaded: {wheelError}
+							</AppText>
 						) : null}
 						{!formOpen && today.entries.length > 0 ? (
 							<View style={styles.section}>

@@ -13,8 +13,8 @@ import { StyleSheet, useUnistyles } from "../../theme/unistyles";
 
 const TAB_TITLES = {
 	"/": "Today",
-	"/body": "Body",
-	"/mind": "Mind",
+	"/log": "Log",
+	"/insights": "Insights",
 	"/life": "Life",
 } as const;
 
@@ -96,24 +96,20 @@ function TabShell() {
 						}}
 					/>
 					<Tabs.Screen
-						name="body"
+						name="log"
 						options={{
-							title: "Body",
+							title: "Log",
 							tabBarIcon: ({ color, size }) => (
-								<MaterialIcons
-									name="fitness-center"
-									color={color}
-									size={size}
-								/>
+								<MaterialIcons name="edit-note" color={color} size={size} />
 							),
 						}}
 					/>
 					<Tabs.Screen
-						name="mind"
+						name="insights"
 						options={{
-							title: "Mind",
+							title: "Insights",
 							tabBarIcon: ({ color, size }) => (
-								<MaterialIcons name="psychology" color={color} size={size} />
+								<MaterialIcons name="insights" color={color} size={size} />
 							),
 						}}
 					/>

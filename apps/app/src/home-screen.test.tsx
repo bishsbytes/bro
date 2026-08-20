@@ -7,6 +7,7 @@ import {
 	TodayHeaderMonthProvider,
 	useTodayHeaderMonth,
 } from "./components/today-header-month-context";
+import type { ReviewResult } from "./review/review-store";
 import { HomeScreen } from "./screens/home/home-screen";
 
 let triggerFocus: (() => void) | null = null;
@@ -53,6 +54,26 @@ const emptyRoutines = {
 	habits: [],
 	challenges: [],
 };
+
+function wheelAt(completedAt: number): ReviewResult {
+	return {
+		assessment: {
+			id: `review-${completedAt}`,
+			templateSlug: "wheel-of-life",
+			templateVersion: 1,
+			startedAt: completedAt - 1_000,
+			completedAt,
+			items: [],
+			focusItemSlugs: [],
+			createdAt: completedAt,
+			updatedAt: completedAt,
+		},
+		scores: [],
+		previousAssessment: null,
+		previousScores: [],
+		comparisons: [],
+	};
+}
 
 const manualHabit = {
 	id: "habit-1",
@@ -134,6 +155,9 @@ function supportingProps() {
 		unitSettingsStore: {
 			loadWeekStart: jest.fn(async () => "monday" as const),
 		},
+		reviewStore: {
+			loadLatestWheel: jest.fn(async () => null),
+		},
 		now: FIXED_NOW,
 	};
 }
@@ -164,7 +188,56 @@ describe("home screen", () => {
 		expect(await screen.findByLabelText("Mood 4")).toBeTruthy();
 		expect(screen.queryByText("Measurements")).toBeNull();
 		expect(await screen.findByText("Build a routine")).toBeTruthy();
-		expect(screen.queryByText("Take stock of the bigger picture")).toBeNull();
+		expect(
+			await screen.findByText("Take stock of the bigger picture"),
+		).toBeTruthy();
+	});
+
+	it("hides the take-stock prompt after a recent wheel review", async () => {
+		const screen = await render(
+			<HomeScreen
+				{...supportingProps()}
+				reviewStore={{
+					loadLatestWheel: jest.fn(async () =>
+						wheelAt(Date.parse("2026-08-01T12:00:00Z")),
+					),
+				}}
+				habitsStore={habitsStore()}
+				store={{
+					loadToday: jest.fn(async () => emptyToday),
+					loadCheckInDays: jest.fn(async () => new Set<string>()),
+					save: jest.fn(async () => emptyToday),
+				}}
+			/>,
+		);
+
+		await screen.findByLabelText("Mood 4");
+		await waitFor(() =>
+			expect(screen.queryByText("Take stock of the bigger picture")).toBeNull(),
+		);
+	});
+
+	it("shows the take-stock prompt when the latest review is stale", async () => {
+		const screen = await render(
+			<HomeScreen
+				{...supportingProps()}
+				reviewStore={{
+					loadLatestWheel: jest.fn(async () =>
+						wheelAt(Date.parse("2026-07-09T11:59:59Z")),
+					),
+				}}
+				habitsStore={habitsStore()}
+				store={{
+					loadToday: jest.fn(async () => emptyToday),
+					loadCheckInDays: jest.fn(async () => new Set<string>()),
+					save: jest.fn(async () => emptyToday),
+				}}
+			/>,
+		);
+
+		expect(
+			await screen.findByText("Take stock of the bigger picture"),
+		).toBeTruthy();
 	});
 
 	it("marks a manual habit complete from Today", async () => {

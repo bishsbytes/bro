@@ -13,7 +13,7 @@ import {
 } from "../../habits/habits-store";
 import { StyleSheet } from "../../theme/unistyles";
 
-type HabitDetailScreenProps = {
+export type HabitDetailScreenProps = {
 	id: string;
 	store?: Pick<HabitsStore, "loadHabitDetail">;
 };

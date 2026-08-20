@@ -67,6 +67,13 @@ jest.mock("./habits/habits-store", () => ({
 	}),
 }));
 
+jest.mock("./review/review-store", () => ({
+	createReviewStore: () => ({
+		loadLatestWheel: async () => null,
+		loadOverview: async () => ({ sittings: [], goals: [] }),
+	}),
+}));
+
 jest.mock("./trends/trends-store", () => ({
 	createTrendsStore: () => ({
 		load: async (period: number) => ({

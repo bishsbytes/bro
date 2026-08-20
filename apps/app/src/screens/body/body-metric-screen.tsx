@@ -302,7 +302,7 @@ export function BodyMetricScreen({ metricSlug, store }: BodyMetricScreenProps) {
 					title="Measurement not found"
 					body={error ?? "This measurement is not available."}
 					actionLabel="Back to Body"
-					onAction={() => router.replace("/body")}
+					onAction={() => router.replace("/log")}
 				/>
 			</Screen>
 		);

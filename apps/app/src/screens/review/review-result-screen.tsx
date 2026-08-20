@@ -185,7 +185,7 @@ export function ReviewResultScreen({
 											variant="text"
 											onPress={() =>
 												router.push({
-													pathname: "/settings/habits",
+													pathname: "/habits",
 													params: { add: template.slug },
 												})
 											}

@@ -149,6 +149,10 @@ export {
 	REMINDER_NOTIFICATION_PREFIX,
 } from "./reminders/reminder-planner";
 export {
+	isWheelReviewDue,
+	WHEEL_REVIEW_INTERVAL_DAYS,
+} from "./review/wheel-review-due";
+export {
 	buildTrendSeries,
 	TREND_PERIODS,
 	type TrendPeriod,

@@ -4,8 +4,8 @@ import { resolveHabit } from "@bro/domain/habit-catalogue";
 import { fireEvent, render, waitFor } from "@testing-library/react-native";
 import { ChallengeDetailScreen } from "./screens/challenges/challenge-detail-screen";
 import { ChallengeScreen } from "./screens/challenges/challenge-screen";
-import { HabitDetailScreen } from "./screens/settings/habit-detail-screen";
-import { HabitsScreen } from "./screens/settings/habits-screen";
+import { HabitDetailScreen } from "./screens/habits/habit-detail-screen";
+import { HabitsScreen } from "./screens/habits/habits-screen";
 
 const mockRouter = {
 	back: jest.fn(),

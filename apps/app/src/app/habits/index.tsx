@@ -1,5 +1,5 @@
 import { useLocalSearchParams } from "expo-router";
-import { HabitsScreen } from "../../screens/settings/habits-screen";
+import { HabitsScreen } from "../../screens/habits/habits-screen";
 
 export default function HabitsRoute() {
 	const { add } = useLocalSearchParams<{ add?: string }>();

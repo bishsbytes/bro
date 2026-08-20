@@ -378,7 +378,7 @@ export function HabitsScreen({
 						disabled={busy}
 						onPress={() =>
 							router.push(
-								`/settings/habits/${encodeURIComponent(item.habit.id)}` as Href,
+								`/habits/${encodeURIComponent(item.habit.id)}` as Href,
 							)
 						}
 					/>

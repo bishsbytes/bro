@@ -27,7 +27,7 @@ type LifeAreaRepository = Pick<
 	"listResolved" | "configure" | "configureMany" | "relabel"
 >;
 
-type LifeAreasScreenProps = {
+export type LifeAreasScreenProps = {
 	repository?: LifeAreaRepository;
 };
 

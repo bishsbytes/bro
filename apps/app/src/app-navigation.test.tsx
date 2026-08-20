@@ -66,6 +66,18 @@ jest.mock("./body/body-store", () => ({
 	}),
 }));
 
+jest.mock("./drinks/drinks-store", () => ({
+	createDrinksStore: () => ({
+		loadToday: async () => ({ entries: [], metrics: [] }),
+	}),
+}));
+
+jest.mock("./food/food-store", () => ({
+	createFoodStore: () => ({
+		loadToday: async () => ({ entries: [], metrics: [] }),
+	}),
+}));
+
 jest.mock("./habits/habits-store", () => ({
 	createHabitsStore: () => ({
 		loadToday: async () => ({
@@ -77,6 +89,13 @@ jest.mock("./habits/habits-store", () => ({
 		loadAdherenceRange: async () => [],
 		toggleManual: jest.fn(),
 		completeChallengeDay: jest.fn(),
+	}),
+}));
+
+jest.mock("./review/review-store", () => ({
+	createReviewStore: () => ({
+		loadLatestWheel: async () => null,
+		loadOverview: async () => ({ sittings: [], goals: [] }),
 	}),
 }));
 
@@ -199,25 +218,30 @@ describe("app entry", () => {
 
 		expect(router.getPathname()).toBe("/");
 		expect(await view.findByText("How are you?")).toBeTruthy();
+		expect(
+			await view.findByText("Take stock of the bigger picture"),
+		).toBeTruthy();
 	});
 
 	it("moves between the four human-domain tabs", async () => {
 		const { router, view } = await launch({ onboardingComplete: true });
 		expect(view.getByLabelText("Account")).toBeTruthy();
 
-		await press(view, "Body");
-		await waitFor(() => expect(router.getPathname()).toBe("/body"));
+		await press(view, "Log");
+		await waitFor(() => expect(router.getPathname()).toBe("/log"));
 		expect(await view.findByText("No body metrics tracked")).toBeTruthy();
 		expect(view.getByLabelText("Account")).toBeTruthy();
 
-		await press(view, "Mind");
-		await waitFor(() => expect(router.getPathname()).toBe("/mind"));
-		expect(await view.findByText("Your mind patterns start here")).toBeTruthy();
+		await press(view, "Insights");
+		await waitFor(() => expect(router.getPathname()).toBe("/insights"));
+		expect(
+			await view.findByText("Your patterns start with check-ins"),
+		).toBeTruthy();
 		expect(view.getByLabelText("Account")).toBeTruthy();
 
 		await press(view, "Life");
 		await waitFor(() => expect(router.getPathname()).toBe("/life"));
-		expect(await view.findByText("YOUR BIGGER PICTURE")).toBeTruthy();
+		expect(await view.findByText("WHEEL OF LIFE")).toBeTruthy();
 		expect(view.getByLabelText("Account")).toBeTruthy();
 
 		await press(view, "Today");
