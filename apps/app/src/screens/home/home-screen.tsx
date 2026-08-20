@@ -351,13 +351,29 @@ export function HomeScreen({
 	const previousTodayLocalDay = useRef(initialTodayLocalDay);
 	const [selectedDay, setSelectedDay] = useState<string | null>(null);
 	const resolvedSelectedDay = selectedDay ?? todayLocalDay;
+	const [previewDay, setPreviewDay] = useState<string | null>(null);
+	const calendarSelectedDay = previewDay ?? resolvedSelectedDay;
+	const previewPagerDay = useCallback(
+		(localDay: string) => {
+			setPreviewDay(localDay === resolvedSelectedDay ? null : localDay);
+		},
+		[resolvedSelectedDay],
+	);
+	const commitDay = useCallback(
+		(localDay: string) => {
+			setPreviewDay(null);
+			if (localDay === resolvedSelectedDay) return;
+			setSelectedDay(localDay === todayLocalDay ? null : localDay);
+		},
+		[resolvedSelectedDay, todayLocalDay],
+	);
 	const selectDay = useCallback(
 		(localDay: string) => {
 			if (localDay === resolvedSelectedDay) return;
 			playSelectionHaptic();
-			setSelectedDay(localDay === todayLocalDay ? null : localDay);
+			commitDay(localDay);
 		},
-		[resolvedSelectedDay, todayLocalDay],
+		[commitDay, resolvedSelectedDay],
 	);
 	const pagerDays = useMemo(() => {
 		const previous = shiftLocalDay(resolvedSelectedDay, -1);
@@ -374,6 +390,7 @@ export function HomeScreen({
 		previousTodayLocalDay.current = nextTodayLocalDay;
 		setTodayLocalDay(nextTodayLocalDay);
 		setSelectedDay(null);
+		setPreviewDay(null);
 		setResetToTodayCount((count) => count + 1);
 	};
 	useScrollToTop(returnToTodayRef);
@@ -592,6 +609,7 @@ export function HomeScreen({
 		useCallback(() => {
 			const nextTodayLocalDay = localDayOf(clock());
 			const previous = previousTodayLocalDay.current;
+			setPreviewDay(null);
 			setSelectedDay((current) =>
 				current === previous && previous !== nextTodayLocalDay ? null : current,
 			);
@@ -1183,7 +1201,7 @@ export function HomeScreen({
 		<View style={styles.home}>
 			<WeekStrip
 				todayLocalDay={todayLocalDay}
-				selectedDay={resolvedSelectedDay}
+				selectedDay={calendarSelectedDay}
 				resetToTodayCount={resetToTodayCount}
 				weekStart={weekStart}
 				indicators={indicators}
@@ -1193,7 +1211,8 @@ export function HomeScreen({
 			<DayPager
 				days={pagerDays}
 				selectedDay={resolvedSelectedDay}
-				onSelectDay={selectDay}
+				onPreviewDay={previewPagerDay}
+				onSelectDay={commitDay}
 				renderDay={renderPagerDay}
 			/>
 		</View>

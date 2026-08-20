@@ -12,9 +12,9 @@ import {
 } from "@bro/database-app";
 import { Stack } from "expo-router";
 import * as SplashScreen from "expo-splash-screen";
-import { StatusBar } from "expo-status-bar";
 import { useCallback, useEffect, useState } from "react";
 import { ActivityIndicator, Text, TouchableOpacity, View } from "react-native";
+import { SystemBars } from "react-native-edge-to-edge";
 import { HealthImportEffects } from "../health/health-import-effects";
 import {
 	DeviceSettingsProvider,
@@ -165,7 +165,7 @@ export default function RootLayout() {
 
 	return (
 		<View style={styles.container}>
-			<StatusBar style={rt.themeName === "dark" ? "light" : "dark"} />
+			<SystemBars style={rt.themeName === "dark" ? "light" : "dark"} />
 			{startup.kind === "loading" ? <Loading /> : null}
 			{startup.kind === "error" ? (
 				<StorageError error={startup.error} onRetry={retry} />

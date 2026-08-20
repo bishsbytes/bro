@@ -469,7 +469,7 @@ describe("home screen", () => {
 		expect(historyStore.loadDay).toHaveBeenCalledWith("2026-08-13");
 	});
 
-	it("pages between adjacent days without adding a future page", async () => {
+	it("haptically pages between adjacent days without adding a future page", async () => {
 		const historyStore = {
 			loadDay: jest.fn(async (localDay: string) => historyDay(localDay)),
 		};
@@ -490,7 +490,25 @@ describe("home screen", () => {
 		let pager = screen.getByTestId("today-day-pager");
 		expect(pager.props.initialPage).toBe(1);
 		expect(pager.props.pageCount).toBe(2);
-		fireEvent(pager, "pageSelected", { nativeEvent: { position: 0 } });
+		await fireEvent(pager, "pageScroll", {
+			nativeEvent: { position: 0, offset: 0.51 },
+		});
+		expect(Haptics.selectionAsync).not.toHaveBeenCalled();
+		expect(
+			screen.getByTestId("week-strip-day-2026-08-14").props.accessibilityState
+				.selected,
+		).toBe(true);
+		await fireEvent(pager, "pageScroll", {
+			nativeEvent: { position: 0, offset: 0.49 },
+		});
+		expect(Haptics.selectionAsync).toHaveBeenCalledTimes(1);
+		expect(
+			screen.getByTestId("week-strip-day-2026-08-13").props.accessibilityState
+				.selected,
+		).toBe(true);
+		await fireEvent(pager, "pageSelected", {
+			nativeEvent: { position: 0 },
+		});
 
 		expect(await screen.findByText("Yesterday")).toBeTruthy();
 		expect(Haptics.selectionAsync).toHaveBeenCalledTimes(1);
@@ -498,11 +516,33 @@ describe("home screen", () => {
 		pager = screen.getByTestId("today-day-pager");
 		expect(pager.props.initialPage).toBe(1);
 		expect(pager.props.pageCount).toBe(3);
-		fireEvent(pager, "pageSelected", { nativeEvent: { position: 2 } });
+		await fireEvent(pager, "pageScroll", {
+			nativeEvent: { position: 1, offset: 0.49 },
+		});
+		expect(Haptics.selectionAsync).toHaveBeenCalledTimes(1);
+		await fireEvent(pager, "pageScroll", {
+			nativeEvent: { position: 1, offset: 0.51 },
+		});
+		expect(Haptics.selectionAsync).toHaveBeenCalledTimes(2);
+		expect(
+			screen.getByTestId("week-strip-day-2026-08-14").props.accessibilityState
+				.selected,
+		).toBe(true);
+		await fireEvent(pager, "pageSelected", {
+			nativeEvent: { position: 2 },
+		});
 
 		expect(await screen.findByLabelText("Mood 4")).toBeTruthy();
 		expect(Haptics.selectionAsync).toHaveBeenCalledTimes(2);
-		expect(screen.getByTestId("today-day-pager").props.pageCount).toBe(2);
+
+		pager = screen.getByTestId("today-day-pager");
+		expect(pager.props.pageCount).toBe(2);
+		await fireEvent(pager, "pageSelected", {
+			nativeEvent: { position: 0 },
+		});
+
+		expect(await screen.findByText("Yesterday")).toBeTruthy();
+		expect(Haptics.selectionAsync).toHaveBeenCalledTimes(3);
 	});
 
 	it("updates the header month as earlier weeks become visible", async () => {
