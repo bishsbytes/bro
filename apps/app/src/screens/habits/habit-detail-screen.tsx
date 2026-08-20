@@ -1,9 +1,10 @@
 import type { HabitAdherenceState } from "@bro/logic";
 import { useFocusEffect } from "expo-router";
 import { useCallback, useMemo, useState } from "react";
-import { ActivityIndicator, View } from "react-native";
+import { View } from "react-native";
 import { AppText } from "../../components/app-text";
 import { EmptyState } from "../../components/empty-state";
+import { LoadingIndicator } from "../../components/loading-indicator";
 import { Screen } from "../../components/screen";
 import { SectionHeader } from "../../components/section-header";
 import {
@@ -51,7 +52,7 @@ export function HabitDetailScreen({ id, store }: HabitDetailScreenProps) {
 	if (!loaded) {
 		return (
 			<Screen centered>
-				<ActivityIndicator size="large" />
+				<LoadingIndicator size="large" />
 			</Screen>
 		);
 	}

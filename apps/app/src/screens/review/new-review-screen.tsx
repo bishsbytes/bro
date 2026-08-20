@@ -1,10 +1,11 @@
 import { router } from "expo-router";
 import { useEffect, useMemo, useState } from "react";
-import { ActivityIndicator, TouchableOpacity, View } from "react-native";
+import { TouchableOpacity, View } from "react-native";
 import { AppText } from "../../components/app-text";
 import { Button } from "../../components/button";
 import { Card } from "../../components/card";
 import { EmptyState } from "../../components/empty-state";
+import { LoadingIndicator } from "../../components/loading-indicator";
 import { StackScreen as Screen } from "../../components/screen";
 import { WheelChart } from "../../components/wheel-chart";
 import {
@@ -75,7 +76,7 @@ export function NewReviewScreen({ store }: NewReviewScreenProps) {
 	if (!draft && !error) {
 		return (
 			<Screen centered>
-				<ActivityIndicator size="large" />
+				<LoadingIndicator size="large" />
 			</Screen>
 		);
 	}

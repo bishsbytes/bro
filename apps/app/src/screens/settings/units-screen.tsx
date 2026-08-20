@@ -1,11 +1,12 @@
 import type { WeekStartDay } from "@bro/domain";
 import { useFocusEffect } from "expo-router";
 import { useCallback, useMemo, useState } from "react";
-import { ActivityIndicator, View } from "react-native";
+import { View } from "react-native";
 import { AppText } from "../../components/app-text";
 import { Button } from "../../components/button";
 import { Card } from "../../components/card";
 import { EmptyState } from "../../components/empty-state";
+import { LoadingIndicator } from "../../components/loading-indicator";
 import { Screen } from "../../components/screen";
 import { SectionHeader } from "../../components/section-header";
 import { StyleSheet } from "../../theme/unistyles";
@@ -90,7 +91,7 @@ export function UnitsScreen({ store }: UnitsScreenProps) {
 	if ((!snapshot || !weekStart) && !error) {
 		return (
 			<Screen centered>
-				<ActivityIndicator size="large" />
+				<LoadingIndicator size="large" />
 			</Screen>
 		);
 	}

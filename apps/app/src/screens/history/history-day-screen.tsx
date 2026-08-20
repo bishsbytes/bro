@@ -1,11 +1,12 @@
 import type { DayNote, Observation } from "@bro/database-app";
 import { resolveMetric } from "@bro/domain/metric-registry";
 import { useEffect, useMemo, useState } from "react";
-import { ActivityIndicator, TouchableOpacity, View } from "react-native";
+import { TouchableOpacity, View } from "react-native";
 import { AppText } from "../../components/app-text";
 import { Button } from "../../components/button";
 import { Card } from "../../components/card";
 import { FormField } from "../../components/form-field";
+import { LoadingIndicator } from "../../components/loading-indicator";
 import { Screen } from "../../components/screen";
 import { SectionHeader } from "../../components/section-header";
 import {
@@ -205,7 +206,7 @@ export function HistoryDayScreen({ localDay, store }: HistoryDayScreenProps) {
 	if (!day && !error) {
 		return (
 			<Screen centered>
-				<ActivityIndicator size="large" />
+				<LoadingIndicator size="large" />
 			</Screen>
 		);
 	}

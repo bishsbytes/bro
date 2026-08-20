@@ -1,6 +1,6 @@
 import { router, useFocusEffect } from "expo-router";
 import { useCallback, useMemo, useState } from "react";
-import { ActivityIndicator, View } from "react-native";
+import { View } from "react-native";
 import {
 	type BodyOverview,
 	type BodyStore,
@@ -11,6 +11,7 @@ import { Button } from "../../components/button";
 import { Card } from "../../components/card";
 import { EmptyState } from "../../components/empty-state";
 import { ListRow } from "../../components/list-row";
+import { LoadingIndicator } from "../../components/loading-indicator";
 import { Screen } from "../../components/screen";
 import { SectionHeader } from "../../components/section-header";
 import { ThemedSwitch } from "../../components/themed-switch";
@@ -146,7 +147,7 @@ export function LogScreen({
 	if (!snapshot && !error) {
 		return (
 			<Screen centered>
-				<ActivityIndicator size="large" />
+				<LoadingIndicator size="large" />
 			</Screen>
 		);
 	}

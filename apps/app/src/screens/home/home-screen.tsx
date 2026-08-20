@@ -13,7 +13,7 @@ import {
 import { formatLocalDayLabel, isWheelReviewDue } from "@bro/logic";
 import { type Href, router, useFocusEffect, useScrollToTop } from "expo-router";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { ActivityIndicator, TouchableOpacity, View } from "react-native";
+import { TouchableOpacity, View } from "react-native";
 import {
 	type CheckInEntry,
 	type CheckInMeasurement,
@@ -26,6 +26,7 @@ import { Button } from "../../components/button";
 import { Card } from "../../components/card";
 import { DayPager } from "../../components/day-pager";
 import { FormField } from "../../components/form-field";
+import { LoadingIndicator } from "../../components/loading-indicator";
 import { MeasurementField } from "../../components/measurement-field";
 import { Screen } from "../../components/screen";
 import { SectionHeader } from "../../components/section-header";
@@ -192,7 +193,7 @@ function PastDaySection({
 			<AppText variant="section" style={styles.pageTitle}>
 				{formatLocalDayLabel(localDay, todayLocalDay)}
 			</AppText>
-			{loading ? <ActivityIndicator size="large" /> : null}
+			{loading ? <LoadingIndicator size="large" /> : null}
 			{error ? <AppText color="danger">{error}</AppText> : null}
 			{day ? (
 				<>
@@ -841,7 +842,7 @@ export function HomeScreen({
 	if ((!today || !weekStart) && !error) {
 		return (
 			<Screen centered>
-				<ActivityIndicator size="large" />
+				<LoadingIndicator size="large" />
 			</Screen>
 		);
 	}
@@ -863,7 +864,7 @@ export function HomeScreen({
 	if (!weekStart) {
 		return (
 			<Screen centered>
-				<ActivityIndicator size="large" />
+				<LoadingIndicator size="large" />
 			</Screen>
 		);
 	}

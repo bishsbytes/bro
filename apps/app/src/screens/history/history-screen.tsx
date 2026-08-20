@@ -2,10 +2,10 @@ import { localDayOf } from "@bro/domain";
 import { formatLocalDayLabel } from "@bro/logic";
 import { router, useFocusEffect } from "expo-router";
 import { useCallback, useMemo, useState } from "react";
-import { ActivityIndicator } from "react-native";
 import { AppText } from "../../components/app-text";
 import { EmptyState } from "../../components/empty-state";
 import { ListRow } from "../../components/list-row";
+import { LoadingIndicator } from "../../components/loading-indicator";
 import { Screen } from "../../components/screen";
 import {
 	createHistoryStore,
@@ -41,7 +41,7 @@ export function HistoryScreen({ store }: HistoryScreenProps) {
 	if (!days && !error) {
 		return (
 			<Screen centered>
-				<ActivityIndicator size="large" />
+				<LoadingIndicator size="large" />
 			</Screen>
 		);
 	}

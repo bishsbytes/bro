@@ -6,11 +6,12 @@ import {
 } from "@bro/logic";
 import { type Href, router, useFocusEffect } from "expo-router";
 import { useCallback, useMemo, useState } from "react";
-import { ActivityIndicator, TouchableOpacity, View } from "react-native";
+import { TouchableOpacity, View } from "react-native";
 import { AppText } from "../../components/app-text";
 import { Card } from "../../components/card";
 import { EmptyState } from "../../components/empty-state";
 import { ListRow } from "../../components/list-row";
+import { LoadingIndicator } from "../../components/loading-indicator";
 import { Screen } from "../../components/screen";
 import { SectionHeader } from "../../components/section-header";
 import { TrendChart } from "../../components/trend-chart";
@@ -87,7 +88,7 @@ export function InsightsScreen({ store, insightStore }: InsightsScreenProps) {
 			<View style={styles.section}>
 				<SectionHeader title="Insights" eyebrow="LAST 90 DAYS" />
 				{!insightSnapshot && !insightError ? (
-					<ActivityIndicator size="large" />
+					<LoadingIndicator size="large" />
 				) : null}
 				{insightError ? (
 					<EmptyState
@@ -157,7 +158,7 @@ export function InsightsScreen({ store, insightStore }: InsightsScreenProps) {
 					))}
 				</View>
 
-				{!snapshot && !error ? <ActivityIndicator size="large" /> : null}
+				{!snapshot && !error ? <LoadingIndicator size="large" /> : null}
 				{error ? (
 					<EmptyState
 						title="Trends could not be loaded"

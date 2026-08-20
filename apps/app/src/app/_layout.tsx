@@ -13,8 +13,9 @@ import {
 import { Stack } from "expo-router";
 import * as SplashScreen from "expo-splash-screen";
 import { useCallback, useEffect, useState } from "react";
-import { ActivityIndicator, Text, TouchableOpacity, View } from "react-native";
+import { Text, TouchableOpacity, View } from "react-native";
 import { SystemBars } from "react-native-edge-to-edge";
+import { LoadingIndicator } from "../components/loading-indicator";
 import { HealthImportEffects } from "../health/health-import-effects";
 import {
 	DeviceSettingsProvider,
@@ -38,7 +39,7 @@ type StartupState =
 function Loading() {
 	return (
 		<View style={styles.centered}>
-			<ActivityIndicator size="large" />
+			<LoadingIndicator size="large" />
 		</View>
 	);
 }

@@ -1,12 +1,13 @@
 import { useAuth } from "@bro/auth-app";
 import { router } from "expo-router";
 import { useState } from "react";
-import { ActivityIndicator, View } from "react-native";
+import { View } from "react-native";
 import { AppText } from "../../components/app-text";
 import { Button } from "../../components/button";
 import { Card } from "../../components/card";
 import { FormField } from "../../components/form-field";
 import { ListRow } from "../../components/list-row";
+import { LoadingIndicator } from "../../components/loading-indicator";
 import { StackScreen as Screen } from "../../components/screen";
 import { SectionHeader } from "../../components/section-header";
 import { useDeviceSettings } from "../../providers/device-settings-provider";
@@ -140,7 +141,7 @@ export function AccountScreen() {
 
 			{(isChecking || isResolving) && confirmation === null ? (
 				<View style={styles.centeredState}>
-					<ActivityIndicator />
+					<LoadingIndicator />
 					<AppText variant="label" color="subtle">
 						Checking your account…
 					</AppText>

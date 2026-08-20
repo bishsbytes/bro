@@ -1,7 +1,8 @@
 import type { ComponentProps } from "react";
-import { ActivityIndicator, TouchableOpacity } from "react-native";
+import { TouchableOpacity } from "react-native";
 import { StyleSheet, useUnistyles } from "../theme/unistyles";
 import { AppText } from "./app-text";
+import { LoadingIndicator } from "./loading-indicator";
 
 type ButtonVariant = "primary" | "secondary" | "danger" | "text";
 type ButtonTone = "default" | "danger";
@@ -56,7 +57,7 @@ export function Button({
 			{...props}
 		>
 			{loading ? (
-				<ActivityIndicator color={foreground} />
+				<LoadingIndicator color={foreground} />
 			) : (
 				<AppText variant="label" style={[styles.label, { color: foreground }]}>
 					{label}
