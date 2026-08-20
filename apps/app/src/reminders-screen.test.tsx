@@ -21,6 +21,10 @@ function reminder(overrides: Partial<Reminder> = {}): Reminder {
 	};
 }
 
+function weekStartStore(day: "monday" | "saturday" | "sunday" = "monday") {
+	return { loadWeekStart: jest.fn(async () => day) };
+}
+
 describe("reminders screen", () => {
 	it("creates and persists the default every-day reminder", async () => {
 		let rows: Reminder[] = [];
@@ -38,13 +42,31 @@ describe("reminders screen", () => {
 			setEnabled: jest.fn(async () => undefined),
 			delete: jest.fn(async () => undefined),
 		};
-		const view = await render(<RemindersScreen store={store} />);
+		const view = await render(
+			<RemindersScreen
+				store={store}
+				unitSettingsStore={weekStartStore("saturday")}
+			/>,
+		);
 
 		await waitFor(() =>
 			expect(view.getByText("No reminders yet")).toBeTruthy(),
 		);
 		await fireEvent.press(view.getByText("Add reminder"));
 		expect(view.getByLabelText("Time (24-hour)").props.value).toBe("20:00");
+		expect(
+			view
+				.getAllByLabelText(/^Remove /)
+				.map((button) => button.props.accessibilityLabel),
+		).toEqual([
+			"Remove Saturday",
+			"Remove Sunday",
+			"Remove Monday",
+			"Remove Tuesday",
+			"Remove Wednesday",
+			"Remove Thursday",
+			"Remove Friday",
+		]);
 		await fireEvent.press(view.getByText("Save reminder"));
 
 		await waitFor(() =>
@@ -68,7 +90,9 @@ describe("reminders screen", () => {
 			setEnabled: jest.fn(async () => undefined),
 			delete: jest.fn(),
 		};
-		const view = await render(<RemindersScreen store={store} />);
+		const view = await render(
+			<RemindersScreen store={store} unitSettingsStore={weekStartStore()} />,
+		);
 
 		await waitFor(() =>
 			expect(view.getByText("Notifications are off")).toBeTruthy(),

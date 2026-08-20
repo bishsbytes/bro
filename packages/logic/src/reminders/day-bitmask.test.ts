@@ -3,6 +3,7 @@ import {
 	ISO_WEEKDAYS,
 	includesWeekday,
 	isoWeekdayIndex,
+	orderedIsoWeekdays,
 	weekdaysFromMask,
 	weekdaysToMask,
 } from "./day-bitmask";
@@ -21,5 +22,17 @@ describe("ISO weekday bitmasks", () => {
 		for (let mask = 0; mask <= EVERY_DAY_MASK; mask += 1) {
 			expect(weekdaysToMask(weekdaysFromMask(mask))).toBe(mask);
 		}
+	});
+
+	it("reorders labels from the preferred week start without changing indices", () => {
+		expect(orderedIsoWeekdays("monday").map((day) => day.index)).toEqual([
+			0, 1, 2, 3, 4, 5, 6,
+		]);
+		expect(orderedIsoWeekdays("sunday").map((day) => day.index)).toEqual([
+			6, 0, 1, 2, 3, 4, 5,
+		]);
+		expect(orderedIsoWeekdays("saturday").map((day) => day.index)).toEqual([
+			5, 6, 0, 1, 2, 3, 4,
+		]);
 	});
 });

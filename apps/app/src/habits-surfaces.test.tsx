@@ -25,6 +25,10 @@ jest.mock("expo-router", () => ({
 	},
 }));
 
+function weekStartStore(day: "monday" | "saturday" | "sunday" = "monday") {
+	return { loadWeekStart: jest.fn(async () => day) };
+}
+
 describe("habit and challenge surfaces", () => {
 	beforeEach(() => {
 		jest.clearAllMocks();
@@ -70,10 +74,39 @@ describe("habit and challenge surfaces", () => {
 			removeHabit: jest.fn(),
 			moveHabit: jest.fn(),
 		};
-		const screen = await render(<HabitsScreen store={store} />);
+		const screen = await render(
+			<HabitsScreen
+				store={store}
+				unitSettingsStore={weekStartStore("sunday")}
+			/>,
+		);
 
 		await fireEvent.press(await screen.findByLabelText("Add Read"));
 		expect(screen.getByDisplayValue("Read")).toBeTruthy();
+		expect(
+			screen
+				.getAllByRole("button")
+				.map((button) => button.props.accessibilityLabel)
+				.filter((label) =>
+					[
+						"Monday",
+						"Tuesday",
+						"Wednesday",
+						"Thursday",
+						"Friday",
+						"Saturday",
+						"Sunday",
+					].includes(label),
+				),
+		).toEqual([
+			"Sunday",
+			"Monday",
+			"Tuesday",
+			"Wednesday",
+			"Thursday",
+			"Friday",
+			"Saturday",
+		]);
 		await fireEvent.press(screen.getByText("Save habit"));
 
 		await waitFor(() =>
@@ -110,7 +143,11 @@ describe("habit and challenge surfaces", () => {
 			moveHabit: jest.fn(),
 		};
 		const screen = await render(
-			<HabitsScreen store={store} addTemplateSlug={reading.slug} />,
+			<HabitsScreen
+				store={store}
+				unitSettingsStore={weekStartStore()}
+				addTemplateSlug={reading.slug}
+			/>,
 		);
 		expect(await screen.findByDisplayValue("Read")).toBeTruthy();
 		// Cancelling must not reopen the editor: the param is consumed once.
@@ -159,7 +196,11 @@ describe("habit and challenge surfaces", () => {
 			moveHabit: jest.fn(),
 		};
 		const screen = await render(
-			<HabitsScreen store={store} addTemplateSlug={reading.slug} />,
+			<HabitsScreen
+				store={store}
+				unitSettingsStore={weekStartStore()}
+				addTemplateSlug={reading.slug}
+			/>,
 		);
 		await screen.findByText("Read");
 		expect(screen.queryByDisplayValue("Read")).toBeNull();
@@ -205,7 +246,9 @@ describe("habit and challenge surfaces", () => {
 			removeHabit: jest.fn(),
 			moveHabit: jest.fn(),
 		};
-		const screen = await render(<HabitsScreen store={store} />);
+		const screen = await render(
+			<HabitsScreen store={store} unitSettingsStore={weekStartStore()} />,
+		);
 
 		await fireEvent.press(
 			await screen.findByLabelText("Add Have an alcohol-free day"),

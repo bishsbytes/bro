@@ -2,11 +2,11 @@
 
 ## Status
 
-**Draft, 20 August 2026.** Follows the information-architecture review of the tab structure. This is the first IA change from that review — the highest-leverage one — and is deliberately scoped to the Today tab only. The wider tab rebalance (Insights merge, Life made stateful, Drinks/Food promotion) is not this plan.
+**Implemented, 20 August 2026.** Follows the information-architecture review of the tab structure. This is the first IA change from that review — the highest-leverage one — and is deliberately scoped to the Today tab only. The wider tab rebalance (Insights merge, Life made stateful, Drinks/Food promotion) is not this plan. The finished interaction incorporates hands-on feedback: a rightward swipe moves into the past, and the compact Today header shows the visible month.
 
 ## Outcome
 
-Today gains a week strip pinned under the header: seven day cells per page, the current week shown first, swipe right-to-left through previous weeks. Each cell carries two indicators — whether a check-in was logged, and how the day's scheduled habits went. Tapping a past day switches the screen in place to that day: a read-only summary of what was logged, habit cards with backfill allowed, and a link into the full editing surface at `/history/[localDay]`. Tapping today returns to the live check-in state.
+Today gains a week strip pinned under the header: seven day cells per page, the current week shown first, with a rightward swipe moving through previous weeks. Each cell carries two indicators — whether a check-in was logged, and how the day's scheduled habits went. Tapping a past day switches the screen in place to that day: a read-only summary of what was logged, habit cards with backfill allowed, and a link into the full editing surface at `/history/[localDay]`. Tapping today returns to the live check-in state.
 
 The step is successful when three things hold: a user can see at a glance which days this week they checked in; they can tap yesterday and mark a habit done there, and the strip's ring updates; and a late tracker sync that lifts yesterday's steps over a metric habit's target flips that day's indicator without anyone touching anything — the derived-completion model made visible.
 
@@ -100,19 +100,20 @@ export type WeekStripDayIndicator = {
 export type WeekStripProps = {
   todayLocalDay: string;
   selectedDay: string; // resolved by the screen; never null here
+  weekStart: WeekStartDay;
   indicators: ReadonlyMap<string, WeekStripDayIndicator>;
   onSelectDay: (localDay: string) => void;
   onVisibleRangeChange: (fromLocalDay: string, throughLocalDay: string) => void;
 };
 ```
 
-Internals: a horizontal, `pagingEnabled` FlatList whose items are whole weeks (arrays of seven local days built from `weekStartOf` + `shiftLocalDay`), fixed-width via `getItemLayout`, ordered current-week-first with `inverted` so the initial position needs no scroll-to-index and swiping left pages into the past (an `initialScrollIndex` non-inverted layout is an acceptable alternative if the inverted transform misbehaves — implementer's call, behaviour is the contract). Each cell: weekday initial, day number, check-in fill, adherence ring, all from theme tokens. Future days in the current week render dimmed and non-pressable. `onEndReached` extends the week list backward.
+Internals: a horizontal, `pagingEnabled` FlatList whose items are whole weeks (arrays of seven local days built from `weekStartOf` + `shiftLocalDay`), fixed-width via `getItemLayout`, ordered current-week-first with `inverted` so the initial position needs no scroll-to-index and a rightward swipe pages into the past. Each cell: short weekday label, day number, check-in fill, adherence ring, all from theme tokens. Future days in the current week render dimmed and non-pressable. `onEndReached` extends the week list backward.
 
 Accessibility: each cell is `accessibilityRole="button"`, `accessibilityState={{ selected, disabled }}`, with a composed label — "Monday 18 August, check-in logged, 2 of 3 habits done" — built from `formatLocalDayLabel` and the indicator. The strip itself gets `accessibilityLabel="Week of …"` per page.
 
 ### Screen integration (`apps/app/src/screens/home/home-screen.tsx`)
 
-The strip renders above the existing `<Screen scroll>` inside a column, so it stays pinned while content scrolls. When the resolved selected day is today, the screen renders exactly what it renders now. When it is a past day, it renders a new `PastDaySection`: `formatLocalDayLabel` heading, day summary from `HistoryStore.loadDay`, habit cards from `HabitsStore.loadToday(localDay)` with the existing toggle wiring, and the "Edit this day" push. The header's history icon is unchanged.
+The strip renders above the existing `<Screen scroll>` inside a column, so it stays pinned while content scrolls. When the resolved selected day is today, the screen renders exactly what it renders now. When it is a past day, it renders a new `PastDaySection`: `formatLocalDayLabel` heading, day summary from `HistoryStore.loadDay`, habit cards from `HabitsStore.loadToday(localDay)` with the existing toggle wiring, and the "Edit this day" push. The compact header centers the visible month, with history and account actions balancing its sides.
 
 ## Delivery slices
 

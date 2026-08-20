@@ -1,5 +1,6 @@
+import type { WeekStartDay } from "@bro/domain";
 import { type HabitTemplate, resolveHabit } from "@bro/domain/habit-catalogue";
-import { ISO_WEEKDAYS } from "@bro/logic";
+import { orderedIsoWeekdays } from "@bro/logic";
 import { type Href, router, useFocusEffect } from "expo-router";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { ActivityIndicator, TouchableOpacity, View } from "react-native";
@@ -18,6 +19,10 @@ import {
 	type HabitsStore,
 } from "../../habits/habits-store";
 import { StyleSheet } from "../../theme/unistyles";
+import {
+	createUnitSettingsStore,
+	type UnitSettingsStore,
+} from "../../units/unit-settings-store";
 
 type HabitsScreenStore = Pick<
 	HabitsStore,
@@ -36,13 +41,21 @@ type Editor =
 
 export function HabitsScreen({
 	store,
+	unitSettingsStore,
 	addTemplateSlug = null,
 }: {
 	store?: HabitsScreenStore;
+	unitSettingsStore?: Pick<UnitSettingsStore, "loadWeekStart">;
 	addTemplateSlug?: string | null;
 }) {
 	const habits = useMemo(() => store ?? createHabitsStore(), [store]);
+	const unitSettings = useMemo(
+		() => unitSettingsStore ?? createUnitSettingsStore(),
+		[unitSettingsStore],
+	);
 	const [snapshot, setSnapshot] = useState<HabitSettingsSnapshot | null>(null);
+	const [weekStart, setWeekStart] = useState<WeekStartDay>("monday");
+	const weekdays = useMemo(() => orderedIsoWeekdays(weekStart), [weekStart]);
 	const [editor, setEditor] = useState<Editor | null>(null);
 	const consumedAddParam = useRef(false);
 	const [label, setLabel] = useState("");
@@ -55,11 +68,16 @@ export function HabitsScreen({
 	const load = useCallback(async () => {
 		setError(null);
 		try {
-			setSnapshot(await habits.loadSettings());
+			const [nextSnapshot, nextWeekStart] = await Promise.all([
+				habits.loadSettings(),
+				unitSettings.loadWeekStart(),
+			]);
+			setSnapshot(nextSnapshot);
+			setWeekStart(nextWeekStart);
 		} catch (caught) {
 			setError(caught instanceof Error ? caught.message : String(caught));
 		}
-	}, [habits]);
+	}, [habits, unitSettings]);
 
 	useFocusEffect(
 		useCallback(() => {
@@ -270,7 +288,7 @@ export function HabitsScreen({
 					) : null}
 					<AppText variant="label">Scheduled days</AppText>
 					<View style={styles.weekdays}>
-						{ISO_WEEKDAYS.map((day) => {
+						{weekdays.map((day) => {
 							const selected = (daysOfWeek & (1 << day.index)) !== 0;
 							return (
 								<TouchableOpacity

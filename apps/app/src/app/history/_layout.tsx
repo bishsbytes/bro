@@ -1,3 +1,5 @@
+import { isCalendarDay, localDayOf } from "@bro/domain";
+import { formatLocalDayLabel } from "@bro/logic";
 import { Stack } from "expo-router";
 import { stackScreenOptions, useUnistyles } from "../../theme/unistyles";
 
@@ -16,7 +18,12 @@ export default function HistoryLayout() {
 				name="[localDay]"
 				options={({ route }) => {
 					const { localDay } = (route.params ?? {}) as { localDay?: string };
-					return { title: localDay ?? "Day" };
+					return {
+						title:
+							localDay && isCalendarDay(localDay)
+								? formatLocalDayLabel(localDay, localDayOf(new Date()))
+								: "Day",
+					};
 				}}
 			/>
 		</Stack>

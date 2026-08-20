@@ -1,8 +1,10 @@
 import type { Reminder, ReminderSchedule } from "@bro/database-app";
+import type { WeekStartDay } from "@bro/domain";
 import {
 	EVERY_DAY_MASK,
 	ISO_WEEKDAYS,
 	type IsoWeekdayIndex,
+	orderedIsoWeekdays,
 	weekdaysFromMask,
 } from "@bro/logic";
 import { useFocusEffect } from "expo-router";
@@ -21,12 +23,17 @@ import {
 	type ReminderStore,
 } from "../../reminders/reminder-store";
 import { StyleSheet, useUnistyles } from "../../theme/unistyles";
+import {
+	createUnitSettingsStore,
+	type UnitSettingsStore,
+} from "../../units/unit-settings-store";
 
 type RemindersScreenProps = {
 	store?: Pick<
 		ReminderStore,
 		"load" | "create" | "update" | "setEnabled" | "delete"
 	>;
+	unitSettingsStore?: Pick<UnitSettingsStore, "loadWeekStart">;
 };
 
 function formatTime(minuteOfDay: number): string {
@@ -52,17 +59,20 @@ function formatDays(mask: number): string {
 function ReminderEditor({
 	initial,
 	busy,
+	weekStart,
 	onCancel,
 	onSave,
 }: {
 	initial: ReminderSchedule;
 	busy: boolean;
+	weekStart: WeekStartDay;
 	onCancel(): void;
 	onSave(schedule: ReminderSchedule): Promise<void>;
 }) {
 	const [time, setTime] = useState(formatTime(initial.minuteOfDay));
 	const [daysOfWeek, setDaysOfWeek] = useState(initial.daysOfWeek);
 	const [error, setError] = useState<string | null>(null);
+	const weekdays = useMemo(() => orderedIsoWeekdays(weekStart), [weekStart]);
 
 	function toggleDay(day: IsoWeekdayIndex) {
 		setDaysOfWeek((mask) => mask ^ (1 << day));
@@ -94,7 +104,7 @@ function ReminderEditor({
 				autoCapitalize="none"
 			/>
 			<View style={styles.days}>
-				{ISO_WEEKDAYS.map((day) => {
+				{weekdays.map((day) => {
 					const selected = (daysOfWeek & (1 << day.index)) !== 0;
 					return (
 						<Button
@@ -125,22 +135,35 @@ function ReminderEditor({
 	);
 }
 
-export function RemindersScreen({ store }: RemindersScreenProps) {
+export function RemindersScreen({
+	store,
+	unitSettingsStore,
+}: RemindersScreenProps) {
 	const remindersStore = useMemo(() => store ?? createReminderStore(), [store]);
+	const unitSettings = useMemo(
+		() => unitSettingsStore ?? createUnitSettingsStore(),
+		[unitSettingsStore],
+	);
 	const { theme } = useUnistyles();
 	const [state, setState] = useState<ReminderScreenState | null>(null);
 	const [error, setError] = useState<string | null>(null);
 	const [busy, setBusy] = useState(false);
 	const [editing, setEditing] = useState<Reminder | "new" | null>(null);
+	const [weekStart, setWeekStart] = useState<WeekStartDay>("monday");
 
 	const load = useCallback(async () => {
 		try {
 			setError(null);
-			setState(await remindersStore.load());
+			const [nextState, nextWeekStart] = await Promise.all([
+				remindersStore.load(),
+				unitSettings.loadWeekStart(),
+			]);
+			setState(nextState);
+			setWeekStart(nextWeekStart);
 		} catch (caught) {
 			setError(caught instanceof Error ? caught.message : String(caught));
 		}
-	}, [remindersStore]);
+	}, [remindersStore, unitSettings]);
 
 	useFocusEffect(
 		useCallback(() => {
@@ -263,6 +286,7 @@ export function RemindersScreen({ store }: RemindersScreenProps) {
 							: editing
 					}
 					busy={busy}
+					weekStart={weekStart}
 					onCancel={() => setEditing(null)}
 					onSave={(schedule) =>
 						mutate(() =>

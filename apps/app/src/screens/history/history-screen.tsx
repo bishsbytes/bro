@@ -1,3 +1,5 @@
+import { localDayOf } from "@bro/domain";
+import { formatLocalDayLabel } from "@bro/logic";
 import { router, useFocusEffect } from "expo-router";
 import { useCallback, useMemo, useState } from "react";
 import { ActivityIndicator } from "react-native";
@@ -19,6 +21,7 @@ export function HistoryScreen({ store }: HistoryScreenProps) {
 	const history = useMemo(() => store ?? createHistoryStore(), [store]);
 	const [days, setDays] = useState<HistoryDaySummary[] | null>(null);
 	const [error, setError] = useState<string | null>(null);
+	const todayLocalDay = localDayOf(new Date());
 
 	const load = useCallback(async () => {
 		setError(null);
@@ -62,57 +65,59 @@ export function HistoryScreen({ store }: HistoryScreenProps) {
 				/>
 			) : null}
 
-			{days?.map((day) => (
-				<ListRow
-					key={day.localDay}
-					accessibilityLabel={`Open ${day.localDay}`}
-					title={day.localDay}
-					onPress={() =>
-						router.push({
-							pathname: "/history/[localDay]",
-							params: { localDay: day.localDay },
-						})
-					}
-				>
-					{day.moodValues.length > 0 || day.energyValues.length > 0 ? (
-						<AppText variant="score">
-							Mood {day.moodValues.join(", ")} · Energy{" "}
-							{day.energyValues.join(", ")}
-						</AppText>
-					) : null}
-					{day.factorLabels.length > 0 ? (
-						<AppText color="muted">
-							Factors: {day.factorLabels.join(", ")}
-						</AppText>
-					) : null}
-					{day.assessmentCount > 0 ? (
-						<AppText color="muted">
-							{day.assessmentCount === 1
-								? "Wheel of life review"
-								: `${day.assessmentCount} wheel of life reviews`}
-						</AppText>
-					) : null}
-					{day.healthLabels && day.healthLabels.length > 0 ? (
-						<AppText color="muted">
-							Health: {day.healthLabels.join(", ")}
-						</AppText>
-					) : null}
-					{day.habitLabels && day.habitLabels.length > 0 ? (
-						<AppText color="muted">
-							Habits: {day.habitLabels.join(", ")}
-						</AppText>
-					) : null}
-					{day.challengeLabels && day.challengeLabels.length > 0 ? (
-						<AppText color="muted">
-							Challenges: {day.challengeLabels.join(", ")}
-						</AppText>
-					) : null}
-					{day.noteBodies.map((body, index) => (
-						// biome-ignore lint/suspicious/noArrayIndexKey: summaries do not expose note ids and these text rows hold no state
-						<AppText key={`${day.localDay}-note-${index}`}>{body}</AppText>
-					))}
-				</ListRow>
-			))}
+			{days?.map((day) => {
+				const dayLabel = formatLocalDayLabel(day.localDay, todayLocalDay);
+				return (
+					<ListRow
+						key={day.localDay}
+						accessibilityLabel={`Open ${dayLabel}`}
+						title={dayLabel}
+						onPress={() =>
+							router.push({
+								pathname: "/history/[localDay]",
+								params: { localDay: day.localDay },
+							})
+						}
+					>
+						{day.moodValues.length > 0 || day.energyValues.length > 0 ? (
+							<AppText variant="score">
+								Mood {day.moodValues.join(", ")} · Energy{" "}
+								{day.energyValues.join(", ")}
+							</AppText>
+						) : null}
+						{day.factorLabels.length > 0 ? (
+							<AppText color="muted">
+								Factors: {day.factorLabels.join(", ")}
+							</AppText>
+						) : null}
+						{day.assessmentCount > 0 ? (
+							<AppText color="muted">
+								{day.assessmentCount === 1
+									? "Wheel of life review"
+									: `${day.assessmentCount} wheel of life reviews`}
+							</AppText>
+						) : null}
+						{day.healthLabels && day.healthLabels.length > 0 ? (
+							<AppText color="muted">
+								Health: {day.healthLabels.join(", ")}
+							</AppText>
+						) : null}
+						{day.habitLabels && day.habitLabels.length > 0 ? (
+							<AppText color="muted">
+								Habits: {day.habitLabels.join(", ")}
+							</AppText>
+						) : null}
+						{day.challengeLabels && day.challengeLabels.length > 0 ? (
+							<AppText color="muted">
+								Challenges: {day.challengeLabels.join(", ")}
+							</AppText>
+						) : null}
+						{day.noteBodies.map((body, index) => (
+							<AppText key={`${day.localDay}-note-${index}`}>{body}</AppText>
+						))}
+					</ListRow>
+				);
+			})}
 		</Screen>
 	);
 }

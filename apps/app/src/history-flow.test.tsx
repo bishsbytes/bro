@@ -1,5 +1,7 @@
 import { authClient } from "@bro/auth-app";
 import type * as DatabaseApp from "@bro/database-app";
+import { localDayOf } from "@bro/domain";
+import { formatLocalDayLabel } from "@bro/logic";
 import {
 	act,
 	fireEvent,
@@ -122,19 +124,22 @@ describe("history and day view", () => {
 		await notes.create(localDay, "First synced note");
 		await notes.create(localDay, "Second synced note");
 		await notes.create("2026-08-10", "Older note");
+		const todayLocalDay = localDayOf(new Date());
+		const localDayLabel = formatLocalDayLabel(localDay, todayLocalDay);
+		const olderDayLabel = formatLocalDayLabel("2026-08-10", todayLocalDay);
 
 		const router = renderRouter("src/app", {
 			initialUrl: "/history",
 		});
 		const view = await router;
 		await act(async () => undefined);
-		await view.findByLabelText(`Open ${localDay}`);
+		await view.findByLabelText(`Open ${localDayLabel}`);
 		expect(
 			view
 				.getAllByLabelText(/^Open /)
 				.map((entry) => entry.props.accessibilityLabel),
-		).toEqual([`Open ${localDay}`, "Open 2026-08-10"]);
-		await fireEvent.press(view.getByLabelText(`Open ${localDay}`));
+		).toEqual([`Open ${localDayLabel}`, `Open ${olderDayLabel}`]);
+		await fireEvent.press(view.getByLabelText(`Open ${localDayLabel}`));
 
 		expect(await view.findByText("future_metric: 42")).toBeTruthy();
 		expect(view.getByText("Source: future-sync")).toBeTruthy();

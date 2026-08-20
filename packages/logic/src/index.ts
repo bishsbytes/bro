@@ -133,9 +133,11 @@ export {
 export {
 	EVERY_DAY_MASK,
 	ISO_WEEKDAYS,
+	type IsoWeekday,
 	type IsoWeekdayIndex,
 	includesWeekday,
 	isoWeekdayIndex,
+	orderedIsoWeekdays,
 	weekdaysFromMask,
 	weekdaysToMask,
 } from "./reminders/day-bitmask";
