@@ -11,7 +11,7 @@ import {
 	resolveMetric,
 } from "@bro/domain/metric-registry";
 import { formatLocalDayLabel, isWheelReviewDue } from "@bro/logic";
-import { type Href, router, useFocusEffect } from "expo-router";
+import { type Href, router, useFocusEffect, useScrollToTop } from "expo-router";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { ActivityIndicator, TouchableOpacity, View } from "react-native";
 import {
@@ -287,6 +287,16 @@ export function HomeScreen({
 	const previousTodayLocalDay = useRef(initialTodayLocalDay);
 	const [selectedDay, setSelectedDay] = useState<string | null>(null);
 	const resolvedSelectedDay = selectedDay ?? todayLocalDay;
+	const [resetToTodayCount, setResetToTodayCount] = useState(0);
+	const returnToTodayRef = useRef({ scrollToTop: () => undefined });
+	returnToTodayRef.current.scrollToTop = () => {
+		const nextTodayLocalDay = localDayOf(clock());
+		previousTodayLocalDay.current = nextTodayLocalDay;
+		setTodayLocalDay(nextTodayLocalDay);
+		setSelectedDay(null);
+		setResetToTodayCount((count) => count + 1);
+	};
+	useScrollToTop(returnToTodayRef);
 	const [weekStart, setWeekStart] = useState<WeekStartDay | null>(null);
 	const indicatorCache = useRef(new Map<string, WeekStripDayIndicator>());
 	const indicatorGeneration = useRef(0);
@@ -865,6 +875,7 @@ export function HomeScreen({
 			<WeekStrip
 				todayLocalDay={todayLocalDay}
 				selectedDay={resolvedSelectedDay}
+				resetToTodayCount={resetToTodayCount}
 				weekStart={weekStart}
 				indicators={indicators}
 				onSelectDay={setSelectedDay}

@@ -21,6 +21,7 @@ export type WeekStripDayIndicator = {
 export type WeekStripProps = {
 	todayLocalDay: string;
 	selectedDay: string;
+	resetToTodayCount?: number;
 	weekStart: WeekStartDay;
 	indicators: ReadonlyMap<string, WeekStripDayIndicator>;
 	onSelectDay: (localDay: string) => void;
@@ -97,6 +98,7 @@ function dayAccessibilityLabel(
 export function WeekStrip({
 	todayLocalDay,
 	selectedDay,
+	resetToTodayCount = 0,
 	weekStart,
 	indicators,
 	onSelectDay,
@@ -133,7 +135,7 @@ export function WeekStrip({
 		setWeekCount(INITIAL_WEEK_COUNT);
 		setVisibleWeekIndex(0);
 		onVisibleRangeChange(currentWeekStart, shiftLocalDay(currentWeekStart, 6));
-	}, [currentWeekStart, onVisibleRangeChange]);
+	}, [currentWeekStart, onVisibleRangeChange, resetToTodayCount]);
 
 	const reportVisibleWeek = useCallback(
 		(event: NativeSyntheticEvent<NativeScrollEvent>) => {
@@ -152,7 +154,7 @@ export function WeekStrip({
 
 	return (
 		<FlatList
-			key={currentWeekStart}
+			key={`${currentWeekStart}:${resetToTodayCount}`}
 			testID="week-strip"
 			accessibilityLabel={weekAccessibilityLabel(
 				weeks[visibleWeekIndex]?.start ?? currentWeekStart,

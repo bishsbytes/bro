@@ -11,6 +11,7 @@ import type { ReviewResult } from "./review/review-store";
 import { HomeScreen } from "./screens/home/home-screen";
 
 let triggerFocus: (() => void) | null = null;
+let triggerTodayTabPress: (() => void) | null = null;
 
 jest.mock("expo-router", () => ({
 	router: { push: jest.fn() },
@@ -20,6 +21,15 @@ jest.mock("expo-router", () => ({
 			effect();
 		};
 		React.useEffect(effect, [effect]);
+	},
+	useScrollToTop: (ref: { current: { scrollToTop: () => void } | null }) => {
+		const React = jest.requireActual("react");
+		React.useEffect(() => {
+			triggerTodayTabPress = () => ref.current?.scrollToTop();
+			return () => {
+				triggerTodayTabPress = null;
+			};
+		}, [ref]);
 	},
 }));
 
@@ -170,6 +180,7 @@ describe("home screen", () => {
 	beforeEach(() => {
 		jest.clearAllMocks();
 		triggerFocus = null;
+		triggerTodayTabPress = null;
 	});
 
 	it("shows the fast check-in", async () => {
@@ -461,6 +472,56 @@ describe("home screen", () => {
 			expect(screen.getByTestId("header-month").props.children).toBe(
 				monthHeaderLabel("2026-07-30"),
 			),
+		);
+	});
+
+	it("returns to today when the active Today tab is pressed again", async () => {
+		const screen = await render(
+			<TodayHeaderMonthProvider>
+				<HeaderMonthProbe />
+				<HomeScreen
+					{...supportingProps()}
+					habitsStore={habitsStore()}
+					store={{
+						loadToday: jest.fn(async () => emptyToday),
+						loadCheckInDays: jest.fn(async () => new Set<string>()),
+						save: jest.fn(async () => emptyToday),
+					}}
+				/>
+			</TodayHeaderMonthProvider>,
+		);
+
+		await fireEvent.press(
+			await screen.findByTestId("week-strip-day-2026-08-13"),
+		);
+		expect(await screen.findByText("Yesterday")).toBeTruthy();
+
+		const strip = screen.getByTestId("week-strip");
+		fireEvent(strip, "momentumScrollEnd", {
+			nativeEvent: {
+				contentOffset: { x: strip.props.getItemLayout(null, 2).offset, y: 0 },
+			},
+		});
+		await waitFor(() =>
+			expect(screen.getByTestId("header-month").props.children).toBe(
+				monthHeaderLabel("2026-07-30"),
+			),
+		);
+
+		await act(async () => {
+			triggerTodayTabPress?.();
+		});
+
+		await waitFor(() =>
+			expect(
+				screen.getByTestId("week-strip-day-2026-08-14").props.accessibilityState
+					.selected,
+			).toBe(true),
+		);
+		expect(screen.queryByText("Yesterday")).toBeNull();
+		expect(await screen.findByLabelText("Mood 4")).toBeTruthy();
+		expect(screen.getByTestId("header-month").props.children).toBe(
+			monthHeaderLabel("2026-08-13"),
 		);
 	});
 
