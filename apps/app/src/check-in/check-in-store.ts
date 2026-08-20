@@ -8,6 +8,7 @@ import {
 } from "@bro/database-app";
 import {
 	formatMeasurement,
+	isCalendarDay,
 	localDayOf,
 	resolveUnitPreference,
 	systemLocale,
@@ -266,6 +267,24 @@ export class CheckInStore {
 			inputLocale,
 			note: notes[0]?.body ?? "",
 		};
+	}
+
+	async loadCheckInDays(
+		fromLocalDay: string,
+		throughLocalDay: string,
+	): Promise<Set<string>> {
+		if (!isCalendarDay(fromLocalDay) || !isCalendarDay(throughLocalDay)) {
+			throw new TypeError("Check-in range must use real YYYY-MM-DD dates.");
+		}
+		if (fromLocalDay > throughLocalDay) {
+			throw new RangeError("Check-in range must run forwards.");
+		}
+		const moods = await this.observations.listByMetricAndDayRange(
+			"mood",
+			fromLocalDay,
+			throughLocalDay,
+		);
+		return new Set(moods.map((mood) => mood.localDay));
 	}
 
 	async save(

@@ -195,6 +195,57 @@ describe("habits store", () => {
 		).toEqual([]);
 	});
 
+	it("summarises manual completion, cadence, and the habit start day", async () => {
+		now = new Date("2026-08-17T12:00:00.000Z");
+		const reading = await store.addTemplate(habit("habit:reading"), {
+			label: "Read",
+			// Monday and Wednesday only. Monday is cadence bit zero.
+			daysOfWeek: 0b000_0101,
+			targetValue: null,
+			areaSlug: null,
+		});
+		await store.toggleManual(reading.id, "2026-08-17");
+
+		expect(await store.loadAdherenceRange("2026-08-16", "2026-08-19")).toEqual([
+			{ localDay: "2026-08-16", scheduledCount: 0, completedCount: 0 },
+			{ localDay: "2026-08-17", scheduledCount: 1, completedCount: 1 },
+			{ localDay: "2026-08-18", scheduledCount: 0, completedCount: 0 },
+			{ localDay: "2026-08-19", scheduledCount: 1, completedCount: 0 },
+		]);
+	});
+
+	it("heals ranged metric adherence after a backdated import", async () => {
+		now = new Date("2026-08-14T12:00:00.000Z");
+		const steps = await store.addTemplate(habit("habit:steps-10k"), {
+			label: "Daily steps",
+			daysOfWeek: 0b111_1111,
+			targetValue: 10_000,
+			areaSlug: null,
+		});
+
+		expect(await store.loadAdherenceRange("2026-08-14", "2026-08-16")).toEqual([
+			{ localDay: "2026-08-14", scheduledCount: 1, completedCount: 0 },
+			{ localDay: "2026-08-15", scheduledCount: 1, completedCount: 0 },
+			{ localDay: "2026-08-16", scheduledCount: 1, completedCount: 0 },
+		]);
+
+		await new databaseApp.DailyMetricRepository(db).upsert({
+			metricSlug: "steps",
+			localDay: "2026-08-15",
+			value: 10_012,
+			source: "health_connect",
+		});
+
+		expect(await store.loadAdherenceRange("2026-08-14", "2026-08-16")).toEqual([
+			{ localDay: "2026-08-14", scheduledCount: 1, completedCount: 0 },
+			{ localDay: "2026-08-15", scheduledCount: 1, completedCount: 1 },
+			{ localDay: "2026-08-16", scheduledCount: 1, completedCount: 0 },
+		]);
+		expect(
+			await new databaseApp.HabitCompletionRepository(db).listByHabit(steps.id),
+		).toEqual([]);
+	});
+
 	it("creates, edits, reorders, and soft-removes custom habits", async () => {
 		const reading = await store.addTemplate(habit("habit:reading"), {
 			label: "Books",

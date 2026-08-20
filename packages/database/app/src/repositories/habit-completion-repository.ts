@@ -132,6 +132,27 @@ export class HabitCompletionRepository extends BaseRepository {
 		return rows.map(toHabitCompletion);
 	}
 
+	async listBetweenDays(
+		fromLocalDay: string,
+		throughLocalDay: string,
+	): Promise<HabitCompletion[]> {
+		if (!isCalendarDay(fromLocalDay) || !isCalendarDay(throughLocalDay)) {
+			throw new TypeError(
+				"Habit completion range must use real YYYY-MM-DD dates.",
+			);
+		}
+		if (fromLocalDay > throughLocalDay) {
+			throw new RangeError("Habit completion range must run forwards.");
+		}
+		const rows = await this.all<HabitCompletionRow>(
+			`SELECT ${SELECT_COLUMNS} FROM habit_completions
+			 WHERE local_day >= ? AND local_day <= ?
+			 ORDER BY local_day ASC, completed_at ASC, created_at ASC, id ASC`,
+			[fromLocalDay, throughLocalDay],
+		);
+		return rows.map(toHabitCompletion);
+	}
+
 	async uncomplete(habitId: string, localDay: string): Promise<boolean> {
 		if (!isCalendarDay(localDay)) {
 			throw new TypeError(

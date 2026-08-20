@@ -160,6 +160,38 @@ describe("habit and challenge repositories", () => {
 		);
 	});
 
+	it("lists manual completions across an inclusive day range", async () => {
+		const habits = new databaseApp.HabitRepository(db, {
+			createId: () => "habit-range",
+		});
+		const manual = await habits.create({
+			slug: "habit:reading",
+			customLabel: null,
+			kind: "manual",
+			metricSlug: null,
+			direction: null,
+			targetValue: null,
+			areaSlug: null,
+			daysOfWeek: 0b111_1111,
+			position: 0,
+		});
+		let nextId = 0;
+		const completions = new databaseApp.HabitCompletionRepository(db, {
+			createId: () => `completion-range-${++nextId}`,
+		});
+		await completions.complete(manual.id, "2026-08-15");
+		const fromBoundary = await completions.complete(manual.id, "2026-08-16");
+		const throughBoundary = await completions.complete(manual.id, "2026-08-17");
+		await completions.complete(manual.id, "2026-08-18");
+
+		expect(
+			await completions.listBetweenDays("2026-08-16", "2026-08-17"),
+		).toEqual([fromBoundary, throughBoundary]);
+		await expect(
+			completions.listBetweenDays("2026-08-18", "2026-08-17"),
+		).rejects.toThrow("run forwards");
+	});
+
 	it("enforces one active run per challenge and permits a run after abandon", async () => {
 		let now = 1_000;
 		let nextId = 0;

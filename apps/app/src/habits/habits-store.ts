@@ -15,7 +15,7 @@ import {
 	TrackedMetricsRepository,
 	UnitPreferenceRepository,
 } from "@bro/database-app";
-import { shiftLocalDay, systemLocale } from "@bro/domain";
+import { isCalendarDay, shiftLocalDay, systemLocale } from "@bro/domain";
 import {
 	type ChallengeDay,
 	resolveChallenge,
@@ -73,6 +73,12 @@ export type TodayHabitsSnapshot = {
 	hasHabits: boolean;
 	habits: TodayHabit[];
 	challenges: TodayChallenge[];
+};
+
+export type HabitAdherenceSummaryDay = {
+	localDay: string;
+	scheduledCount: number;
+	completedCount: number;
 };
 
 export type HabitSettingsItem = {
@@ -189,6 +195,29 @@ function nextHabitPosition(habits: readonly Habit[]): number {
 	return (
 		habits.reduce((highest, habit) => Math.max(highest, habit.position), -1) + 1
 	);
+}
+
+function localDaysInRange(
+	fromLocalDay: string,
+	throughLocalDay: string,
+): string[] {
+	if (!isCalendarDay(fromLocalDay) || !isCalendarDay(throughLocalDay)) {
+		throw new TypeError(
+			"Habit adherence range must use real YYYY-MM-DD dates.",
+		);
+	}
+	if (fromLocalDay > throughLocalDay) {
+		throw new RangeError("Habit adherence range must run forwards.");
+	}
+	const localDays: string[] = [];
+	for (
+		let localDay = fromLocalDay;
+		localDay <= throughLocalDay;
+		localDay = shiftLocalDay(localDay, 1)
+	) {
+		localDays.push(localDay);
+	}
+	return localDays;
 }
 
 export class HabitsStore {
@@ -404,6 +433,103 @@ export class HabitsStore {
 			habits: habitCards,
 			challenges: challengeCards,
 		};
+	}
+
+	async loadAdherenceRange(
+		fromLocalDay: string,
+		throughLocalDay: string,
+	): Promise<HabitAdherenceSummaryDay[]> {
+		const localDays = localDaysInRange(fromLocalDay, throughLocalDay);
+		const [activeHabits, completionRows] = await Promise.all([
+			this.habits.listActive(),
+			this.completions.listBetweenDays(fromLocalDay, throughLocalDay),
+		]);
+		const completedDaysByHabit = new Map<string, Set<string>>();
+		for (const completion of completionRows) {
+			const completedDays = completedDaysByHabit.get(completion.habitId);
+			if (completedDays) completedDays.add(completion.localDay);
+			else {
+				completedDaysByHabit.set(
+					completion.habitId,
+					new Set([completion.localDay]),
+				);
+			}
+		}
+
+		const metricSlugs = new Set<HabitMetricSlug>();
+		for (const habit of activeHabits) {
+			if (habit.kind !== "metric") continue;
+			if (!habit.metricSlug || !isHabitMetricSlug(habit.metricSlug)) {
+				throw new TypeError(`Unsupported metric habit: ${habit.metricSlug}`);
+			}
+			metricSlugs.add(habit.metricSlug);
+		}
+		const metricValues = new Map(
+			await Promise.all(
+				[...metricSlugs].map(
+					async (metricSlug) =>
+						[
+							metricSlug,
+							await this.metricDayValues(
+								metricSlug,
+								fromLocalDay,
+								throughLocalDay,
+							),
+						] as const,
+				),
+			),
+		);
+
+		const summaries = new Map(
+			localDays.map((localDay) => [
+				localDay,
+				{
+					localDay,
+					scheduledCount: 0,
+					completedCount: 0,
+				},
+			]),
+		);
+		for (const habit of activeHabits) {
+			const startedOn = localDayAt(habit.addedAt, this.timeZone());
+			for (const localDay of localDays) {
+				if (
+					localDay < startedOn ||
+					!isHabitScheduled(localDay, habit.daysOfWeek)
+				) {
+					continue;
+				}
+				const summary = summaries.get(localDay);
+				if (!summary) continue;
+				summary.scheduledCount += 1;
+
+				if (habit.kind === "manual") {
+					if (completedDaysByHabit.get(habit.id)?.has(localDay)) {
+						summary.completedCount += 1;
+					}
+					continue;
+				}
+
+				const metricSlug = habit.metricSlug;
+				if (!metricSlug || !isHabitMetricSlug(metricSlug)) {
+					throw new TypeError(`Unsupported metric habit: ${habit.metricSlug}`);
+				}
+				const rawValue = metricValues.get(metricSlug);
+				if (!rawValue) {
+					throw new Error(`Metric range was not loaded: ${metricSlug}`);
+				}
+				if (
+					isMetricHabitComplete(habit, {
+						metricSlug,
+						value: habitMetricDayValue(habit, rawValue(localDay)),
+					})
+				) {
+					summary.completedCount += 1;
+				}
+			}
+		}
+
+		return [...summaries.values()];
 	}
 
 	async toggleManual(habitId: string, localDay: string): Promise<void> {

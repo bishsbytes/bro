@@ -105,6 +105,40 @@ describe("check-in store", () => {
 		});
 	});
 
+	it("loads the distinct days with a mood observation in an inclusive range", async () => {
+		const observations = new databaseApp.ObservationRepository(db);
+		const store = new CheckInStore(db, () => CAPTURED_AT);
+		await observations.create({
+			...scoredObservation("mood", 3, 1, 5),
+			localDay: "2026-08-13",
+		});
+		await observations.create({
+			...scoredObservation("mood", 4, 1, 5),
+			localDay: "2026-08-14",
+		});
+		await observations.create({
+			...scoredObservation("mood", 5, 1, 5),
+			observedAt: CAPTURED_AT.getTime() + 1,
+			localDay: "2026-08-14",
+		});
+		await observations.create({
+			...scoredObservation("energy", 4, 1, 5),
+			localDay: "2026-08-15",
+		});
+		await observations.create({
+			...scoredObservation("mood", 3, 1, 5),
+			localDay: "2026-08-16",
+		});
+		await observations.create({
+			...scoredObservation("mood", 2, 1, 5),
+			localDay: "2026-08-17",
+		});
+
+		expect(await store.loadCheckInDays("2026-08-14", "2026-08-16")).toEqual(
+			new Set(["2026-08-14", "2026-08-16"]),
+		);
+	});
+
 	it("deletes the day's note when the prefilled field is saved empty", async () => {
 		const notes = new databaseApp.DayNoteRepository(db);
 		const store = new CheckInStore(db, () => CAPTURED_AT);
