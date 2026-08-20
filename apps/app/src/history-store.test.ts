@@ -1,5 +1,8 @@
 import type { DailyMetric, Observation } from "@bro/database-app";
-import { assembleHistoryDay } from "./history/history-store";
+import {
+	addPreviousDayMeasurementChanges,
+	assembleHistoryDay,
+} from "./history/history-store";
 
 function observation(
 	id: string,
@@ -21,6 +24,24 @@ function observation(
 		assessmentId,
 		createdAt: 1_000,
 		updatedAt: 1_000,
+	};
+}
+
+function dailyMetric(
+	id: string,
+	metricSlug: string,
+	value: number,
+	localDay: string,
+): DailyMetric {
+	return {
+		id,
+		metricSlug,
+		localDay,
+		value,
+		source: "health_connect",
+		computedAt: 2_000,
+		createdAt: 2_000,
+		updatedAt: 2_000,
 	};
 }
 
@@ -93,5 +114,58 @@ describe("history store", () => {
 				selected: true,
 			}),
 		]);
+	});
+
+	it("compares selected measurements with the previous calendar day", () => {
+		const previous = assembleHistoryDay(
+			"2026-08-13",
+			[],
+			[],
+			[
+				dailyMetric("previous-heart", "resting_heart_rate", 50, "2026-08-13"),
+				dailyMetric("previous-sleep", "sleep_duration", 27_000, "2026-08-13"),
+				dailyMetric("previous-steps", "steps", 0, "2026-08-13"),
+			],
+		);
+		const current = assembleHistoryDay(
+			"2026-08-14",
+			[],
+			[],
+			[
+				dailyMetric("current-heart", "resting_heart_rate", 55, "2026-08-14"),
+				dailyMetric("current-sleep", "sleep_duration", 26_100, "2026-08-14"),
+				dailyMetric("current-steps", "steps", 100, "2026-08-14"),
+			],
+		);
+
+		const compared = addPreviousDayMeasurementChanges(current, previous);
+
+		expect(
+			compared.measurements.find(
+				(measurement) => measurement.metricSlug === "resting_heart_rate",
+			)?.changeFromPreviousDay,
+		).toEqual({
+			direction: "increase",
+			formattedDelta: "5 bpm",
+			absolutePercentage: 10,
+		});
+		expect(
+			compared.measurements.find(
+				(measurement) => measurement.metricSlug === "sleep_duration",
+			)?.changeFromPreviousDay,
+		).toEqual({
+			direction: "decrease",
+			formattedDelta: "15 m",
+			absolutePercentage: 100 / 30,
+		});
+		expect(
+			compared.measurements.find(
+				(measurement) => measurement.metricSlug === "steps",
+			)?.changeFromPreviousDay,
+		).toEqual({
+			direction: "increase",
+			formattedDelta: "100",
+			absolutePercentage: null,
+		});
 	});
 });

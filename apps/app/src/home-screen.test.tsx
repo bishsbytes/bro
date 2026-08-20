@@ -414,7 +414,26 @@ describe("home screen", () => {
 
 	it("shows a past-day summary without the check-in form", async () => {
 		const historyStore = {
-			loadDay: jest.fn(async (localDay: string) => historyDay(localDay)),
+			loadDay: jest.fn(async (localDay: string) => ({
+				...historyDay(localDay),
+				measurements: [
+					{
+						id: "heart-rate-1",
+						metricSlug: "resting_heart_rate",
+						label: "Resting heart rate",
+						value: 55,
+						formattedValue: "55 bpm",
+						source: "health_connect",
+						selected: true,
+						observation: null,
+						changeFromPreviousDay: {
+							direction: "increase" as const,
+							formattedDelta: "5 bpm",
+							absolutePercentage: 10,
+						},
+					},
+				],
+			})),
 		};
 		const screen = await render(
 			<HomeScreen
@@ -435,6 +454,10 @@ describe("home screen", () => {
 
 		expect(await screen.findByText("Yesterday")).toBeTruthy();
 		expect(await screen.findByText("Mood 2 · Energy 3")).toBeTruthy();
+		expect(screen.getByText("Resting heart rate")).toBeTruthy();
+		expect(screen.getByText("55 bpm")).toBeTruthy();
+		expect(screen.getByText("↑ 10%")).toBeTruthy();
+		expect(screen.getByText("5 bpm higher than previous day")).toBeTruthy();
 		expect(screen.queryByLabelText("Mood 4")).toBeNull();
 		expect(screen.getByText("Edit this day")).toBeTruthy();
 		expect(historyStore.loadDay).toHaveBeenCalledWith("2026-08-13");

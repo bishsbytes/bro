@@ -41,6 +41,7 @@ import {
 import {
 	createHistoryStore,
 	type HistoryDay,
+	type HistoryMeasurementChange,
 	type HistoryStore,
 } from "../../history/history-store";
 import {
@@ -123,6 +124,27 @@ function isBlankEntry(entry: MeasurementEntry): boolean {
 	return !entry.major.trim() && !entry.minor.trim();
 }
 
+function measurementChangeBadgeLabel(change: HistoryMeasurementChange): string {
+	if (change.direction === "unchanged") return "— 0%";
+	const arrow = change.direction === "increase" ? "↑" : "↓";
+	const amount =
+		change.absolutePercentage === null
+			? change.formattedDelta
+			: `${new Intl.NumberFormat(undefined, {
+					maximumFractionDigits: 1,
+				}).format(change.absolutePercentage)}%`;
+	return `${arrow} ${amount}`;
+}
+
+function measurementChangeDetailLabel(
+	change: HistoryMeasurementChange,
+): string {
+	if (change.direction === "unchanged") return "Same as previous day";
+	return `${change.formattedDelta} ${
+		change.direction === "increase" ? "higher" : "lower"
+	} than previous day`;
+}
+
 type PastDaySectionProps = {
 	localDay: string;
 	todayLocalDay: string;
@@ -200,9 +222,42 @@ function PastDaySection({
 						<View style={styles.section}>
 							<SectionHeader title="Measurements" />
 							{day.measurements.map((measurement) => (
-								<Card key={measurement.id}>
-									<AppText variant="label">{measurement.label}</AppText>
-									<AppText color="muted">{measurement.formattedValue}</AppText>
+								<Card
+									key={measurement.id}
+									style={styles.measurementSummaryCard}
+								>
+									<View style={styles.measurementSummaryHeader}>
+										<AppText
+											variant="caption"
+											color="muted"
+											style={styles.measurementSummaryLabel}
+										>
+											{measurement.label}
+										</AppText>
+										{measurement.changeFromPreviousDay ? (
+											<View style={styles.measurementDeltaBadge}>
+												<AppText
+													variant="micro"
+													color="brand"
+													style={styles.measurementDeltaText}
+												>
+													{measurementChangeBadgeLabel(
+														measurement.changeFromPreviousDay,
+													)}
+												</AppText>
+											</View>
+										) : null}
+									</View>
+									<AppText variant="title">
+										{measurement.formattedValue}
+									</AppText>
+									{measurement.changeFromPreviousDay ? (
+										<AppText variant="micro" color="subtle">
+											{measurementChangeDetailLabel(
+												measurement.changeFromPreviousDay,
+											)}
+										</AppText>
+									) : null}
 								</Card>
 							))}
 						</View>
@@ -1109,6 +1164,22 @@ const styles = StyleSheet.create((theme) => ({
 	stockCard: { gap: theme.spacing.sm, marginBottom: theme.spacing.xl },
 	routineCard: { gap: theme.spacing.sm, marginBottom: theme.spacing.xl },
 	section: { marginBottom: theme.spacing.xl, gap: theme.spacing.md },
+	measurementSummaryCard: { gap: theme.spacing.xs },
+	measurementSummaryHeader: {
+		width: "100%",
+		flexDirection: "row",
+		alignItems: "center",
+		justifyContent: "space-between",
+		gap: theme.spacing.sm,
+	},
+	measurementSummaryLabel: { flex: 1 },
+	measurementDeltaBadge: {
+		paddingVertical: theme.spacing.xs,
+		paddingHorizontal: theme.spacing.sm,
+		borderRadius: theme.radius.pill,
+		backgroundColor: theme.colors.selected,
+	},
+	measurementDeltaText: { fontWeight: "600" },
 	habitCard: {
 		flexDirection: "row",
 		alignItems: "center",

@@ -16,6 +16,7 @@ import {
 	ObservationRepository,
 	UnitPreferenceRepository,
 } from "@bro/database-app";
+import { previousLocalDay } from "@bro/domain";
 import { resolveChallenge } from "@bro/domain/challenge-catalogue";
 import { resolveHabit } from "@bro/domain/habit-catalogue";
 import { resolveMetric } from "@bro/domain/metric-registry";
@@ -31,10 +32,18 @@ export type HistoryMeasurement = {
 	id: string;
 	metricSlug: string;
 	label: string;
+	value: number;
 	formattedValue: string;
 	source: string;
 	selected: boolean;
 	observation: Observation | null;
+	changeFromPreviousDay: HistoryMeasurementChange | null;
+};
+
+export type HistoryMeasurementChange = {
+	direction: "increase" | "decrease" | "unchanged";
+	formattedDelta: string;
+	absolutePercentage: number | null;
 };
 
 export type HistoricalCheckIn = {
@@ -202,6 +211,7 @@ export function assembleHistoryDay(
 				id: observation.id,
 				metricSlug,
 				label: metric.label,
+				value: observation.value,
 				formattedValue: formatMetricValue(
 					metric,
 					observation.value,
@@ -210,15 +220,18 @@ export function assembleHistoryDay(
 				source: observation.source,
 				selected: selectedIds.has(observation.id),
 				observation,
+				changeFromPreviousDay: null,
 			})),
 			...importedRows.map((row) => ({
 				id: row.id,
 				metricSlug,
 				label: metric.label,
+				value: row.value,
 				formattedValue: formatMetricValue(metric, row.value, displayUnit),
 				source: row.source,
 				selected: selectedIds.has(row.id),
 				observation: null,
+				changeFromPreviousDay: null,
 			})),
 		];
 	});
@@ -254,6 +267,56 @@ export function assembleHistoryDay(
 				title: enrolment?.title ?? "Challenge",
 				dayIndex: progress.dayIndex,
 				dayTitle: day?.title ?? `Day ${progress.dayIndex}`,
+			};
+		}),
+	};
+}
+
+export function addPreviousDayMeasurementChanges(
+	day: HistoryDay,
+	previousDay: HistoryDay,
+	preferenceByDimension: ReadonlyMap<string, string> = new Map(),
+	locale?: string,
+): HistoryDay {
+	const previousSelectedByMetric = new Map(
+		previousDay.measurements
+			.filter((measurement) => measurement.selected)
+			.map((measurement) => [measurement.metricSlug, measurement]),
+	);
+
+	return {
+		...day,
+		measurements: day.measurements.map((measurement) => {
+			if (!measurement.selected) return measurement;
+			const previous = previousSelectedByMetric.get(measurement.metricSlug);
+			if (!previous) return measurement;
+
+			const resolved = resolveMetric(measurement.metricSlug);
+			if (resolved.kind !== "known" || resolved.metric.kind !== "measurement") {
+				return measurement;
+			}
+			const delta = measurement.value - previous.value;
+			const displayUnit = metricDisplayUnit(
+				resolved.metric,
+				preferenceByDimension,
+				locale,
+			);
+
+			return {
+				...measurement,
+				changeFromPreviousDay: {
+					direction:
+						delta > 0 ? "increase" : delta < 0 ? "decrease" : "unchanged",
+					formattedDelta: formatMetricValue(
+						resolved.metric,
+						Math.abs(delta),
+						displayUnit,
+					),
+					absolutePercentage:
+						previous.value === 0
+							? null
+							: (Math.abs(delta) / Math.abs(previous.value)) * 100,
+				},
 			};
 		}),
 	};
@@ -376,10 +439,13 @@ export class HistoryStore {
 	}
 
 	async loadDay(localDay: string): Promise<HistoryDay> {
+		const previousDay = previousLocalDay(localDay);
 		const [
 			observations,
+			previousObservations,
 			notes,
 			dailyMetrics,
+			previousDailyMetrics,
 			preferences,
 			habits,
 			habitCompletions,
@@ -387,30 +453,45 @@ export class HistoryStore {
 			challengeProgress,
 		] = await Promise.all([
 			this.observations.listByDay(localDay),
+			this.observations.listByDay(previousDay),
 			this.notes.listByDay(localDay),
 			this.dailyMetrics.listByDay(localDay),
+			this.dailyMetrics.listByDay(previousDay),
 			this.unitPreferences.resolveLatestPerDimension(),
 			this.habits.listAll(),
 			this.habitCompletions.listByDay(localDay),
 			this.enrolments.listAll(),
 			this.challengeProgress.listByDay(localDay),
 		]);
-		return assembleHistoryDay(
+		const preferenceByDimension = new Map(
+			preferences.map((preference) => [preference.dimension, preference.unit]),
+		);
+		const locale = Intl.DateTimeFormat().resolvedOptions().locale;
+		const day = assembleHistoryDay(
 			localDay,
 			observations,
 			notes,
 			dailyMetrics,
-			new Map(
-				preferences.map((preference) => [
-					preference.dimension,
-					preference.unit,
-				]),
-			),
-			Intl.DateTimeFormat().resolvedOptions().locale,
+			preferenceByDimension,
+			locale,
 			habits,
 			habitCompletions,
 			enrolments,
 			challengeProgress,
+		);
+		const prior = assembleHistoryDay(
+			previousDay,
+			previousObservations,
+			[],
+			previousDailyMetrics,
+			preferenceByDimension,
+			locale,
+		);
+		return addPreviousDayMeasurementChanges(
+			day,
+			prior,
+			preferenceByDimension,
+			locale,
 		);
 	}
 
