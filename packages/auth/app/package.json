@@ -21,8 +21,8 @@
 		]
 	},
 	"dependencies": {
-		"@better-auth/expo": "^1.6.27",
-		"better-auth": "^1.6.27"
+		"@better-auth/expo": "catalog:",
+		"better-auth": "catalog:"
 	},
 	"peerDependencies": {
 		"expo-constants": "*",
@@ -33,12 +33,12 @@
 		"react": "*"
 	},
 	"devDependencies": {
-		"expo-constants": "~56.0.23",
-		"expo-linking": "~56.0.16",
-		"expo-network": "~56.0.5",
-		"expo-secure-store": "~56.0.4",
-		"expo-web-browser": "~56.0.6",
-		"react": "19.2.3",
-		"zod": "^4.4.3"
+		"expo-constants": "catalog:",
+		"expo-linking": "catalog:",
+		"expo-network": "catalog:",
+		"expo-secure-store": "catalog:",
+		"expo-web-browser": "catalog:",
+		"react": "catalog:",
+		"zod": "catalog:"
 	}
 }

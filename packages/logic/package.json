@@ -17,7 +17,7 @@
 		"@bro/mobile-model": "workspace:*"
 	},
 	"devDependencies": {
-		"vitest": "^4.1.10"
+		"vitest": "catalog:"
 	},
 	"nx": {
 		"tags": [

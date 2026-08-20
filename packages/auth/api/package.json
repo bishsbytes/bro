@@ -34,12 +34,12 @@
 		}
 	},
 	"dependencies": {
-		"@better-auth/expo": "^1.6.27",
+		"@better-auth/expo": "catalog:",
 		"@bro/database-api": "workspace:*",
-		"better-auth": "^1.6.27",
-		"zod": "^4.4.3"
+		"better-auth": "catalog:",
+		"zod": "catalog:"
 	},
 	"devDependencies": {
-		"auth": "^1.6.27"
+		"auth": "catalog:"
 	}
 }

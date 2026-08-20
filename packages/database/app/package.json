@@ -36,22 +36,22 @@
 	"dependencies": {
 		"@bro/domain": "workspace:*",
 		"@bro/mobile-model": "workspace:*",
-		"drizzle-orm": "^0.45.2"
+		"drizzle-orm": "catalog:"
 	},
 	"peerDependencies": {
-		"expo-crypto": "~56.0.4",
-		"expo-file-system": "~56.0.9",
+		"expo-crypto": "catalog:",
+		"expo-file-system": "catalog:",
 		"expo-sqlite": "*"
 	},
 	"devDependencies": {
-		"@react-native/jest-preset": "0.85.3",
-		"@types/jest": "~29.5.14",
-		"drizzle-kit": "^0.31.10",
-		"expo-crypto": "~56.0.4",
-		"expo-file-system": "~56.0.9",
-		"expo-sqlite": "~56.0.5",
-		"jest": "~29.7.0",
-		"jest-expo": "~56.0.5",
-		"tsx": "^4.23.12"
+		"@react-native/jest-preset": "catalog:",
+		"@types/jest": "catalog:",
+		"drizzle-kit": "catalog:",
+		"expo-crypto": "catalog:",
+		"expo-file-system": "catalog:",
+		"expo-sqlite": "catalog:",
+		"jest": "catalog:expo-jest",
+		"jest-expo": "catalog:",
+		"tsx": "catalog:"
 	}
 }

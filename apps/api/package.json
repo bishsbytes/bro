@@ -111,14 +111,14 @@
 		"@bro/auth-api": "workspace:*",
 		"@bro/database-api": "workspace:*",
 		"@bro/domain": "workspace:*",
-		"@hono/node-server": "^2.1.0",
-		"better-auth": "^1.6.27",
-		"drizzle-orm": "^0.45.2",
-		"hono": "^4.13.1",
-		"postgres": "^3.4.9"
+		"@hono/node-server": "catalog:",
+		"better-auth": "catalog:",
+		"drizzle-orm": "catalog:",
+		"hono": "catalog:",
+		"postgres": "catalog:"
 	},
 	"devDependencies": {
-		"@testcontainers/postgresql": "^12.1.0",
-		"vitest": "^4.1.10"
+		"@testcontainers/postgresql": "catalog:",
+		"vitest": "catalog:"
 	}
 }
