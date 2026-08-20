@@ -14,6 +14,25 @@ jest.mock("expo-router", () => ({
 	},
 }));
 
+jest.mock("react-native-safe-area-context", () => {
+	const React = jest.requireActual<typeof import("react")>("react");
+	const { View } =
+		jest.requireActual<typeof import("react-native")>("react-native");
+	return {
+		SafeAreaView: ({
+			edges = [],
+			...props
+		}: {
+			edges?: readonly string[];
+			children?: React.ReactNode;
+		}) =>
+			React.createElement(View, {
+				...props,
+				testID: `safe-area-${edges.join("-")}`,
+			}),
+	};
+});
+
 describe("Log screen", () => {
 	beforeEach(() => jest.clearAllMocks());
 
@@ -63,5 +82,31 @@ describe("Log screen", () => {
 		expect(mockPush).toHaveBeenLastCalledWith("/drinks");
 		await fireEvent.press(screen.getByLabelText("Open Food"));
 		expect(mockPush).toHaveBeenLastCalledWith("/food");
+	});
+
+	it("leaves the bottom safe area to the tab navigator", async () => {
+		const screen = await render(
+			<LogScreen
+				bodyStore={{
+					loadOverview: jest.fn(async () => ({ metrics: [] }) as BodyOverview),
+					setTracked: jest.fn(),
+				}}
+				drinksStore={{
+					loadToday: jest.fn(
+						async () =>
+							({ entries: [], metrics: [] }) as unknown as DrinkDaySnapshot,
+					),
+				}}
+				foodStore={{
+					loadToday: jest.fn(
+						async () =>
+							({ entries: [], metrics: [] }) as unknown as FoodDaySnapshot,
+					),
+				}}
+			/>,
+		);
+
+		expect(await screen.findByTestId("safe-area-")).toBeTruthy();
+		expect(screen.queryByTestId("safe-area-bottom")).toBeNull();
 	});
 });
