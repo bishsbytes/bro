@@ -1,6 +1,7 @@
 import { KILOGRAMS_PER_POUND } from "@bro/domain";
 import { listFactors } from "@bro/domain/metric-registry";
 import { act, fireEvent, render, waitFor } from "@testing-library/react-native";
+import * as Haptics from "expo-haptics";
 import { Text } from "react-native";
 import {
 	monthHeaderLabel,
@@ -262,6 +263,7 @@ describe("home screen", () => {
 						slug: "habit:reading",
 						customLabel: null,
 						kind: "manual" as const,
+						areaSlug: null,
 						metricSlug: null,
 						direction: null,
 						targetValue: null,
@@ -281,14 +283,18 @@ describe("home screen", () => {
 			challenges: [],
 		};
 		const toggleManual = jest.fn(async () => undefined);
+		let todayLoadCount = 0;
 		const routineStore = {
-			loadToday: jest
-				.fn()
-				.mockResolvedValueOnce({
-					...completed,
-					habits: [{ ...completed.habits[0], completed: false, streak: 3 }],
-				})
-				.mockResolvedValue(completed),
+			loadToday: jest.fn(async (localDay?: string) => {
+				if (localDay) return { ...emptyRoutines, localDay };
+				todayLoadCount += 1;
+				return todayLoadCount === 1
+					? {
+							...completed,
+							habits: [{ ...completed.habits[0], completed: false, streak: 3 }],
+						}
+					: completed;
+			}),
 			loadAdherenceRange: jest.fn(async () => []),
 			toggleManual,
 			completeChallengeDay: jest.fn(),
@@ -463,6 +469,42 @@ describe("home screen", () => {
 		expect(historyStore.loadDay).toHaveBeenCalledWith("2026-08-13");
 	});
 
+	it("pages between adjacent days without adding a future page", async () => {
+		const historyStore = {
+			loadDay: jest.fn(async (localDay: string) => historyDay(localDay)),
+		};
+		const screen = await render(
+			<HomeScreen
+				{...supportingProps()}
+				historyStore={historyStore}
+				habitsStore={habitsStore()}
+				store={{
+					loadToday: jest.fn(async () => emptyToday),
+					loadCheckInDays: jest.fn(async () => new Set<string>()),
+					save: jest.fn(async () => emptyToday),
+				}}
+			/>,
+		);
+		await screen.findByLabelText("Mood 4");
+
+		let pager = screen.getByTestId("today-day-pager");
+		expect(pager.props.initialPage).toBe(1);
+		expect(pager.props.pageCount).toBe(2);
+		fireEvent(pager, "pageSelected", { nativeEvent: { position: 0 } });
+
+		expect(await screen.findByText("Yesterday")).toBeTruthy();
+		expect(Haptics.selectionAsync).toHaveBeenCalledTimes(1);
+		expect(historyStore.loadDay).toHaveBeenCalledWith("2026-08-13");
+		pager = screen.getByTestId("today-day-pager");
+		expect(pager.props.initialPage).toBe(1);
+		expect(pager.props.pageCount).toBe(3);
+		fireEvent(pager, "pageSelected", { nativeEvent: { position: 2 } });
+
+		expect(await screen.findByLabelText("Mood 4")).toBeTruthy();
+		expect(Haptics.selectionAsync).toHaveBeenCalledTimes(2);
+		expect(screen.getByTestId("today-day-pager").props.pageCount).toBe(2);
+	});
+
 	it("updates the header month as earlier weeks become visible", async () => {
 		const screen = await render(
 			<TodayHeaderMonthProvider>
@@ -518,6 +560,7 @@ describe("home screen", () => {
 			await screen.findByTestId("week-strip-day-2026-08-13"),
 		);
 		expect(await screen.findByText("Yesterday")).toBeTruthy();
+		expect(Haptics.selectionAsync).toHaveBeenCalledTimes(1);
 
 		const strip = screen.getByTestId("week-strip");
 		fireEvent(strip, "momentumScrollEnd", {
@@ -534,6 +577,7 @@ describe("home screen", () => {
 		await act(async () => {
 			triggerTodayTabPress?.();
 		});
+		expect(Haptics.selectionAsync).toHaveBeenCalledTimes(2);
 
 		await waitFor(() =>
 			expect(

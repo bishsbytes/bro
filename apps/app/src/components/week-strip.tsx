@@ -1,6 +1,6 @@
 import { shiftLocalDay, type WeekStartDay, weekStartOf } from "@bro/domain";
 import { formatLocalDayLabel } from "@bro/logic";
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
 	FlatList,
 	type NativeScrollEvent,
@@ -50,6 +50,7 @@ const WEEK_LABEL_FORMATTER = new Intl.DateTimeFormat(undefined, {
 	year: "numeric",
 	timeZone: "UTC",
 });
+const MILLISECONDS_PER_WEEK = 7 * 24 * 60 * 60 * 1_000;
 
 function buildWeek(start: string): WeekPage {
 	const days = Array.from({ length: 7 }, (_, index) =>
@@ -108,8 +109,12 @@ export function WeekStrip({
 	const { theme } = useUnistyles();
 	const pageWidth = Math.max(width, 1);
 	const currentWeekStart = weekStartOf(todayLocalDay, weekStart);
+	const selectedWeekStart = weekStartOf(selectedDay, weekStart);
+	const selectedPositionKey = `${currentWeekStart}:${selectedDay}`;
 	const [weekCount, setWeekCount] = useState(INITIAL_WEEK_COUNT);
 	const [visibleWeekIndex, setVisibleWeekIndex] = useState(0);
+	const listRef = useRef<FlatList<WeekPage>>(null);
+	const previousSelectedPositionKey = useRef(selectedPositionKey);
 	const weeks = useMemo(
 		() => buildWeeks(currentWeekStart, weekCount),
 		[currentWeekStart, weekCount],
@@ -137,6 +142,35 @@ export function WeekStrip({
 		onVisibleRangeChange(currentWeekStart, shiftLocalDay(currentWeekStart, 6));
 	}, [currentWeekStart, onVisibleRangeChange, resetToTodayCount]);
 
+	useEffect(() => {
+		if (previousSelectedPositionKey.current === selectedPositionKey) return;
+
+		const index = Math.round(
+			(dateOf(currentWeekStart).getTime() -
+				dateOf(selectedWeekStart).getTime()) /
+				MILLISECONDS_PER_WEEK,
+		);
+		if (index < 0) return;
+		if (index >= weekCount) {
+			setWeekCount(index + WEEK_EXTENSION_COUNT);
+			return;
+		}
+
+		previousSelectedPositionKey.current = selectedPositionKey;
+		listRef.current?.scrollToIndex({ animated: true, index });
+		setVisibleWeekIndex(index);
+		onVisibleRangeChange(
+			selectedWeekStart,
+			shiftLocalDay(selectedWeekStart, 6),
+		);
+	}, [
+		currentWeekStart,
+		onVisibleRangeChange,
+		selectedPositionKey,
+		selectedWeekStart,
+		weekCount,
+	]);
+
 	const reportVisibleWeek = useCallback(
 		(event: NativeSyntheticEvent<NativeScrollEvent>) => {
 			const rawIndex = Math.round(
@@ -154,6 +188,7 @@ export function WeekStrip({
 
 	return (
 		<FlatList
+			ref={listRef}
 			key={`${currentWeekStart}:${resetToTodayCount}`}
 			testID="week-strip"
 			accessibilityLabel={weekAccessibilityLabel(

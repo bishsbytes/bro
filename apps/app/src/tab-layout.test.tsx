@@ -1,5 +1,6 @@
 import { localDayOf } from "@bro/domain";
 import { render } from "@testing-library/react-native";
+import * as Haptics from "expo-haptics";
 import type { ReactNode } from "react";
 import { StyleSheet as NativeStyleSheet } from "react-native";
 import TabLayout from "./app/(tabs)/_layout";
@@ -21,6 +22,7 @@ jest.mock("./theme/unistyles", () => {
 
 const mockTabsOptions = jest.fn();
 const mockTabsProps = jest.fn();
+const mockTabsListeners = jest.fn();
 let mockPathname = "/";
 let mockSegments = ["(tabs)"];
 
@@ -34,13 +36,16 @@ jest.mock("expo-router", () => {
 		({
 			children,
 			detachInactiveScreens,
+			screenListeners,
 			screenOptions,
 		}: {
 			children: ReactNode;
 			detachInactiveScreens: boolean;
+			screenListeners: unknown;
 			screenOptions: Record<string, unknown>;
 		}) => {
 			mockTabsProps({ detachInactiveScreens });
+			mockTabsListeners(screenListeners);
 			mockTabsOptions(screenOptions);
 			return React.createElement(React.Fragment, null, children);
 		},
@@ -89,6 +94,19 @@ describe("TabLayout", () => {
 
 		expect(screen.getByText("Log")).toBeTruthy();
 		expect(screen.queryByText(currentMonth)).toBeNull();
+	});
+
+	it("ticks only when the selected bottom tab changes", async () => {
+		await render(<TabLayout />);
+		const listeners = mockTabsListeners.mock.calls[0]?.[0] as (input: {
+			route: { name: string };
+		}) => { tabPress: () => void };
+
+		listeners({ route: { name: "index" } }).tabPress();
+		expect(Haptics.selectionAsync).not.toHaveBeenCalled();
+
+		listeners({ route: { name: "log" } }).tabPress();
+		expect(Haptics.selectionAsync).toHaveBeenCalledTimes(1);
 	});
 
 	it("keeps the last tab header mounted behind root-stack transitions", async () => {

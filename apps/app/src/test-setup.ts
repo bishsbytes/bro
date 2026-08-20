@@ -15,12 +15,50 @@ jest.mock("expo-crypto", () => ({
 	}),
 }));
 
+jest.mock("expo-haptics", () => ({
+	selectionAsync: jest.fn(async () => undefined),
+}));
+
 // Unistyles ships this mock; it stands in for the Nitro native module and
 // resolves theme callbacks against whatever StyleSheet.configure registered.
 require("react-native-unistyles/mocks");
 // Register the real themes, so a screen rendered on its own resolves the same
 // tokens it would under the root layout.
 require("./theme/unistyles");
+
+// PagerView is a native container. Tests exercise its selection callback through
+// this host-view stand-in while the package owns the platform gesture behavior.
+jest.mock("react-native-pager-view", () => {
+	const React = jest.requireActual<typeof import("react")>("react");
+	const { View } =
+		jest.requireActual<typeof import("react-native")>("react-native");
+	return React.forwardRef(
+		(
+			{
+				children,
+				initialPage = 0,
+				...props
+			}: {
+				children?: React.ReactNode;
+				initialPage?: number;
+				[key: string]: unknown;
+			},
+			ref,
+		) => {
+			const pages = React.Children.toArray(children);
+			return React.createElement(
+				View,
+				{
+					...props,
+					initialPage,
+					pageCount: pages.length,
+					ref,
+				} as unknown as React.ComponentProps<typeof View>,
+				pages[initialPage],
+			);
+		},
+	);
+});
 
 // Native notification behaviour is covered through the app's gateway. Most
 // router tests only need startup to see an undetermined permission state.

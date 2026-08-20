@@ -9,6 +9,7 @@ import {
 	TodayHeaderMonthProvider,
 	useTodayHeaderMonth,
 } from "../../components/today-header-month-context";
+import { playSelectionHaptic } from "../../feedback/selection-haptic";
 import { StyleSheet, useUnistyles } from "../../theme/unistyles";
 
 const TAB_TITLES = {
@@ -37,6 +38,7 @@ function TabShell() {
 	const title = isNestedTabRoute
 		? undefined
 		: (activeHeaderTitle ?? lastTabTitle.current);
+	const activeTabName = pathname === "/" ? "index" : pathname.slice(1);
 
 	return (
 		<AvatarIdentityContext.Provider value={user?.name ?? null}>
@@ -67,6 +69,11 @@ function TabShell() {
 				) : null}
 				<Tabs
 					detachInactiveScreens={false}
+					screenListeners={({ route }) => ({
+						tabPress: () => {
+							if (route.name !== activeTabName) playSelectionHaptic();
+						},
+					})}
 					screenOptions={{
 						headerShown: false,
 						// Domain dashboards initialise repositories and charts. Mount them on

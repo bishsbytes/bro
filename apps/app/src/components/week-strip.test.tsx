@@ -175,4 +175,29 @@ describe("WeekStrip", () => {
 			),
 		);
 	});
+
+	it("keeps a newly selected week visible", async () => {
+		const { view, onSelectDay, onVisibleRangeChange } = await renderStrip();
+
+		await view.rerender(
+			<WeekStrip
+				todayLocalDay={TODAY}
+				selectedDay="2026-08-16"
+				weekStart="monday"
+				indicators={indicators()}
+				onSelectDay={onSelectDay}
+				onVisibleRangeChange={onVisibleRangeChange}
+			/>,
+		);
+
+		await waitFor(() =>
+			expect(onVisibleRangeChange).toHaveBeenCalledWith(
+				"2026-08-10",
+				"2026-08-16",
+			),
+		);
+		expect(view.getByTestId("week-strip").props.accessibilityLabel).toMatch(
+			/^Week of .*10.*2026$/,
+		);
+	});
 });

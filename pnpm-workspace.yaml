@@ -40,6 +40,7 @@ catalog:
   expo-constants: ~56.0.23
   expo-crypto: ~56.0.4
   expo-file-system: ~56.0.9
+  expo-haptics: ~56.0.3
   expo-linking: ~56.0.16
   expo-network: ~56.0.5
   expo-notifications: ~56.0.23
@@ -62,6 +63,7 @@ catalog:
   react-native-gesture-handler: ~2.31.2
   react-native-health-connect: 4.1.3
   react-native-nitro-modules: ^0.36.5
+  react-native-pager-view: 8.0.1
   react-native-reanimated: 4.3.1
   react-native-safe-area-context: ~5.7.0
   react-native-screens: ~4.26.2

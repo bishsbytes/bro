@@ -24,6 +24,7 @@ import {
 import { AppText } from "../../components/app-text";
 import { Button } from "../../components/button";
 import { Card } from "../../components/card";
+import { DayPager } from "../../components/day-pager";
 import { FormField } from "../../components/form-field";
 import { MeasurementField } from "../../components/measurement-field";
 import { Screen } from "../../components/screen";
@@ -33,6 +34,7 @@ import {
 	WeekStrip,
 	type WeekStripDayIndicator,
 } from "../../components/week-strip";
+import { playSelectionHaptic } from "../../feedback/selection-haptic";
 import {
 	createHabitsStore,
 	type HabitsStore,
@@ -156,6 +158,13 @@ type PastDaySectionProps = {
 	routineBusy: string | null;
 	onToggleHabit: (habitId: string) => void;
 	onEdit: () => void;
+};
+
+type PastDaySnapshot = {
+	day: HistoryDay | null;
+	habits: TodayHabitsSnapshot | null;
+	loading: boolean;
+	error: string | null;
 };
 
 function PastDaySection({
@@ -342,10 +351,26 @@ export function HomeScreen({
 	const previousTodayLocalDay = useRef(initialTodayLocalDay);
 	const [selectedDay, setSelectedDay] = useState<string | null>(null);
 	const resolvedSelectedDay = selectedDay ?? todayLocalDay;
+	const selectDay = useCallback(
+		(localDay: string) => {
+			if (localDay === resolvedSelectedDay) return;
+			playSelectionHaptic();
+			setSelectedDay(localDay === todayLocalDay ? null : localDay);
+		},
+		[resolvedSelectedDay, todayLocalDay],
+	);
+	const pagerDays = useMemo(() => {
+		const previous = shiftLocalDay(resolvedSelectedDay, -1);
+		const next = shiftLocalDay(resolvedSelectedDay, 1);
+		return next <= todayLocalDay
+			? [previous, resolvedSelectedDay, next]
+			: [previous, resolvedSelectedDay];
+	}, [resolvedSelectedDay, todayLocalDay]);
 	const [resetToTodayCount, setResetToTodayCount] = useState(0);
 	const returnToTodayRef = useRef({ scrollToTop: () => undefined });
 	returnToTodayRef.current.scrollToTop = () => {
 		const nextTodayLocalDay = localDayOf(clock());
+		if (resolvedSelectedDay !== nextTodayLocalDay) playSelectionHaptic();
 		previousTodayLocalDay.current = nextTodayLocalDay;
 		setTodayLocalDay(nextTodayLocalDay);
 		setSelectedDay(null);
@@ -360,13 +385,11 @@ export function HomeScreen({
 	const [indicators, setIndicators] = useState<
 		ReadonlyMap<string, WeekStripDayIndicator>
 	>(new Map());
-	const [pastDay, setPastDay] = useState<HistoryDay | null>(null);
-	const [pastHabits, setPastHabits] = useState<TodayHabitsSnapshot | null>(
-		null,
-	);
-	const [pastLoading, setPastLoading] = useState(false);
-	const [pastError, setPastError] = useState<string | null>(null);
-	const pastLoadGeneration = useRef(0);
+	const pastDayCache = useRef(new Map<string, PastDaySnapshot>());
+	const pastLoadGenerations = useRef(new Map<string, number>());
+	const [pastDays, setPastDays] = useState<
+		ReadonlyMap<string, PastDaySnapshot>
+	>(new Map());
 	const [today, setToday] = useState<TodayCheckIn | null>(null);
 	const [habitsToday, setHabitsToday] = useState<TodayHabitsSnapshot | null>(
 		null,
@@ -519,39 +542,51 @@ export function HomeScreen({
 	);
 
 	const loadPastDay = useCallback(
-		async (localDay: string) => {
-			const generation = ++pastLoadGeneration.current;
-			setPastLoading(true);
-			setPastError(null);
+		async (localDay: string, force = false) => {
+			const cached = pastDayCache.current.get(localDay);
+			if (!force && (cached?.loading || (cached?.day && cached.habits))) {
+				return;
+			}
+			const generation = (pastLoadGenerations.current.get(localDay) ?? 0) + 1;
+			pastLoadGenerations.current.set(localDay, generation);
+			pastDayCache.current.set(localDay, {
+				day: cached?.day ?? null,
+				habits: cached?.habits ?? null,
+				loading: true,
+				error: null,
+			});
+			setPastDays(new Map(pastDayCache.current));
 			try {
 				const [day, habits] = await Promise.all([
 					history.loadDay(localDay),
 					routines.loadToday(localDay),
 				]);
-				if (generation !== pastLoadGeneration.current) return;
-				setPastDay(day);
-				setPastHabits(habits);
+				if (generation !== pastLoadGenerations.current.get(localDay)) return;
+				pastDayCache.current.set(localDay, {
+					day,
+					habits,
+					loading: false,
+					error: null,
+				});
 			} catch (caught) {
-				if (generation !== pastLoadGeneration.current) return;
-				setPastError(caught instanceof Error ? caught.message : String(caught));
-			} finally {
-				if (generation === pastLoadGeneration.current) setPastLoading(false);
+				if (generation !== pastLoadGenerations.current.get(localDay)) return;
+				pastDayCache.current.set(localDay, {
+					day: cached?.day ?? null,
+					habits: cached?.habits ?? null,
+					loading: false,
+					error: caught instanceof Error ? caught.message : String(caught),
+				});
 			}
+			setPastDays(new Map(pastDayCache.current));
 		},
 		[history, routines],
 	);
 
 	useEffect(() => {
-		if (resolvedSelectedDay === todayLocalDay) {
-			pastLoadGeneration.current += 1;
-			setPastDay(null);
-			setPastHabits(null);
-			setPastError(null);
-			setPastLoading(false);
-			return;
+		for (const localDay of pagerDays) {
+			if (localDay < todayLocalDay) void loadPastDay(localDay);
 		}
-		void loadPastDay(resolvedSelectedDay);
-	}, [loadPastDay, resolvedSelectedDay, todayLocalDay]);
+	}, [loadPastDay, pagerDays, todayLocalDay]);
 
 	useFocusEffect(
 		useCallback(() => {
@@ -624,15 +659,15 @@ export function HomeScreen({
 		}
 	}
 
-	async function togglePastHabit(habitId: string) {
-		if (!pastHabits || routineBusy) return;
-		const localDay = pastHabits.localDay;
+	async function togglePastHabit(localDay: string, habitId: string) {
+		const habits = pastDayCache.current.get(localDay)?.habits;
+		if (!habits || routineBusy) return;
 		setRoutineBusy(habitId);
 		setRoutineError(null);
 		try {
 			await routines.toggleManual(habitId, localDay);
 			invalidateIndicatorDay(localDay);
-			await loadPastDay(localDay);
+			await loadPastDay(localDay, true);
 		} catch (caught) {
 			setRoutineError(
 				caught instanceof Error ? caught.message : String(caught),
@@ -769,6 +804,7 @@ export function HomeScreen({
 			</Screen>
 		);
 	}
+	const pagerToday = today;
 
 	const groupedFactors = Object.entries(CATEGORY_LABELS).map(
 		([category, label]) => ({
@@ -925,37 +961,27 @@ export function HomeScreen({
 		</View>
 	) : null;
 
-	return (
-		<View style={styles.home}>
-			<WeekStrip
-				todayLocalDay={todayLocalDay}
-				selectedDay={resolvedSelectedDay}
-				resetToTodayCount={resetToTodayCount}
-				weekStart={weekStart}
-				indicators={indicators}
-				onSelectDay={setSelectedDay}
-				onVisibleRangeChange={handleVisibleRangeChange}
-			/>
+	function renderPagerDay(localDay: string) {
+		const past = pastDays.get(localDay);
+		return (
 			<Screen
 				scroll
 				padded
 				contentContainerStyle={styles.content}
 				keyboardShouldPersistTaps="handled"
 			>
-				{resolvedSelectedDay !== todayLocalDay ? (
+				{localDay !== todayLocalDay ? (
 					<PastDaySection
-						localDay={resolvedSelectedDay}
+						localDay={localDay}
 						todayLocalDay={todayLocalDay}
-						day={pastDay}
-						habits={pastHabits}
-						loading={pastLoading}
-						error={pastError}
+						day={past?.day ?? null}
+						habits={past?.habits ?? null}
+						loading={past?.loading ?? true}
+						error={past?.error ?? null}
 						routineError={routineError}
 						routineBusy={routineBusy}
-						onToggleHabit={(habitId) => void togglePastHabit(habitId)}
-						onEdit={() =>
-							router.push(`/history/${resolvedSelectedDay}` as Href)
-						}
+						onToggleHabit={(habitId) => void togglePastHabit(localDay, habitId)}
+						onEdit={() => router.push(`/history/${localDay}` as Href)}
 					/>
 				) : (
 					<>
@@ -1086,18 +1112,18 @@ export function HomeScreen({
 								Wheel review status could not be loaded: {wheelError}
 							</AppText>
 						) : null}
-						{!formOpen && today.entries.length > 0 ? (
+						{!formOpen && pagerToday.entries.length > 0 ? (
 							<View style={styles.section}>
 								<SectionHeader
 									title="Logged today"
 									action={
 										<AppText variant="caption" color="subtle">
-											{today.entries.length} check-in
-											{today.entries.length === 1 ? "" : "s"}
+											{pagerToday.entries.length} check-in
+											{pagerToday.entries.length === 1 ? "" : "s"}
 										</AppText>
 									}
 								/>
-								{today.entries.map((entry) => (
+								{pagerToday.entries.map((entry) => (
 									<Card key={entry.id} style={styles.entryCard}>
 										<View>
 											<AppText variant="label">
@@ -1122,10 +1148,10 @@ export function HomeScreen({
 										Factors: {selectedFactorLabels.join(", ")}
 									</AppText>
 								) : null}
-								{today.loggedMeasurements.length > 0 ? (
+								{pagerToday.loggedMeasurements.length > 0 ? (
 									<AppText variant="caption" color="muted">
 										Measurements:{" "}
-										{today.loggedMeasurements
+										{pagerToday.loggedMeasurements
 											.map(
 												(measurement) =>
 													`${measurement.label} ${measurement.formattedValue}`,
@@ -1133,9 +1159,9 @@ export function HomeScreen({
 											.join(", ")}
 									</AppText>
 								) : null}
-								{today.note ? (
+								{pagerToday.note ? (
 									<AppText variant="caption" color="muted">
-										Note: {today.note}
+										Note: {pagerToday.note}
 									</AppText>
 								) : null}
 								{!formOpen ? (
@@ -1150,6 +1176,26 @@ export function HomeScreen({
 					</>
 				)}
 			</Screen>
+		);
+	}
+
+	return (
+		<View style={styles.home}>
+			<WeekStrip
+				todayLocalDay={todayLocalDay}
+				selectedDay={resolvedSelectedDay}
+				resetToTodayCount={resetToTodayCount}
+				weekStart={weekStart}
+				indicators={indicators}
+				onSelectDay={selectDay}
+				onVisibleRangeChange={handleVisibleRangeChange}
+			/>
+			<DayPager
+				days={pagerDays}
+				selectedDay={resolvedSelectedDay}
+				onSelectDay={selectDay}
+				renderDay={renderPagerDay}
+			/>
 		</View>
 	);
 }
