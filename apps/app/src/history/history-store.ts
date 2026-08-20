@@ -21,6 +21,7 @@ import { resolveChallenge } from "@bro/domain/challenge-catalogue";
 import { resolveHabit } from "@bro/domain/habit-catalogue";
 import { resolveMetric } from "@bro/domain/metric-registry";
 import {
+	formatMetricDelta,
 	formatMetricValue,
 	isHealthMetricSlug,
 	metricDisplayUnit,
@@ -40,11 +41,17 @@ export type HistoryMeasurement = {
 	changeFromPreviousDay: HistoryMeasurementChange | null;
 };
 
-export type HistoryMeasurementChange = {
-	direction: "increase" | "decrease" | "unchanged";
-	formattedDelta: string;
-	absolutePercentage: number | null;
-};
+/**
+ * A change is only ever reported as moved when it is large enough to render, so
+ * the formatted amount is present exactly when there is a direction to show.
+ */
+export type HistoryMeasurementChange =
+	| { direction: "unchanged" }
+	| {
+			direction: "increase" | "decrease";
+			formattedDelta: string;
+			absolutePercentage: number | null;
+	  };
 
 export type HistoricalCheckIn = {
 	id: string;
@@ -124,49 +131,22 @@ function pairCheckIns(
 	return checkIns;
 }
 
-export function assembleHistoryDay(
+/**
+ * Builds just the measurement rows of a day. Kept separate so a comparison
+ * against the previous day can load those rows without assembling the check-ins,
+ * notes, habits and challenges nobody reads from it.
+ */
+export function assembleMeasurements(
 	localDay: string,
 	observations: readonly Observation[],
-	notes: readonly DayNote[],
 	dailyMetrics: readonly DailyMetric[] = [],
 	preferenceByDimension: ReadonlyMap<string, string> = new Map(),
 	locale?: string,
-	habits: readonly Habit[] = [],
-	habitCompletions: readonly HabitCompletion[] = [],
-	enrolments: readonly ChallengeEnrolment[] = [],
-	challengeProgress: readonly ChallengeProgress[] = [],
-): HistoryDay {
-	const checkIns = pairCheckIns(observations);
-	const pairedIds = new Set(
-		checkIns.flatMap((checkIn) => [checkIn.mood.id, checkIn.energy.id]),
-	);
-	const unpairedScored: Observation[] = [];
-	const factors: Observation[] = [];
-	const assessments: Observation[] = [];
-	const measurementObservations: Observation[] = [];
-	const unknown: Observation[] = [];
-
-	for (const observation of observations) {
-		const resolved = resolveMetric(observation.metricSlug);
-		if (resolved.kind === "unknown") {
-			unknown.push(observation);
-		} else if (resolved.metric.kind === "factor") {
-			factors.push(observation);
-		} else if (resolved.metric.kind === "assessment") {
-			assessments.push(observation);
-		} else if (resolved.metric.kind === "measurement") {
-			measurementObservations.push(observation);
-		} else if (
-			resolved.metric.kind === "scored" &&
-			!pairedIds.has(observation.id)
-		) {
-			unpairedScored.push(observation);
-		}
-	}
+): HistoryMeasurement[] {
 	// Keep the pre-import day view unchanged. Manual measurement provenance is
 	// shown here only when there is a tracker row to compare it with.
 	const measurementSlugs = new Set(dailyMetrics.map((row) => row.metricSlug));
-	const measurements = [...measurementSlugs].flatMap((metricSlug) => {
+	return [...measurementSlugs].flatMap((metricSlug) => {
 		const resolved = resolveMetric(metricSlug);
 		if (resolved.kind !== "known" || resolved.metric.kind !== "measurement") {
 			return [];
@@ -177,7 +157,7 @@ export function assembleHistoryDay(
 			preferenceByDimension,
 			locale,
 		);
-		const userRows = measurementObservations.filter(
+		const userRows = observations.filter(
 			(row) => row.metricSlug === metricSlug,
 		);
 		const importedRows = dailyMetrics.filter(
@@ -235,6 +215,54 @@ export function assembleHistoryDay(
 			})),
 		];
 	});
+}
+
+export function assembleHistoryDay(
+	localDay: string,
+	observations: readonly Observation[],
+	notes: readonly DayNote[],
+	dailyMetrics: readonly DailyMetric[] = [],
+	preferenceByDimension: ReadonlyMap<string, string> = new Map(),
+	locale?: string,
+	habits: readonly Habit[] = [],
+	habitCompletions: readonly HabitCompletion[] = [],
+	enrolments: readonly ChallengeEnrolment[] = [],
+	challengeProgress: readonly ChallengeProgress[] = [],
+): HistoryDay {
+	const checkIns = pairCheckIns(observations);
+	const pairedIds = new Set(
+		checkIns.flatMap((checkIn) => [checkIn.mood.id, checkIn.energy.id]),
+	);
+	const unpairedScored: Observation[] = [];
+	const factors: Observation[] = [];
+	const assessments: Observation[] = [];
+	const measurementObservations: Observation[] = [];
+	const unknown: Observation[] = [];
+
+	for (const observation of observations) {
+		const resolved = resolveMetric(observation.metricSlug);
+		if (resolved.kind === "unknown") {
+			unknown.push(observation);
+		} else if (resolved.metric.kind === "factor") {
+			factors.push(observation);
+		} else if (resolved.metric.kind === "assessment") {
+			assessments.push(observation);
+		} else if (resolved.metric.kind === "measurement") {
+			measurementObservations.push(observation);
+		} else if (
+			resolved.metric.kind === "scored" &&
+			!pairedIds.has(observation.id)
+		) {
+			unpairedScored.push(observation);
+		}
+	}
+	const measurements = assembleMeasurements(
+		localDay,
+		measurementObservations,
+		dailyMetrics,
+		preferenceByDimension,
+		locale,
+	);
 
 	return {
 		localDay,
@@ -274,12 +302,12 @@ export function assembleHistoryDay(
 
 export function addPreviousDayMeasurementChanges(
 	day: HistoryDay,
-	previousDay: HistoryDay,
+	previousMeasurements: readonly HistoryMeasurement[],
 	preferenceByDimension: ReadonlyMap<string, string> = new Map(),
 	locale?: string,
 ): HistoryDay {
 	const previousSelectedByMetric = new Map(
-		previousDay.measurements
+		previousMeasurements
 			.filter((measurement) => measurement.selected)
 			.map((measurement) => [measurement.metricSlug, measurement]),
 	);
@@ -301,17 +329,26 @@ export function addPreviousDayMeasurementChanges(
 				preferenceByDimension,
 				locale,
 			);
+			const formattedDelta = formatMetricDelta(
+				resolved.metric,
+				Math.abs(delta),
+				displayUnit,
+			);
+
+			// A change too small to format is one the two readings do not show
+			// either, so calling it unchanged keeps the badge and the values honest.
+			if (formattedDelta === null) {
+				return {
+					...measurement,
+					changeFromPreviousDay: { direction: "unchanged" },
+				};
+			}
 
 			return {
 				...measurement,
 				changeFromPreviousDay: {
-					direction:
-						delta > 0 ? "increase" : delta < 0 ? "decrease" : "unchanged",
-					formattedDelta: formatMetricValue(
-						resolved.metric,
-						Math.abs(delta),
-						displayUnit,
-					),
+					direction: delta > 0 ? "increase" : "decrease",
+					formattedDelta,
 					absolutePercentage:
 						previous.value === 0
 							? null
@@ -479,17 +516,15 @@ export class HistoryStore {
 			enrolments,
 			challengeProgress,
 		);
-		const prior = assembleHistoryDay(
-			previousDay,
-			previousObservations,
-			[],
-			previousDailyMetrics,
-			preferenceByDimension,
-			locale,
-		);
 		return addPreviousDayMeasurementChanges(
 			day,
-			prior,
+			assembleMeasurements(
+				previousDay,
+				previousObservations,
+				previousDailyMetrics,
+				preferenceByDimension,
+				locale,
+			),
 			preferenceByDimension,
 			locale,
 		);

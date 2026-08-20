@@ -165,7 +165,15 @@ type PastDaySnapshot = {
 	habits: TodayHabitsSnapshot | null;
 	loading: boolean;
 	error: string | null;
+	/** Freshness stamp; entries below the current generation are refetched. */
+	generation: number;
 };
+
+/**
+ * The pager renders at most three days, so a handful of entries covers paging
+ * back and forth. Anything older is dropped rather than kept for the session.
+ */
+const PAST_DAY_CACHE_LIMIT = 7;
 
 function PastDaySection({
 	localDay,
@@ -404,6 +412,9 @@ export function HomeScreen({
 	>(new Map());
 	const pastDayCache = useRef(new Map<string, PastDaySnapshot>());
 	const pastLoadGenerations = useRef(new Map<string, number>());
+	const [pastDayGeneration, setPastDayGeneration] = useState(0);
+	const pastDayGenerationRef = useRef(0);
+	pastDayGenerationRef.current = pastDayGeneration;
 	const [pastDays, setPastDays] = useState<
 		ReadonlyMap<string, PastDaySnapshot>
 	>(new Map());
@@ -558,52 +569,82 @@ export function HomeScreen({
 		[loadIndicatorRange],
 	);
 
+	const writePastDay = useCallback(
+		(localDay: string, snapshot: PastDaySnapshot) => {
+			// Re-inserting moves the day to the end, so the entries evicted below
+			// are always the ones touched least recently.
+			pastDayCache.current.delete(localDay);
+			pastDayCache.current.set(localDay, snapshot);
+			while (pastDayCache.current.size > PAST_DAY_CACHE_LIMIT) {
+				const oldest = pastDayCache.current.keys().next();
+				if (oldest.done) break;
+				pastDayCache.current.delete(oldest.value);
+				pastLoadGenerations.current.delete(oldest.value);
+			}
+			setPastDays(new Map(pastDayCache.current));
+		},
+		[],
+	);
+
 	const loadPastDay = useCallback(
 		async (localDay: string, force = false) => {
 			const cached = pastDayCache.current.get(localDay);
-			if (!force && (cached?.loading || (cached?.day && cached.habits))) {
+			// Captured up front: a refocus mid-flight must leave the result stamped
+			// stale so the refocus-triggered load refetches it.
+			const stamp = pastDayGenerationRef.current;
+			const fresh = cached?.generation === stamp;
+			if (
+				!force &&
+				fresh &&
+				(cached.loading || (cached.day && cached.habits))
+			) {
 				return;
 			}
 			const generation = (pastLoadGenerations.current.get(localDay) ?? 0) + 1;
 			pastLoadGenerations.current.set(localDay, generation);
-			pastDayCache.current.set(localDay, {
+			// Keep any previous data on screen while refetching so a revisit shows
+			// stale-but-real content rather than flashing back to a spinner.
+			writePastDay(localDay, {
 				day: cached?.day ?? null,
 				habits: cached?.habits ?? null,
 				loading: true,
 				error: null,
+				generation: stamp,
 			});
-			setPastDays(new Map(pastDayCache.current));
 			try {
 				const [day, habits] = await Promise.all([
 					history.loadDay(localDay),
 					routines.loadToday(localDay),
 				]);
 				if (generation !== pastLoadGenerations.current.get(localDay)) return;
-				pastDayCache.current.set(localDay, {
+				writePastDay(localDay, {
 					day,
 					habits,
 					loading: false,
 					error: null,
+					generation: stamp,
 				});
 			} catch (caught) {
 				if (generation !== pastLoadGenerations.current.get(localDay)) return;
-				pastDayCache.current.set(localDay, {
+				writePastDay(localDay, {
 					day: cached?.day ?? null,
 					habits: cached?.habits ?? null,
 					loading: false,
 					error: caught instanceof Error ? caught.message : String(caught),
+					generation: stamp,
 				});
 			}
-			setPastDays(new Map(pastDayCache.current));
 		},
-		[history, routines],
+		[history, routines, writePastDay],
 	);
 
+	// `pastDayGeneration` is a dependency so that refocusing the tab — which bumps
+	// it — refetches the visible days after an edit made on another screen.
 	useEffect(() => {
 		for (const localDay of pagerDays) {
 			if (localDay < todayLocalDay) void loadPastDay(localDay);
 		}
-	}, [loadPastDay, pagerDays, todayLocalDay]);
+	}, [loadPastDay, pagerDays, todayLocalDay, pastDayGeneration]);
 
 	useFocusEffect(
 		useCallback(() => {
@@ -620,6 +661,10 @@ export function HomeScreen({
 			indicatorDayRevisions.current.clear();
 			indicatorCache.current.clear();
 			setIndicators(new Map());
+
+			// A past day may have been edited on the history screen while this tab
+			// was blurred, so every cached snapshot is now suspect.
+			setPastDayGeneration((generation) => generation + 1);
 			const range = visibleRange.current;
 			if (range) void loadIndicatorRange(range.from, range.through);
 

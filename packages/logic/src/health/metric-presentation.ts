@@ -1,8 +1,10 @@
 import {
 	type Dimension,
 	type DisplayUnit,
+	formatIntrinsicDelta,
 	formatIntrinsicMeasurement,
 	formatMeasurement,
+	formatMeasurementDelta,
 	INTRINSIC_DIMENSIONS,
 	resolveUnitPreference,
 } from "@bro/domain";
@@ -45,6 +47,29 @@ export function formatMetricValue(
 	}
 	return formatMeasurement(
 		value,
+		metric.dimension as Dimension,
+		displayUnit as never,
+	);
+}
+
+/**
+ * Formats how much a metric moved. Takes the magnitude of the change, not a
+ * reading, and returns null when it is too small to render at the unit's
+ * display resolution.
+ */
+export function formatMetricDelta(
+	metric: MeasurementMetricDefinition,
+	magnitude: number,
+	displayUnit: DisplayUnit | null,
+): string | null {
+	if (isIntrinsicDimension(metric.dimension)) {
+		return formatIntrinsicDelta(magnitude, metric.dimension);
+	}
+	if (!displayUnit) {
+		throw new TypeError(`A ${metric.dimension} metric needs a display unit.`);
+	}
+	return formatMeasurementDelta(
+		magnitude,
 		metric.dimension as Dimension,
 		displayUnit as never,
 	);

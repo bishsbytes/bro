@@ -51,8 +51,10 @@ export {
 	type VolumeDisplayUnit,
 } from "./dimensions";
 export {
+	formatIntrinsicDelta,
 	formatIntrinsicMeasurement,
 	formatMeasurement,
+	formatMeasurementDelta,
 	measurementEntryOf,
 } from "./formatting";
 export {

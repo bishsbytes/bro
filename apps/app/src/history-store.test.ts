@@ -1,4 +1,5 @@
 import type { DailyMetric, Observation } from "@bro/database-app";
+import { KILOGRAMS_PER_POUND } from "@bro/domain";
 import {
 	addPreviousDayMeasurementChanges,
 	assembleHistoryDay,
@@ -116,6 +117,103 @@ describe("history store", () => {
 		]);
 	});
 
+	it("reports compound-unit changes in the minor unit alone", () => {
+		const stones = new Map([["mass", "st"]]);
+		const previous = assembleHistoryDay(
+			"2026-08-13",
+			[],
+			[],
+			[dailyMetric("previous-weight", "weight", 80, "2026-08-13")],
+			stones,
+			"en-GB",
+		);
+		const current = assembleHistoryDay(
+			"2026-08-14",
+			[],
+			[],
+			[
+				dailyMetric(
+					"current-weight",
+					"weight",
+					80 + KILOGRAMS_PER_POUND,
+					"2026-08-14",
+				),
+			],
+			stones,
+			"en-GB",
+		);
+
+		const compared = addPreviousDayMeasurementChanges(
+			current,
+			previous.measurements,
+			stones,
+			"en-GB",
+		);
+
+		// `0 st 1 lb` is what formatting the delta as a reading would produce.
+		expect(compared.measurements[0]?.changeFromPreviousDay).toMatchObject({
+			direction: "increase",
+			formattedDelta: "1 lb",
+		});
+	});
+
+	it("calls a change nobody can see in the values unchanged", () => {
+		const stones = new Map([["mass", "st"]]);
+		const previous = assembleHistoryDay(
+			"2026-08-13",
+			[],
+			[],
+			[dailyMetric("previous-weight", "weight", 80, "2026-08-13")],
+			stones,
+			"en-GB",
+		);
+		const current = assembleHistoryDay(
+			"2026-08-14",
+			[],
+			[],
+			[dailyMetric("current-weight", "weight", 80.05, "2026-08-14")],
+			stones,
+			"en-GB",
+		);
+
+		const compared = addPreviousDayMeasurementChanges(
+			current,
+			previous.measurements,
+			stones,
+			"en-GB",
+		);
+
+		expect(compared.measurements[0]?.changeFromPreviousDay).toEqual({
+			direction: "unchanged",
+		});
+	});
+
+	it("reports a sub-minute duration change in seconds", () => {
+		const previous = assembleHistoryDay(
+			"2026-08-13",
+			[],
+			[],
+			[dailyMetric("previous-sleep", "sleep_duration", 27_000, "2026-08-13")],
+		);
+		const current = assembleHistoryDay(
+			"2026-08-14",
+			[],
+			[],
+			[dailyMetric("current-sleep", "sleep_duration", 27_020, "2026-08-14")],
+		);
+
+		const compared = addPreviousDayMeasurementChanges(
+			current,
+			previous.measurements,
+		);
+
+		// Whole-minute rounding would render this as `0 m`.
+		expect(compared.measurements[0]?.changeFromPreviousDay).toMatchObject({
+			direction: "increase",
+			formattedDelta: "20 s",
+		});
+	});
+
 	it("compares selected measurements with the previous calendar day", () => {
 		const previous = assembleHistoryDay(
 			"2026-08-13",
@@ -138,7 +236,10 @@ describe("history store", () => {
 			],
 		);
 
-		const compared = addPreviousDayMeasurementChanges(current, previous);
+		const compared = addPreviousDayMeasurementChanges(
+			current,
+			previous.measurements,
+		);
 
 		expect(
 			compared.measurements.find(

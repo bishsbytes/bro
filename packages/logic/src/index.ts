@@ -70,6 +70,7 @@ export {
 	type PlatformHealthSample,
 } from "./health/mapping";
 export {
+	formatMetricDelta,
 	formatMetricValue,
 	metricDisplayUnit,
 } from "./health/metric-presentation";

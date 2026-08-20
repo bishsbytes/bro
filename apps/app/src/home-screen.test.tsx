@@ -469,6 +469,87 @@ describe("home screen", () => {
 		expect(historyStore.loadDay).toHaveBeenCalledWith("2026-08-13");
 	});
 
+	it("refetches the visible past day after returning from an edit", async () => {
+		let note = "before the edit";
+		const historyStore = {
+			loadDay: jest.fn(async (localDay: string) => ({
+				...historyDay(localDay),
+				notes: [
+					{
+						id: `note-${localDay}`,
+						body: note,
+						localDay,
+						createdAt: 1_000,
+						updatedAt: 1_000,
+					},
+				],
+			})),
+		};
+		const screen = await render(
+			<HomeScreen
+				{...supportingProps()}
+				historyStore={historyStore}
+				habitsStore={habitsStore()}
+				store={{
+					loadToday: jest.fn(async () => emptyToday),
+					loadCheckInDays: jest.fn(async () => new Set<string>()),
+					save: jest.fn(async () => emptyToday),
+				}}
+			/>,
+		);
+
+		await fireEvent.press(
+			await screen.findByTestId("week-strip-day-2026-08-13"),
+		);
+		expect(await screen.findByText("before the edit")).toBeTruthy();
+
+		// Standing in for the day being edited on the history screen while the
+		// Today tab is blurred.
+		note = "after the edit";
+		await act(async () => {
+			triggerFocus?.();
+		});
+
+		expect(await screen.findByText("after the edit")).toBeTruthy();
+		expect(screen.queryByText("before the edit")).toBeNull();
+	});
+
+	it("stops refetching a past day that is already loaded", async () => {
+		const historyStore = {
+			loadDay: jest.fn(async (localDay: string) => historyDay(localDay)),
+		};
+		const screen = await render(
+			<HomeScreen
+				{...supportingProps()}
+				historyStore={historyStore}
+				habitsStore={habitsStore()}
+				store={{
+					loadToday: jest.fn(async () => emptyToday),
+					loadCheckInDays: jest.fn(async () => new Set<string>()),
+					save: jest.fn(async () => emptyToday),
+				}}
+			/>,
+		);
+
+		await fireEvent.press(
+			await screen.findByTestId("week-strip-day-2026-08-13"),
+		);
+		await screen.findByText("Yesterday");
+		const loadsForYesterday = historyStore.loadDay.mock.calls.filter(
+			([localDay]) => localDay === "2026-08-13",
+		).length;
+
+		await fireEvent.press(screen.getByTestId("week-strip-day-2026-08-14"));
+		await fireEvent.press(screen.getByTestId("week-strip-day-2026-08-13"));
+		await screen.findByText("Yesterday");
+
+		expect(
+			historyStore.loadDay.mock.calls.filter(
+				([localDay]) => localDay === "2026-08-13",
+			).length,
+		).toBe(loadsForYesterday);
+	});
+
 	it("haptically pages between adjacent days without adding a future page", async () => {
 		const historyStore = {
 			loadDay: jest.fn(async (localDay: string) => historyDay(localDay)),

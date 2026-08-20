@@ -72,6 +72,42 @@ export function formatMeasurement<D extends Dimension>(
 }
 
 /**
+ * Formats the size of a change rather than a reading.
+ *
+ * Compound units report in their minor unit alone: a day-to-day weight move
+ * would otherwise read `0 st 1 lb`. Returns null when the change rounds away at
+ * display resolution — both readings render identically, so there is no change
+ * a person could see.
+ */
+export function formatMeasurementDelta<D extends Dimension>(
+	magnitude: number,
+	dimension: D,
+	unit: DisplayUnitForDimension<D>,
+): string | null {
+	if (!isDisplayUnitForDimension(dimension, unit as DisplayUnit)) {
+		throw new TypeError(`Unit ${unit} does not measure ${dimension}.`);
+	}
+	assertCanonicalValue(magnitude);
+
+	if (isCompoundDisplayUnit(unit as DisplayUnit)) {
+		const { minor } = COMPOUND_UNIT_PARTS[unit as CompoundDisplayUnit];
+		// A compound reading shows whole minors (`12 st 4 lb`), so a change is
+		// only visible in whole minors — not at the minor unit's own resolution.
+		const minors = Math.round(
+			fromCanonical(magnitude, dimension, minor as DisplayUnitForDimension<D>),
+		);
+		return minors === 0 ? null : `${minors} ${minor}`;
+	}
+
+	const simple = unit as SimpleDisplayUnit;
+	const converted = fromCanonical(magnitude, dimension, unit);
+	if (roundToResolution(converted, DISPLAY_RESOLUTIONS[simple]) === 0) {
+		return null;
+	}
+	return formatRounded(converted, simple);
+}
+
+/**
  * Splits a stored value into the fields a person edits, without unit suffixes.
  * Compound units seed both fields; simple units seed `major` alone.
  */
@@ -123,4 +159,32 @@ export function formatIntrinsicMeasurement(
 
 	const rounded = Math.round((canonicalValue + Number.EPSILON) * 10) / 10;
 	return `${rounded.toFixed(Number.isInteger(rounded) ? 0 : 1)} bpm`;
+}
+
+/**
+ * The change counterpart of `formatIntrinsicMeasurement`. Sub-minute durations
+ * are reported in seconds, since whole-minute rounding renders them as `0 m`.
+ * Returns null when the change rounds away entirely.
+ */
+export function formatIntrinsicDelta(
+	magnitude: number,
+	dimension: IntrinsicDimension,
+): string | null {
+	assertCanonicalValue(magnitude);
+
+	if (dimension === "time") {
+		if (magnitude < 60) {
+			const seconds = Math.round(magnitude);
+			return seconds === 0 ? null : `${seconds} s`;
+		}
+		return formatIntrinsicMeasurement(magnitude, dimension);
+	}
+	if (dimension === "count") {
+		return Math.round(magnitude) === 0
+			? null
+			: formatIntrinsicMeasurement(magnitude, dimension);
+	}
+	return Math.round((magnitude + Number.EPSILON) * 10) === 0
+		? null
+		: formatIntrinsicMeasurement(magnitude, dimension);
 }
