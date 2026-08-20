@@ -1,14 +1,18 @@
 import {
+	localDayOf,
 	type MeasurementEntry,
 	type ParsedMeasurement,
 	parseMeasurementEntry,
+	shiftLocalDay,
+	type WeekStartDay,
 } from "@bro/domain";
 import {
 	type FactorCategory,
 	resolveMetric,
 } from "@bro/domain/metric-registry";
-import { router, useFocusEffect } from "expo-router";
-import { useCallback, useMemo, useState } from "react";
+import { formatLocalDayLabel } from "@bro/logic";
+import { type Href, router, useFocusEffect } from "expo-router";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { ActivityIndicator, TouchableOpacity, View } from "react-native";
 import {
 	type CheckInEntry,
@@ -24,19 +28,36 @@ import { FormField } from "../../components/form-field";
 import { MeasurementField } from "../../components/measurement-field";
 import { Screen } from "../../components/screen";
 import { SectionHeader } from "../../components/section-header";
+import { useSetTodayHeaderVisibleMonthDay } from "../../components/today-header-month-context";
+import {
+	WeekStrip,
+	type WeekStripDayIndicator,
+} from "../../components/week-strip";
 import {
 	createHabitsStore,
 	type HabitsStore,
 	type TodayHabitsSnapshot,
 } from "../../habits/habits-store";
+import {
+	createHistoryStore,
+	type HistoryDay,
+	type HistoryStore,
+} from "../../history/history-store";
 import { StyleSheet } from "../../theme/unistyles";
+import {
+	createUnitSettingsStore,
+	type UnitSettingsStore,
+} from "../../units/unit-settings-store";
 
 type HomeScreenProps = {
-	store?: Pick<CheckInStore, "loadToday" | "save">;
+	store?: Pick<CheckInStore, "loadToday" | "save" | "loadCheckInDays">;
 	habitsStore?: Pick<
 		HabitsStore,
-		"loadToday" | "toggleManual" | "completeChallengeDay"
+		"loadToday" | "toggleManual" | "completeChallengeDay" | "loadAdherenceRange"
 	>;
+	historyStore?: Pick<HistoryStore, "loadDay">;
+	unitSettingsStore?: Pick<UnitSettingsStore, "loadWeekStart">;
+	now?: () => Date;
 };
 
 const SCORES = [1, 2, 3, 4, 5] as const;
@@ -49,6 +70,19 @@ const CATEGORY_LABELS: Record<FactorCategory, string> = {
 };
 
 const EMPTY_ENTRY: MeasurementEntry = { major: "", minor: "" };
+const systemNow = () => new Date();
+
+function localDaysBetween(fromLocalDay: string, throughLocalDay: string) {
+	const days: string[] = [];
+	for (
+		let localDay = fromLocalDay;
+		localDay <= throughLocalDay;
+		localDay = shiftLocalDay(localDay, 1)
+	) {
+		days.push(localDay);
+	}
+	return days;
+}
 
 function parseMeasurementInput(
 	entry: MeasurementEntry,
@@ -83,12 +117,180 @@ function isBlankEntry(entry: MeasurementEntry): boolean {
 	return !entry.major.trim() && !entry.minor.trim();
 }
 
-export function HomeScreen({ store, habitsStore }: HomeScreenProps) {
+type PastDaySectionProps = {
+	localDay: string;
+	todayLocalDay: string;
+	day: HistoryDay | null;
+	habits: TodayHabitsSnapshot | null;
+	loading: boolean;
+	error: string | null;
+	routineError: string | null;
+	routineBusy: string | null;
+	onToggleHabit: (habitId: string) => void;
+	onEdit: () => void;
+};
+
+function PastDaySection({
+	localDay,
+	todayLocalDay,
+	day,
+	habits,
+	loading,
+	error,
+	routineError,
+	routineBusy,
+	onToggleHabit,
+	onEdit,
+}: PastDaySectionProps) {
+	return (
+		<>
+			<AppText variant="section" style={styles.pageTitle}>
+				{formatLocalDayLabel(localDay, todayLocalDay)}
+			</AppText>
+			{loading ? <ActivityIndicator size="large" /> : null}
+			{error ? <AppText color="danger">{error}</AppText> : null}
+			{day ? (
+				<>
+					<View style={styles.section}>
+						<SectionHeader title="Check-ins" />
+						{day.checkIns.length === 0 ? (
+							<Card>
+								<AppText color="muted">No check-in was logged.</AppText>
+							</Card>
+						) : (
+							day.checkIns.map((checkIn) => (
+								<Card key={checkIn.id}>
+									<AppText variant="label">
+										Mood {checkIn.mood.value} · Energy {checkIn.energy.value}
+									</AppText>
+									<AppText variant="caption" color="subtle">
+										{new Date(checkIn.observedAt).toLocaleTimeString([], {
+											hour: "2-digit",
+											minute: "2-digit",
+										})}
+									</AppText>
+								</Card>
+							))
+						)}
+					</View>
+					{day.factors.length > 0 ? (
+						<View style={styles.section}>
+							<SectionHeader title="Factors" />
+							<Card>
+								<AppText color="muted">
+									{day.factors
+										.map((factor) => {
+											const resolved = resolveMetric(factor.metricSlug);
+											return resolved.kind === "known"
+												? resolved.metric.label
+												: factor.metricSlug;
+										})
+										.join(", ")}
+								</AppText>
+							</Card>
+						</View>
+					) : null}
+					{day.measurements.length > 0 ? (
+						<View style={styles.section}>
+							<SectionHeader title="Measurements" />
+							{day.measurements.map((measurement) => (
+								<Card key={measurement.id}>
+									<AppText variant="label">{measurement.label}</AppText>
+									<AppText color="muted">{measurement.formattedValue}</AppText>
+								</Card>
+							))}
+						</View>
+					) : null}
+					{day.notes.length > 0 ? (
+						<View style={styles.section}>
+							<SectionHeader title="Notes" />
+							{day.notes.map((note) => (
+								<Card key={note.id}>
+									<AppText color="muted">{note.body}</AppText>
+								</Card>
+							))}
+						</View>
+					) : null}
+				</>
+			) : null}
+			{habits && habits.habits.length > 0 ? (
+				<View style={styles.section}>
+					<SectionHeader title="Habits" />
+					{habits.habits.map((item) => (
+						<Card key={item.habit.id} style={styles.habitCard}>
+							<View style={styles.routineCopy}>
+								<AppText variant="score">{item.label}</AppText>
+								{item.progressLabel ? (
+									<AppText color="muted">{item.progressLabel}</AppText>
+								) : null}
+								<AppText variant="caption" color="subtle">
+									{item.completed ? "Done on this day" : "Not done"}
+								</AppText>
+							</View>
+							{item.habit.kind === "manual" ? (
+								<Button
+									label={item.completed ? "Undo" : "Mark done"}
+									variant={item.completed ? "text" : "secondary"}
+									loading={routineBusy === item.habit.id}
+									onPress={() => onToggleHabit(item.habit.id)}
+								/>
+							) : null}
+						</Card>
+					))}
+				</View>
+			) : null}
+			{routineError ? <AppText color="danger">{routineError}</AppText> : null}
+			{day && habits ? (
+				<Button label="Edit this day" variant="secondary" onPress={onEdit} />
+			) : null}
+		</>
+	);
+}
+
+export function HomeScreen({
+	store,
+	habitsStore,
+	historyStore,
+	unitSettingsStore,
+	now,
+}: HomeScreenProps) {
+	const clockSource = useRef(now ?? systemNow);
+	clockSource.current = now ?? systemNow;
+	const clock = useCallback(() => clockSource.current(), []);
 	const checkIns = useMemo(() => store ?? createCheckInStore(), [store]);
 	const routines = useMemo(
 		() => habitsStore ?? createHabitsStore(),
 		[habitsStore],
 	);
+	const history = useMemo(
+		() => historyStore ?? createHistoryStore(),
+		[historyStore],
+	);
+	const settings = useMemo(
+		() => unitSettingsStore ?? createUnitSettingsStore(),
+		[unitSettingsStore],
+	);
+	const setHeaderVisibleMonthDay = useSetTodayHeaderVisibleMonthDay();
+	const initialTodayLocalDay = localDayOf(clock());
+	const [todayLocalDay, setTodayLocalDay] = useState(initialTodayLocalDay);
+	const previousTodayLocalDay = useRef(initialTodayLocalDay);
+	const [selectedDay, setSelectedDay] = useState<string | null>(null);
+	const resolvedSelectedDay = selectedDay ?? todayLocalDay;
+	const [weekStart, setWeekStart] = useState<WeekStartDay | null>(null);
+	const indicatorCache = useRef(new Map<string, WeekStripDayIndicator>());
+	const indicatorGeneration = useRef(0);
+	const indicatorDayRevisions = useRef(new Map<string, number>());
+	const visibleRange = useRef<{ from: string; through: string } | null>(null);
+	const [indicators, setIndicators] = useState<
+		ReadonlyMap<string, WeekStripDayIndicator>
+	>(new Map());
+	const [pastDay, setPastDay] = useState<HistoryDay | null>(null);
+	const [pastHabits, setPastHabits] = useState<TodayHabitsSnapshot | null>(
+		null,
+	);
+	const [pastLoading, setPastLoading] = useState(false);
+	const [pastError, setPastError] = useState<string | null>(null);
+	const pastLoadGeneration = useRef(0);
 	const [today, setToday] = useState<TodayCheckIn | null>(null);
 	const [habitsToday, setHabitsToday] = useState<TodayHabitsSnapshot | null>(
 		null,
@@ -137,11 +339,159 @@ export function HomeScreen({ store, habitsStore }: HomeScreenProps) {
 		}
 	}, [routines]);
 
+	useEffect(() => {
+		const current = clock();
+		const nextMidnight = new Date(current);
+		nextMidnight.setHours(24, 0, 0, 50);
+		const timeout = setTimeout(
+			() => {
+				setTodayLocalDay(localDayOf(clock()));
+				void load();
+				void loadRoutines();
+			},
+			Math.max(1_000, nextMidnight.getTime() - current.getTime()),
+		);
+		return () => clearTimeout(timeout);
+	}, [clock, load, loadRoutines, todayLocalDay]);
+
+	const loadIndicatorRange = useCallback(
+		async (fromLocalDay: string, throughLocalDay: string) => {
+			const requestedDays = localDaysBetween(fromLocalDay, throughLocalDay);
+			const missingDays = requestedDays.filter(
+				(localDay) => !indicatorCache.current.has(localDay),
+			);
+			if (missingDays.length === 0) return;
+
+			const requestFrom = missingDays[0];
+			const requestThrough = missingDays[missingDays.length - 1];
+			const days = localDaysBetween(requestFrom, requestThrough);
+			const generation = indicatorGeneration.current;
+			const revisions = new Map(
+				days.map((localDay) => [
+					localDay,
+					indicatorDayRevisions.current.get(localDay) ?? 0,
+				]),
+			);
+
+			try {
+				const [adherence, checkInDays] = await Promise.all([
+					routines.loadAdherenceRange(requestFrom, requestThrough),
+					checkIns.loadCheckInDays(requestFrom, requestThrough),
+				]);
+				if (generation !== indicatorGeneration.current) return;
+				const adherenceByDay = new Map(
+					adherence.map((day) => [day.localDay, day]),
+				);
+				for (const localDay of days) {
+					if (
+						revisions.get(localDay) !==
+						(indicatorDayRevisions.current.get(localDay) ?? 0)
+					) {
+						continue;
+					}
+					const summary = adherenceByDay.get(localDay);
+					indicatorCache.current.set(localDay, {
+						hasCheckIn: checkInDays.has(localDay),
+						habitsScheduled: summary?.scheduledCount ?? 0,
+						habitsCompleted: summary?.completedCount ?? 0,
+					});
+				}
+				setIndicators(new Map(indicatorCache.current));
+			} catch (caught) {
+				setRoutineError(
+					caught instanceof Error ? caught.message : String(caught),
+				);
+			}
+		},
+		[checkIns, routines],
+	);
+
+	const handleVisibleRangeChange = useCallback(
+		(from: string, through: string) => {
+			visibleRange.current = { from, through };
+			setHeaderVisibleMonthDay(shiftLocalDay(from, 3));
+			void loadIndicatorRange(from, through);
+		},
+		[loadIndicatorRange, setHeaderVisibleMonthDay],
+	);
+
+	const invalidateIndicatorDay = useCallback(
+		(localDay: string) => {
+			indicatorDayRevisions.current.set(
+				localDay,
+				(indicatorDayRevisions.current.get(localDay) ?? 0) + 1,
+			);
+			indicatorCache.current.delete(localDay);
+			setIndicators(new Map(indicatorCache.current));
+			void loadIndicatorRange(localDay, localDay);
+		},
+		[loadIndicatorRange],
+	);
+
+	const loadPastDay = useCallback(
+		async (localDay: string) => {
+			const generation = ++pastLoadGeneration.current;
+			setPastLoading(true);
+			setPastError(null);
+			try {
+				const [day, habits] = await Promise.all([
+					history.loadDay(localDay),
+					routines.loadToday(localDay),
+				]);
+				if (generation !== pastLoadGeneration.current) return;
+				setPastDay(day);
+				setPastHabits(habits);
+			} catch (caught) {
+				if (generation !== pastLoadGeneration.current) return;
+				setPastError(caught instanceof Error ? caught.message : String(caught));
+			} finally {
+				if (generation === pastLoadGeneration.current) setPastLoading(false);
+			}
+		},
+		[history, routines],
+	);
+
+	useEffect(() => {
+		if (resolvedSelectedDay === todayLocalDay) {
+			pastLoadGeneration.current += 1;
+			setPastDay(null);
+			setPastHabits(null);
+			setPastError(null);
+			setPastLoading(false);
+			return;
+		}
+		void loadPastDay(resolvedSelectedDay);
+	}, [loadPastDay, resolvedSelectedDay, todayLocalDay]);
+
 	useFocusEffect(
 		useCallback(() => {
+			const nextTodayLocalDay = localDayOf(clock());
+			const previous = previousTodayLocalDay.current;
+			setSelectedDay((current) =>
+				current === previous && previous !== nextTodayLocalDay ? null : current,
+			);
+			previousTodayLocalDay.current = nextTodayLocalDay;
+			setTodayLocalDay(nextTodayLocalDay);
+
+			indicatorGeneration.current += 1;
+			indicatorDayRevisions.current.clear();
+			indicatorCache.current.clear();
+			setIndicators(new Map());
+			const range = visibleRange.current;
+			if (range) void loadIndicatorRange(range.from, range.through);
+
 			void load();
 			void loadRoutines();
-		}, [load, loadRoutines]),
+			void settings
+				.loadWeekStart()
+				.then(setWeekStart)
+				.catch((caught) => {
+					setWeekStart("monday");
+					setRoutineError(
+						caught instanceof Error ? caught.message : String(caught),
+					);
+				});
+		}, [clock, load, loadIndicatorRange, loadRoutines, settings]),
 	);
 
 	async function toggleHabit(habitId: string) {
@@ -150,6 +500,7 @@ export function HomeScreen({ store, habitsStore }: HomeScreenProps) {
 		setRoutineError(null);
 		try {
 			await routines.toggleManual(habitId, habitsToday.localDay);
+			invalidateIndicatorDay(habitsToday.localDay);
 			await loadRoutines();
 		} catch (caught) {
 			setRoutineError(
@@ -171,7 +522,26 @@ export function HomeScreen({ store, habitsStore }: HomeScreenProps) {
 				habitsToday.localDay,
 			);
 			if (detail.isFinished) setFinishedChallenge(detail.title);
+			invalidateIndicatorDay(habitsToday.localDay);
 			await loadRoutines();
+		} catch (caught) {
+			setRoutineError(
+				caught instanceof Error ? caught.message : String(caught),
+			);
+		} finally {
+			setRoutineBusy(null);
+		}
+	}
+
+	async function togglePastHabit(habitId: string) {
+		if (!pastHabits || routineBusy) return;
+		const localDay = pastHabits.localDay;
+		setRoutineBusy(habitId);
+		setRoutineError(null);
+		try {
+			await routines.toggleManual(habitId, localDay);
+			invalidateIndicatorDay(localDay);
+			await loadPastDay(localDay);
 		} catch (caught) {
 			setRoutineError(
 				caught instanceof Error ? caught.message : String(caught),
@@ -263,6 +633,7 @@ export function HomeScreen({ store, habitsStore }: HomeScreenProps) {
 				editing,
 			);
 			setToday(saved);
+			invalidateIndicatorDay(saved.localDay);
 			setSelectedFactors(saved.selectedFactorSlugs);
 			setNote(saved.note);
 			setMood(null);
@@ -278,7 +649,7 @@ export function HomeScreen({ store, habitsStore }: HomeScreenProps) {
 		}
 	}
 
-	if (!today && !error) {
+	if ((!today || !weekStart) && !error) {
 		return (
 			<Screen centered>
 				<ActivityIndicator size="large" />
@@ -296,6 +667,14 @@ export function HomeScreen({ store, habitsStore }: HomeScreenProps) {
 					variant="secondary"
 					onPress={() => void load()}
 				/>
+			</Screen>
+		);
+	}
+
+	if (!weekStart) {
+		return (
+			<Screen centered>
+				<ActivityIndicator size="large" />
 			</Screen>
 		);
 	}
@@ -456,192 +835,230 @@ export function HomeScreen({ store, habitsStore }: HomeScreenProps) {
 	) : null;
 
 	return (
-		<Screen
-			scroll
-			padded
-			contentContainerStyle={styles.content}
-			keyboardShouldPersistTaps="handled"
-		>
-			<AppText variant="display" style={styles.pageTitle}>
-				How are you?
-			</AppText>
-			{checkInForm}
-			{finishedChallenge ? (
-				<Card style={styles.routineCard}>
-					<AppText variant="section">Challenge complete</AppText>
-					<AppText color="muted">You finished {finishedChallenge}.</AppText>
-					<Button
-						label="Dismiss"
-						variant="text"
-						onPress={() => setFinishedChallenge(null)}
-					/>
-				</Card>
-			) : null}
-			{habitsToday &&
-			habitsToday.habits.length === 0 &&
-			habitsToday.challenges.length === 0 &&
-			!habitsToday.hasHabits ? (
-				<Card style={styles.routineCard}>
-					<AppText variant="section">Build a routine</AppText>
-					<AppText color="muted">
-						Add a habit and Today will keep the next small action in view.
-					</AppText>
-					<Button
-						label="Choose a habit"
-						variant="secondary"
-						onPress={() => router.push("/settings/habits")}
-					/>
-				</Card>
-			) : null}
-			{habitsToday && habitsToday.habits.length > 0 ? (
-				<View style={styles.section}>
-					<SectionHeader
-						title="Habits"
-						action={
-							<TouchableOpacity onPress={() => router.push("/settings/habits")}>
-								<AppText variant="label" color="brand">
-									Manage
-								</AppText>
-							</TouchableOpacity>
+		<View style={styles.home}>
+			<WeekStrip
+				todayLocalDay={todayLocalDay}
+				selectedDay={resolvedSelectedDay}
+				weekStart={weekStart}
+				indicators={indicators}
+				onSelectDay={setSelectedDay}
+				onVisibleRangeChange={handleVisibleRangeChange}
+			/>
+			<Screen
+				scroll
+				padded
+				contentContainerStyle={styles.content}
+				keyboardShouldPersistTaps="handled"
+			>
+				{resolvedSelectedDay !== todayLocalDay ? (
+					<PastDaySection
+						localDay={resolvedSelectedDay}
+						todayLocalDay={todayLocalDay}
+						day={pastDay}
+						habits={pastHabits}
+						loading={pastLoading}
+						error={pastError}
+						routineError={routineError}
+						routineBusy={routineBusy}
+						onToggleHabit={(habitId) => void togglePastHabit(habitId)}
+						onEdit={() =>
+							router.push(`/history/${resolvedSelectedDay}` as Href)
 						}
 					/>
-					{habitsToday.habits.map((item) => (
-						<Card key={item.habit.id} style={styles.habitCard}>
-							<View style={styles.routineCopy}>
-								<AppText variant="score">{item.label}</AppText>
-								{item.progressLabel ? (
-									<AppText color="muted">{item.progressLabel}</AppText>
-								) : null}
-								<AppText variant="caption" color="subtle">
-									{item.completed ? "Done today" : "Still to do"}
-									{item.streak > 0 ? ` · ${item.streak} day streak` : ""}
+				) : (
+					<>
+						<AppText variant="section" style={styles.pageTitle}>
+							How are you?
+						</AppText>
+						{checkInForm}
+						{finishedChallenge ? (
+							<Card style={styles.routineCard}>
+								<AppText variant="section">Challenge complete</AppText>
+								<AppText color="muted">
+									You finished {finishedChallenge}.
 								</AppText>
-							</View>
-							{item.habit.kind === "manual" ? (
 								<Button
-									label={item.completed ? "Undo" : "Mark done"}
-									variant={item.completed ? "text" : "secondary"}
-									loading={routineBusy === item.habit.id}
-									onPress={() => void toggleHabit(item.habit.id)}
+									label="Dismiss"
+									variant="text"
+									onPress={() => setFinishedChallenge(null)}
 								/>
-							) : null}
-						</Card>
-					))}
-				</View>
-			) : null}
-			{habitsToday && habitsToday.challenges.length > 0 ? (
-				<View style={styles.section}>
-					<SectionHeader title="Challenges" />
-					{habitsToday.challenges.map((challenge) => (
-						<Card key={challenge.enrolmentId} style={styles.routineCard}>
-							<AppText variant="caption" color="brand">
-								DAY {challenge.dayIndex} OF {challenge.durationDays}
-							</AppText>
-							<AppText variant="section">{challenge.dayTitle}</AppText>
-							<AppText color="muted">{challenge.action}</AppText>
-							<Button
-								label="Mark step done"
-								loading={routineBusy === challenge.enrolmentId}
-								onPress={() =>
-									void completeChallenge(
-										challenge.enrolmentId,
-										challenge.dayIndex,
-									)
-								}
-							/>
-							<Button
-								label="View challenge"
-								variant="text"
-								onPress={() =>
-									router.push(`/challenges/${challenge.enrolmentId}`)
-								}
-							/>
-						</Card>
-					))}
-				</View>
-			) : null}
-			{routineError ? <AppText color="danger">{routineError}</AppText> : null}
-			{!formOpen && today.entries.length === 0 ? (
-				<Card style={styles.stockCard}>
-					<AppText variant="section">Take stock of the bigger picture</AppText>
-					<AppText color="muted">
-						Rate the areas of your life and choose where to focus next.
-					</AppText>
-					<Button
-						label="Take stock"
-						variant="secondary"
-						onPress={() => router.push("/review/new")}
-					/>
-				</Card>
-			) : null}
-			{!formOpen && today.entries.length > 0 ? (
-				<View style={styles.section}>
-					<SectionHeader
-						title="Logged today"
-						action={
-							<AppText variant="caption" color="subtle">
-								{today.entries.length} check-in
-								{today.entries.length === 1 ? "" : "s"}
-							</AppText>
-						}
-					/>
-					{today.entries.map((entry) => (
-						<Card key={entry.id} style={styles.entryCard}>
-							<View>
-								<AppText variant="label">
-									Mood {entry.mood.value} · Energy {entry.energy.value}
+							</Card>
+						) : null}
+						{habitsToday &&
+						habitsToday.habits.length === 0 &&
+						habitsToday.challenges.length === 0 &&
+						!habitsToday.hasHabits ? (
+							<Card style={styles.routineCard}>
+								<AppText variant="section">Build a routine</AppText>
+								<AppText color="muted">
+									Add a habit and Today will keep the next small action in view.
 								</AppText>
-								<AppText variant="caption" color="subtle">
-									{new Date(entry.observedAt).toLocaleTimeString([], {
-										hour: "2-digit",
-										minute: "2-digit",
-									})}
-								</AppText>
+								<Button
+									label="Choose a habit"
+									variant="secondary"
+									onPress={() => router.push("/settings/habits")}
+								/>
+							</Card>
+						) : null}
+						{habitsToday && habitsToday.habits.length > 0 ? (
+							<View style={styles.section}>
+								<SectionHeader
+									title="Habits"
+									action={
+										<TouchableOpacity
+											onPress={() => router.push("/settings/habits")}
+										>
+											<AppText variant="label" color="brand">
+												Manage
+											</AppText>
+										</TouchableOpacity>
+									}
+								/>
+								{habitsToday.habits.map((item) => (
+									<Card key={item.habit.id} style={styles.habitCard}>
+										<View style={styles.routineCopy}>
+											<AppText variant="score">{item.label}</AppText>
+											{item.progressLabel ? (
+												<AppText color="muted">{item.progressLabel}</AppText>
+											) : null}
+											<AppText variant="caption" color="subtle">
+												{item.completed ? "Done today" : "Still to do"}
+												{item.streak > 0 ? ` · ${item.streak} day streak` : ""}
+											</AppText>
+										</View>
+										{item.habit.kind === "manual" ? (
+											<Button
+												label={item.completed ? "Undo" : "Mark done"}
+												variant={item.completed ? "text" : "secondary"}
+												loading={routineBusy === item.habit.id}
+												onPress={() => void toggleHabit(item.habit.id)}
+											/>
+										) : null}
+									</Card>
+								))}
 							</View>
-							<TouchableOpacity onPress={() => startEditing(entry)}>
-								<AppText variant="label" color="brand">
-									Edit
+						) : null}
+						{habitsToday && habitsToday.challenges.length > 0 ? (
+							<View style={styles.section}>
+								<SectionHeader title="Challenges" />
+								{habitsToday.challenges.map((challenge) => (
+									<Card key={challenge.enrolmentId} style={styles.routineCard}>
+										<AppText variant="caption" color="brand">
+											DAY {challenge.dayIndex} OF {challenge.durationDays}
+										</AppText>
+										<AppText variant="section">{challenge.dayTitle}</AppText>
+										<AppText color="muted">{challenge.action}</AppText>
+										<Button
+											label="Mark step done"
+											loading={routineBusy === challenge.enrolmentId}
+											onPress={() =>
+												void completeChallenge(
+													challenge.enrolmentId,
+													challenge.dayIndex,
+												)
+											}
+										/>
+										<Button
+											label="View challenge"
+											variant="text"
+											onPress={() =>
+												router.push(`/challenges/${challenge.enrolmentId}`)
+											}
+										/>
+									</Card>
+								))}
+							</View>
+						) : null}
+						{routineError ? (
+							<AppText color="danger">{routineError}</AppText>
+						) : null}
+						{!formOpen && today.entries.length === 0 ? (
+							<Card style={styles.stockCard}>
+								<AppText variant="section">
+									Take stock of the bigger picture
 								</AppText>
-							</TouchableOpacity>
-						</Card>
-					))}
-					{selectedFactorLabels.length > 0 ? (
-						<AppText variant="caption" color="muted">
-							Factors: {selectedFactorLabels.join(", ")}
-						</AppText>
-					) : null}
-					{today.loggedMeasurements.length > 0 ? (
-						<AppText variant="caption" color="muted">
-							Measurements:{" "}
-							{today.loggedMeasurements
-								.map(
-									(measurement) =>
-										`${measurement.label} ${measurement.formattedValue}`,
-								)
-								.join(", ")}
-						</AppText>
-					) : null}
-					{today.note ? (
-						<AppText variant="caption" color="muted">
-							Note: {today.note}
-						</AppText>
-					) : null}
-					{!formOpen ? (
-						<Button
-							label="Add another check-in"
-							variant="secondary"
-							onPress={startAnother}
-						/>
-					) : null}
-				</View>
-			) : null}
-		</Screen>
+								<AppText color="muted">
+									Rate the areas of your life and choose where to focus next.
+								</AppText>
+								<Button
+									label="Take stock"
+									variant="secondary"
+									onPress={() => router.push("/review/new")}
+								/>
+							</Card>
+						) : null}
+						{!formOpen && today.entries.length > 0 ? (
+							<View style={styles.section}>
+								<SectionHeader
+									title="Logged today"
+									action={
+										<AppText variant="caption" color="subtle">
+											{today.entries.length} check-in
+											{today.entries.length === 1 ? "" : "s"}
+										</AppText>
+									}
+								/>
+								{today.entries.map((entry) => (
+									<Card key={entry.id} style={styles.entryCard}>
+										<View>
+											<AppText variant="label">
+												Mood {entry.mood.value} · Energy {entry.energy.value}
+											</AppText>
+											<AppText variant="caption" color="subtle">
+												{new Date(entry.observedAt).toLocaleTimeString([], {
+													hour: "2-digit",
+													minute: "2-digit",
+												})}
+											</AppText>
+										</View>
+										<TouchableOpacity onPress={() => startEditing(entry)}>
+											<AppText variant="label" color="brand">
+												Edit
+											</AppText>
+										</TouchableOpacity>
+									</Card>
+								))}
+								{selectedFactorLabels.length > 0 ? (
+									<AppText variant="caption" color="muted">
+										Factors: {selectedFactorLabels.join(", ")}
+									</AppText>
+								) : null}
+								{today.loggedMeasurements.length > 0 ? (
+									<AppText variant="caption" color="muted">
+										Measurements:{" "}
+										{today.loggedMeasurements
+											.map(
+												(measurement) =>
+													`${measurement.label} ${measurement.formattedValue}`,
+											)
+											.join(", ")}
+									</AppText>
+								) : null}
+								{today.note ? (
+									<AppText variant="caption" color="muted">
+										Note: {today.note}
+									</AppText>
+								) : null}
+								{!formOpen ? (
+									<Button
+										label="Add another check-in"
+										variant="secondary"
+										onPress={startAnother}
+									/>
+								) : null}
+							</View>
+						) : null}
+					</>
+				)}
+			</Screen>
+		</View>
 	);
 }
 
 const styles = StyleSheet.create((theme) => ({
+	home: { flex: 1 },
 	content: { paddingBottom: theme.spacing.xxl * 2 },
-	pageTitle: { marginBottom: theme.spacing.xl },
+	pageTitle: { marginBottom: theme.spacing.lg },
 	loading: {
 		gap: theme.spacing.md,
 	},

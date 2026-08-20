@@ -57,6 +57,7 @@ describe("WeekStrip", () => {
 		);
 		expect(view.getByTestId("week-strip-day-2026-08-17")).toBeTruthy();
 		expect(view.getByTestId("week-strip-day-2026-08-23")).toBeTruthy();
+		expect(view.getAllByText("Mo").length).toBeGreaterThan(0);
 		expect(view.getByTestId("week-strip").props.accessibilityLabel).toMatch(
 			/^Week of /,
 		);
@@ -108,9 +109,10 @@ describe("WeekStrip", () => {
 		expect(view.getByTestId("week-strip-adherence-2026-08-20")).toBeTruthy();
 	});
 
-	it("reports pages after a swipe and extends backward at the end", async () => {
+	it("reveals earlier pages with a rightward swipe and extends backward", async () => {
 		const { view, onVisibleRangeChange } = await renderStrip();
 		const list = view.getByTestId("week-strip");
+		expect(list.props.inverted).toBe(true);
 		const initialCount = list.props.data.length;
 		const initialLabel = list.props.accessibilityLabel;
 		const previousWeekOffset = list.props.getItemLayout(null, 1).offset;

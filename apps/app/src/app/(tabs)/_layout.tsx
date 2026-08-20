@@ -5,6 +5,10 @@ import { useLayoutEffect, useRef } from "react";
 import { TouchableOpacity, View } from "react-native";
 import { AppHeader } from "../../components/app-header";
 import { AvatarIdentityContext } from "../../components/avatar-identity-context";
+import {
+	TodayHeaderMonthProvider,
+	useTodayHeaderMonth,
+} from "../../components/today-header-month-context";
 import { StyleSheet, useUnistyles } from "../../theme/unistyles";
 
 const TAB_TITLES = {
@@ -14,22 +18,25 @@ const TAB_TITLES = {
 	"/life": "Life",
 } as const;
 
-export default function TabLayout() {
+function TabShell() {
 	const { theme } = useUnistyles();
 	const { user } = useAuth();
 	const pathname = usePathname();
 	const segments = useSegments() as string[];
+	const todayHeaderMonth = useTodayHeaderMonth();
 	const activeTabTitle = TAB_TITLES[pathname as keyof typeof TAB_TITLES];
-	const lastTabTitle = useRef(activeTabTitle ?? "Today");
+	const activeHeaderTitle =
+		pathname === "/" ? todayHeaderMonth : activeTabTitle;
+	const lastTabTitle = useRef(activeHeaderTitle ?? todayHeaderMonth);
 	useLayoutEffect(() => {
-		if (activeTabTitle) {
-			lastTabTitle.current = activeTabTitle;
+		if (activeHeaderTitle) {
+			lastTabTitle.current = activeHeaderTitle;
 		}
-	}, [activeTabTitle]);
+	}, [activeHeaderTitle]);
 	const isNestedTabRoute = segments[0] === "(tabs)" && segments.length > 2;
 	const title = isNestedTabRoute
 		? undefined
-		: (activeTabTitle ?? lastTabTitle.current);
+		: (activeHeaderTitle ?? lastTabTitle.current);
 
 	return (
 		<AvatarIdentityContext.Provider value={user?.name ?? null}>
@@ -37,7 +44,8 @@ export default function TabLayout() {
 				{title ? (
 					<AppHeader
 						title={title}
-						actions={
+						centerTitle={pathname === "/"}
+						leading={
 							pathname === "/" ? (
 								<TouchableOpacity
 									accessibilityRole="button"
@@ -124,6 +132,14 @@ export default function TabLayout() {
 	);
 }
 
+export default function TabLayout() {
+	return (
+		<TodayHeaderMonthProvider>
+			<TabShell />
+		</TodayHeaderMonthProvider>
+	);
+}
+
 const styles = StyleSheet.create((theme) => ({
 	shell: { flex: 1, backgroundColor: theme.colors.background },
 	headerAction: {
@@ -131,9 +147,8 @@ const styles = StyleSheet.create((theme) => ({
 		height: theme.control.avatarSize,
 		alignItems: "center",
 		justifyContent: "center",
-		borderWidth: 1,
-		borderColor: theme.colors.border,
+		borderWidth: 0,
 		borderRadius: theme.control.avatarSize / 2,
-		backgroundColor: theme.colors.surface,
+		backgroundColor: "transparent",
 	},
 }));

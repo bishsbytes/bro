@@ -36,7 +36,7 @@ type WeekPage = {
 const INITIAL_WEEK_COUNT = 8;
 const WEEK_EXTENSION_COUNT = 8;
 const WEEKDAY_FORMATTER = new Intl.DateTimeFormat(undefined, {
-	weekday: "narrow",
+	weekday: "short",
 	timeZone: "UTC",
 });
 const DAY_NUMBER_FORMATTER = new Intl.DateTimeFormat(undefined, {
@@ -67,8 +67,9 @@ function dateOf(localDay: string): Date {
 	return new Date(`${localDay}T00:00:00.000Z`);
 }
 
-function weekdayInitial(localDay: string): string {
-	return WEEKDAY_FORMATTER.format(dateOf(localDay));
+function weekdayLabel(localDay: string): string {
+	const formatted = WEEKDAY_FORMATTER.format(dateOf(localDay)).replace(".", "");
+	return Array.from(formatted).slice(0, 2).join("");
 }
 
 function dayNumber(localDay: string): string {
@@ -119,7 +120,7 @@ export function WeekStrip({
 		for (const week of weeks) {
 			for (const localDay of week.days) {
 				presentation.set(localDay, {
-					weekday: weekdayInitial(localDay),
+					weekday: weekdayLabel(localDay),
 					number: dayNumber(localDay),
 					accessibilityLabel: formatLocalDayLabel(localDay, todayLocalDay),
 				});
@@ -157,6 +158,7 @@ export function WeekStrip({
 				weeks[visibleWeekIndex]?.start ?? currentWeekStart,
 			)}
 			horizontal
+			inverted
 			pagingEnabled
 			showsHorizontalScrollIndicator={false}
 			data={weeks}
@@ -203,18 +205,22 @@ export function WeekStrip({
 								accessibilityState={{ selected, disabled: future }}
 								disabled={future}
 								onPress={() => onSelectDay(localDay)}
-								style={[
-									styles.day,
-									selected && styles.selectedDay,
-									future && styles.futureDay,
-								]}
+								style={[styles.day, future && styles.futureDay]}
 							>
-								<AppText variant="micro" color="muted">
-									{presentation?.weekday ?? weekdayInitial(localDay)}
+								<AppText
+									variant="micro"
+									color={selected ? "default" : "subtle"}
+									style={selected && styles.selectedText}
+								>
+									{presentation?.weekday ?? weekdayLabel(localDay)}
 								</AppText>
 								<AppText
 									variant="label"
-									style={localDay === todayLocalDay && styles.todayNumber}
+									color={selected ? "default" : "subtle"}
+									style={[
+										localDay === todayLocalDay && styles.todayNumber,
+										selected && styles.selectedText,
+									]}
 								>
 									{presentation?.number ?? dayNumber(localDay)}
 								</AppText>
@@ -263,36 +269,36 @@ const styles = StyleSheet.create((theme) => ({
 	week: {
 		flexDirection: "row",
 		paddingHorizontal: theme.spacing.sm,
-		paddingVertical: theme.spacing.sm,
+		paddingVertical: theme.spacing.xs,
 	},
 	day: {
 		flex: 1,
-		minHeight: 66,
+		minHeight: 54,
 		alignItems: "center",
 		justifyContent: "center",
-		gap: theme.spacing.xs,
-		borderRadius: theme.radius.sm,
+		gap: 2,
 	},
-	selectedDay: { backgroundColor: theme.colors.selected },
+	selectedText: { fontWeight: "700" },
 	futureDay: { opacity: theme.opacity.disabled },
 	todayNumber: { fontWeight: "700" },
 	indicators: {
-		minHeight: 8,
+		position: "absolute",
+		bottom: 1,
 		flexDirection: "row",
 		alignItems: "center",
 		gap: theme.spacing.xs,
 	},
 	checkIn: {
-		width: 7,
-		height: 7,
+		width: 5,
+		height: 5,
 		borderWidth: 1,
 		borderColor: theme.colors.border,
 		borderRadius: theme.radius.pill,
 	},
 	adherence: {
-		width: 8,
-		height: 8,
-		borderWidth: 2,
+		width: 6,
+		height: 6,
+		borderWidth: 1.5,
 		borderColor: theme.colors.border,
 		borderRadius: theme.radius.pill,
 	},

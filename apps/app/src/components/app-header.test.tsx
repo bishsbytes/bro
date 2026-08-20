@@ -13,12 +13,15 @@ describe("AppHeader", () => {
 		const screen = await render(
 			<AppHeader
 				title="Today"
+				centerTitle
+				leading={<Text>History</Text>}
 				actions={<Text>Filter</Text>}
 				onAvatarPress={onAvatarPress}
 			/>,
 		);
 
 		expect(screen.getByText("Today")).toBeTruthy();
+		expect(screen.getByText("History")).toBeTruthy();
 		expect(screen.getByText("Filter")).toBeTruthy();
 
 		await fireEvent.press(screen.getByLabelText("Account"));

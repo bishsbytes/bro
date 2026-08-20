@@ -1,6 +1,8 @@
+import { localDayOf } from "@bro/domain";
 import { render } from "@testing-library/react-native";
 import type { ReactNode } from "react";
 import TabLayout from "./app/(tabs)/_layout";
+import { monthHeaderLabel } from "./components/today-header-month-context";
 
 const mockTabsOptions = jest.fn();
 const mockTabsProps = jest.fn();
@@ -47,8 +49,9 @@ describe("TabLayout", () => {
 
 	it("owns one stable header above lazy, retained tab scenes", async () => {
 		const screen = await render(<TabLayout />);
+		const currentMonth = monthHeaderLabel(localDayOf(new Date()));
 
-		expect(screen.getByText("Today")).toBeTruthy();
+		expect(screen.getByText(currentMonth)).toBeTruthy();
 		expect(mockTabsOptions).toHaveBeenCalledWith(
 			expect.objectContaining({ lazy: true }),
 		);
@@ -69,22 +72,23 @@ describe("TabLayout", () => {
 		await screen.rerender(<TabLayout />);
 
 		expect(screen.getByText("Body")).toBeTruthy();
-		expect(screen.queryByText("Today")).toBeNull();
+		expect(screen.queryByText(currentMonth)).toBeNull();
 	});
 
 	it("keeps the last tab header mounted behind root-stack transitions", async () => {
 		const screen = await render(<TabLayout />);
+		const currentMonth = monthHeaderLabel(localDayOf(new Date()));
 
 		mockPathname = "/account";
 		mockSegments = ["account"];
 		await screen.rerender(<TabLayout />);
 
-		expect(screen.getByText("Today")).toBeTruthy();
+		expect(screen.getByText(currentMonth)).toBeTruthy();
 
 		mockPathname = "/body/weight";
 		mockSegments = ["(tabs)", "body", "[slug]"];
 		await screen.rerender(<TabLayout />);
 
-		expect(screen.queryByText("Today")).toBeNull();
+		expect(screen.queryByText(currentMonth)).toBeNull();
 	});
 });

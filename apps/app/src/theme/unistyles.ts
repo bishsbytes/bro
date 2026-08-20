@@ -61,8 +61,8 @@ const shared = {
 		buttonMinHeight: 52,
 		scoreMinHeight: 64,
 		noteMinHeight: 112,
-		avatarSize: 42,
-		avatarIconSize: 22,
+		avatarSize: 36,
+		avatarIconSize: 20,
 	},
 	opacity: {
 		disabled: 0.45,

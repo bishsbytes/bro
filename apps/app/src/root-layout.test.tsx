@@ -36,6 +36,7 @@ jest.mock("./check-in/check-in-store", () => ({
 			inputLocale: "en-GB",
 			note: "",
 		}),
+		loadCheckInDays: async () => new Set(),
 		save: jest.fn(),
 	}),
 }));
@@ -43,16 +44,24 @@ jest.mock("./check-in/check-in-store", () => ({
 jest.mock("./history/history-store", () => ({
 	createHistoryStore: () => ({
 		loadHistory: async () => [],
+		loadDay: jest.fn(),
 	}),
+}));
+
+jest.mock("./units/unit-settings-store", () => ({
+	...jest.requireActual("./units/unit-settings-store"),
+	createUnitSettingsStore: () => ({ loadWeekStart: async () => "monday" }),
 }));
 
 jest.mock("./habits/habits-store", () => ({
 	createHabitsStore: () => ({
 		loadToday: async () => ({
 			localDay: "2026-08-14",
+			hasHabits: false,
 			habits: [],
 			challenges: [],
 		}),
+		loadAdherenceRange: async () => [],
 		toggleManual: jest.fn(),
 		completeChallengeDay: jest.fn(),
 	}),

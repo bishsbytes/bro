@@ -44,10 +44,9 @@ const styles = StyleSheet.create((theme) => ({
 		height: theme.control.avatarSize,
 		alignItems: "center",
 		justifyContent: "center",
-		borderWidth: 1,
-		borderColor: theme.colors.border,
+		borderWidth: 0,
 		borderRadius: theme.control.avatarSize / 2,
-		backgroundColor: theme.colors.surface,
+		backgroundColor: "transparent",
 	},
 	initial: {
 		...theme.typography.score,
