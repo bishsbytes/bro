@@ -1,12 +1,25 @@
 export const DEVICE_SETTINGS_DATABASE_NAME = "bro-device.db";
 
+export const THEME_MODES = ["system", "light", "dark"] as const;
+export type ThemeMode = (typeof THEME_MODES)[number];
+
+export const ACCENT_COLORS = [
+	"neutral",
+	"emerald",
+	"sky",
+	"rose",
+	"amber",
+	"amethyst",
+] as const;
+export type AccentColor = (typeof ACCENT_COLORS)[number];
+
 /**
  * Device-local settings. Never replicated: everything in the product database
  * (`bro.db`) syncs once a user opts in, so onboarding state and lock
  * preferences kept there would propagate to their other devices and
  * `installationId` would stop identifying an install.
  *
- * Stored as key-value rather than as a schema, because it is six flat scalars
+ * Stored as key-value rather than as a schema, because it is a few flat scalars
  * — a relational shape would be ceremony without a table to justify it.
  */
 export type DeviceSettingsSnapshot = {
@@ -15,6 +28,8 @@ export type DeviceSettingsSnapshot = {
 	onboardingComplete: boolean;
 	appLockEnabled: boolean;
 	appLockTimeoutSeconds: number | null;
+	themeMode: ThemeMode;
+	accentColor: AccentColor;
 	/** Lets startup skip all session work for a user who has never registered. */
 	hasStoredRemoteSession: boolean;
 	/** The account currently signed in on this device, or null. Not a claim on the data. */
@@ -27,6 +42,8 @@ export const DEVICE_SETTINGS_KEYS = {
 	onboardingComplete: "onboardingComplete",
 	appLockEnabled: "appLockEnabled",
 	appLockTimeoutSeconds: "appLockTimeoutSeconds",
+	themeMode: "themeMode",
+	accentColor: "accentColor",
 	hasStoredRemoteSession: "hasStoredRemoteSession",
 	lastRemoteUserId: "lastRemoteUserId",
 } as const;
@@ -53,6 +70,7 @@ export type DeviceSettingsApi = {
 	readDeviceSettings: () => DeviceSettingsSnapshot;
 	setOnboardingComplete: (complete: boolean) => void;
 	setAppLock: (enabled: boolean, timeoutSeconds: number | null) => void;
+	setAppearance: (themeMode: ThemeMode, accentColor: AccentColor) => void;
 	setRemoteSessionMarker: (
 		hasStoredRemoteSession: boolean,
 		lastRemoteUserId: string | null,
@@ -73,6 +91,17 @@ export function createDeviceSettings(
 
 		const parsed = Number.parseInt(raw, 10);
 		return Number.isNaN(parsed) ? null : parsed;
+	};
+
+	const readChoice = <Choice extends string>(
+		key: string,
+		choices: readonly Choice[],
+		fallback: Choice,
+	): Choice => {
+		const value = backend.getItem(key);
+		return value !== null && choices.includes(value as Choice)
+			? (value as Choice)
+			: fallback;
 	};
 
 	/**
@@ -107,6 +136,16 @@ export function createDeviceSettings(
 			appLockTimeoutSeconds: readInteger(
 				DEVICE_SETTINGS_KEYS.appLockTimeoutSeconds,
 			),
+			themeMode: readChoice(
+				DEVICE_SETTINGS_KEYS.themeMode,
+				THEME_MODES,
+				"system",
+			),
+			accentColor: readChoice(
+				DEVICE_SETTINGS_KEYS.accentColor,
+				ACCENT_COLORS,
+				"neutral",
+			),
 			hasStoredRemoteSession: readBoolean(
 				DEVICE_SETTINGS_KEYS.hasStoredRemoteSession,
 			),
@@ -139,6 +178,11 @@ export function createDeviceSettings(
 				DEVICE_SETTINGS_KEYS.appLockTimeoutSeconds,
 				timeoutSeconds === null ? null : String(timeoutSeconds),
 			);
+		},
+
+		setAppearance(themeMode, accentColor) {
+			backend.setItem(DEVICE_SETTINGS_KEYS.themeMode, themeMode);
+			backend.setItem(DEVICE_SETTINGS_KEYS.accentColor, accentColor);
 		},
 
 		setRemoteSessionMarker(hasStoredRemoteSession, lastRemoteUserId) {

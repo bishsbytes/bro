@@ -29,8 +29,9 @@ export function AvatarButton({
 				<Text style={styles.initial}>{initial}</Text>
 			) : (
 				<MaterialIcons
+					testID="account-header-icon"
 					name="person"
-					color={theme.colors.brand}
+					color={theme.colors.text}
 					size={theme.control.avatarIconSize}
 				/>
 			)}
@@ -50,6 +51,6 @@ const styles = StyleSheet.create((theme) => ({
 	},
 	initial: {
 		...theme.typography.score,
-		color: theme.colors.brand,
+		color: theme.colors.text,
 	},
 }));

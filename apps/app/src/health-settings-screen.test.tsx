@@ -13,6 +13,12 @@ jest.mock("expo-router", () => ({
 	},
 }));
 
+jest.mock("./providers/device-settings-provider", () => ({
+	useDeviceSettings: () => ({
+		settings: { themeMode: "system", accentColor: "neutral" },
+	}),
+}));
+
 const disconnected: HealthSettingsSnapshot = {
 	availability: { available: true, platform: "health_connect" },
 	platform: "health_connect",

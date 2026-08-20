@@ -1,18 +1,19 @@
 import { type Href, router, useFocusEffect } from "expo-router";
 import { useCallback, useMemo, useState } from "react";
-import { ActivityIndicator, Switch, View } from "react-native";
+import { ActivityIndicator, View } from "react-native";
 import { AppText } from "../../components/app-text";
 import { Button } from "../../components/button";
 import { Card } from "../../components/card";
 import { EmptyState } from "../../components/empty-state";
 import { Screen } from "../../components/screen";
 import { SectionHeader } from "../../components/section-header";
+import { ThemedSwitch } from "../../components/themed-switch";
 import {
 	createDrinksStore,
 	type DrinkSettingsSnapshot,
 	type DrinksStore,
 } from "../../drinks/drinks-store";
-import { StyleSheet, useUnistyles } from "../../theme/unistyles";
+import { StyleSheet } from "../../theme/unistyles";
 
 type DrinksSettingsScreenProps = {
 	store?: Pick<DrinksStore, "loadSettings" | "setTracked" | "setUnit">;
@@ -20,7 +21,6 @@ type DrinksSettingsScreenProps = {
 
 export function DrinksSettingsScreen({ store }: DrinksSettingsScreenProps) {
 	const drinks = useMemo(() => store ?? createDrinksStore(), [store]);
-	const { theme } = useUnistyles();
 	const [snapshot, setSnapshot] = useState<DrinkSettingsSnapshot | null>(null);
 	const [busyKey, setBusyKey] = useState<string | null>(null);
 	const [error, setError] = useState<string | null>(null);
@@ -100,14 +100,10 @@ export function DrinksSettingsScreen({ store }: DrinksSettingsScreenProps) {
 								Daily total from your logged drinks
 							</AppText>
 						</View>
-						<Switch
+						<ThemedSwitch
 							accessibilityLabel={`${metric.tracked ? "Stop tracking" : "Track"} ${metric.label}`}
 							value={metric.tracked}
 							disabled={busyKey !== null}
-							trackColor={{
-								false: theme.colors.border,
-								true: theme.colors.brand,
-							}}
 							onValueChange={(enabled) =>
 								void mutate(metric.metricSlug, () =>
 									drinks.setTracked(metric.metricSlug, enabled),

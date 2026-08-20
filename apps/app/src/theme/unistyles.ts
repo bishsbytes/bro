@@ -1,17 +1,31 @@
-import { StyleSheet, useUnistyles } from "react-native-unistyles";
+import type { AccentColor, ThemeMode } from "@bro/database-app";
+import {
+	StyleSheet,
+	UnistylesRuntime,
+	useUnistyles,
+} from "react-native-unistyles";
 
 // Import themed APIs from this module rather than directly from Unistyles. Expo
 // Router can evaluate route modules before the root layout, so this module must
 // finish configuring the theme before a route creates a themed stylesheet.
 export { StyleSheet, useUnistyles };
 
+export const ACCENT_OPTIONS: readonly {
+	value: AccentColor;
+	label: string;
+}[] = [
+	{ value: "neutral", label: "Neutral" },
+	{ value: "emerald", label: "Emerald" },
+	{ value: "sky", label: "Sky" },
+	{ value: "rose", label: "Rose" },
+	{ value: "amber", label: "Amber" },
+	{ value: "amethyst", label: "Amethyst" },
+];
+
 /**
- * The product's visual system. The palette deliberately stays neutral: hierarchy
- * comes from type, spacing, and the contrast between the canvas and raised white
- * surfaces rather than from decorative colour.
- *
- * Every colour in the app comes from here — a hardcoded hex in a screen is a bug,
- * because it cannot follow the device's colour scheme.
+ * The product's visual system. Most of the palette deliberately stays neutral:
+ * an accent adds identity to actions, selections, charts, and navigation without
+ * washing the calm canvas or raised surfaces in decorative colour.
  */
 const shared = {
 	spacing: {
@@ -69,19 +83,14 @@ const shared = {
 	},
 } as const;
 
-export const lightTheme = {
-	...shared,
-	colors: {
+const schemeColors = {
+	light: {
 		background: "#f3f2f0",
 		text: "#1b1d1a",
 		textMuted: "#686b67",
 		textSubtle: "#94928f",
 		border: "#dfdedb",
 		surface: "#ffffff",
-		selected: "#e9e8e5",
-		onSelected: "#1b1d1a",
-		brand: "#1b1d1a",
-		onBrand: "#ffffff",
 		danger: "#b42318",
 		onDanger: "#fff8f7",
 		headerBackground: "#f3f2f0",
@@ -90,21 +99,13 @@ export const lightTheme = {
 		tabInactive: "#9a9c99",
 		tabIndicator: "#eeedea",
 	},
-} as const;
-
-export const darkTheme = {
-	...shared,
-	colors: {
+	dark: {
 		background: "#141512",
 		text: "#f2f2ee",
 		textMuted: "#b8bab5",
 		textSubtle: "#8f918c",
 		border: "#383a36",
 		surface: "#20211e",
-		selected: "#343630",
-		onSelected: "#f5f5f0",
-		brand: "#efefe9",
-		onBrand: "#181916",
 		danger: "#ff8a80",
 		onDanger: "#25110f",
 		headerBackground: "#151613",
@@ -114,6 +115,131 @@ export const darkTheme = {
 		tabIndicator: "#30322d",
 	},
 } as const;
+
+const accents = {
+	neutral: {
+		light: {
+			brand: "#1b1d1a",
+			onBrand: "#ffffff",
+			selected: "#e9e8e5",
+			onSelected: "#1b1d1a",
+		},
+		dark: {
+			brand: "#efefe9",
+			onBrand: "#181916",
+			selected: "#343630",
+			onSelected: "#f5f5f0",
+		},
+	},
+	emerald: {
+		light: {
+			brand: "#167553",
+			onBrand: "#ffffff",
+			selected: "#dceee7",
+			onSelected: "#123d30",
+		},
+		dark: {
+			brand: "#72d6ad",
+			onBrand: "#10271e",
+			selected: "#244b3b",
+			onSelected: "#dff8ed",
+		},
+	},
+	sky: {
+		light: {
+			brand: "#316db1",
+			onBrand: "#ffffff",
+			selected: "#dfeaf7",
+			onSelected: "#183754",
+		},
+		dark: {
+			brand: "#83b9f2",
+			onBrand: "#10253b",
+			selected: "#29435f",
+			onSelected: "#e4f1ff",
+		},
+	},
+	rose: {
+		light: {
+			brand: "#ad3d62",
+			onBrand: "#ffffff",
+			selected: "#f4e0e7",
+			onSelected: "#572236",
+		},
+		dark: {
+			brand: "#ee91ad",
+			onBrand: "#35131e",
+			selected: "#583141",
+			onSelected: "#ffe7ee",
+		},
+	},
+	amber: {
+		light: {
+			brand: "#7b5707",
+			onBrand: "#ffffff",
+			selected: "#f2e7ca",
+			onSelected: "#3e2d08",
+		},
+		dark: {
+			brand: "#e6bd68",
+			onBrand: "#2d220c",
+			selected: "#4d3e20",
+			onSelected: "#f9edcf",
+		},
+	},
+	amethyst: {
+		light: {
+			brand: "#74519d",
+			onBrand: "#ffffff",
+			selected: "#ebe2f2",
+			onSelected: "#3d2854",
+		},
+		dark: {
+			brand: "#c4a0e6",
+			onBrand: "#2b173d",
+			selected: "#49365a",
+			onSelected: "#f3e7ff",
+		},
+	},
+} as const satisfies Record<
+	AccentColor,
+	Record<"light" | "dark", Record<string, string>>
+>;
+
+export function createTheme(
+	scheme: "light" | "dark",
+	accentColor: AccentColor,
+) {
+	return {
+		...shared,
+		colors: {
+			...schemeColors[scheme],
+			...accents[accentColor][scheme],
+		},
+	};
+}
+
+export const lightTheme = createTheme("light", "neutral");
+export const darkTheme = createTheme("dark", "neutral");
+
+/** Applies one preference consistently to every themed surface in the app. */
+export function applyAppearance(
+	themeMode: ThemeMode,
+	accentColor: AccentColor,
+) {
+	UnistylesRuntime.updateTheme("light", () =>
+		createTheme("light", accentColor),
+	);
+	UnistylesRuntime.updateTheme("dark", () => createTheme("dark", accentColor));
+
+	if (themeMode === "system") {
+		UnistylesRuntime.setAdaptiveThemes(true);
+		return;
+	}
+
+	UnistylesRuntime.setAdaptiveThemes(false);
+	UnistylesRuntime.setTheme(themeMode);
+}
 
 /** Keeps native stack headers in the same visual system as app-owned headers. */
 export function stackScreenOptions(
@@ -140,8 +266,6 @@ declare module "react-native-unistyles" {
 StyleSheet.configure({
 	themes: { light: lightTheme, dark: darkTheme },
 	settings: {
-		// Follows the OS, which is what app.json's `userInterfaceStyle: automatic`
-		// has been promising all along.
 		adaptiveThemes: true,
 	},
 });

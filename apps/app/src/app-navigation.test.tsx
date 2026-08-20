@@ -27,6 +27,7 @@ jest.mock("@bro/database-app", () => ({
 	closeDeviceSettings: () => mockCloseDeviceSettings(),
 	setOnboardingComplete: (complete: boolean) =>
 		mockSetOnboardingComplete(complete),
+	setAppearance: jest.fn(),
 	setRemoteSessionMarker: jest.fn(),
 }));
 
@@ -155,6 +156,8 @@ const baseSettings: DeviceSettingsSnapshot = {
 	onboardingComplete: false,
 	appLockEnabled: false,
 	appLockTimeoutSeconds: null,
+	themeMode: "system",
+	accentColor: "neutral",
 	hasStoredRemoteSession: false,
 	lastRemoteUserId: null,
 };
@@ -295,6 +298,13 @@ describe("app entry", () => {
 		await press(view, "Settings");
 		await waitFor(() => expect(router.getPathname()).toBe("/settings"));
 		expect(await view.findByText("Data on this device")).toBeTruthy();
+		await press(view, "Appearance");
+		await waitFor(() =>
+			expect(router.getPathname()).toBe("/settings/appearance"),
+		);
+		expect(view.getByText("Accent colour")).toBeTruthy();
+		await act(async () => expoRouter.back());
+		await waitFor(() => expect(router.getPathname()).toBe("/settings"));
 		await press(view, "Privacy");
 		await waitFor(() => expect(router.getPathname()).toBe("/settings/privacy"));
 		expect(view.getByText("Where your data lives")).toBeTruthy();

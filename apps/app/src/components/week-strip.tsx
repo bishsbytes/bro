@@ -211,14 +211,14 @@ export function WeekStrip({
 							>
 								<AppText
 									variant="micro"
-									color={selected ? "default" : "subtle"}
+									color={selected ? "brand" : "subtle"}
 									style={selected && styles.selectedText}
 								>
 									{presentation?.weekday ?? weekdayLabel(localDay)}
 								</AppText>
 								<AppText
 									variant="label"
-									color={selected ? "default" : "subtle"}
+									color={selected ? "brand" : "subtle"}
 									style={[
 										localDay === todayLocalDay && styles.todayNumber,
 										selected && styles.selectedText,

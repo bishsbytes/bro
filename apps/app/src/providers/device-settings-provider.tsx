@@ -1,7 +1,10 @@
 import {
+	type AccentColor,
 	type DeviceSettingsSnapshot,
+	setAppearance,
 	setOnboardingComplete,
 	setRemoteSessionMarker,
+	type ThemeMode,
 } from "@bro/database-app";
 import {
 	createContext,
@@ -11,10 +14,12 @@ import {
 	useMemo,
 	useState,
 } from "react";
+import { applyAppearance } from "../theme/unistyles";
 
 type DeviceSettingsContextValue = {
 	settings: DeviceSettingsSnapshot;
 	completeOnboarding: () => void;
+	updateAppearance: (themeMode: ThemeMode, accentColor: AccentColor) => void;
 	markRemoteSessionStored: (userId: string | null) => Promise<void>;
 	clearRemoteSession: () => Promise<void>;
 };
@@ -36,6 +41,19 @@ export function DeviceSettingsProvider({
 		setOnboardingComplete(true);
 		setSettings((current) => ({ ...current, onboardingComplete: true }));
 	}, []);
+
+	const updateAppearance = useCallback(
+		(themeMode: ThemeMode, accentColor: AccentColor) => {
+			setAppearance(themeMode, accentColor);
+			applyAppearance(themeMode, accentColor);
+			setSettings((current) => ({
+				...current,
+				themeMode,
+				accentColor,
+			}));
+		},
+		[],
+	);
 
 	// The auth provider owns the marker's lifecycle and awaits these, so they
 	// stay promise-returning even though the write beneath them is synchronous.
@@ -79,10 +97,17 @@ export function DeviceSettingsProvider({
 		() => ({
 			settings,
 			completeOnboarding,
+			updateAppearance,
 			markRemoteSessionStored,
 			clearRemoteSession,
 		}),
-		[settings, completeOnboarding, markRemoteSessionStored, clearRemoteSession],
+		[
+			settings,
+			completeOnboarding,
+			updateAppearance,
+			markRemoteSessionStored,
+			clearRemoteSession,
+		],
 	);
 
 	return (

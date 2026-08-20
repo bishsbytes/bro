@@ -33,7 +33,9 @@ export function Button({
 				? theme.colors.onDanger
 				: dangerTone
 					? theme.colors.danger
-					: theme.colors.brand;
+					: variant === "secondary"
+						? theme.colors.text
+						: theme.colors.brand;
 
 	return (
 		<TouchableOpacity

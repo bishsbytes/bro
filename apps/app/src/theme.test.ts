@@ -1,4 +1,10 @@
-import { darkTheme, lightTheme, stackScreenOptions } from "./theme/unistyles";
+import {
+	ACCENT_OPTIONS,
+	createTheme,
+	darkTheme,
+	lightTheme,
+	stackScreenOptions,
+} from "./theme/unistyles";
 
 describe("design tokens", () => {
 	it("defines every colour in both themes", () => {
@@ -31,6 +37,23 @@ describe("design tokens", () => {
 		expect(darkTheme.typography).toEqual(lightTheme.typography);
 		expect(darkTheme.control).toEqual(lightTheme.control);
 		expect(darkTheme.opacity).toEqual(lightTheme.opacity);
+	});
+
+	it("gives every curated accent a complete light and dark treatment", () => {
+		for (const option of ACCENT_OPTIONS) {
+			const light = createTheme("light", option.value);
+			const dark = createTheme("dark", option.value);
+
+			expect(Object.keys(light.colors).sort()).toEqual(
+				Object.keys(lightTheme.colors).sort(),
+			);
+			expect(Object.keys(dark.colors).sort()).toEqual(
+				Object.keys(darkTheme.colors).sort(),
+			);
+			expect(light.colors.brand).not.toBe(dark.colors.brand);
+			expect(light.spacing).toBe(lightTheme.spacing);
+			expect(dark.spacing).toBe(darkTheme.spacing);
+		}
 	});
 
 	it("uses a distinct canvas and raised surface in each colour scheme", () => {

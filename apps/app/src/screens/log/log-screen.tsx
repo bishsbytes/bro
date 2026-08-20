@@ -1,6 +1,6 @@
 import { router, useFocusEffect } from "expo-router";
 import { useCallback, useMemo, useState } from "react";
-import { ActivityIndicator, Switch, View } from "react-native";
+import { ActivityIndicator, View } from "react-native";
 import {
 	type BodyOverview,
 	type BodyStore,
@@ -13,6 +13,7 @@ import { EmptyState } from "../../components/empty-state";
 import { ListRow } from "../../components/list-row";
 import { Screen } from "../../components/screen";
 import { SectionHeader } from "../../components/section-header";
+import { ThemedSwitch } from "../../components/themed-switch";
 import { TrendChart } from "../../components/trend-chart";
 import {
 	createDrinksStore,
@@ -24,7 +25,7 @@ import {
 	type FoodDaySnapshot,
 	type FoodStore,
 } from "../../food/food-store";
-import { StyleSheet, useUnistyles } from "../../theme/unistyles";
+import { StyleSheet } from "../../theme/unistyles";
 
 type LogScreenProps = {
 	bodyStore?: Pick<BodyStore, "loadOverview" | "setTracked">;
@@ -98,7 +99,6 @@ export function LogScreen({
 		[drinksStore],
 	);
 	const food = useMemo(() => foodStore ?? createFoodStore(), [foodStore]);
-	const { theme } = useUnistyles();
 	const [snapshot, setSnapshot] = useState<LogSnapshot | null>(null);
 	const [busySlug, setBusySlug] = useState<string | null>(null);
 	const [error, setError] = useState<string | null>(null);
@@ -230,14 +230,10 @@ export function LogScreen({
 								)}
 							</View>
 							{metric.userEnterable ? (
-								<Switch
+								<ThemedSwitch
 									accessibilityLabel={`${metric.tracked ? "Stop tracking" : "Track"} ${metric.label}`}
 									value={metric.tracked}
 									disabled={busySlug !== null}
-									trackColor={{
-										false: theme.colors.border,
-										true: theme.colors.brand,
-									}}
 									onValueChange={(enabled) =>
 										void setTracked(metric.metricSlug, enabled)
 									}
@@ -285,14 +281,10 @@ export function LogScreen({
 									Enter in {metric.displayUnit}
 								</AppText>
 							</View>
-							<Switch
+							<ThemedSwitch
 								accessibilityLabel={`Track ${metric.label}`}
 								value={false}
 								disabled={busySlug !== null}
-								trackColor={{
-									false: theme.colors.border,
-									true: theme.colors.brand,
-								}}
 								onValueChange={(enabled) =>
 									void setTracked(metric.metricSlug, enabled)
 								}

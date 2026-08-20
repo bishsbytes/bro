@@ -1,17 +1,18 @@
 import { useMemo, useState } from "react";
-import { Switch, View } from "react-native";
+import { View } from "react-native";
 import { AppText } from "../../components/app-text";
 import { Button } from "../../components/button";
 import { Card } from "../../components/card";
 import { Screen } from "../../components/screen";
 import { SectionHeader } from "../../components/section-header";
+import { ThemedSwitch } from "../../components/themed-switch";
 import { createExportStore, type ExportStore } from "../../export/export-store";
 import {
 	type ExportShareResult,
 	exportFileName,
 	shareExport,
 } from "../../export/share-export";
-import { StyleSheet, useUnistyles } from "../../theme/unistyles";
+import { StyleSheet } from "../../theme/unistyles";
 
 type ExportScreenProps = {
 	store?: Pick<ExportStore, "serialize">;
@@ -23,7 +24,6 @@ export function ExportScreen({
 	share = shareExport,
 }: ExportScreenProps) {
 	const exporter = useMemo(() => store ?? createExportStore(), [store]);
-	const { theme } = useUnistyles();
 	const [includeSensitive, setIncludeSensitive] = useState(false);
 	const [busy, setBusy] = useState(false);
 	const [result, setResult] = useState<string | null>(null);
@@ -61,14 +61,10 @@ export function ExportScreen({
 							areas.
 						</AppText>
 					</View>
-					<Switch
+					<ThemedSwitch
 						accessibilityLabel="Include sensitive data"
 						value={includeSensitive}
 						disabled={busy}
-						trackColor={{
-							false: theme.colors.border,
-							true: theme.colors.brand,
-						}}
 						onValueChange={setIncludeSensitive}
 					/>
 				</View>

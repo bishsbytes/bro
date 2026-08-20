@@ -41,6 +41,8 @@ describe("device-local settings", () => {
 			onboardingComplete: false,
 			appLockEnabled: false,
 			appLockTimeoutSeconds: null,
+			themeMode: "system",
+			accentColor: "neutral",
 			hasStoredRemoteSession: false,
 			lastRemoteUserId: null,
 		});
@@ -81,6 +83,7 @@ describe("device-local settings", () => {
 
 		deviceSettings.setOnboardingComplete(true);
 		deviceSettings.setAppLock(true, 120);
+		deviceSettings.setAppearance("dark", "emerald");
 		deviceSettings.setRemoteSessionMarker(true, "user-a");
 		deviceSettings.closeDeviceSettings();
 
@@ -89,6 +92,8 @@ describe("device-local settings", () => {
 			onboardingComplete: true,
 			appLockEnabled: true,
 			appLockTimeoutSeconds: 120,
+			themeMode: "dark",
+			accentColor: "emerald",
 			hasStoredRemoteSession: true,
 			lastRemoteUserId: "user-a",
 		});
@@ -118,5 +123,21 @@ describe("device-local settings", () => {
 		expect(() => deviceSettings.readDeviceSettings()).toThrow(
 			"Device settings were created by a newer version of the app.",
 		);
+	});
+
+	it("falls back safely when a stored appearance value is unknown", () => {
+		const seed = new mockSqlite.SQLiteStorage("bro-device.db");
+		seed.setItemSync("schemaVersion", "1");
+		seed.setItemSync("installationId", "install-1");
+		seed.setItemSync("themeMode", "sepia");
+		seed.setItemSync("accentColor", "ultraviolet");
+		seed.closeSync();
+
+		const deviceSettings = relaunch();
+
+		expect(deviceSettings.readDeviceSettings()).toMatchObject({
+			themeMode: "system",
+			accentColor: "neutral",
+		});
 	});
 });

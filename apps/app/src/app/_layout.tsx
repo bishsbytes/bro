@@ -22,6 +22,7 @@ import {
 } from "../providers/device-settings-provider";
 import { ReminderNotificationEffects } from "../reminders/reminder-notification-effects";
 import {
+	applyAppearance,
 	StyleSheet,
 	stackScreenOptions,
 	useUnistyles,
@@ -117,6 +118,7 @@ function RootNavigator() {
 
 export default function RootLayout() {
 	const [startup, setStartup] = useState<StartupState>({ kind: "loading" });
+	const { rt } = useUnistyles();
 
 	const start = useCallback(async () => {
 		setStartup({ kind: "loading" });
@@ -125,6 +127,7 @@ export default function RootLayout() {
 			// Device settings read synchronously; both relational stores and their
 			// independent migrations are I/O the startup screen has to wait on.
 			const settings = readDeviceSettings();
+			applyAppearance(settings.themeMode, settings.accentColor);
 			const [db, localDb] = await Promise.all([initDb(), initLocalDb()]);
 			await Promise.all([runMigrations(db), runLocalMigrations(localDb)]);
 			setStartup({ kind: "ready", settings });
@@ -162,7 +165,7 @@ export default function RootLayout() {
 
 	return (
 		<View style={styles.container}>
-			<StatusBar style="auto" />
+			<StatusBar style={rt.themeName === "dark" ? "light" : "dark"} />
 			{startup.kind === "loading" ? <Loading /> : null}
 			{startup.kind === "error" ? (
 				<StorageError error={startup.error} onRetry={retry} />

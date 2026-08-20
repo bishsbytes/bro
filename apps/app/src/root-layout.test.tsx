@@ -21,6 +21,7 @@ jest.mock("@bro/database-app", () => ({
 	closeLocalDb: () => mockCloseLocalDb(),
 	closeDeviceSettings: () => mockCloseDeviceSettings(),
 	setOnboardingComplete: jest.fn(),
+	setAppearance: jest.fn(),
 	setRemoteSessionMarker: jest.fn(),
 }));
 
@@ -116,6 +117,8 @@ const baseSettings: DeviceSettingsSnapshot = {
 	onboardingComplete: true,
 	appLockEnabled: false,
 	appLockTimeoutSeconds: null,
+	themeMode: "system",
+	accentColor: "neutral",
 	hasStoredRemoteSession: false,
 	lastRemoteUserId: null,
 };

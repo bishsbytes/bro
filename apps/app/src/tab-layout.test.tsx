@@ -1,8 +1,23 @@
 import { localDayOf } from "@bro/domain";
 import { render } from "@testing-library/react-native";
 import type { ReactNode } from "react";
+import { StyleSheet as NativeStyleSheet } from "react-native";
 import TabLayout from "./app/(tabs)/_layout";
 import { monthHeaderLabel } from "./components/today-header-month-context";
+import * as themeModule from "./theme/unistyles";
+
+let mockThemeOverride: unknown;
+
+jest.mock("./theme/unistyles", () => {
+	const actual = jest.requireActual("./theme/unistyles");
+	return {
+		...actual,
+		useUnistyles: () =>
+			mockThemeOverride
+				? { theme: mockThemeOverride, rt: {} }
+				: actual.useUnistyles(),
+	};
+});
 
 const mockTabsOptions = jest.fn();
 const mockTabsProps = jest.fn();
@@ -44,6 +59,7 @@ describe("TabLayout", () => {
 	beforeEach(() => {
 		mockPathname = "/";
 		mockSegments = ["(tabs)"];
+		mockThemeOverride = undefined;
 		jest.clearAllMocks();
 	});
 
@@ -90,5 +106,32 @@ describe("TabLayout", () => {
 		await screen.rerender(<TabLayout />);
 
 		expect(screen.queryByText(currentMonth)).toBeNull();
+	});
+
+	it("keeps header icons and active tabs neutral", async () => {
+		const themed = {
+			...themeModule.lightTheme,
+			colors: {
+				...themeModule.lightTheme.colors,
+				text: "neutral-chrome",
+				brand: "accent-colour",
+			},
+		} as unknown as typeof themeModule.lightTheme;
+		mockThemeOverride = themed;
+
+		const screen = await render(<TabLayout />);
+		const screenOptions = mockTabsOptions.mock.calls[0]?.[0] as {
+			tabBarActiveTintColor: string;
+		};
+		const historyIcon = screen.getByTestId("history-header-icon");
+		const accountIcon = screen.getByTestId("account-header-icon");
+
+		expect(screenOptions.tabBarActiveTintColor).toBe("neutral-chrome");
+		expect(NativeStyleSheet.flatten(historyIcon.props.style).color).toBe(
+			"neutral-chrome",
+		);
+		expect(NativeStyleSheet.flatten(accountIcon.props.style).color).toBe(
+			"neutral-chrome",
+		);
 	});
 });

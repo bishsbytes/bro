@@ -55,8 +55,9 @@ function TabShell() {
 									onPress={() => router.push("/history")}
 								>
 									<MaterialIcons
+										testID="history-header-icon"
 										name="calendar-today"
-										color={theme.colors.brand}
+										color={theme.colors.text}
 										size={theme.control.avatarIconSize}
 									/>
 								</TouchableOpacity>
@@ -72,7 +73,7 @@ function TabShell() {
 						// first use, then keep them attached for quick returns.
 						lazy: true,
 						sceneStyle: { backgroundColor: theme.colors.background },
-						tabBarActiveTintColor: theme.colors.brand,
+						tabBarActiveTintColor: theme.colors.text,
 						tabBarInactiveTintColor: theme.colors.tabInactive,
 						tabBarStyle: {
 							backgroundColor: theme.colors.tabBackground,

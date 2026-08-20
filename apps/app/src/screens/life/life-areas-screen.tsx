@@ -13,14 +13,15 @@ import {
 } from "@bro/domain/life-area-catalogue";
 import { useFocusEffect } from "expo-router";
 import { useCallback, useMemo, useState } from "react";
-import { ActivityIndicator, Switch, View } from "react-native";
+import { ActivityIndicator, View } from "react-native";
 import { AppText } from "../../components/app-text";
 import { Button } from "../../components/button";
 import { Card } from "../../components/card";
 import { EmptyState } from "../../components/empty-state";
 import { FormField } from "../../components/form-field";
 import { Screen } from "../../components/screen";
-import { StyleSheet, useUnistyles } from "../../theme/unistyles";
+import { ThemedSwitch } from "../../components/themed-switch";
+import { StyleSheet } from "../../theme/unistyles";
 
 type LifeAreaRepository = Pick<
 	TrackedMetricsRepository,
@@ -40,7 +41,6 @@ export function LifeAreasScreen({ repository }: LifeAreasScreenProps) {
 		() => repository ?? createRepository(),
 		[repository],
 	);
-	const { theme } = useUnistyles();
 	const [areas, setAreas] = useState<ResolvedLifeArea[] | null>(null);
 	const [editingSlug, setEditingSlug] = useState<LifeAreaSlug | null>(null);
 	const [labelDraft, setLabelDraft] = useState("");
@@ -151,14 +151,10 @@ export function LifeAreasScreen({ repository }: LifeAreasScreenProps) {
 								</AppText>
 							) : null}
 						</View>
-						<Switch
+						<ThemedSwitch
 							accessibilityLabel={`${area.enabled ? "Disable" : "Enable"} ${area.label}`}
 							value={area.enabled}
 							disabled={busy}
-							trackColor={{
-								false: theme.colors.border,
-								true: theme.colors.brand,
-							}}
 							onValueChange={(enabled) => {
 								if (
 									enabled &&

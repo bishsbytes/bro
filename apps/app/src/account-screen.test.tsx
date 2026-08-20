@@ -41,6 +41,8 @@ const localSettings: DeviceSettingsSnapshot = {
 	onboardingComplete: true,
 	appLockEnabled: false,
 	appLockTimeoutSeconds: null,
+	themeMode: "system",
+	accentColor: "neutral",
 	hasStoredRemoteSession: false,
 	lastRemoteUserId: null,
 };

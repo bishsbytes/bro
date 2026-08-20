@@ -10,8 +10,9 @@ import { Screen } from "../../components/screen";
 import { SectionHeader } from "../../components/section-header";
 import type { HealthGatewayAvailability } from "../../health/gateway";
 import { healthImportEngine } from "../../health/import-service";
+import { useDeviceSettings } from "../../providers/device-settings-provider";
 import { cancelAllReminderNotifications } from "../../reminders/reminder-materialiser";
-import { StyleSheet } from "../../theme/unistyles";
+import { ACCENT_OPTIONS, StyleSheet } from "../../theme/unistyles";
 
 const DELETE_LOCAL_DATA_COPY =
 	"This permanently deletes data stored by bro on this device. It does not delete your account or data stored elsewhere.";
@@ -63,6 +64,7 @@ export function SettingsScreen({
 	cancelReminderNotifications = cancelAllReminderNotifications,
 	healthAvailability = defaultHealthAvailability,
 }: SettingsScreenProps) {
+	const { settings } = useDeviceSettings();
 	const [deleteStep, setDeleteStep] = useState<DeleteStep>("idle");
 	const [deleting, setDeleting] = useState(false);
 	const [error, setError] = useState<string | null>(null);
@@ -91,6 +93,13 @@ export function SettingsScreen({
 
 	return (
 		<Screen scroll padded gap="md">
+			<ListRow
+				title="Appearance"
+				detail="Choose a theme and a quiet accent for actions and selections."
+				value={`${settings.themeMode === "system" ? "System" : settings.themeMode === "light" ? "Light" : "Dark"} · ${ACCENT_OPTIONS.find(({ value }) => value === settings.accentColor)?.label ?? "Neutral"}`}
+				accessibilityLabel="Manage appearance"
+				onPress={() => router.push("/settings/appearance" as Href)}
+			/>
 			<HealthSettingsEntry availability={healthAvailability} />
 			<ListRow
 				title="Drinks"

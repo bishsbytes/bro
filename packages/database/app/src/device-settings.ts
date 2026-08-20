@@ -6,8 +6,10 @@ import {
 } from "./device-settings-store";
 
 export {
+	type AccentColor,
 	DEVICE_SETTINGS_DATABASE_NAME,
 	type DeviceSettingsSnapshot,
+	type ThemeMode,
 } from "./device-settings-store";
 
 let store: SQLiteStorage | undefined;
@@ -57,6 +59,7 @@ const settings = createDeviceSettings({
 
 export const {
 	readDeviceSettings,
+	setAppearance,
 	setOnboardingComplete,
 	setAppLock,
 	setRemoteSessionMarker,

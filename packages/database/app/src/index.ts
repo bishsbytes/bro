@@ -6,13 +6,16 @@ export {
 } from "./connection";
 export { deleteLocalProductData } from "./delete-local-product-data";
 export {
+	type AccentColor,
 	closeDeviceSettings,
 	DEVICE_SETTINGS_DATABASE_NAME,
 	type DeviceSettingsSnapshot,
 	readDeviceSettings,
+	setAppearance,
 	setAppLock,
 	setOnboardingComplete,
 	setRemoteSessionMarker,
+	type ThemeMode,
 } from "./device-settings";
 export {
 	closeLocalDb,

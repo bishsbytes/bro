@@ -1,5 +1,26 @@
-import { act, fireEvent, render, waitFor } from "@testing-library/react-native";
+import {
+	act,
+	fireEvent,
+	render,
+	waitFor,
+	within,
+} from "@testing-library/react-native";
+import { StyleSheet as NativeStyleSheet } from "react-native";
+import * as themeModule from "../theme/unistyles";
 import { WeekStrip, type WeekStripDayIndicator } from "./week-strip";
+
+let mockThemeOverride: unknown;
+
+jest.mock("../theme/unistyles", () => {
+	const actual = jest.requireActual("../theme/unistyles");
+	return {
+		...actual,
+		useUnistyles: () =>
+			mockThemeOverride
+				? { theme: mockThemeOverride, rt: {} }
+				: actual.useUnistyles(),
+	};
+});
 
 const TODAY = "2026-08-20";
 
@@ -46,6 +67,10 @@ async function renderStrip(
 }
 
 describe("WeekStrip", () => {
+	beforeEach(() => {
+		mockThemeOverride = undefined;
+	});
+
 	it("renders the current week and reports its inclusive visible range", async () => {
 		const { view, onVisibleRangeChange } = await renderStrip();
 
@@ -64,6 +89,15 @@ describe("WeekStrip", () => {
 	});
 
 	it("selects enabled days and exposes selection accessibly", async () => {
+		const themed = {
+			...themeModule.lightTheme,
+			colors: {
+				...themeModule.lightTheme.colors,
+				text: "neutral-text",
+				brand: "accent-colour",
+			},
+		} as unknown as typeof themeModule.lightTheme;
+		mockThemeOverride = themed;
 		const { view, onSelectDay } = await renderStrip();
 		const yesterday = view.getByTestId("week-strip-day-2026-08-19");
 
@@ -74,6 +108,10 @@ describe("WeekStrip", () => {
 			selected: true,
 			disabled: false,
 		});
+		expect(
+			NativeStyleSheet.flatten(within(yesterday).getByText("19").props.style)
+				.color,
+		).toBe("accent-colour");
 		await fireEvent.press(view.getByTestId("week-strip-day-2026-08-18"));
 		expect(onSelectDay).toHaveBeenCalledWith("2026-08-18");
 	});

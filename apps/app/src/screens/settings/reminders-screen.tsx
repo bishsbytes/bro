@@ -9,7 +9,7 @@ import {
 } from "@bro/logic";
 import { useFocusEffect } from "expo-router";
 import { useCallback, useMemo, useState } from "react";
-import { ActivityIndicator, Linking, Switch, View } from "react-native";
+import { ActivityIndicator, Linking, View } from "react-native";
 import { AppText } from "../../components/app-text";
 import { Button } from "../../components/button";
 import { Card } from "../../components/card";
@@ -17,12 +17,13 @@ import { EmptyState } from "../../components/empty-state";
 import { FormField } from "../../components/form-field";
 import { Screen } from "../../components/screen";
 import { SectionHeader } from "../../components/section-header";
+import { ThemedSwitch } from "../../components/themed-switch";
 import {
 	createReminderStore,
 	type ReminderScreenState,
 	type ReminderStore,
 } from "../../reminders/reminder-store";
-import { StyleSheet, useUnistyles } from "../../theme/unistyles";
+import { StyleSheet } from "../../theme/unistyles";
 import {
 	createUnitSettingsStore,
 	type UnitSettingsStore,
@@ -144,7 +145,6 @@ export function RemindersScreen({
 		() => unitSettingsStore ?? createUnitSettingsStore(),
 		[unitSettingsStore],
 	);
-	const { theme } = useUnistyles();
 	const [state, setState] = useState<ReminderScreenState | null>(null);
 	const [error, setError] = useState<string | null>(null);
 	const [busy, setBusy] = useState(false);
@@ -240,14 +240,10 @@ export function RemindersScreen({
 							</AppText>
 							<AppText color="muted">{formatDays(reminder.daysOfWeek)}</AppText>
 						</View>
-						<Switch
+						<ThemedSwitch
 							accessibilityLabel={`${reminder.enabled ? "Disable" : "Enable"} ${formatTime(reminder.minuteOfDay)} reminder`}
 							value={reminder.enabled}
 							disabled={busy}
-							trackColor={{
-								false: theme.colors.border,
-								true: theme.colors.brand,
-							}}
 							onValueChange={(enabled) =>
 								void mutate(() =>
 									remindersStore.setEnabled(reminder.id, enabled),

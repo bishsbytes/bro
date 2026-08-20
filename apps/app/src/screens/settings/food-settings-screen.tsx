@@ -1,18 +1,19 @@
 import { type Href, router, useFocusEffect } from "expo-router";
 import { useCallback, useMemo, useState } from "react";
-import { ActivityIndicator, Switch, View } from "react-native";
+import { ActivityIndicator, View } from "react-native";
 import { AppText } from "../../components/app-text";
 import { Button } from "../../components/button";
 import { Card } from "../../components/card";
 import { EmptyState } from "../../components/empty-state";
 import { Screen } from "../../components/screen";
 import { SectionHeader } from "../../components/section-header";
+import { ThemedSwitch } from "../../components/themed-switch";
 import {
 	createFoodStore,
 	type FoodSettingsSnapshot,
 	type FoodStore,
 } from "../../food/food-store";
-import { StyleSheet, useUnistyles } from "../../theme/unistyles";
+import { StyleSheet } from "../../theme/unistyles";
 
 type FoodSettingsScreenProps = {
 	store?: Pick<FoodStore, "loadSettings" | "setTracked">;
@@ -20,7 +21,6 @@ type FoodSettingsScreenProps = {
 
 export function FoodSettingsScreen({ store }: FoodSettingsScreenProps) {
 	const food = useMemo(() => store ?? createFoodStore(), [store]);
-	const { theme } = useUnistyles();
 	const [snapshot, setSnapshot] = useState<FoodSettingsSnapshot | null>(null);
 	const [busyKey, setBusyKey] = useState<string | null>(null);
 	const [error, setError] = useState<string | null>(null);
@@ -84,14 +84,10 @@ export function FoodSettingsScreen({ store }: FoodSettingsScreenProps) {
 								Daily total from food and other applicable entries
 							</AppText>
 						</View>
-						<Switch
+						<ThemedSwitch
 							accessibilityLabel={`${metric.tracked ? "Stop tracking" : "Track"} ${metric.label}`}
 							value={metric.tracked}
 							disabled={busyKey !== null}
-							trackColor={{
-								false: theme.colors.border,
-								true: theme.colors.brand,
-							}}
 							onValueChange={(enabled) =>
 								void setTracked(metric.metricSlug, enabled)
 							}
