@@ -12,10 +12,12 @@ export function formatLocalDayLabel(
 	if (localDay === todayLocalDay) return "Today";
 	if (localDay === previousLocalDay(todayLocalDay)) return "Yesterday";
 
+	const sameYear = localDay.slice(0, 4) === todayLocalDay.slice(0, 4);
 	return new Intl.DateTimeFormat(locale, {
 		weekday: "long",
 		day: "numeric",
 		month: "long",
+		year: sameYear ? undefined : "numeric",
 		timeZone: "UTC",
 	}).format(new Date(`${localDay}T00:00:00.000Z`));
 }

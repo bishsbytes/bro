@@ -19,6 +19,15 @@ describe("formatLocalDayLabel", () => {
 		);
 	});
 
+	it("adds the year once the day falls outside the current year", () => {
+		expect(formatLocalDayLabel("2025-08-18", "2026-08-20", "en-GB")).toBe(
+			"Monday, 18 August 2025",
+		);
+		expect(formatLocalDayLabel("2026-01-01", "2026-08-20", "en-GB")).toBe(
+			"Thursday 1 January",
+		);
+	});
+
 	it("rejects invalid local days", () => {
 		expect(() =>
 			formatLocalDayLabel("2026-02-30", "2026-08-20", "en-GB"),

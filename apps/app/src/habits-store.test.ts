@@ -214,6 +214,23 @@ describe("habits store", () => {
 		]);
 	});
 
+	it("keeps days before a habit existed out of its past-day snapshot", async () => {
+		now = new Date("2026-08-17T12:00:00.000Z");
+		await store.addTemplate(habit("habit:reading"), {
+			label: "Read",
+			daysOfWeek: 0b111_1111,
+			targetValue: null,
+			areaSlug: null,
+		});
+
+		// The past-day view must agree with the adherence ring: a habit added
+		// today was never scheduled yesterday, so it offers no backfill there.
+		expect((await store.loadToday("2026-08-16")).habits).toEqual([]);
+		expect((await store.loadToday("2026-08-17")).habits).toEqual([
+			expect.objectContaining({ label: "Read" }),
+		]);
+	});
+
 	it("heals ranged metric adherence after a backdated import", async () => {
 		now = new Date("2026-08-14T12:00:00.000Z");
 		const steps = await store.addTemplate(habit("habit:steps-10k"), {

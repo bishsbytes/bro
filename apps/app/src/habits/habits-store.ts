@@ -346,8 +346,10 @@ export class HabitsStore {
 			this.habits.listActive(),
 			this.enrolments.listActive(),
 		]);
-		const scheduled = activeHabits.filter((habit) =>
-			isHabitScheduled(localDay, habit.daysOfWeek),
+		const scheduled = activeHabits.filter(
+			(habit) =>
+				localDay >= localDayAt(habit.addedAt, this.timeZone()) &&
+				isHabitScheduled(localDay, habit.daysOfWeek),
 		);
 		const habitCards = await Promise.all(
 			scheduled.map(async (habit): Promise<TodayHabit> => {

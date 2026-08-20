@@ -7,7 +7,13 @@
 	},
 	"files": {
 		"ignoreUnknown": false,
-		"includes": ["**", "!**/__fixtures__", "!**/drizzle/meta"]
+		"includes": [
+			"**",
+			"!**/__fixtures__",
+			"!**/drizzle/meta",
+			"!apps/app/ios",
+			"!apps/app/android"
+		]
 	},
 	"formatter": {
 		"enabled": true,
