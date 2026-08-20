@@ -1,4 +1,5 @@
 import { render } from "@testing-library/react-native";
+import type { TodayHabit, TodayHabitsSnapshot } from "./habits/habits-store";
 import type { ReviewResult } from "./review/review-store";
 import { LifeScreen } from "./screens/life/life-screen";
 
@@ -16,6 +17,43 @@ const emptyHabits = {
 	habits: [],
 	challenges: [],
 };
+
+function habit(id: string, label: string, completed: boolean): TodayHabit {
+	return {
+		habit: {
+			id,
+			slug: `habit:${id}`,
+			customLabel: null,
+			kind: "manual",
+			metricSlug: null,
+			areaSlug: null,
+			direction: null,
+			targetValue: null,
+			daysOfWeek: 0b111_1111,
+			position: 0,
+			addedAt: 1,
+			removedAt: null,
+			createdAt: 1,
+			updatedAt: 1,
+		},
+		label,
+		completed,
+		streak: 0,
+		progressLabel: null,
+	};
+}
+
+function scheduledHabits(readingDone: boolean): TodayHabitsSnapshot {
+	return {
+		localDay: "2026-08-20",
+		hasHabits: true,
+		habits: [
+			habit("reading", "Read", readingDone),
+			habit("walking", "Walk", true),
+		],
+		challenges: [],
+	};
+}
 
 function wheelAt(completedAt: number): ReviewResult {
 	const items = [
@@ -46,13 +84,16 @@ function wheelAt(completedAt: number): ReviewResult {
 	};
 }
 
-function stores(latest: ReviewResult | null) {
+function stores(
+	latest: ReviewResult | null,
+	habits: TodayHabitsSnapshot = emptyHabits,
+) {
 	return {
 		reviewStore: {
 			loadOverview: jest.fn(async () => ({ sittings: [], goals: [] })),
 			loadLatestWheel: jest.fn(async () => latest),
 		},
-		habitsStore: { loadToday: jest.fn(async () => emptyHabits) },
+		habitsStore: { loadToday: jest.fn(async () => habits) },
 	};
 }
 
@@ -93,5 +134,46 @@ describe("Life screen", () => {
 		);
 
 		expect(await screen.findByText("Time to take stock")).toBeTruthy();
+	});
+
+	it("summarises how many of today's habits are complete", async () => {
+		const screen = await render(
+			<LifeScreen
+				{...stores(null, scheduledHabits(false))}
+				now={() => new Date("2026-08-20T12:00:00Z")}
+			/>,
+		);
+
+		expect(await screen.findByText("2 today · 1 complete")).toBeTruthy();
+	});
+
+	it("reflects a habit toggle when the screen regains focus", async () => {
+		const now = () => new Date("2026-08-20T12:00:00Z");
+		const screen = await render(
+			<LifeScreen {...stores(null, scheduledHabits(false))} now={now} />,
+		);
+		expect(await screen.findByText("2 today · 1 complete")).toBeTruthy();
+
+		screen.rerender(
+			<LifeScreen {...stores(null, scheduledHabits(true))} now={now} />,
+		);
+
+		expect(await screen.findByText("2 today · 2 complete")).toBeTruthy();
+	});
+
+	it("says so when habits are chosen but none fall on today", async () => {
+		const screen = await render(
+			<LifeScreen
+				{...stores(null, {
+					localDay: "2026-08-20",
+					hasHabits: true,
+					habits: [],
+					challenges: [],
+				})}
+				now={() => new Date("2026-08-20T12:00:00Z")}
+			/>,
+		);
+
+		expect(await screen.findByText("No habits scheduled today")).toBeTruthy();
 	});
 });

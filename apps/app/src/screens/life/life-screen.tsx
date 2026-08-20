@@ -120,15 +120,11 @@ export function LifeScreen({ reviewStore, habitsStore, now }: LifeScreenProps) {
 				move it forward.
 			</AppText>
 
-			{latest ? (
+			{latest && completedAt !== null ? (
 				<View style={styles.section}>
 					<SectionHeader
 						title="Your wheel"
-						eyebrow={
-							completedAt === null
-								? "LATEST REVIEW"
-								: `REVIEWED ${completedLabel(completedAt).toUpperCase()}`
-						}
+						eyebrow={`REVIEWED ${completedLabel(completedAt).toUpperCase()}`}
 					/>
 					{latest.scores.length >= 3 ? (
 						<WheelChart
