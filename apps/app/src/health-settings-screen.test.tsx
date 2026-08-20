@@ -79,7 +79,7 @@ describe("health settings", () => {
 		);
 		await waitFor(() => expect(view.getByText("Life areas")).toBeTruthy());
 		expect(view.queryByText("Health data")).toBeNull();
-		expect(view.getByText("Units")).toBeTruthy();
+		expect(view.getByText("Units & format")).toBeTruthy();
 		expect(view.getByText("Reminders")).toBeTruthy();
 	});
 

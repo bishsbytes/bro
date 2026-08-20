@@ -62,6 +62,24 @@ export function isoWeekdayForLocalDay(localDay: string): number {
 	return (parseLocalDay(localDay).getUTCDay() + 6) % 7;
 }
 
+export type WeekStartDay = "monday" | "saturday" | "sunday";
+
+const ISO_WEEKDAY_BY_WEEK_START = {
+	monday: 0,
+	saturday: 5,
+	sunday: 6,
+} as const satisfies Record<WeekStartDay, number>;
+
+/** The first local day of the presentation week containing `localDay`. */
+export function weekStartOf(localDay: string, weekStart: WeekStartDay): string {
+	const daysSinceStart =
+		(isoWeekdayForLocalDay(localDay) -
+			ISO_WEEKDAY_BY_WEEK_START[weekStart] +
+			7) %
+		7;
+	return shiftLocalDay(localDay, -daysSinceStart);
+}
+
 export function previousLocalDay(localDay: string): string {
 	return shiftLocalDay(localDay, -1);
 }

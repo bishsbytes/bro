@@ -12,6 +12,7 @@ import {
 	resolveUnitPreference,
 	systemLocale,
 	type UnitPreferenceDimension,
+	type WeekStartDay,
 } from "@bro/domain";
 import type { SQLiteDatabase } from "expo-sqlite";
 
@@ -39,6 +40,37 @@ type UnitPreferences = Pick<
 	UnitPreferenceRepository,
 	"resolveLatestPerDimension" | "set"
 >;
+
+export const WEEK_START_PREFERENCE_DIMENSION = "week_start";
+
+export const WEEK_START_OPTIONS = [
+	{ day: "monday", label: "Monday" },
+	{ day: "sunday", label: "Sunday" },
+	{ day: "saturday", label: "Saturday" },
+] as const satisfies readonly { day: WeekStartDay; label: string }[];
+
+function isWeekStartDay(value: string): value is WeekStartDay {
+	return WEEK_START_OPTIONS.some((option) => option.day === value);
+}
+
+type LocaleWithWeekInfo = Intl.Locale & {
+	getWeekInfo?: () => { firstDay: number };
+};
+
+/** Uses locale week metadata where the runtime exposes it. */
+export function defaultWeekStart(locale: string | undefined): WeekStartDay {
+	if (!locale) return "monday";
+	try {
+		const localeValue = new Intl.Locale(locale) as LocaleWithWeekInfo;
+		if (typeof localeValue.getWeekInfo !== "function") return "monday";
+		const { firstDay } = localeValue.getWeekInfo();
+		if (firstDay === 7) return "sunday";
+		if (firstDay === 6) return "saturday";
+		return "monday";
+	} catch {
+		return "monday";
+	}
+}
 
 const UNIT_LABELS: Record<DisplayUnit, string> = {
 	kg: "Kilograms",
@@ -124,7 +156,12 @@ export class UnitSettingsStore {
 	async load(): Promise<UnitSettingsSnapshot> {
 		const preferences = await this.preferences.resolveLatestPerDimension();
 		const storedByDimension = new Map(
-			preferences.map((preference) => [preference.dimension, preference.unit]),
+			preferences
+				.filter(
+					(preference) =>
+						preference.dimension !== WEEK_START_PREFERENCE_DIMENSION,
+				)
+				.map((preference) => [preference.dimension, preference.unit]),
 		);
 		const locale = this.locale();
 		return {
@@ -161,6 +198,24 @@ export class UnitSettingsStore {
 				};
 			}),
 		};
+	}
+
+	async loadWeekStart(): Promise<WeekStartDay> {
+		const preferences = await this.preferences.resolveLatestPerDimension();
+		const stored = preferences.find(
+			(preference) => preference.dimension === WEEK_START_PREFERENCE_DIMENSION,
+		)?.unit;
+		if (stored !== undefined) {
+			return isWeekStartDay(stored) ? stored : "monday";
+		}
+		return defaultWeekStart(this.locale());
+	}
+
+	async setWeekStart(day: WeekStartDay): Promise<void> {
+		if (!isWeekStartDay(day)) {
+			throw new TypeError(`Unsupported week start: ${day}.`);
+		}
+		await this.preferences.set(WEEK_START_PREFERENCE_DIMENSION, day);
 	}
 
 	async set(

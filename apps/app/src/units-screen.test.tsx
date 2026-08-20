@@ -69,6 +69,8 @@ describe("units screen", () => {
 		const store = {
 			load: jest.fn(async () => localeSnapshot),
 			set: jest.fn(),
+			loadWeekStart: jest.fn(async () => "monday" as const),
+			setWeekStart: jest.fn(),
 		};
 		const view = await render(<UnitsScreen store={store} />);
 
@@ -85,6 +87,9 @@ describe("units screen", () => {
 				.accessibilityState,
 		).toMatchObject({ selected: false });
 		expect(store.set).not.toHaveBeenCalled();
+		expect(
+			view.getByLabelText("Start weeks on Monday").props.accessibilityState,
+		).toMatchObject({ selected: true });
 	});
 
 	it("persists a choice and replaces the preview immediately", async () => {
@@ -104,6 +109,8 @@ describe("units screen", () => {
 		const store = {
 			load: jest.fn(async () => localeSnapshot),
 			set: jest.fn(async () => kilogramSnapshot),
+			loadWeekStart: jest.fn(async () => "monday" as const),
+			setWeekStart: jest.fn(),
 		};
 		const view = await render(<UnitsScreen store={store} />);
 
@@ -118,5 +125,27 @@ describe("units screen", () => {
 			view.getByLabelText("Use Kilograms for Weight").props.accessibilityState,
 		).toMatchObject({ selected: true });
 		expect(globalThis.fetch).not.toHaveBeenCalled();
+	});
+
+	it("persists a week-start choice and updates the selection", async () => {
+		const store = {
+			load: jest.fn(async () => localeSnapshot),
+			set: jest.fn(),
+			loadWeekStart: jest.fn(async () => "monday" as const),
+			setWeekStart: jest.fn(async () => undefined),
+		};
+		const view = await render(<UnitsScreen store={store} />);
+
+		await waitFor(() =>
+			expect(view.getByLabelText("Start weeks on Sunday")).toBeTruthy(),
+		);
+		await fireEvent.press(view.getByLabelText("Start weeks on Sunday"));
+
+		await waitFor(() =>
+			expect(store.setWeekStart).toHaveBeenCalledWith("sunday"),
+		);
+		expect(
+			view.getByLabelText("Start weeks on Sunday").props.accessibilityState,
+		).toMatchObject({ selected: true });
 	});
 });

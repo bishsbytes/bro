@@ -117,9 +117,9 @@ export function SettingsScreen({
 				onPress={() => router.push("/settings/life-areas")}
 			/>
 			<ListRow
-				title="Units"
-				detail="Choose how body measurements appear."
-				accessibilityLabel="Manage units"
+				title="Units & format"
+				detail="Choose how weeks and body measurements appear."
+				accessibilityLabel="Manage units and format"
 				onPress={() => router.push("/settings/units")}
 			/>
 			<ListRow

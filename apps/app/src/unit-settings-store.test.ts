@@ -10,7 +10,7 @@ jest.mock("expo-sqlite", () => ({
 	openDatabaseSync: mockSqlite.openDatabaseSync,
 	openDatabaseAsync: mockSqlite.openDatabaseAsync,
 }));
-const { UnitSettingsStore } = jest.requireActual(
+const { defaultWeekStart, UnitSettingsStore } = jest.requireActual(
 	"./units/unit-settings-store",
 ) as typeof import("./units/unit-settings-store");
 
@@ -124,5 +124,47 @@ describe("unit settings store", () => {
 			"does not measure mass",
 		);
 		expect((await repository.list())[0]?.unit).toBe("future-mass-unit");
+	});
+
+	it("probes locale week metadata without persisting a default", async () => {
+		const repository = new databaseApp.UnitPreferenceRepository(db);
+		const store = new UnitSettingsStore(repository, () => "en-US");
+
+		expect(await store.loadWeekStart()).toBe("sunday");
+		expect(await repository.list()).toEqual([]);
+		expect(defaultWeekStart(undefined)).toBe("monday");
+		expect(defaultWeekStart("_")).toBe("monday");
+	});
+
+	it("persists week start as a reserved preference without affecting units", async () => {
+		const repository = new databaseApp.UnitPreferenceRepository(db);
+		const store = new UnitSettingsStore(repository, () => "en-GB");
+
+		await store.setWeekStart("saturday");
+		await store.set("mass", "lb");
+
+		expect(await store.loadWeekStart()).toBe("saturday");
+		expect((await store.load()).settings).toHaveLength(4);
+		expect((await store.load()).settings[0]).toMatchObject({
+			dimension: "mass",
+			resolvedUnit: "lb",
+		});
+		expect(await repository.list()).toEqual(
+			expect.arrayContaining([
+				expect.objectContaining({
+					dimension: "week_start",
+					unit: "saturday",
+				}),
+				expect.objectContaining({ dimension: "mass", unit: "lb" }),
+			]),
+		);
+	});
+
+	it("uses a safe Monday fallback for an unsupported replicated week start", async () => {
+		const repository = new databaseApp.UnitPreferenceRepository(db);
+		await repository.set("week_start", "future-day");
+		const store = new UnitSettingsStore(repository, () => "en-US");
+
+		expect(await store.loadWeekStart()).toBe("monday");
 	});
 });

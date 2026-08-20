@@ -1,3 +1,4 @@
+import type { WeekStartDay } from "@bro/domain";
 import { useFocusEffect } from "expo-router";
 import { useCallback, useMemo, useState } from "react";
 import { ActivityIndicator, View } from "react-native";
@@ -12,10 +13,14 @@ import {
 	createUnitSettingsStore,
 	type UnitSettingsSnapshot,
 	type UnitSettingsStore,
+	WEEK_START_OPTIONS,
 } from "../../units/unit-settings-store";
 
 type UnitsScreenProps = {
-	store?: Pick<UnitSettingsStore, "load" | "set">;
+	store?: Pick<
+		UnitSettingsStore,
+		"load" | "set" | "loadWeekStart" | "setWeekStart"
+	>;
 };
 
 function resolvedLabel(
@@ -30,13 +35,19 @@ function resolvedLabel(
 export function UnitsScreen({ store }: UnitsScreenProps) {
 	const unitsStore = useMemo(() => store ?? createUnitSettingsStore(), [store]);
 	const [snapshot, setSnapshot] = useState<UnitSettingsSnapshot | null>(null);
+	const [weekStart, setWeekStart] = useState<WeekStartDay | null>(null);
 	const [error, setError] = useState<string | null>(null);
 	const [busyDimension, setBusyDimension] = useState<string | null>(null);
 
 	const load = useCallback(async () => {
 		try {
 			setError(null);
-			setSnapshot(await unitsStore.load());
+			const [nextSnapshot, nextWeekStart] = await Promise.all([
+				unitsStore.load(),
+				unitsStore.loadWeekStart(),
+			]);
+			setSnapshot(nextSnapshot);
+			setWeekStart(nextWeekStart);
 		} catch (caught) {
 			setError(caught instanceof Error ? caught.message : String(caught));
 		}
@@ -63,7 +74,20 @@ export function UnitsScreen({ store }: UnitsScreenProps) {
 		}
 	}
 
-	if (!snapshot && !error) {
+	async function chooseWeekStart(day: WeekStartDay) {
+		setBusyDimension("week_start");
+		setError(null);
+		try {
+			await unitsStore.setWeekStart(day);
+			setWeekStart(day);
+		} catch (caught) {
+			setError(caught instanceof Error ? caught.message : String(caught));
+		} finally {
+			setBusyDimension(null);
+		}
+	}
+
+	if ((!snapshot || !weekStart) && !error) {
 		return (
 			<Screen centered>
 				<ActivityIndicator size="large" />
@@ -74,8 +98,8 @@ export function UnitsScreen({ store }: UnitsScreenProps) {
 	return (
 		<Screen scroll padded gap="lg">
 			<AppText color="muted">
-				Choose how measurements appear. Stored values stay unchanged, so
-				switching units never changes your history or goals.
+				Choose how dates and measurements appear. Stored values stay unchanged,
+				so format choices never change your history or goals.
 			</AppText>
 
 			{error ? (
@@ -86,6 +110,32 @@ export function UnitsScreen({ store }: UnitsScreenProps) {
 					onAction={() => void load()}
 					tone="danger"
 				/>
+			) : null}
+
+			{weekStart ? (
+				<Card style={styles.setting}>
+					<SectionHeader title="Week starts on" />
+					<AppText color="muted">
+						Used to order days in the Today week strip and day pickers.
+					</AppText>
+					<View style={styles.options}>
+						{WEEK_START_OPTIONS.map((option) => {
+							const selected = weekStart === option.day;
+							return (
+								<Button
+									key={option.day}
+									label={option.label}
+									accessibilityLabel={`Start weeks on ${option.label}`}
+									accessibilityState={{ selected }}
+									variant={selected ? "primary" : "secondary"}
+									disabled={busyDimension === "week_start"}
+									style={styles.option}
+									onPress={() => void chooseWeekStart(option.day)}
+								/>
+							);
+						})}
+					</View>
+				</Card>
 			) : null}
 
 			{snapshot?.settings.map((setting) => (
