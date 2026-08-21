@@ -37,11 +37,21 @@ function CheckInEditor({
 	onDelete,
 }: {
 	checkIn: HistoricalCheckIn;
-	onSave: (checkIn: HistoricalCheckIn, mood: number, energy: number) => void;
+	onSave: (
+		checkIn: HistoricalCheckIn,
+		mood: number,
+		energy: number,
+		additional: Readonly<Record<string, number>>,
+	) => void;
 	onDelete: (checkIn: HistoricalCheckIn) => void;
 }) {
 	const [mood, setMood] = useState(checkIn.mood.value);
 	const [energy, setEnergy] = useState(checkIn.energy.value);
+	const [additional, setAdditional] = useState<Record<string, number>>(
+		Object.fromEntries(
+			checkIn.optionalScores.map((score) => [score.metricSlug, score.value]),
+		),
+	);
 
 	return (
 		<Card style={styles.card}>
@@ -67,10 +77,32 @@ function CheckInEditor({
 				selected={energy}
 				onSelect={setEnergy}
 			/>
+			{checkIn.optionalScores.map((score) => {
+				const resolved = resolveMetric(score.metricSlug);
+				const label =
+					resolved.kind === "known" ? resolved.metric.label : score.metricSlug;
+				return (
+					<View key={score.id} style={styles.scoreEditor}>
+						<AppText variant="label" color="muted">
+							{label}
+						</AppText>
+						<ScoreRow
+							accessibilityPrefix={label}
+							selected={additional[score.metricSlug] ?? score.value}
+							onSelect={(value) =>
+								setAdditional((current) => ({
+									...current,
+									[score.metricSlug]: value,
+								}))
+							}
+						/>
+					</View>
+				);
+			})}
 			<View style={styles.actions}>
 				<Button
 					label="Save changes"
-					onPress={() => onSave(checkIn, mood, energy)}
+					onPress={() => onSave(checkIn, mood, energy, additional)}
 				/>
 				<Button
 					label="Delete check-in"
@@ -230,8 +262,10 @@ export function HistoryDayScreen({ localDay, store }: HistoryDayScreenProps) {
 						<CheckInEditor
 							key={checkIn.id}
 							checkIn={checkIn}
-							onSave={(entry, mood, energy) =>
-								void mutate(() => history.updateCheckIn(entry, mood, energy))
+							onSave={(entry, mood, energy, additional) =>
+								void mutate(() =>
+									history.updateCheckIn(entry, mood, energy, additional),
+								)
 							}
 							onDelete={(entry) =>
 								void mutate(() => history.deleteCheckIn(entry))
@@ -336,6 +370,7 @@ export function HistoryDayScreen({ localDay, store }: HistoryDayScreenProps) {
 const styles = StyleSheet.create((theme) => ({
 	content: { gap: theme.spacing.md },
 	card: { gap: theme.spacing.sm },
+	scoreEditor: { gap: theme.spacing.sm },
 	actions: {
 		flexDirection: "row",
 		alignItems: "center",

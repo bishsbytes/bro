@@ -18,7 +18,9 @@ import {
 	FACTOR_PRESENCE_VALUE,
 	type FactorMetricDefinition,
 	listFactors,
+	OPTIONAL_CHECK_IN_METRIC_SLUGS,
 	resolveMetric,
+	type ScoredMetricDefinition,
 } from "@bro/domain/metric-registry";
 import {
 	type MeasurementPresentation,
@@ -35,11 +37,13 @@ export type CheckInEntry = {
 	observedAt: number;
 	mood: Observation;
 	energy: Observation;
+	optionalScores: Observation[];
 };
 
 export type TodayCheckIn = {
 	localDay: string;
 	entries: CheckInEntry[];
+	availableOptionalScores: ScoredMetricDefinition[];
 	selectedFactorSlugs: string[];
 	availableFactors: FactorMetricDefinition[];
 	availableMeasurements: CheckInMeasurement[];
@@ -58,7 +62,10 @@ export type LoggedCheckInMeasurement = CheckInMeasurement & {
 export type CheckInScores = {
 	mood: number;
 	energy: number;
+	additional?: Readonly<Record<string, number>>;
 };
+
+const optionalScoreSlugs = new Set<string>(OPTIONAL_CHECK_IN_METRIC_SLUGS);
 
 function pairCheckIns(observations: readonly Observation[]): CheckInEntry[] {
 	const moods = observations.filter((row) => row.metricSlug === "mood");
@@ -74,6 +81,13 @@ function pairCheckIns(observations: readonly Observation[]): CheckInEntry[] {
 			observedAt: Math.max(mood.observedAt, energy.observedAt),
 			mood,
 			energy,
+			optionalScores: observations.filter(
+				(row) =>
+					optionalScoreSlugs.has(row.metricSlug) &&
+					(row.sourceRecordId === mood.id ||
+						(row.sourceRecordId === null &&
+							row.observedAt === mood.observedAt)),
+			),
 		});
 	}
 
@@ -106,6 +120,17 @@ function assertScores(scores: CheckInScores): void {
 	for (const [label, value] of [
 		["Mood", scores.mood],
 		["Energy", scores.energy],
+		...Object.entries(scores.additional ?? {}).map(([slug, value]) => {
+			const resolved = resolveMetric(slug);
+			if (
+				!optionalScoreSlugs.has(slug) ||
+				resolved.kind !== "known" ||
+				resolved.metric.kind !== "scored"
+			) {
+				throw new TypeError(`Unknown optional check-in score: ${slug}`);
+			}
+			return [resolved.metric.label, value] as const;
+		}),
 	] as const) {
 		if (!Number.isInteger(value) || value < 1 || value > 5) {
 			throw new RangeError(`${label} must be a whole number from 1 to 5.`);
@@ -148,6 +173,15 @@ export class CheckInStore {
 			tracked
 				.filter((metric) => metric.enabled)
 				.map((metric) => metric.metricSlug),
+		);
+		const availableOptionalScores = OPTIONAL_CHECK_IN_METRIC_SLUGS.flatMap(
+			(slug) => {
+				if (!enabledSlugs.has(slug)) return [];
+				const resolved = resolveMetric(slug);
+				return resolved.kind === "known" && resolved.metric.kind === "scored"
+					? [resolved.metric]
+					: [];
+			},
 		);
 		const availableFactors = listFactors().filter((factor) =>
 			enabledSlugs.has(factor.slug),
@@ -207,6 +241,7 @@ export class CheckInStore {
 		return {
 			localDay,
 			entries: pairCheckIns(observations),
+			availableOptionalScores,
 			selectedFactorSlugs: [
 				...new Set(
 					observations
@@ -278,9 +313,39 @@ export class CheckInStore {
 					localDay: entry.energy.localDay,
 					tzOffsetMinutes: entry.energy.tzOffsetMinutes,
 				});
+				for (const [metricSlug, value] of Object.entries(
+					draft.additional ?? {},
+				)) {
+					const existing = entry.optionalScores.find(
+						(row) => row.metricSlug === metricSlug,
+					);
+					if (existing) {
+						await this.observations.update(existing.id, {
+							value,
+							scaleMin: existing.scaleMin,
+							scaleMax: existing.scaleMax,
+							observedAt: existing.observedAt,
+							localDay: existing.localDay,
+							tzOffsetMinutes: existing.tzOffsetMinutes,
+						});
+					} else {
+						await this.observations.create({
+							metricSlug,
+							value,
+							scaleMin: 1,
+							scaleMax: 5,
+							observedAt: entry.mood.observedAt,
+							localDay: entry.mood.localDay,
+							tzOffsetMinutes: entry.mood.tzOffsetMinutes,
+							source: "user",
+							sourceRecordId: entry.id,
+							assessmentId: null,
+						});
+					}
+				}
 				return;
 			}
-			await this.observations.create({
+			const mood = await this.observations.create({
 				metricSlug: "mood",
 				value: draft.mood,
 				scaleMin: 1,
@@ -304,6 +369,22 @@ export class CheckInStore {
 				sourceRecordId: null,
 				assessmentId: null,
 			});
+			for (const [metricSlug, value] of Object.entries(
+				draft.additional ?? {},
+			)) {
+				await this.observations.create({
+					metricSlug,
+					value,
+					scaleMin: 1,
+					scaleMax: 5,
+					observedAt,
+					localDay,
+					tzOffsetMinutes,
+					source: "user",
+					sourceRecordId: mood.id,
+					assessmentId: null,
+				});
+			}
 		});
 
 		const today = await this.loadToday(capturedAt);

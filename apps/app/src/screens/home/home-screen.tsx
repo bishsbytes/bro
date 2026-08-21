@@ -112,6 +112,22 @@ function measurementChangeDetailLabel(
 	} than previous day`;
 }
 
+function checkInScoreSummary(
+	checkIn: CheckInEntry | HistoryDay["checkIns"][number],
+) {
+	const optional = checkIn.optionalScores.map((score) => {
+		const resolved = resolveMetric(score.metricSlug);
+		const label =
+			resolved.kind === "known" ? resolved.metric.label : score.metricSlug;
+		return `${label} ${score.value}`;
+	});
+	return [
+		`Mood ${checkIn.mood.value}`,
+		`Energy ${checkIn.energy.value}`,
+		...optional,
+	].join(" · ");
+}
+
 type PastDaySectionProps = {
 	localDay: string;
 	todayLocalDay: string;
@@ -171,7 +187,7 @@ function PastDaySection({
 							day.checkIns.map((checkIn) => (
 								<Card key={checkIn.id}>
 									<AppText variant="label">
-										Mood {checkIn.mood.value} · Energy {checkIn.energy.value}
+										{checkInScoreSummary(checkIn)}
 									</AppText>
 									<AppText variant="caption" color="subtle">
 										{new Date(checkIn.observedAt).toLocaleTimeString([], {
@@ -398,6 +414,9 @@ export function HomeScreen({
 	);
 	const [mood, setMood] = useState<number | null>(null);
 	const [energy, setEnergy] = useState<number | null>(null);
+	const [additionalScores, setAdditionalScores] = useState<
+		Record<string, number>
+	>({});
 	const [selectedFactors, setSelectedFactors] = useState<string[]>([]);
 	const [note, setNote] = useState("");
 	const [editing, setEditing] = useState<CheckInEntry | null>(null);
@@ -755,6 +774,11 @@ export function HomeScreen({
 	function startEditing(entry: CheckInEntry) {
 		setMood(entry.mood.value);
 		setEnergy(entry.energy.value);
+		setAdditionalScores(
+			Object.fromEntries(
+				entry.optionalScores.map((score) => [score.metricSlug, score.value]),
+			),
+		);
 		setEditing(entry);
 		setError(null);
 	}
@@ -762,29 +786,43 @@ export function HomeScreen({
 	function cancelEditing() {
 		setMood(null);
 		setEnergy(null);
+		setAdditionalScores({});
 		setEditing(null);
 		setError(null);
 	}
 
-	/** Choosing an energy score is what commits the check-in. */
-	async function chooseEnergy(score: number) {
+	async function commitCheckIn(
+		energyScore: number,
+		additional: Readonly<Record<string, number>>,
+	) {
 		if (!today || mood === null || savingRef.current) return;
 		savingRef.current = true;
-		playSelectionHaptic();
-		setEnergy(score);
 		setSaving(true);
 		setError(null);
 		todayWriteRef.current += 1;
 		const stamp = todayWriteRef.current;
 		try {
+			const activeAdditional = Object.fromEntries(
+				today.availableOptionalScores.map((metric) => [
+					metric.slug,
+					additional[metric.slug],
+				]),
+			);
 			const saved = await checkIns.saveCheckIn(
-				{ mood, energy: score },
+				{
+					mood,
+					energy: energyScore,
+					...(today.availableOptionalScores.length > 0
+						? { additional: activeAdditional }
+						: {}),
+				},
 				editing,
 			);
 			if (stamp === todayWriteRef.current) setToday(saved);
 			invalidateIndicatorDay(saved.localDay);
 			setMood(null);
 			setEnergy(null);
+			setAdditionalScores({});
 			setEditing(null);
 		} catch (caught) {
 			setError(caught instanceof Error ? caught.message : String(caught));
@@ -794,10 +832,46 @@ export function HomeScreen({
 		}
 	}
 
+	/** Energy commits immediately unless extra prompts have been enabled. */
+	function chooseEnergy(score: number) {
+		if (!today || mood === null || savingRef.current) return;
+		playSelectionHaptic();
+		setEnergy(score);
+		setAdditionalScores({});
+		if (today.availableOptionalScores.length === 0) {
+			void commitCheckIn(score, {});
+		}
+	}
+
+	function chooseAdditionalScore(
+		metricSlug: string,
+		score: number,
+		index: number,
+	) {
+		if (!today || energy === null || savingRef.current) return;
+		playSelectionHaptic();
+		const laterSlugs = new Set(
+			today.availableOptionalScores
+				.slice(index + 1)
+				.map((metric) => metric.slug),
+		);
+		const next = Object.fromEntries(
+			Object.entries({ ...additionalScores, [metricSlug]: score }).filter(
+				([slug]) => !laterSlugs.has(slug),
+			),
+		);
+		setAdditionalScores(next);
+		if (index === today.availableOptionalScores.length - 1) {
+			void commitCheckIn(energy, next);
+		}
+	}
+
 	function chooseMood(score: number) {
 		if (savingRef.current) return;
 		playSelectionHaptic();
 		setMood(score);
+		setEnergy(null);
+		setAdditionalScores({});
 		setError(null);
 	}
 
@@ -909,16 +983,54 @@ export function HomeScreen({
 						<ScoreRow
 							accessibilityPrefix="Energy"
 							selected={energy}
-							onSelect={(score) => void chooseEnergy(score)}
+							onSelect={chooseEnergy}
 							disabled={saving}
 						/>
 						<AppText variant="caption" color="subtle" style={styles.hint}>
 							{saving
 								? "Saving your check-in…"
-								: "Pick your energy to save this check-in."}
+								: today.availableOptionalScores.length > 0
+									? "Pick your energy to continue."
+									: "Pick your energy to save this check-in."}
 						</AppText>
 					</>
 				) : null}
+
+				{today.availableOptionalScores.map((metric, index) => {
+					const previousComplete =
+						energy !== null &&
+						(index === 0 ||
+							additionalScores[
+								today.availableOptionalScores[index - 1]?.slug
+							] !== undefined);
+					if (!previousComplete) return null;
+					const isLast = index === today.availableOptionalScores.length - 1;
+					return (
+						<View key={metric.slug}>
+							<AppText
+								variant="label"
+								style={[styles.prompt, styles.promptSpaced]}
+							>
+								{metric.label}
+							</AppText>
+							<ScoreRow
+								accessibilityPrefix={metric.label}
+								selected={additionalScores[metric.slug] ?? null}
+								onSelect={(score) =>
+									chooseAdditionalScore(metric.slug, score, index)
+								}
+								disabled={saving}
+							/>
+							{isLast ? (
+								<AppText variant="caption" color="subtle" style={styles.hint}>
+									{saving
+										? "Saving your check-in…"
+										: `Pick your ${metric.label.toLowerCase()} to save this check-in.`}
+								</AppText>
+							) : null}
+						</View>
+					);
+				})}
 
 				{editing ? (
 					<Button
@@ -935,9 +1047,7 @@ export function HomeScreen({
 				? today.entries.map((entry) => (
 						<Card key={entry.id} style={styles.entryCard}>
 							<View>
-								<AppText variant="label">
-									Mood {entry.mood.value} · Energy {entry.energy.value}
-								</AppText>
+								<AppText variant="label">{checkInScoreSummary(entry)}</AppText>
 								<AppText variant="caption" color="subtle">
 									{new Date(entry.observedAt).toLocaleTimeString([], {
 										hour: "2-digit",

@@ -1,8 +1,8 @@
-import { listFactors } from "@bro/domain/metric-registry";
+import { listFactors, listScoredMetrics } from "@bro/domain/metric-registry";
 import { act, fireEvent, render, waitFor } from "@testing-library/react-native";
 import * as Haptics from "expo-haptics";
 import { Text } from "react-native";
-import type { CheckInEntry } from "./check-in/check-in-store";
+import type { CheckInEntry, TodayCheckIn } from "./check-in/check-in-store";
 import {
 	monthHeaderLabel,
 	TodayHeaderMonthProvider,
@@ -36,9 +36,10 @@ jest.mock("expo-router", () => ({
 
 const FIXED_NOW = () => new Date(2026, 7, 14, 12);
 
-const emptyToday = {
+const emptyToday: TodayCheckIn = {
 	localDay: "2026-08-14",
 	entries: [] as CheckInEntry[],
+	availableOptionalScores: [],
 	selectedFactorSlugs: [],
 	availableFactors: listFactors(),
 	availableMeasurements: [],
@@ -114,7 +115,15 @@ function historyDay(localDay: string) {
 	const energy = observation("energy", 3);
 	return {
 		localDay,
-		checkIns: [{ id: mood.id, observedAt: mood.observedAt, mood, energy }],
+		checkIns: [
+			{
+				id: mood.id,
+				observedAt: mood.observedAt,
+				mood,
+				energy,
+				optionalScores: [],
+			},
+		],
 		unpairedScored: [],
 		factors: [],
 		assessments: [],
@@ -328,6 +337,41 @@ describe("home screen", () => {
 		expect(screen.queryByText("Save check-in")).toBeNull();
 	});
 
+	it("continues through enabled optional scores before saving", async () => {
+		const store = checkInStore({
+			...emptyToday,
+			availableOptionalScores: listScoredMetrics().filter((metric) =>
+				["motivation", "productivity", "libido"].includes(metric.slug),
+			),
+		});
+		const screen = await render(
+			<HomeScreen
+				{...supportingProps()}
+				habitsStore={habitsStore()}
+				store={store}
+			/>,
+		);
+
+		await fireEvent.press(await screen.findByLabelText("Mood 4"));
+		await fireEvent.press(await screen.findByLabelText("Energy 3"));
+		expect(store.saveCheckIn).not.toHaveBeenCalled();
+		await fireEvent.press(await screen.findByLabelText("Motivation 5"));
+		await fireEvent.press(await screen.findByLabelText("Productivity 4"));
+		expect(store.saveCheckIn).not.toHaveBeenCalled();
+		await fireEvent.press(await screen.findByLabelText("Libido 2"));
+
+		await waitFor(() =>
+			expect(store.saveCheckIn).toHaveBeenCalledWith(
+				{
+					mood: 4,
+					energy: 3,
+					additional: { motivation: 5, productivity: 4, libido: 2 },
+				},
+				null,
+			),
+		);
+	});
+
 	it("commits only one check-in when energy is tapped twice", async () => {
 		const store = checkInStore();
 		let release: (() => void) | null = null;
@@ -357,7 +401,13 @@ describe("home screen", () => {
 	it("keeps the day's check-ins behind a count affordance", async () => {
 		const mood = { ...observation("mood", 2), localDay: "2026-08-14" };
 		const energy = { ...observation("energy", 3), localDay: "2026-08-14" };
-		const entry = { id: mood.id, observedAt: mood.observedAt, mood, energy };
+		const entry = {
+			id: mood.id,
+			observedAt: mood.observedAt,
+			mood,
+			energy,
+			optionalScores: [],
+		};
 		const store = checkInStore({ ...emptyToday, entries: [entry] });
 		const screen = await render(
 			<HomeScreen
@@ -395,7 +445,13 @@ describe("home screen", () => {
 	it("edits an existing check-in through the same two taps", async () => {
 		const mood = { ...observation("mood", 2), localDay: "2026-08-14" };
 		const energy = { ...observation("energy", 3), localDay: "2026-08-14" };
-		const entry = { id: mood.id, observedAt: mood.observedAt, mood, energy };
+		const entry = {
+			id: mood.id,
+			observedAt: mood.observedAt,
+			mood,
+			energy,
+			optionalScores: [],
+		};
 		const store = checkInStore({ ...emptyToday, entries: [entry] });
 		const screen = await render(
 			<HomeScreen
@@ -423,7 +479,13 @@ describe("home screen", () => {
 	it("leaves the check-in untouched when an edit is cancelled", async () => {
 		const mood = { ...observation("mood", 2), localDay: "2026-08-14" };
 		const energy = { ...observation("energy", 3), localDay: "2026-08-14" };
-		const entry = { id: mood.id, observedAt: mood.observedAt, mood, energy };
+		const entry = {
+			id: mood.id,
+			observedAt: mood.observedAt,
+			mood,
+			energy,
+			optionalScores: [],
+		};
 		const store = checkInStore({ ...emptyToday, entries: [entry] });
 		const screen = await render(
 			<HomeScreen

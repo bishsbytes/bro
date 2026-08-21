@@ -90,6 +90,19 @@ describe("trends store", () => {
 		expect(weight?.series.points.at(-1)?.value).toBe(77.56429527);
 	});
 
+	it("adds optional check-in scores to trends only after opt-in", async () => {
+		const tracked = new databaseApp.TrackedMetricsRepository(db);
+		const store = new TrendsStore(db);
+
+		expect(
+			(await store.load(7)).metrics.map(({ metric }) => metric.slug),
+		).toEqual(["mood", "energy"]);
+		await tracked.configure("motivation", 2, true);
+		expect(
+			(await store.load(7)).metrics.map(({ metric }) => metric.slug),
+		).toEqual(["mood", "energy", "motivation"]);
+	});
+
 	it("keeps the no-connection trends snapshot unchanged", async () => {
 		await new databaseApp.TrackedMetricsRepository(db).configure(
 			"sleep_duration",

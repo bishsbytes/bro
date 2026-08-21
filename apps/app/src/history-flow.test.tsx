@@ -94,7 +94,7 @@ describe("history and day view", () => {
 			sourceRecordId: null,
 			assessmentId: null,
 		};
-		await observations.create({
+		const mood = await observations.create({
 			...base,
 			metricSlug: "mood",
 			value: 2,
@@ -107,6 +107,14 @@ describe("history and day view", () => {
 			value: 3,
 			scaleMin: 1,
 			scaleMax: 5,
+		});
+		await observations.create({
+			...base,
+			metricSlug: "motivation",
+			value: 4,
+			scaleMin: 1,
+			scaleMax: 5,
+			sourceRecordId: mood.id,
 		});
 		const unknown = await observations.create({
 			...base,
@@ -150,11 +158,13 @@ describe("history and day view", () => {
 
 		await fireEvent.press(view.getByLabelText("Mood 5"));
 		await fireEvent.press(view.getByLabelText("Energy 4"));
+		await fireEvent.press(view.getByLabelText("Motivation 2"));
 		await fireEvent.press(view.getByText("Save changes"));
 		await act(async () => undefined);
 		let rows = await observations.listByDay(localDay);
 		expect(rows.find((row) => row.metricSlug === "mood")?.value).toBe(5);
 		expect(rows.find((row) => row.metricSlug === "energy")?.value).toBe(4);
+		expect(rows.find((row) => row.metricSlug === "motivation")?.value).toBe(2);
 
 		await fireEvent.press(view.getByText("Delete", { exact: true }));
 		await waitFor(() =>
@@ -185,6 +195,9 @@ describe("history and day view", () => {
 		rows = await observations.listByDay(localDay);
 		expect(rows.filter((row) => row.metricSlug === "mood")).toHaveLength(0);
 		expect(rows.filter((row) => row.metricSlug === "energy")).toHaveLength(0);
+		expect(rows.filter((row) => row.metricSlug === "motivation")).toHaveLength(
+			0,
+		);
 
 		expect(mockedUseSession).not.toHaveBeenCalled();
 		expect(globalThis.fetch).not.toHaveBeenCalled();

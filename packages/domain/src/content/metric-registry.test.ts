@@ -10,6 +10,7 @@ import {
 	listScoredMetrics,
 	listUserEnterableMeasurements,
 	METRIC_REGISTRY,
+	OPTIONAL_CHECK_IN_METRIC_SLUGS,
 	resolveMetric,
 } from "./metric-registry";
 
@@ -53,8 +54,20 @@ describe("metric registry", () => {
 		expect(listScoredMetrics().map((metric) => metric.slug)).toEqual([
 			"mood",
 			"energy",
+			"motivation",
+			"productivity",
+			"libido",
 		]);
 		expect(listFactors()).toHaveLength(10);
+		expect(resolveMetric("libido")).toMatchObject({
+			kind: "known",
+			metric: { kind: "scored", sensitive: true },
+		});
+		for (const slug of ["motivation", "productivity", "libido"]) {
+			expect(
+				DEFAULT_TRACKED_METRICS.find((metric) => metric.metricSlug === slug),
+			).toMatchObject({ enabled: false });
+		}
 		expect(listMeasurements()).toEqual([
 			expect.objectContaining({
 				slug: "weight",
@@ -238,7 +251,10 @@ describe("metric registry", () => {
 			).map((metric) => ({
 				metricSlug: metric.slug,
 				position: metric.defaultPosition,
-				...(metric.kind === "measurement" ? { enabled: false } : {}),
+				...(metric.kind === "measurement" ||
+				OPTIONAL_CHECK_IN_METRIC_SLUGS.some((slug) => slug === metric.slug)
+					? { enabled: false }
+					: {}),
 			})),
 		);
 		expect(

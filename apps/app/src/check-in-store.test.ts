@@ -84,7 +84,13 @@ describe("check-in store", () => {
 
 		await store.saveCheckIn(
 			{ mood: 4, energy: 3 },
-			{ id: mood.id, observedAt: mood.observedAt, mood, energy },
+			{
+				id: mood.id,
+				observedAt: mood.observedAt,
+				mood,
+				energy,
+				optionalScores: [],
+			},
 		);
 
 		expect(await observations.findById(mood.id)).toMatchObject({
@@ -165,6 +171,68 @@ describe("check-in store", () => {
 		transaction.mockRestore();
 	});
 
+	it("writes enabled optional scores with the check-in and retains them when disabled", async () => {
+		const observations = new databaseApp.ObservationRepository(db);
+		const tracked = new databaseApp.TrackedMetricsRepository(db);
+		await tracked.configure("motivation", 2, true);
+		await tracked.configure("productivity", 3, true);
+		await tracked.configure("libido", 4, true);
+		const store = new CheckInStore(db, () => CAPTURED_AT);
+
+		expect(
+			(await store.loadToday()).availableOptionalScores.map(
+				(metric) => metric.slug,
+			),
+		).toEqual(["motivation", "productivity", "libido"]);
+		const saved = await store.saveCheckIn({
+			mood: 4,
+			energy: 3,
+			additional: { motivation: 5, productivity: 4, libido: 2 },
+		});
+
+		expect(
+			(await observations.listByDay(LOCAL_DAY)).map((row) => [
+				row.metricSlug,
+				row.value,
+			]),
+		).toEqual([
+			["mood", 4],
+			["energy", 3],
+			["motivation", 5],
+			["productivity", 4],
+			["libido", 2],
+		]);
+		expect(saved.entries[0]?.optionalScores).toMatchObject([
+			{ metricSlug: "motivation", value: 5 },
+			{ metricSlug: "productivity", value: 4 },
+			{ metricSlug: "libido", value: 2 },
+		]);
+		const entry = saved.entries[0];
+		if (!entry) throw new Error("Expected the saved check-in.");
+		await store.saveCheckIn(
+			{
+				mood: 3,
+				energy: 2,
+				additional: { motivation: 4, productivity: 3, libido: 1 },
+			},
+			entry,
+		);
+		expect(await observations.listByDay(LOCAL_DAY)).toMatchObject([
+			{ metricSlug: "mood", value: 3 },
+			{ metricSlug: "energy", value: 2 },
+			{ metricSlug: "motivation", value: 4 },
+			{ metricSlug: "productivity", value: 3 },
+			{ metricSlug: "libido", value: 1 },
+		]);
+
+		await tracked.configure("libido", 4, false);
+		const reloaded = await store.loadToday();
+		expect(
+			reloaded.availableOptionalScores.map((metric) => metric.slug),
+		).toEqual(["motivation", "productivity"]);
+		expect(reloaded.entries[0]?.optionalScores).toHaveLength(3);
+	});
+
 	it("rejects a score outside the scale without writing anything", async () => {
 		const observations = new databaseApp.ObservationRepository(db);
 		const store = new CheckInStore(db, () => CAPTURED_AT);
@@ -175,6 +243,13 @@ describe("check-in store", () => {
 		await expect(store.saveCheckIn({ mood: 4, energy: 6 })).rejects.toThrow(
 			"Energy must be a whole number from 1 to 5.",
 		);
+		await expect(
+			store.saveCheckIn({
+				mood: 4,
+				energy: 3,
+				additional: { libido: 0 },
+			}),
+		).rejects.toThrow("Libido must be a whole number from 1 to 5.");
 		expect(await observations.listByDay(LOCAL_DAY)).toEqual([]);
 	});
 

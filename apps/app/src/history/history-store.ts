@@ -19,7 +19,10 @@ import {
 import { previousLocalDay } from "@bro/domain";
 import { resolveChallenge } from "@bro/domain/challenge-catalogue";
 import { resolveHabit } from "@bro/domain/habit-catalogue";
-import { resolveMetric } from "@bro/domain/metric-registry";
+import {
+	OPTIONAL_CHECK_IN_METRIC_SLUGS,
+	resolveMetric,
+} from "@bro/domain/metric-registry";
 import {
 	formatMetricDelta,
 	formatMetricValue,
@@ -58,7 +61,10 @@ export type HistoricalCheckIn = {
 	observedAt: number;
 	mood: Observation;
 	energy: Observation;
+	optionalScores: Observation[];
 };
+
+const optionalScoreSlugs = new Set<string>(OPTIONAL_CHECK_IN_METRIC_SLUGS);
 
 export type HistoryDay = {
 	localDay: string;
@@ -125,6 +131,13 @@ function pairCheckIns(
 			observedAt: Math.max(mood.observedAt, energy.observedAt),
 			mood,
 			energy,
+			optionalScores: observations.filter(
+				(row) =>
+					optionalScoreSlugs.has(row.metricSlug) &&
+					(row.sourceRecordId === mood.id ||
+						(row.sourceRecordId === null &&
+							row.observedAt === mood.observedAt)),
+			),
 		});
 	}
 
@@ -231,7 +244,11 @@ export function assembleHistoryDay(
 ): HistoryDay {
 	const checkIns = pairCheckIns(observations);
 	const pairedIds = new Set(
-		checkIns.flatMap((checkIn) => [checkIn.mood.id, checkIn.energy.id]),
+		checkIns.flatMap((checkIn) => [
+			checkIn.mood.id,
+			checkIn.energy.id,
+			...checkIn.optionalScores.map((score) => score.id),
+		]),
 	);
 	const unpairedScored: Observation[] = [];
 	const factors: Observation[] = [];
@@ -534,6 +551,7 @@ export class HistoryStore {
 		checkIn: HistoricalCheckIn,
 		mood: number,
 		energy: number,
+		additional: Readonly<Record<string, number>> = {},
 	): Promise<HistoryDay> {
 		await this.db.withTransactionAsync(async () => {
 			await this.observations.update(checkIn.mood.id, {
@@ -552,6 +570,18 @@ export class HistoryStore {
 				localDay: checkIn.energy.localDay,
 				tzOffsetMinutes: checkIn.energy.tzOffsetMinutes,
 			});
+			for (const score of checkIn.optionalScores) {
+				const value = additional[score.metricSlug];
+				if (value === undefined) continue;
+				await this.observations.update(score.id, {
+					value,
+					scaleMin: score.scaleMin,
+					scaleMax: score.scaleMax,
+					observedAt: score.observedAt,
+					localDay: score.localDay,
+					tzOffsetMinutes: score.tzOffsetMinutes,
+				});
+			}
 		});
 		return await this.loadDay(checkIn.mood.localDay);
 	}
@@ -560,6 +590,9 @@ export class HistoryStore {
 		await this.db.withTransactionAsync(async () => {
 			await this.observations.delete(checkIn.mood.id);
 			await this.observations.delete(checkIn.energy.id);
+			for (const score of checkIn.optionalScores) {
+				await this.observations.delete(score.id);
+			}
 		});
 		return await this.loadDay(checkIn.mood.localDay);
 	}

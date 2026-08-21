@@ -65,6 +65,7 @@ describe("history store", () => {
 			[
 				observation("mood", "mood", 4),
 				observation("energy", "energy", 3),
+				observation("motivation", "motivation", 5),
 				observation("stress", "stress", 1),
 				observation("weight", "weight", 78),
 				wheel,
@@ -74,6 +75,9 @@ describe("history store", () => {
 		);
 
 		expect(day.checkIns).toHaveLength(1);
+		expect(day.checkIns[0]?.optionalScores).toMatchObject([
+			{ metricSlug: "motivation", value: 5 },
+		]);
 		expect(day.factors.map(({ metricSlug }) => metricSlug)).toEqual(["stress"]);
 		expect(day.assessments).toEqual([wheel]);
 		expect(day.unpairedScored).toEqual([]);

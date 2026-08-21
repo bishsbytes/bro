@@ -71,12 +71,14 @@ export class TrendsStore {
 		const measurementSlugs = new Set<string>(
 			listMeasurements().map((metric) => metric.slug),
 		);
-		const measurementDefaults = DEFAULT_TRACKED_METRICS.filter((metric) =>
-			measurementSlugs.has(metric.metricSlug),
+		const trackedDefaults = DEFAULT_TRACKED_METRICS.filter(
+			(metric) =>
+				measurementSlugs.has(metric.metricSlug) ||
+				listScoredMetrics().some((scored) => scored.slug === metric.metricSlug),
 		);
 		const [overlays, preferences, dailyMetrics, consumptionEntries] =
 			await Promise.all([
-				this.trackedMetrics.listResolved(measurementDefaults),
+				this.trackedMetrics.listResolved(trackedDefaults),
 				this.unitPreferences.resolveLatestPerDimension(),
 				this.dailyMetrics.listAll(),
 				this.consumptionEntries.listAll(),
@@ -93,11 +95,11 @@ export class TrendsStore {
 			label: string;
 			displayUnit: DisplayUnit | null;
 		}> = [
-			...listScoredMetrics().map((metric) => ({
-				metric,
-				label: metric.label,
-				displayUnit: null,
-			})),
+			...listScoredMetrics().flatMap((metric) =>
+				overlayBySlug.get(metric.slug)?.enabled
+					? [{ metric, label: metric.label, displayUnit: null }]
+					: [],
+			),
 			...listMeasurements().flatMap((metric) => {
 				const overlay = overlayBySlug.get(metric.slug);
 				return overlay?.enabled || importedSlugs.has(metric.slug)

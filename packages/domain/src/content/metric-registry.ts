@@ -134,6 +134,7 @@ const scored = (
 	slug: string,
 	label: string,
 	defaultPosition: number,
+	sensitive = false,
 ): ScoredMetricDefinition => ({
 	slug,
 	label,
@@ -142,7 +143,7 @@ const scored = (
 	scaleMax: 5,
 	category: null,
 	aggregation: "mean",
-	sensitive: false,
+	sensitive,
 	userEnterable: true,
 	deprecated: false,
 	defaultPosition,
@@ -264,6 +265,9 @@ const importedMeasurement = (
 export const METRIC_REGISTRY = [
 	scored("mood", "Mood", 0),
 	scored("energy", "Energy", 1),
+	scored("motivation", "Motivation", 2),
+	scored("productivity", "Productivity", 3),
+	scored("libido", "Libido", 4, true),
 	factor("training", "Training", "body", 2),
 	factor("illness", "Illness", "body", 3),
 	factor("poor_sleep_environment", "Poor sleep environment", "body", 4),
@@ -317,6 +321,17 @@ const metricsBySlug = new Map<string, MetricDefinition>(
 	METRIC_REGISTRY.map((metric) => [metric.slug, metric]),
 );
 
+/** Optional scored prompts that can be added to the core mood/energy check-in. */
+export const OPTIONAL_CHECK_IN_METRIC_SLUGS = [
+	"motivation",
+	"productivity",
+	"libido",
+] as const;
+
+const optionalCheckInMetricSlugs = new Set<string>(
+	OPTIONAL_CHECK_IN_METRIC_SLUGS,
+);
+
 export const DEFAULT_TRACKED_METRICS = METRIC_REGISTRY.filter(
 	(metric) =>
 		metric.userEnterable ||
@@ -326,7 +341,10 @@ export const DEFAULT_TRACKED_METRICS = METRIC_REGISTRY.filter(
 ).map((metric) => ({
 	metricSlug: metric.slug,
 	position: metric.defaultPosition,
-	...(metric.kind === "measurement" ? { enabled: false } : {}),
+	...(metric.kind === "measurement" ||
+	optionalCheckInMetricSlugs.has(metric.slug)
+		? { enabled: false }
+		: {}),
 }));
 
 /**
