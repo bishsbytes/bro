@@ -157,7 +157,7 @@ describe("startup", () => {
 		expect(mockRunMigrations).toHaveBeenCalledWith({ handle: true });
 		expect(mockInitLocalDb).toHaveBeenCalledWith();
 		expect(mockRunLocalMigrations).toHaveBeenCalledWith({ localHandle: true });
-		expect(await view.findByText("How are you?")).toBeTruthy();
+		expect(await view.findByLabelText("Mood 4")).toBeTruthy();
 	});
 
 	it("issues no session request and no network call for a local-only start", async () => {
@@ -187,11 +187,11 @@ describe("startup", () => {
 
 		expect(view.getByText("Local storage is unavailable")).toBeTruthy();
 		expect(view.getByText("disk unavailable")).toBeTruthy();
-		expect(view.queryByText("How are you?")).toBeNull();
+		expect(view.queryByLabelText("Mood 4")).toBeNull();
 
 		await fireEvent.press(view.getByText("Try again"));
 
-		expect(await view.findByText("How are you?")).toBeTruthy();
+		expect(await view.findByLabelText("Mood 4")).toBeTruthy();
 		// Both handles must be released, or the retry reopens against a half-known
 		// schema rather than a clean one.
 		expect(mockCloseDb).toHaveBeenCalledTimes(1);
@@ -210,7 +210,7 @@ describe("startup", () => {
 
 		await fireEvent.press(view.getByText("Try again"));
 
-		expect(await view.findByText("How are you?")).toBeTruthy();
+		expect(await view.findByLabelText("Mood 4")).toBeTruthy();
 	});
 
 	it("never lets an auth failure reach the startup screen", async () => {
@@ -227,6 +227,6 @@ describe("startup", () => {
 		});
 
 		expect(view.queryByText("Local storage is unavailable")).toBeNull();
-		expect(await view.findByText("How are you?")).toBeTruthy();
+		expect(await view.findByLabelText("Mood 4")).toBeTruthy();
 	});
 });

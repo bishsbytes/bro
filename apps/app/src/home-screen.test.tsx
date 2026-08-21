@@ -354,6 +354,44 @@ describe("home screen", () => {
 		await act(async () => release?.());
 	});
 
+	it("keeps the day's check-ins behind a count affordance", async () => {
+		const mood = { ...observation("mood", 2), localDay: "2026-08-14" };
+		const energy = { ...observation("energy", 3), localDay: "2026-08-14" };
+		const entry = { id: mood.id, observedAt: mood.observedAt, mood, energy };
+		const store = checkInStore({ ...emptyToday, entries: [entry] });
+		const screen = await render(
+			<HomeScreen
+				{...supportingProps()}
+				habitsStore={habitsStore()}
+				store={store}
+			/>,
+		);
+
+		// The mood row stays available for the next check-in either way.
+		expect(await screen.findByLabelText("Mood 4")).toBeTruthy();
+		expect(screen.getByText("1 check-in")).toBeTruthy();
+		expect(screen.queryByText("Mood 2 · Energy 3")).toBeNull();
+
+		await fireEvent.press(screen.getByLabelText("Review check-ins"));
+		expect(screen.getByText("Mood 2 · Energy 3")).toBeTruthy();
+
+		await fireEvent.press(screen.getByLabelText("Hide check-ins"));
+		expect(screen.queryByText("Mood 2 · Energy 3")).toBeNull();
+	});
+
+	it("offers no count affordance before the first check-in", async () => {
+		const screen = await render(
+			<HomeScreen
+				{...supportingProps()}
+				habitsStore={habitsStore()}
+				store={checkInStore()}
+			/>,
+		);
+
+		expect(await screen.findByLabelText("Mood 4")).toBeTruthy();
+		expect(screen.queryByLabelText("Review check-ins")).toBeNull();
+	});
+
 	it("edits an existing check-in through the same two taps", async () => {
 		const mood = { ...observation("mood", 2), localDay: "2026-08-14" };
 		const energy = { ...observation("energy", 3), localDay: "2026-08-14" };
@@ -367,8 +405,10 @@ describe("home screen", () => {
 			/>,
 		);
 
-		await fireEvent.press(await screen.findByText("Edit"));
-		expect(screen.getByText("Edit check-in")).toBeTruthy();
+		// The entries live behind the count affordance in the Check-ins header.
+		await fireEvent.press(await screen.findByLabelText("Review check-ins"));
+		await fireEvent.press(screen.getByText("Edit"));
+		expect(screen.getByText("Editing check-in")).toBeTruthy();
 		await fireEvent.press(screen.getByLabelText("Mood 5"));
 		await fireEvent.press(screen.getByLabelText("Energy 4"));
 
@@ -393,12 +433,13 @@ describe("home screen", () => {
 			/>,
 		);
 
-		await fireEvent.press(await screen.findByText("Edit"));
+		await fireEvent.press(await screen.findByLabelText("Review check-ins"));
+		await fireEvent.press(screen.getByText("Edit"));
 		await fireEvent.press(screen.getByLabelText("Mood 5"));
 		await fireEvent.press(screen.getByText("Cancel edit"));
 
 		expect(store.saveCheckIn).not.toHaveBeenCalled();
-		expect(screen.queryByText("Edit check-in")).toBeNull();
+		expect(screen.queryByText("Editing check-in")).toBeNull();
 	});
 
 	it("persists a factor the moment it is toggled, without a check-in", async () => {

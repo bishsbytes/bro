@@ -92,7 +92,7 @@ describe("daily check-in flow", () => {
 		let router = renderRouter("src/app", { initialUrl: "/" });
 		let view = await router;
 		await act(async () => undefined);
-		await view.findByText("How are you?");
+		await view.findByLabelText("Mood 4");
 
 		// The energy tap is what commits the check-in — there is no Save button.
 		await fireEvent.press(view.getByLabelText("Mood 4"));
@@ -181,9 +181,6 @@ describe("daily check-in flow", () => {
 		await act(async () => undefined);
 
 		expect(await view.findByText("2 check-ins")).toBeTruthy();
-		expect(
-			await view.findByText("Measurements: Weight 12 st 4 lb"),
-		).toBeTruthy();
 		// Two product opens across the cold relaunch plus one local-store open.
 		expect(mockSqlite.openDatabaseAsync).toHaveBeenCalledTimes(3);
 		expect(mockedUseSession).not.toHaveBeenCalled();

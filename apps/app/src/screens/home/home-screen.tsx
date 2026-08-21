@@ -418,6 +418,7 @@ export function HomeScreen({
 	// check-in commits would otherwise put the day back as it was.
 	const todayWriteRef = useRef(0);
 	const [savingNote, setSavingNote] = useState(false);
+	const [reviewingCheckIns, setReviewingCheckIns] = useState(false);
 	const noteDirty = note !== savedNoteRef.current;
 
 	const load = useCallback(async () => {
@@ -848,8 +849,6 @@ export function HomeScreen({
 			</Screen>
 		);
 	}
-	const pagerToday = today;
-
 	const groupedFactors = Object.entries(CATEGORY_LABELS).map(
 		([category, label]) => ({
 			category: category as FactorCategory,
@@ -859,56 +858,108 @@ export function HomeScreen({
 			),
 		}),
 	);
-	const checkInFlow = (
-		<View style={styles.form}>
-			<SectionHeader title={editing ? "Edit check-in" : "Check in"} />
-
-			<AppText variant="label" style={styles.prompt}>
-				Mood
-			</AppText>
-			<ScoreRow
-				accessibilityPrefix="Mood"
-				selected={mood}
-				onSelect={chooseMood}
-				faces={MOOD_FACES}
-				disabled={saving}
+	const checkInCount = today.entries.length;
+	const checkInsSection = (
+		<View style={styles.section}>
+			<SectionHeader
+				title="Check-ins"
+				action={
+					checkInCount > 0 ? (
+						<TouchableOpacity
+							accessibilityRole="button"
+							accessibilityLabel={
+								reviewingCheckIns ? "Hide check-ins" : "Review check-ins"
+							}
+							accessibilityState={{ expanded: reviewingCheckIns }}
+							onPress={() => setReviewingCheckIns((open) => !open)}
+						>
+							<AppText variant="label" color="brand">
+								{checkInCount} check-in{checkInCount === 1 ? "" : "s"}
+							</AppText>
+						</TouchableOpacity>
+					) : null
+				}
 			/>
 
-			{mood !== null ? (
-				<>
-					<AppText variant="label" style={styles.prompt}>
-						Energy
+			<Card>
+				{editing ? (
+					<AppText variant="caption" color="brand" style={styles.prompt}>
+						Editing check-in
 					</AppText>
-					<ScoreRow
-						accessibilityPrefix="Energy"
-						selected={energy}
-						onSelect={(score) => void chooseEnergy(score)}
-						disabled={saving}
-					/>
-					<AppText variant="caption" color="subtle" style={styles.hint}>
-						{saving
-							? "Saving your check-in…"
-							: "Pick your energy to save this check-in."}
-					</AppText>
-				</>
-			) : null}
-
-			{editing ? (
-				<Button
-					label="Cancel edit"
-					variant="text"
+				) : null}
+				<AppText variant="label" style={styles.prompt}>
+					Mood
+				</AppText>
+				<ScoreRow
+					accessibilityPrefix="Mood"
+					selected={mood}
+					onSelect={chooseMood}
+					faces={MOOD_FACES}
 					disabled={saving}
-					onPress={cancelEditing}
 				/>
-			) : null}
-			{error ? <AppText color="danger">{error}</AppText> : null}
+
+				{mood !== null ? (
+					<>
+						<AppText
+							variant="label"
+							style={[styles.prompt, styles.promptSpaced]}
+						>
+							Energy
+						</AppText>
+						<ScoreRow
+							accessibilityPrefix="Energy"
+							selected={energy}
+							onSelect={(score) => void chooseEnergy(score)}
+							disabled={saving}
+						/>
+						<AppText variant="caption" color="subtle" style={styles.hint}>
+							{saving
+								? "Saving your check-in…"
+								: "Pick your energy to save this check-in."}
+						</AppText>
+					</>
+				) : null}
+
+				{editing ? (
+					<Button
+						label="Cancel edit"
+						variant="text"
+						disabled={saving}
+						onPress={cancelEditing}
+					/>
+				) : null}
+				{error ? <AppText color="danger">{error}</AppText> : null}
+			</Card>
+
+			{reviewingCheckIns
+				? today.entries.map((entry) => (
+						<Card key={entry.id} style={styles.entryCard}>
+							<View>
+								<AppText variant="label">
+									Mood {entry.mood.value} · Energy {entry.energy.value}
+								</AppText>
+								<AppText variant="caption" color="subtle">
+									{new Date(entry.observedAt).toLocaleTimeString([], {
+										hour: "2-digit",
+										minute: "2-digit",
+									})}
+								</AppText>
+							</View>
+							<TouchableOpacity onPress={() => startEditing(entry)}>
+								<AppText variant="label" color="brand">
+									Edit
+								</AppText>
+							</TouchableOpacity>
+						</Card>
+					))
+				: null}
 		</View>
 	);
 
 	const factorsSection =
 		today.availableFactors.length > 0 ? (
 			<View style={styles.section}>
-				<SectionHeader title="Factors" eyebrow="TODAY" />
+				<SectionHeader title="Factors" />
 				<AppText variant="caption" color="subtle">
 					What applied today?
 				</AppText>
@@ -956,7 +1007,7 @@ export function HomeScreen({
 
 	const noteSection = (
 		<View style={styles.section}>
-			<SectionHeader title="Note" eyebrow="TODAY" />
+			<SectionHeader title="Note" />
 			<FormField
 				label="Note (optional)"
 				value={note}
@@ -1000,9 +1051,9 @@ export function HomeScreen({
 				) : (
 					<>
 						<AppText variant="section" style={styles.pageTitle}>
-							How are you?
+							{formatLocalDayLabel(localDay, todayLocalDay)}
 						</AppText>
-						{checkInFlow}
+						{checkInsSection}
 						{finishedChallenge ? (
 							<Card style={styles.routineCard}>
 								<AppText variant="section">Challenge complete</AppText>
@@ -1126,50 +1177,6 @@ export function HomeScreen({
 								Wheel review status could not be loaded: {wheelError}
 							</AppText>
 						) : null}
-						{pagerToday.entries.length > 0 ? (
-							<View style={styles.section}>
-								<SectionHeader
-									title="Logged today"
-									action={
-										<AppText variant="caption" color="subtle">
-											{pagerToday.entries.length} check-in
-											{pagerToday.entries.length === 1 ? "" : "s"}
-										</AppText>
-									}
-								/>
-								{pagerToday.entries.map((entry) => (
-									<Card key={entry.id} style={styles.entryCard}>
-										<View>
-											<AppText variant="label">
-												Mood {entry.mood.value} · Energy {entry.energy.value}
-											</AppText>
-											<AppText variant="caption" color="subtle">
-												{new Date(entry.observedAt).toLocaleTimeString([], {
-													hour: "2-digit",
-													minute: "2-digit",
-												})}
-											</AppText>
-										</View>
-										<TouchableOpacity onPress={() => startEditing(entry)}>
-											<AppText variant="label" color="brand">
-												Edit
-											</AppText>
-										</TouchableOpacity>
-									</Card>
-								))}
-								{pagerToday.loggedMeasurements.length > 0 ? (
-									<AppText variant="caption" color="muted">
-										Measurements:{" "}
-										{pagerToday.loggedMeasurements
-											.map(
-												(measurement) =>
-													`${measurement.label} ${measurement.formattedValue}`,
-											)
-											.join(", ")}
-									</AppText>
-								) : null}
-							</View>
-						) : null}
 						{factorsSection}
 						{noteSection}
 					</>
@@ -1237,17 +1244,12 @@ const styles = StyleSheet.create((theme) => ({
 		justifyContent: "space-between",
 		alignItems: "center",
 	},
-	form: {
-		marginBottom: theme.spacing.xl,
-		padding: theme.spacing.xl,
-		borderRadius: theme.radius.md,
-		backgroundColor: theme.colors.surface,
-	},
 	prompt: {
 		fontWeight: "600",
-		marginTop: theme.spacing.lg,
 		marginBottom: theme.spacing.sm,
 	},
+	/** Separates the energy prompt from the mood row; the first prompt sits flush. */
+	promptSpaced: { marginTop: theme.spacing.lg },
 	choiceSelected: {
 		borderColor: theme.colors.brand,
 		backgroundColor: theme.colors.selected,

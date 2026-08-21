@@ -322,7 +322,7 @@ describe("delete local data", () => {
 
 		await fireEvent.press(view.getByText("Back to today"));
 		await waitFor(() => expect(router.getPathname()).toBe("/"));
-		expect(await view.findByText("How are you?")).toBeTruthy();
+		expect(await view.findByLabelText("Mood 4")).toBeTruthy();
 		expect(view.queryByText("Logged today")).toBeNull();
 
 		await fireEvent.press(view.getByLabelText(/^Account/));

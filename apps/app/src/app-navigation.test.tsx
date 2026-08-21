@@ -222,7 +222,7 @@ describe("app entry", () => {
 		const { router, view } = await launch({ onboardingComplete: true });
 
 		expect(router.getPathname()).toBe("/");
-		expect(await view.findByText("How are you?")).toBeTruthy();
+		expect(await view.findByLabelText("Mood 4")).toBeTruthy();
 		expect(
 			await view.findByText("Take stock of the bigger picture"),
 		).toBeTruthy();
@@ -249,9 +249,10 @@ describe("app entry", () => {
 		expect(await view.findByText("WHEEL OF LIFE")).toBeTruthy();
 		expect(view.getByLabelText("Account")).toBeTruthy();
 
-		await press(view, "Today");
+		// Today's pane carries the title "Today" too, so address the tab itself.
+		await fireEvent.press(view.getByLabelText(/^Today, tab/));
 		await waitFor(() => expect(router.getPathname()).toBe("/"));
-		expect(await view.findByText("How are you?")).toBeTruthy();
+		expect(await view.findByLabelText("Mood 4")).toBeTruthy();
 	});
 
 	it("walks onboarding through to the app without a backend request", async () => {
@@ -269,7 +270,7 @@ describe("app entry", () => {
 
 		expect(mockSetOnboardingComplete).toHaveBeenCalledWith(true);
 		expect(router.getPathname()).toBe("/");
-		expect(await view.findByText("How are you?")).toBeTruthy();
+		expect(await view.findByLabelText("Mood 4")).toBeTruthy();
 		// The whole first run, end to end, touches nothing of ours over the network.
 		expect(globalThis.fetch).not.toHaveBeenCalled();
 	});
@@ -446,6 +447,6 @@ describe("app entry", () => {
 		// rather than stacking a second copy of it under the first.
 		await act(async () => expoRouter.back());
 		await waitFor(() => expect(router.getPathname()).toBe("/"));
-		expect(await view.findByText("How are you?")).toBeTruthy();
+		expect(await view.findByLabelText("Mood 4")).toBeTruthy();
 	});
 });
