@@ -1,8 +1,8 @@
-import { KILOGRAMS_PER_POUND } from "@bro/domain";
 import { listFactors } from "@bro/domain/metric-registry";
 import { act, fireEvent, render, waitFor } from "@testing-library/react-native";
 import * as Haptics from "expo-haptics";
 import { Text } from "react-native";
+import type { CheckInEntry } from "./check-in/check-in-store";
 import {
 	monthHeaderLabel,
 	TodayHeaderMonthProvider,
@@ -38,25 +38,13 @@ const FIXED_NOW = () => new Date(2026, 7, 14, 12);
 
 const emptyToday = {
 	localDay: "2026-08-14",
-	entries: [],
+	entries: [] as CheckInEntry[],
 	selectedFactorSlugs: [],
 	availableFactors: listFactors(),
 	availableMeasurements: [],
 	loggedMeasurements: [],
 	inputLocale: "en-GB",
 	note: "",
-};
-
-const measurementToday = {
-	...emptyToday,
-	availableMeasurements: [
-		{
-			metricSlug: "weight" as const,
-			label: "Weight",
-			dimension: "mass" as const,
-			displayUnit: "st" as const,
-		},
-	],
 };
 
 const emptyRoutines = {
@@ -138,6 +126,16 @@ function historyDay(localDay: string) {
 	};
 }
 
+function checkInStore(today = emptyToday) {
+	return {
+		loadToday: jest.fn(async () => today),
+		loadCheckInDays: jest.fn(async () => new Set<string>()),
+		saveCheckIn: jest.fn(async () => today),
+		saveDayFactors: jest.fn(async () => today),
+		saveDayNote: jest.fn(async () => today),
+	};
+}
+
 function habitsStore() {
 	return {
 		loadToday: jest.fn(async () => emptyRoutines),
@@ -189,11 +187,7 @@ describe("home screen", () => {
 			<HomeScreen
 				{...supportingProps()}
 				habitsStore={habitsStore()}
-				store={{
-					loadToday: jest.fn(async () => emptyToday),
-					loadCheckInDays: jest.fn(async () => new Set<string>()),
-					save: jest.fn(async () => emptyToday),
-				}}
+				store={checkInStore()}
 			/>,
 		);
 
@@ -215,11 +209,7 @@ describe("home screen", () => {
 					),
 				}}
 				habitsStore={habitsStore()}
-				store={{
-					loadToday: jest.fn(async () => emptyToday),
-					loadCheckInDays: jest.fn(async () => new Set<string>()),
-					save: jest.fn(async () => emptyToday),
-				}}
+				store={checkInStore()}
 			/>,
 		);
 
@@ -239,11 +229,7 @@ describe("home screen", () => {
 					),
 				}}
 				habitsStore={habitsStore()}
-				store={{
-					loadToday: jest.fn(async () => emptyToday),
-					loadCheckInDays: jest.fn(async () => new Set<string>()),
-					save: jest.fn(async () => emptyToday),
-				}}
+				store={checkInStore()}
 			/>,
 		);
 
@@ -303,11 +289,7 @@ describe("home screen", () => {
 			<HomeScreen
 				{...supportingProps()}
 				habitsStore={routineStore}
-				store={{
-					loadToday: jest.fn(async () => emptyToday),
-					loadCheckInDays: jest.fn(async () => new Set<string>()),
-					save: jest.fn(async () => emptyToday),
-				}}
+				store={checkInStore()}
 			/>,
 		);
 
@@ -321,101 +303,167 @@ describe("home screen", () => {
 		expect(await screen.findByText(/4 day streak/)).toBeTruthy();
 	});
 
-	it("saves after mood, energy, and one factor selection", async () => {
-		const save = jest.fn(async () => emptyToday);
+	it("saves the check-in as soon as an energy score is chosen", async () => {
+		const store = checkInStore();
 		const screen = await render(
 			<HomeScreen
 				{...supportingProps()}
 				habitsStore={habitsStore()}
-				store={{
-					loadToday: jest.fn(async () => emptyToday),
-					loadCheckInDays: jest.fn(async () => new Set<string>()),
-					save,
-				}}
+				store={store}
+			/>,
+		);
+		await screen.findByLabelText("Mood 4");
+
+		// Energy is only offered once a mood is chosen, and choosing it commits.
+		expect(screen.queryByLabelText("Energy 3")).toBeNull();
+		await fireEvent.press(screen.getByLabelText("Mood 4"));
+		await fireEvent.press(screen.getByLabelText("Energy 3"));
+
+		await waitFor(() =>
+			expect(store.saveCheckIn).toHaveBeenCalledWith(
+				{ mood: 4, energy: 3 },
+				null,
+			),
+		);
+		expect(screen.queryByText("Save check-in")).toBeNull();
+	});
+
+	it("commits only one check-in when energy is tapped twice", async () => {
+		const store = checkInStore();
+		let release: (() => void) | null = null;
+		store.saveCheckIn.mockImplementation(async () => {
+			await new Promise<void>((resolve) => {
+				release = resolve;
+			});
+			return emptyToday;
+		});
+		const screen = await render(
+			<HomeScreen
+				{...supportingProps()}
+				habitsStore={habitsStore()}
+				store={store}
 			/>,
 		);
 		await screen.findByLabelText("Mood 4");
 
 		await fireEvent.press(screen.getByLabelText("Mood 4"));
 		await fireEvent.press(screen.getByLabelText("Energy 3"));
-		await fireEvent.press(screen.getByLabelText("Training"));
-		await fireEvent.press(screen.getByText("Save check-in"));
+		await fireEvent.press(screen.getByLabelText("Energy 3"));
+
+		expect(store.saveCheckIn).toHaveBeenCalledTimes(1);
+		await act(async () => release?.());
+	});
+
+	it("edits an existing check-in through the same two taps", async () => {
+		const mood = { ...observation("mood", 2), localDay: "2026-08-14" };
+		const energy = { ...observation("energy", 3), localDay: "2026-08-14" };
+		const entry = { id: mood.id, observedAt: mood.observedAt, mood, energy };
+		const store = checkInStore({ ...emptyToday, entries: [entry] });
+		const screen = await render(
+			<HomeScreen
+				{...supportingProps()}
+				habitsStore={habitsStore()}
+				store={store}
+			/>,
+		);
+
+		await fireEvent.press(await screen.findByText("Edit"));
+		expect(screen.getByText("Edit check-in")).toBeTruthy();
+		await fireEvent.press(screen.getByLabelText("Mood 5"));
+		await fireEvent.press(screen.getByLabelText("Energy 4"));
 
 		await waitFor(() =>
-			expect(save).toHaveBeenCalledWith(
-				{
-					mood: 4,
-					energy: 3,
-					selectedFactorSlugs: ["training"],
-					measurements: [],
-					note: "",
-				},
-				null,
+			expect(store.saveCheckIn).toHaveBeenCalledWith(
+				{ mood: 5, energy: 4 },
+				entry,
 			),
 		);
 	});
 
-	it("parses an enabled measurement into a canonical draft value", async () => {
-		const save = jest.fn(
-			async (_draft: unknown, _entry: unknown) => measurementToday,
-		);
+	it("leaves the check-in untouched when an edit is cancelled", async () => {
+		const mood = { ...observation("mood", 2), localDay: "2026-08-14" };
+		const energy = { ...observation("energy", 3), localDay: "2026-08-14" };
+		const entry = { id: mood.id, observedAt: mood.observedAt, mood, energy };
+		const store = checkInStore({ ...emptyToday, entries: [entry] });
 		const screen = await render(
 			<HomeScreen
 				{...supportingProps()}
 				habitsStore={habitsStore()}
-				store={{
-					loadToday: jest.fn(async () => measurementToday),
-					loadCheckInDays: jest.fn(async () => new Set<string>()),
-					save,
-				}}
+				store={store}
 			/>,
 		);
-		await screen.findByLabelText("Weight (stones)");
 
-		await fireEvent.press(screen.getByLabelText("Mood 4"));
-		await fireEvent.press(screen.getByLabelText("Energy 3"));
-		await fireEvent.changeText(screen.getByLabelText("Weight (stones)"), "12");
-		await fireEvent.changeText(screen.getByLabelText("Weight (pounds)"), "4");
-		await fireEvent.press(screen.getByText("Save check-in"));
+		await fireEvent.press(await screen.findByText("Edit"));
+		await fireEvent.press(screen.getByLabelText("Mood 5"));
+		await fireEvent.press(screen.getByText("Cancel edit"));
 
-		await waitFor(() => expect(save).toHaveBeenCalledTimes(1));
-		expect(save.mock.calls[0]?.[0]).toMatchObject({
-			measurements: [
-				{
-					metricSlug: "weight",
-					value: 172 * KILOGRAMS_PER_POUND,
-				},
-			],
-		});
+		expect(store.saveCheckIn).not.toHaveBeenCalled();
+		expect(screen.queryByText("Edit check-in")).toBeNull();
 	});
 
-	it("shows a field error and writes nothing for abandoned measurement input", async () => {
-		const save = jest.fn(async () => measurementToday);
+	it("persists a factor the moment it is toggled, without a check-in", async () => {
+		const store = checkInStore();
 		const screen = await render(
 			<HomeScreen
 				{...supportingProps()}
 				habitsStore={habitsStore()}
-				store={{
-					loadToday: jest.fn(async () => measurementToday),
-					loadCheckInDays: jest.fn(async () => new Set<string>()),
-					save,
-				}}
+				store={store}
 			/>,
 		);
-		await screen.findByLabelText("Weight (stones)");
+		await screen.findByLabelText("Mood 4");
 
-		await fireEvent.press(screen.getByLabelText("Mood 4"));
-		await fireEvent.press(screen.getByLabelText("Energy 3"));
-		await fireEvent.changeText(
-			screen.getByLabelText("Weight (stones)"),
-			"nope",
+		await fireEvent.press(screen.getByLabelText("Training"));
+
+		await waitFor(() =>
+			expect(store.saveDayFactors).toHaveBeenCalledWith(["training"]),
 		);
-		await fireEvent.press(screen.getByText("Save check-in"));
-		expect(await screen.findByText("Enter a valid measurement.")).toBeTruthy();
-		expect(save).not.toHaveBeenCalled();
+		expect(store.saveCheckIn).not.toHaveBeenCalled();
+	});
 
-		screen.unmount();
-		expect(save).not.toHaveBeenCalled();
+	it("saves the day note only once it is edited", async () => {
+		const store = checkInStore();
+		const screen = await render(
+			<HomeScreen
+				{...supportingProps()}
+				habitsStore={habitsStore()}
+				store={store}
+			/>,
+		);
+		await screen.findByLabelText("Mood 4");
+
+		expect(screen.queryByText("Save note")).toBeNull();
+		await fireEvent.changeText(
+			screen.getByLabelText("Note (optional)"),
+			"Strong finish",
+		);
+		await fireEvent.press(screen.getByText("Save note"));
+
+		await waitFor(() =>
+			expect(store.saveDayNote).toHaveBeenCalledWith("Strong finish"),
+		);
+	});
+
+	it("keeps an unsaved note through a background reload", async () => {
+		const store = checkInStore();
+		const screen = await render(
+			<HomeScreen
+				{...supportingProps()}
+				habitsStore={habitsStore()}
+				store={store}
+			/>,
+		);
+		await screen.findByLabelText("Mood 4");
+		await fireEvent.changeText(
+			screen.getByLabelText("Note (optional)"),
+			"Half-typed thought",
+		);
+
+		await act(async () => triggerFocus?.());
+
+		expect(screen.getByLabelText("Note (optional)").props.value).toBe(
+			"Half-typed thought",
+		);
+		expect(screen.getByText("Save note")).toBeTruthy();
 	});
 
 	it("shows a past-day summary without the check-in form", async () => {
@@ -446,11 +494,7 @@ describe("home screen", () => {
 				{...supportingProps()}
 				historyStore={historyStore}
 				habitsStore={habitsStore()}
-				store={{
-					loadToday: jest.fn(async () => emptyToday),
-					loadCheckInDays: jest.fn(async () => new Set<string>()),
-					save: jest.fn(async () => emptyToday),
-				}}
+				store={checkInStore()}
 			/>,
 		);
 
@@ -490,11 +534,7 @@ describe("home screen", () => {
 				{...supportingProps()}
 				historyStore={historyStore}
 				habitsStore={habitsStore()}
-				store={{
-					loadToday: jest.fn(async () => emptyToday),
-					loadCheckInDays: jest.fn(async () => new Set<string>()),
-					save: jest.fn(async () => emptyToday),
-				}}
+				store={checkInStore()}
 			/>,
 		);
 
@@ -523,11 +563,7 @@ describe("home screen", () => {
 				{...supportingProps()}
 				historyStore={historyStore}
 				habitsStore={habitsStore()}
-				store={{
-					loadToday: jest.fn(async () => emptyToday),
-					loadCheckInDays: jest.fn(async () => new Set<string>()),
-					save: jest.fn(async () => emptyToday),
-				}}
+				store={checkInStore()}
 			/>,
 		);
 
@@ -559,11 +595,7 @@ describe("home screen", () => {
 				{...supportingProps()}
 				historyStore={historyStore}
 				habitsStore={habitsStore()}
-				store={{
-					loadToday: jest.fn(async () => emptyToday),
-					loadCheckInDays: jest.fn(async () => new Set<string>()),
-					save: jest.fn(async () => emptyToday),
-				}}
+				store={checkInStore()}
 			/>,
 		);
 		await screen.findByLabelText("Mood 4");
@@ -633,11 +665,7 @@ describe("home screen", () => {
 				<HomeScreen
 					{...supportingProps()}
 					habitsStore={habitsStore()}
-					store={{
-						loadToday: jest.fn(async () => emptyToday),
-						loadCheckInDays: jest.fn(async () => new Set<string>()),
-						save: jest.fn(async () => emptyToday),
-					}}
+					store={checkInStore()}
 				/>
 			</TodayHeaderMonthProvider>,
 		);
@@ -668,11 +696,7 @@ describe("home screen", () => {
 				<HomeScreen
 					{...supportingProps()}
 					habitsStore={habitsStore()}
-					store={{
-						loadToday: jest.fn(async () => emptyToday),
-						loadCheckInDays: jest.fn(async () => new Set<string>()),
-						save: jest.fn(async () => emptyToday),
-					}}
+					store={checkInStore()}
 				/>
 			</TodayHeaderMonthProvider>,
 		);
@@ -753,11 +777,7 @@ describe("home screen", () => {
 					loadDay: jest.fn(async (localDay: string) => historyDay(localDay)),
 				}}
 				habitsStore={routineStore}
-				store={{
-					loadToday: jest.fn(async () => emptyToday),
-					loadCheckInDays: jest.fn(async () => new Set<string>()),
-					save: jest.fn(async () => emptyToday),
-				}}
+				store={checkInStore()}
 			/>,
 		);
 		const yesterday = await screen.findByTestId("week-strip-day-2026-08-13");
@@ -780,29 +800,26 @@ describe("home screen", () => {
 
 	it("fills today's check-in dot after saving", async () => {
 		let saved = false;
-		const save = jest.fn(async () => {
+		const store = checkInStore();
+		store.saveCheckIn.mockImplementation(async () => {
 			saved = true;
 			return emptyToday;
 		});
+		store.loadCheckInDays.mockImplementation(async () =>
+			saved ? new Set(["2026-08-14"]) : new Set<string>(),
+		);
 		const screen = await render(
 			<HomeScreen
 				{...supportingProps()}
 				habitsStore={habitsStore()}
-				store={{
-					loadToday: jest.fn(async () => emptyToday),
-					loadCheckInDays: jest.fn(async () =>
-						saved ? new Set(["2026-08-14"]) : new Set<string>(),
-					),
-					save,
-				}}
+				store={store}
 			/>,
 		);
 		await screen.findByLabelText("Mood 4");
 		await fireEvent.press(screen.getByLabelText("Mood 4"));
 		await fireEvent.press(screen.getByLabelText("Energy 3"));
-		await fireEvent.press(screen.getByText("Save check-in"));
 
-		await waitFor(() => expect(save).toHaveBeenCalledTimes(1));
+		await waitFor(() => expect(store.saveCheckIn).toHaveBeenCalledTimes(1));
 		await waitFor(() =>
 			expect(
 				screen.getByTestId("week-strip-day-2026-08-14").props
@@ -825,7 +842,9 @@ describe("home screen", () => {
 						localDay: current.getDate() === 14 ? "2026-08-14" : "2026-08-15",
 					})),
 					loadCheckInDays: jest.fn(async () => new Set<string>()),
-					save: jest.fn(async () => emptyToday),
+					saveCheckIn: jest.fn(async () => emptyToday),
+					saveDayFactors: jest.fn(async () => emptyToday),
+					saveDayNote: jest.fn(async () => emptyToday),
 				}}
 			/>,
 		);

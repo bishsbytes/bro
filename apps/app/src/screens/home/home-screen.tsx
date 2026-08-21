@@ -1,11 +1,4 @@
-import {
-	localDayOf,
-	type MeasurementEntry,
-	type ParsedMeasurement,
-	parseMeasurementEntry,
-	shiftLocalDay,
-	type WeekStartDay,
-} from "@bro/domain";
+import { localDayOf, shiftLocalDay, type WeekStartDay } from "@bro/domain";
 import {
 	type FactorCategory,
 	resolveMetric,
@@ -16,7 +9,6 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { TouchableOpacity, View } from "react-native";
 import {
 	type CheckInEntry,
-	type CheckInMeasurement,
 	type CheckInStore,
 	createCheckInStore,
 	type TodayCheckIn,
@@ -27,7 +19,7 @@ import { Card } from "../../components/card";
 import { DayPager } from "../../components/day-pager";
 import { FormField } from "../../components/form-field";
 import { LoadingIndicator } from "../../components/loading-indicator";
-import { MeasurementField } from "../../components/measurement-field";
+import { ScoreRow } from "../../components/score-row";
 import { Screen } from "../../components/screen";
 import { SectionHeader } from "../../components/section-header";
 import { useSetTodayHeaderVisibleMonthDay } from "../../components/today-header-month-context";
@@ -59,7 +51,14 @@ import {
 } from "../../units/unit-settings-store";
 
 type HomeScreenProps = {
-	store?: Pick<CheckInStore, "loadToday" | "save" | "loadCheckInDays">;
+	store?: Pick<
+		CheckInStore,
+		| "loadToday"
+		| "saveCheckIn"
+		| "saveDayFactors"
+		| "saveDayNote"
+		| "loadCheckInDays"
+	>;
 	habitsStore?: Pick<
 		HabitsStore,
 		"loadToday" | "toggleManual" | "completeChallengeDay" | "loadAdherenceRange"
@@ -70,7 +69,6 @@ type HomeScreenProps = {
 	now?: () => Date;
 };
 
-const SCORES = [1, 2, 3, 4, 5] as const;
 const MOOD_FACES = ["😞", "🙁", "😐", "🙂", "😄"] as const;
 const CATEGORY_LABELS: Record<FactorCategory, string> = {
 	body: "Body",
@@ -79,7 +77,6 @@ const CATEGORY_LABELS: Record<FactorCategory, string> = {
 	social: "Social",
 };
 
-const EMPTY_ENTRY: MeasurementEntry = { major: "", minor: "" };
 const systemNow = () => new Date();
 
 function localDaysBetween(fromLocalDay: string, throughLocalDay: string) {
@@ -92,39 +89,6 @@ function localDaysBetween(fromLocalDay: string, throughLocalDay: string) {
 		days.push(localDay);
 	}
 	return days;
-}
-
-function parseMeasurementInput(
-	entry: MeasurementEntry,
-	measurement: CheckInMeasurement,
-	locale: string | undefined,
-): ParsedMeasurement {
-	if (measurement.dimension === "mass") {
-		return parseMeasurementEntry(
-			entry,
-			measurement.dimension,
-			measurement.displayUnit,
-			locale,
-		);
-	}
-	if (measurement.dimension === "length") {
-		return parseMeasurementEntry(
-			entry,
-			measurement.dimension,
-			measurement.displayUnit,
-			locale,
-		);
-	}
-	return parseMeasurementEntry(
-		entry,
-		measurement.dimension,
-		measurement.displayUnit,
-		locale,
-	);
-}
-
-function isBlankEntry(entry: MeasurementEntry): boolean {
-	return !entry.major.trim() && !entry.minor.trim();
 }
 
 function measurementChangeBadgeLabel(change: HistoryMeasurementChange): string {
@@ -436,25 +400,42 @@ export function HomeScreen({
 	const [energy, setEnergy] = useState<number | null>(null);
 	const [selectedFactors, setSelectedFactors] = useState<string[]>([]);
 	const [note, setNote] = useState("");
-	const [measurementInputs, setMeasurementInputs] = useState<
-		Record<string, MeasurementEntry>
-	>({});
-	const [measurementErrors, setMeasurementErrors] = useState<
-		Record<string, string>
-	>({});
 	const [editing, setEditing] = useState<CheckInEntry | null>(null);
-	const [formOpen, setFormOpen] = useState(false);
 	const [saving, setSaving] = useState(false);
 	const [error, setError] = useState<string | null>(null);
+	// A tap commits the check-in, so the guard has to close before React has
+	// re-rendered: a second tap in the same frame would still see `saving` false.
+	const savingRef = useRef(false);
+	// Only the latest factor toggle may apply its result, and a reload must not
+	// pull the chips back to a set the user has already moved on from.
+	const factorRequestRef = useRef(0);
+	const factorsInFlightRef = useRef(0);
+	// The note field is the user's draft until they save it; a background reload
+	// may only refill it while it matches what was last loaded or saved.
+	const savedNoteRef = useRef("");
+	// Every read and write returns a whole snapshot of the day, so a slow one
+	// must not land on top of a newer one — a note save in flight while a
+	// check-in commits would otherwise put the day back as it was.
+	const todayWriteRef = useRef(0);
+	const [savingNote, setSavingNote] = useState(false);
+	const noteDirty = note !== savedNoteRef.current;
 
 	const load = useCallback(async () => {
 		setError(null);
+		todayWriteRef.current += 1;
+		const stamp = todayWriteRef.current;
 		try {
 			const loaded = await checkIns.loadToday();
+			if (stamp !== todayWriteRef.current) return;
 			setToday(loaded);
-			setSelectedFactors(loaded.selectedFactorSlugs);
-			setNote(loaded.note);
-			setFormOpen(loaded.entries.length === 0);
+			if (factorsInFlightRef.current === 0) {
+				setSelectedFactors(loaded.selectedFactorSlugs);
+			}
+			const previouslySaved = savedNoteRef.current;
+			savedNoteRef.current = loaded.note;
+			setNote((current) =>
+				current === previouslySaved ? loaded.note : current,
+			);
 		} catch (caught) {
 			setError(caught instanceof Error ? caught.message : String(caught));
 		}
@@ -741,22 +722,33 @@ export function HomeScreen({
 		}
 	}
 
-	function toggleFactor(slug: string) {
-		setSelectedFactors((current) =>
-			current.includes(slug)
-				? current.filter((selected) => selected !== slug)
-				: [...current, slug],
-		);
-	}
-
-	function startAnother() {
-		setMood(null);
-		setEnergy(null);
-		setEditing(null);
+	async function toggleFactor(slug: string) {
+		const next = selectedFactors.includes(slug)
+			? selectedFactors.filter((selected) => selected !== slug)
+			: [...selectedFactors, slug];
+		const previous = selectedFactors;
+		playSelectionHaptic();
+		setSelectedFactors(next);
 		setError(null);
-		setMeasurementInputs({});
-		setMeasurementErrors({});
-		setFormOpen(true);
+		const request = factorRequestRef.current + 1;
+		factorRequestRef.current = request;
+		factorsInFlightRef.current += 1;
+		todayWriteRef.current += 1;
+		const stamp = todayWriteRef.current;
+		try {
+			const saved = await checkIns.saveDayFactors(next);
+			if (request !== factorRequestRef.current) return;
+			setSelectedFactors(saved.selectedFactorSlugs);
+			if (stamp !== todayWriteRef.current) return;
+			setToday(saved);
+			invalidateIndicatorDay(saved.localDay);
+		} catch (caught) {
+			if (request !== factorRequestRef.current) return;
+			setSelectedFactors(previous);
+			setError(caught instanceof Error ? caught.message : String(caught));
+		} finally {
+			factorsInFlightRef.current -= 1;
+		}
 	}
 
 	function startEditing(entry: CheckInEntry) {
@@ -764,78 +756,66 @@ export function HomeScreen({
 		setEnergy(entry.energy.value);
 		setEditing(entry);
 		setError(null);
-		setMeasurementInputs({});
-		setMeasurementErrors({});
-		setFormOpen(true);
 	}
 
-	function updateMeasurementInput(slug: string, entry: MeasurementEntry) {
-		setMeasurementInputs((current) => ({ ...current, [slug]: entry }));
-		setMeasurementErrors((current) => {
-			if (!(slug in current)) return current;
-			const next = { ...current };
-			delete next[slug];
-			return next;
-		});
+	function cancelEditing() {
+		setMood(null);
+		setEnergy(null);
+		setEditing(null);
+		setError(null);
 	}
 
-	async function save() {
-		if (!today || mood === null || energy === null || saving) {
-			return;
-		}
-		const measurements: { metricSlug: string; value: number }[] = [];
-		const fieldErrors: Record<string, string> = {};
-		if (!editing) {
-			for (const measurement of today.availableMeasurements) {
-				const entry = measurementInputs[measurement.metricSlug] ?? EMPTY_ENTRY;
-				if (isBlankEntry(entry)) continue;
-				const parsed = parseMeasurementInput(
-					entry,
-					measurement,
-					today.inputLocale,
-				);
-				if (!parsed.ok) {
-					fieldErrors[measurement.metricSlug] = parsed.error;
-				} else {
-					measurements.push({
-						metricSlug: measurement.metricSlug,
-						value: parsed.canonicalValue,
-					});
-				}
-			}
-		}
-		if (Object.keys(fieldErrors).length > 0) {
-			setMeasurementErrors(fieldErrors);
-			return;
-		}
-
+	/** Choosing an energy score is what commits the check-in. */
+	async function chooseEnergy(score: number) {
+		if (!today || mood === null || savingRef.current) return;
+		savingRef.current = true;
+		playSelectionHaptic();
+		setEnergy(score);
 		setSaving(true);
 		setError(null);
+		todayWriteRef.current += 1;
+		const stamp = todayWriteRef.current;
 		try {
-			const saved = await checkIns.save(
-				{
-					mood,
-					energy,
-					selectedFactorSlugs: selectedFactors,
-					measurements,
-					note,
-				},
+			const saved = await checkIns.saveCheckIn(
+				{ mood, energy: score },
 				editing,
 			);
-			setToday(saved);
+			if (stamp === todayWriteRef.current) setToday(saved);
 			invalidateIndicatorDay(saved.localDay);
-			setSelectedFactors(saved.selectedFactorSlugs);
-			setNote(saved.note);
 			setMood(null);
 			setEnergy(null);
 			setEditing(null);
-			setMeasurementInputs({});
-			setMeasurementErrors({});
-			setFormOpen(false);
 		} catch (caught) {
 			setError(caught instanceof Error ? caught.message : String(caught));
 		} finally {
+			savingRef.current = false;
 			setSaving(false);
+		}
+	}
+
+	function chooseMood(score: number) {
+		if (savingRef.current) return;
+		playSelectionHaptic();
+		setMood(score);
+		setError(null);
+	}
+
+	async function saveNote() {
+		if (savingNote) return;
+		setSavingNote(true);
+		setError(null);
+		todayWriteRef.current += 1;
+		const stamp = todayWriteRef.current;
+		try {
+			const saved = await checkIns.saveDayNote(note);
+			savedNoteRef.current = saved.note;
+			setNote(saved.note);
+			if (stamp !== todayWriteRef.current) return;
+			setToday(saved);
+		} catch (caught) {
+			setError(caught instanceof Error ? caught.message : String(caught));
+		} finally {
+			setSavingNote(false);
 		}
 	}
 
@@ -879,151 +859,121 @@ export function HomeScreen({
 			),
 		}),
 	);
-	const selectedFactorLabels = today.selectedFactorSlugs.map((slug) => {
-		const resolved = resolveMetric(slug);
-		return resolved.kind === "known" ? resolved.metric.label : slug;
-	});
-	const checkInForm = formOpen ? (
+	const checkInFlow = (
 		<View style={styles.form}>
 			<SectionHeader title={editing ? "Edit check-in" : "Check in"} />
 
 			<AppText variant="label" style={styles.prompt}>
 				Mood
 			</AppText>
-			<View style={styles.scoreRow}>
-				{SCORES.map((score, index) => {
-					const selected = mood === score;
-					return (
-						<TouchableOpacity
-							key={score}
-							accessibilityRole="button"
-							accessibilityLabel={`Mood ${score}`}
-							accessibilityState={{ selected }}
-							style={[styles.scoreButton, selected && styles.choiceSelected]}
-							onPress={() => setMood(score)}
-						>
-							<AppText style={styles.face}>{MOOD_FACES[index]}</AppText>
-							<AppText
-								variant="micro"
-								color="subtle"
-								style={[selected && styles.choiceSelectedText]}
-							>
-								{score}
-							</AppText>
-						</TouchableOpacity>
-					);
-				})}
-			</View>
+			<ScoreRow
+				accessibilityPrefix="Mood"
+				selected={mood}
+				onSelect={chooseMood}
+				faces={MOOD_FACES}
+				disabled={saving}
+			/>
 
-			<AppText variant="label" style={styles.prompt}>
-				Energy
-			</AppText>
-			<View style={styles.scoreRow}>
-				{SCORES.map((score) => {
-					const selected = energy === score;
-					return (
-						<TouchableOpacity
-							key={score}
-							accessibilityRole="button"
-							accessibilityLabel={`Energy ${score}`}
-							accessibilityState={{ selected }}
-							style={[styles.scoreButton, selected && styles.choiceSelected]}
-							onPress={() => setEnergy(score)}
-						>
-							<AppText
-								variant="score"
-								style={[selected && styles.choiceSelectedText]}
-							>
-								{score}
-							</AppText>
-						</TouchableOpacity>
-					);
-				})}
-			</View>
-
-			<AppText variant="label" style={styles.prompt}>
-				What applied today?
-			</AppText>
-			{groupedFactors.map(({ category, label, factors }) =>
-				factors.length > 0 ? (
-					<View key={category} style={styles.factorGroup}>
-						<AppText
-							variant="caption"
-							color="subtle"
-							style={styles.categoryLabel}
-						>
-							{label}
-						</AppText>
-						<View style={styles.factorRow}>
-							{factors.map((factor) => {
-								const selected = selectedFactors.includes(factor.slug);
-								return (
-									<TouchableOpacity
-										key={factor.slug}
-										accessibilityRole="button"
-										accessibilityLabel={factor.label}
-										accessibilityState={{ selected }}
-										style={[
-											styles.factorButton,
-											selected && styles.choiceSelected,
-										]}
-										onPress={() => toggleFactor(factor.slug)}
-									>
-										<AppText
-											variant="caption"
-											color="muted"
-											style={[selected && styles.choiceSelectedText]}
-										>
-											{factor.label}
-										</AppText>
-									</TouchableOpacity>
-								);
-							})}
-						</View>
-					</View>
-				) : null,
-			)}
-
-			{!editing && today.availableMeasurements.length > 0 ? (
-				<View style={styles.measurementSection}>
-					<AppText variant="label">Measurements</AppText>
-					<AppText variant="caption" color="subtle">
-						Optional — leave a field blank to skip it today.
+			{mood !== null ? (
+				<>
+					<AppText variant="label" style={styles.prompt}>
+						Energy
 					</AppText>
-					{today.availableMeasurements.map((measurement) => (
-						<MeasurementField
-							key={measurement.metricSlug}
-							label={measurement.label}
-							unit={measurement.displayUnit}
-							entry={measurementInputs[measurement.metricSlug] ?? EMPTY_ENTRY}
-							onChangeEntry={(entry) =>
-								updateMeasurementInput(measurement.metricSlug, entry)
-							}
-							placeholder={`Enter ${measurement.displayUnit}`}
-							error={measurementErrors[measurement.metricSlug]}
-						/>
-					))}
-				</View>
+					<ScoreRow
+						accessibilityPrefix="Energy"
+						selected={energy}
+						onSelect={(score) => void chooseEnergy(score)}
+						disabled={saving}
+					/>
+					<AppText variant="caption" color="subtle" style={styles.hint}>
+						{saving
+							? "Saving your check-in…"
+							: "Pick your energy to save this check-in."}
+					</AppText>
+				</>
 			) : null}
 
+			{editing ? (
+				<Button
+					label="Cancel edit"
+					variant="text"
+					disabled={saving}
+					onPress={cancelEditing}
+				/>
+			) : null}
+			{error ? <AppText color="danger">{error}</AppText> : null}
+		</View>
+	);
+
+	const factorsSection =
+		today.availableFactors.length > 0 ? (
+			<View style={styles.section}>
+				<SectionHeader title="Factors" eyebrow="TODAY" />
+				<AppText variant="caption" color="subtle">
+					What applied today?
+				</AppText>
+				{groupedFactors.map(({ category, label, factors }) =>
+					factors.length > 0 ? (
+						<View key={category} style={styles.factorGroup}>
+							<AppText
+								variant="caption"
+								color="subtle"
+								style={styles.categoryLabel}
+							>
+								{label}
+							</AppText>
+							<View style={styles.factorRow}>
+								{factors.map((factor) => {
+									const selected = selectedFactors.includes(factor.slug);
+									return (
+										<TouchableOpacity
+											key={factor.slug}
+											accessibilityRole="button"
+											accessibilityLabel={factor.label}
+											accessibilityState={{ selected }}
+											style={[
+												styles.factorButton,
+												selected && styles.choiceSelected,
+											]}
+											onPress={() => void toggleFactor(factor.slug)}
+										>
+											<AppText
+												variant="caption"
+												color="muted"
+												style={[selected && styles.choiceSelectedText]}
+											>
+												{factor.label}
+											</AppText>
+										</TouchableOpacity>
+									);
+								})}
+							</View>
+						</View>
+					) : null,
+				)}
+			</View>
+		) : null;
+
+	const noteSection = (
+		<View style={styles.section}>
+			<SectionHeader title="Note" eyebrow="TODAY" />
 			<FormField
 				label="Note (optional)"
-				containerStyle={styles.noteField}
 				value={note}
 				onChangeText={setNote}
 				placeholder="Anything worth remembering?"
 				multiline
 			/>
-
-			{error ? <AppText color="danger">{error}</AppText> : null}
-			<Button
-				label={editing ? "Update check-in" : "Save check-in"}
-				loading={saving}
-				disabled={mood === null || energy === null || saving}
-				onPress={() => void save()}
-			/>
+			{noteDirty ? (
+				<Button
+					label="Save note"
+					variant="secondary"
+					loading={savingNote}
+					onPress={() => void saveNote()}
+				/>
+			) : null}
 		</View>
-	) : null;
+	);
 
 	function renderPagerDay(localDay: string) {
 		const past = pastDays.get(localDay);
@@ -1052,7 +1002,7 @@ export function HomeScreen({
 						<AppText variant="section" style={styles.pageTitle}>
 							How are you?
 						</AppText>
-						{checkInForm}
+						{checkInFlow}
 						{finishedChallenge ? (
 							<Card style={styles.routineCard}>
 								<AppText variant="section">Challenge complete</AppText>
@@ -1176,7 +1126,7 @@ export function HomeScreen({
 								Wheel review status could not be loaded: {wheelError}
 							</AppText>
 						) : null}
-						{!formOpen && pagerToday.entries.length > 0 ? (
+						{pagerToday.entries.length > 0 ? (
 							<View style={styles.section}>
 								<SectionHeader
 									title="Logged today"
@@ -1207,11 +1157,6 @@ export function HomeScreen({
 										</TouchableOpacity>
 									</Card>
 								))}
-								{selectedFactorLabels.length > 0 ? (
-									<AppText variant="caption" color="muted">
-										Factors: {selectedFactorLabels.join(", ")}
-									</AppText>
-								) : null}
 								{pagerToday.loggedMeasurements.length > 0 ? (
 									<AppText variant="caption" color="muted">
 										Measurements:{" "}
@@ -1223,20 +1168,10 @@ export function HomeScreen({
 											.join(", ")}
 									</AppText>
 								) : null}
-								{pagerToday.note ? (
-									<AppText variant="caption" color="muted">
-										Note: {pagerToday.note}
-									</AppText>
-								) : null}
-								{!formOpen ? (
-									<Button
-										label="Add another check-in"
-										variant="secondary"
-										onPress={startAnother}
-									/>
-								) : null}
 							</View>
 						) : null}
+						{factorsSection}
+						{noteSection}
 					</>
 				)}
 			</Screen>
@@ -1313,26 +1248,11 @@ const styles = StyleSheet.create((theme) => ({
 		marginTop: theme.spacing.lg,
 		marginBottom: theme.spacing.sm,
 	},
-	scoreRow: { flexDirection: "row", gap: theme.spacing.sm },
-	scoreButton: {
-		flex: 1,
-		minHeight: theme.control.scoreMinHeight,
-		alignItems: "center",
-		justifyContent: "center",
-		borderWidth: 1,
-		borderColor: theme.colors.border,
-		borderRadius: theme.radius.md,
-		backgroundColor: theme.colors.surface,
-	},
 	choiceSelected: {
 		borderColor: theme.colors.brand,
 		backgroundColor: theme.colors.selected,
 	},
 	choiceSelectedText: { color: theme.colors.onSelected },
-	face: {
-		fontSize: theme.typography.face.fontSize,
-		lineHeight: theme.typography.face.lineHeight,
-	},
 	factorGroup: { marginBottom: theme.spacing.md },
 	categoryLabel: { marginBottom: theme.spacing.xs },
 	factorRow: { flexDirection: "row", flexWrap: "wrap", gap: theme.spacing.sm },
@@ -1344,9 +1264,5 @@ const styles = StyleSheet.create((theme) => ({
 		paddingVertical: theme.spacing.sm,
 		paddingHorizontal: theme.spacing.md,
 	},
-	measurementSection: {
-		marginTop: theme.spacing.lg,
-		gap: theme.spacing.sm,
-	},
-	noteField: { marginTop: theme.spacing.lg, marginBottom: theme.spacing.lg },
+	hint: { marginTop: theme.spacing.sm },
 }));

@@ -58,6 +58,7 @@ export type BodyMetricSummary = BodyMetricPresentation & {
 
 export type BodyOverview = {
 	metrics: BodyMetricSummary[];
+	inputLocale: string | undefined;
 };
 
 export type BodyHistoryEntry = {
@@ -165,7 +166,7 @@ export class BodyStore {
 	}
 
 	async loadOverview(): Promise<BodyOverview> {
-		return { metrics: await this.loadSummaries() };
+		return { metrics: await this.loadSummaries(), inputLocale: this.locale() };
 	}
 
 	async loadMetric(metricSlug: string): Promise<BodyMetricDetail | null> {
@@ -234,6 +235,40 @@ export class BodyStore {
 				enabled,
 			},
 		]);
+		return await this.loadOverview();
+	}
+
+	/**
+	 * Records a value the user typed for today. Only a tracked measurement can
+	 * be logged: an untracked one has no entry field, so a write for it means
+	 * the caller is working from a stale overview.
+	 */
+	async recordMeasurement(
+		metricSlug: string,
+		canonicalValue: number,
+	): Promise<BodyOverview> {
+		const metric = resolveMeasurement(metricSlug);
+		assertCanonicalValue(metric, canonicalValue);
+		const overlays = await this.trackedMetrics.listResolved(
+			measurementDefaults(),
+		);
+		const tracked = overlays.find((row) => row.metricSlug === metric.slug);
+		if (!tracked?.enabled) {
+			throw new TypeError(`Measurement is not tracked: ${metric.slug}`);
+		}
+		const capturedAt = this.now();
+		await this.observations.create({
+			metricSlug: metric.slug,
+			value: canonicalValue,
+			scaleMin: null,
+			scaleMax: null,
+			observedAt: capturedAt.getTime(),
+			localDay: localDayOf(capturedAt),
+			tzOffsetMinutes: capturedAt.getTimezoneOffset(),
+			source: "user",
+			sourceRecordId: null,
+			assessmentId: null,
+		});
 		return await this.loadOverview();
 	}
 

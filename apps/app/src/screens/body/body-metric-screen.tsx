@@ -1,10 +1,5 @@
 import type { Observation } from "@bro/database-app";
-import {
-	type MeasurementEntry,
-	measurementEntryOf,
-	type ParsedMeasurement,
-	parseMeasurementEntry,
-} from "@bro/domain";
+import type { MeasurementEntry } from "@bro/domain";
 import { router, useFocusEffect } from "expo-router";
 import { useCallback, useMemo, useState } from "react";
 import { View } from "react-native";
@@ -24,6 +19,11 @@ import { MeasurementField } from "../../components/measurement-field";
 import { StackScreen as Screen } from "../../components/screen";
 import { SectionHeader } from "../../components/section-header";
 import { TrendChart } from "../../components/trend-chart";
+import {
+	EMPTY_ENTRY,
+	measurementInputOf,
+	parseMeasurementInput,
+} from "../../measurements/measurement-entry";
 import { StyleSheet } from "../../theme/unistyles";
 
 type BodyMetricScreenProps = {
@@ -38,62 +38,6 @@ type BodyMetricScreenProps = {
 		| "abandonGoal"
 	>;
 };
-
-const EMPTY_ENTRY: MeasurementEntry = { major: "", minor: "" };
-
-function parsePresentedMeasurement(
-	entry: MeasurementEntry,
-	presentation: MeasurementPresentation,
-	locale: string | undefined,
-): ParsedMeasurement {
-	if (presentation.dimension === "mass") {
-		return parseMeasurementEntry(
-			entry,
-			presentation.dimension,
-			presentation.displayUnit,
-			locale,
-		);
-	}
-	if (presentation.dimension === "length") {
-		return parseMeasurementEntry(
-			entry,
-			presentation.dimension,
-			presentation.displayUnit,
-			locale,
-		);
-	}
-	return parseMeasurementEntry(
-		entry,
-		presentation.dimension,
-		presentation.displayUnit,
-		locale,
-	);
-}
-
-function presentedEntryOf(
-	canonicalValue: number,
-	presentation: MeasurementPresentation,
-): MeasurementEntry {
-	if (presentation.dimension === "mass") {
-		return measurementEntryOf(
-			canonicalValue,
-			presentation.dimension,
-			presentation.displayUnit,
-		);
-	}
-	if (presentation.dimension === "length") {
-		return measurementEntryOf(
-			canonicalValue,
-			presentation.dimension,
-			presentation.displayUnit,
-		);
-	}
-	return measurementEntryOf(
-		canonicalValue,
-		presentation.dimension,
-		presentation.displayUnit,
-	);
-}
 
 function dateTimeLabel(observation: Observation): string {
 	if (observation.source !== "user") return observation.localDay;
@@ -128,12 +72,12 @@ function HistoryEditor({
 	onDelete: () => void;
 }) {
 	const [value, setValue] = useState(() =>
-		presentedEntryOf(entry.observation.value, presentation),
+		measurementInputOf(entry.observation.value, presentation),
 	);
 	const [error, setError] = useState<string | null>(null);
 
 	function save() {
-		const parsed = parsePresentedMeasurement(value, presentation, inputLocale);
+		const parsed = parseMeasurementInput(value, presentation, inputLocale);
 		if (!parsed.ok) {
 			setError(parsed.error);
 			return;
@@ -260,7 +204,7 @@ export function BodyMetricScreen({ metricSlug, store }: BodyMetricScreenProps) {
 
 	async function saveGoal() {
 		if (!detail?.editablePresentation || busy) return;
-		const parsed = parsePresentedMeasurement(
+		const parsed = parseMeasurementInput(
 			target,
 			detail.editablePresentation,
 			detail.inputLocale,

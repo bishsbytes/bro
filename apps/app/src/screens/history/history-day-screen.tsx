@@ -1,12 +1,13 @@
 import type { DayNote, Observation } from "@bro/database-app";
 import { resolveMetric } from "@bro/domain/metric-registry";
 import { useEffect, useMemo, useState } from "react";
-import { TouchableOpacity, View } from "react-native";
+import { View } from "react-native";
 import { AppText } from "../../components/app-text";
 import { Button } from "../../components/button";
 import { Card } from "../../components/card";
 import { FormField } from "../../components/form-field";
 import { LoadingIndicator } from "../../components/loading-indicator";
+import { ScoreRow } from "../../components/score-row";
 import { Screen } from "../../components/screen";
 import { SectionHeader } from "../../components/section-header";
 import {
@@ -16,8 +17,6 @@ import {
 	type HistoryStore,
 } from "../../history/history-store";
 import { StyleSheet } from "../../theme/unistyles";
-
-const SCORES = [1, 2, 3, 4, 5] as const;
 
 type HistoryDayScreenProps = {
 	localDay: string;
@@ -59,33 +58,15 @@ function CheckInEditor({
 			<AppText variant="label" color="muted">
 				Mood
 			</AppText>
-			<View style={styles.scoreRow}>
-				{SCORES.map((score) => (
-					<TouchableOpacity
-						key={`mood-${score}`}
-						accessibilityLabel={`Mood ${score}`}
-						style={[styles.scoreButton, mood === score && styles.selected]}
-						onPress={() => setMood(score)}
-					>
-						<AppText variant="label">{score}</AppText>
-					</TouchableOpacity>
-				))}
-			</View>
+			<ScoreRow accessibilityPrefix="Mood" selected={mood} onSelect={setMood} />
 			<AppText variant="label" color="muted">
 				Energy
 			</AppText>
-			<View style={styles.scoreRow}>
-				{SCORES.map((score) => (
-					<TouchableOpacity
-						key={`energy-${score}`}
-						accessibilityLabel={`Energy ${score}`}
-						style={[styles.scoreButton, energy === score && styles.selected]}
-						onPress={() => setEnergy(score)}
-					>
-						<AppText variant="label">{score}</AppText>
-					</TouchableOpacity>
-				))}
-			</View>
+			<ScoreRow
+				accessibilityPrefix="Energy"
+				selected={energy}
+				onSelect={setEnergy}
+			/>
 			<View style={styles.actions}>
 				<Button
 					label="Save changes"
@@ -355,20 +336,6 @@ export function HistoryDayScreen({ localDay, store }: HistoryDayScreenProps) {
 const styles = StyleSheet.create((theme) => ({
 	content: { gap: theme.spacing.md },
 	card: { gap: theme.spacing.sm },
-	scoreRow: { flexDirection: "row", gap: theme.spacing.sm },
-	scoreButton: {
-		flex: 1,
-		minHeight: 42,
-		alignItems: "center",
-		justifyContent: "center",
-		borderWidth: 1,
-		borderColor: theme.colors.border,
-		borderRadius: theme.radius.sm,
-	},
-	selected: {
-		backgroundColor: theme.colors.selected,
-		borderColor: theme.colors.brand,
-	},
 	actions: {
 		flexDirection: "row",
 		alignItems: "center",

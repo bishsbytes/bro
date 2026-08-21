@@ -1,3 +1,4 @@
+import type { MeasurementEntry } from "@bro/domain";
 import { router, useFocusEffect } from "expo-router";
 import { useCallback, useMemo, useState } from "react";
 import { View } from "react-native";
@@ -5,6 +6,7 @@ import {
 	type BodyOverview,
 	type BodyStore,
 	createBodyStore,
+	type MeasurementPresentation,
 } from "../../body/body-store";
 import { AppText } from "../../components/app-text";
 import { Button } from "../../components/button";
@@ -12,6 +14,7 @@ import { Card } from "../../components/card";
 import { EmptyState } from "../../components/empty-state";
 import { ListRow } from "../../components/list-row";
 import { LoadingIndicator } from "../../components/loading-indicator";
+import { MeasurementField } from "../../components/measurement-field";
 import { Screen } from "../../components/screen";
 import { SectionHeader } from "../../components/section-header";
 import { ThemedSwitch } from "../../components/themed-switch";
@@ -26,10 +29,18 @@ import {
 	type FoodDaySnapshot,
 	type FoodStore,
 } from "../../food/food-store";
+import {
+	EMPTY_ENTRY,
+	isBlankEntry,
+	parseMeasurementInput,
+} from "../../measurements/measurement-entry";
 import { StyleSheet } from "../../theme/unistyles";
 
 type LogScreenProps = {
-	bodyStore?: Pick<BodyStore, "loadOverview" | "setTracked">;
+	bodyStore?: Pick<
+		BodyStore,
+		"loadOverview" | "setTracked" | "recordMeasurement"
+	>;
 	drinksStore?: Pick<DrinksStore, "loadToday">;
 	foodStore?: Pick<FoodStore, "loadToday">;
 };
@@ -103,6 +114,8 @@ export function LogScreen({
 	const [snapshot, setSnapshot] = useState<LogSnapshot | null>(null);
 	const [busySlug, setBusySlug] = useState<string | null>(null);
 	const [error, setError] = useState<string | null>(null);
+	const [entries, setEntries] = useState<Record<string, MeasurementEntry>>({});
+	const [entryErrors, setEntryErrors] = useState<Record<string, string>>({});
 
 	const load = useCallback(async () => {
 		setError(null);
@@ -137,6 +150,48 @@ export function LogScreen({
 				...snapshot,
 				body: await body.setTracked(metricSlug, enabled),
 			});
+		} catch (caught) {
+			setError(caught instanceof Error ? caught.message : String(caught));
+		} finally {
+			setBusySlug(null);
+		}
+	}
+
+	function updateEntry(metricSlug: string, entry: MeasurementEntry) {
+		setEntries((current) => ({ ...current, [metricSlug]: entry }));
+		setEntryErrors((current) => {
+			if (!(metricSlug in current)) return current;
+			const next = { ...current };
+			delete next[metricSlug];
+			return next;
+		});
+	}
+
+	async function recordMeasurement(
+		metricSlug: string,
+		presentation: MeasurementPresentation,
+	) {
+		if (!snapshot || busySlug) return;
+		const entry = entries[metricSlug] ?? EMPTY_ENTRY;
+		if (isBlankEntry(entry)) return;
+		const parsed = parseMeasurementInput(
+			entry,
+			presentation,
+			snapshot.body.inputLocale,
+		);
+		if (!parsed.ok) {
+			setEntryErrors((current) => ({ ...current, [metricSlug]: parsed.error }));
+			return;
+		}
+		setBusySlug(metricSlug);
+		setError(null);
+		try {
+			const recorded = await body.recordMeasurement(
+				metricSlug,
+				parsed.canonicalValue,
+			);
+			setSnapshot({ ...snapshot, body: recorded });
+			setEntries((current) => ({ ...current, [metricSlug]: EMPTY_ENTRY }));
 		} catch (caught) {
 			setError(caught instanceof Error ? caught.message : String(caught));
 		} finally {
@@ -203,7 +258,7 @@ export function LogScreen({
 				{visible.length === 0 ? (
 					<EmptyState
 						title="No body metrics tracked"
-						body="Turn on a measurement below to add it to your daily check-in and Log."
+						body="Turn on a measurement below to log it here and see its trend."
 					/>
 				) : null}
 
@@ -242,6 +297,32 @@ export function LogScreen({
 							) : null}
 						</View>
 
+						{metric.tracked && metric.editablePresentation ? (
+							<View style={styles.entry}>
+								<MeasurementField
+									label={metric.label}
+									unit={metric.editablePresentation.displayUnit}
+									entry={entries[metric.metricSlug] ?? EMPTY_ENTRY}
+									onChangeEntry={(entry) =>
+										updateEntry(metric.metricSlug, entry)
+									}
+									placeholder={`Enter ${metric.editablePresentation.displayUnit}`}
+									error={entryErrors[metric.metricSlug]}
+								/>
+								<Button
+									label={`Log ${metric.label}`}
+									loading={busySlug === metric.metricSlug}
+									disabled={busySlug !== null}
+									onPress={() => {
+										const presentation = metric.editablePresentation;
+										if (presentation) {
+											void recordMeasurement(metric.metricSlug, presentation);
+										}
+									}}
+								/>
+							</View>
+						) : null}
+
 						{metric.series.observedDayCount > 0 ? (
 							<TrendChart series={metric.series} height={100} />
 						) : null}
@@ -273,7 +354,7 @@ export function LogScreen({
 
 			{untracked.length > 0 ? (
 				<View style={styles.section}>
-					<SectionHeader title="More measurements" eyebrow="DAILY CHECK-IN" />
+					<SectionHeader title="More measurements" eyebrow="YOUR BODY" />
 					{untracked.map((metric) => (
 						<Card key={metric.metricSlug} style={styles.heading}>
 							<View style={styles.grow}>
@@ -301,6 +382,7 @@ export function LogScreen({
 const styles = StyleSheet.create((theme) => ({
 	section: { gap: theme.spacing.md },
 	metricCard: { gap: theme.spacing.md },
+	entry: { gap: theme.spacing.sm },
 	heading: {
 		flexDirection: "row",
 		alignItems: "center",

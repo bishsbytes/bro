@@ -44,7 +44,9 @@ jest.mock("./check-in/check-in-store", () => ({
 			note: "",
 		}),
 		loadCheckInDays: async () => new Set(),
-		save: jest.fn(),
+		saveCheckIn: jest.fn(),
+		saveDayFactors: jest.fn(),
+		saveDayNote: jest.fn(),
 	}),
 }));
 

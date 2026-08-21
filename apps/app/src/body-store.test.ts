@@ -263,6 +263,76 @@ describe("body store", () => {
 		);
 	});
 
+	it("records a typed measurement against the day it was entered", async () => {
+		const now = new Date("2026-08-14T12:00:00.000Z");
+		const store = new BodyStore(
+			db,
+			() => now,
+			() => "en-GB",
+		);
+		await store.setTracked("weight", true);
+
+		const overview = await store.recordMeasurement("weight", 78.5);
+
+		expect(overview.inputLocale).toBe("en-GB");
+		expect(overview.metrics[0]).toMatchObject({
+			metricSlug: "weight",
+			tracked: true,
+			latestFormatted: "12 st 5 lb",
+		});
+		const rows = await new databaseApp.ObservationRepository(db).listByDay(
+			"2026-08-14",
+		);
+		expect(rows).toMatchObject([
+			{
+				metricSlug: "weight",
+				value: 78.5,
+				scaleMin: null,
+				scaleMax: null,
+				observedAt: now.getTime(),
+				localDay: "2026-08-14",
+				tzOffsetMinutes: now.getTimezoneOffset(),
+				source: "user",
+			},
+		]);
+	});
+
+	it("refuses to record an untracked, unknown, or out-of-range measurement", async () => {
+		const store = new BodyStore(
+			db,
+			() => new Date("2026-08-14T12:00:00.000Z"),
+			() => "en-GB",
+		);
+
+		await expect(store.recordMeasurement("weight", 78)).rejects.toThrow(
+			"Measurement is not tracked",
+		);
+		await expect(store.recordMeasurement("mood", 4)).rejects.toThrow(
+			"Unknown measurement slug",
+		);
+		// Imported-only metrics have no entry field, whatever an overlay claims.
+		await new databaseApp.TrackedMetricsRepository(db).configure(
+			"steps",
+			99,
+			true,
+		);
+		await expect(store.recordMeasurement("steps", 10_000)).rejects.toThrow(
+			"Unknown measurement slug: steps",
+		);
+
+		await store.setTracked("weight", true);
+		await expect(store.recordMeasurement("weight", -1)).rejects.toThrow(
+			"finite and non-negative",
+		);
+		await store.setTracked("body_fat", true);
+		await expect(store.recordMeasurement("body_fat", 1.4)).rejects.toThrow(
+			"between zero and one",
+		);
+		expect(await new databaseApp.ObservationRepository(db).listAll()).toEqual(
+			[],
+		);
+	});
+
 	it("refuses non-measurement history and goals", async () => {
 		const observations = new databaseApp.ObservationRepository(db);
 		const mood = await observations.create({

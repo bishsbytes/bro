@@ -55,17 +55,9 @@ export type LoggedCheckInMeasurement = CheckInMeasurement & {
 	formattedValue: string;
 };
 
-export type CheckInMeasurementDraft = {
-	metricSlug: string;
-	value: number;
-};
-
-export type CheckInDraft = {
+export type CheckInScores = {
 	mood: number;
 	energy: number;
-	selectedFactorSlugs: readonly string[];
-	measurements: readonly CheckInMeasurementDraft[];
-	note: string;
 };
 
 function pairCheckIns(observations: readonly Observation[]): CheckInEntry[] {
@@ -110,51 +102,14 @@ function latestObservation(
 	return latest;
 }
 
-function assertDraft(draft: CheckInDraft): void {
+function assertScores(scores: CheckInScores): void {
 	for (const [label, value] of [
-		["Mood", draft.mood],
-		["Energy", draft.energy],
+		["Mood", scores.mood],
+		["Energy", scores.energy],
 	] as const) {
 		if (!Number.isInteger(value) || value < 1 || value > 5) {
 			throw new RangeError(`${label} must be a whole number from 1 to 5.`);
 		}
-	}
-
-	for (const slug of draft.selectedFactorSlugs) {
-		const resolved = resolveMetric(slug);
-		if (resolved.kind !== "known" || resolved.metric.kind !== "factor") {
-			throw new TypeError(`Unknown factor slug: ${slug}`);
-		}
-	}
-
-	const measurementSlugs = new Set<string>();
-	for (const measurement of draft.measurements) {
-		const resolved = resolveMetric(measurement.metricSlug);
-		if (
-			resolved.kind !== "known" ||
-			resolved.metric.kind !== "measurement" ||
-			!resolved.metric.userEnterable
-		) {
-			throw new TypeError(
-				`Unknown measurement slug: ${measurement.metricSlug}`,
-			);
-		}
-		if (measurementSlugs.has(measurement.metricSlug)) {
-			throw new TypeError(
-				`Measurement appears more than once: ${measurement.metricSlug}`,
-			);
-		}
-		if (!Number.isFinite(measurement.value) || measurement.value < 0) {
-			throw new RangeError(
-				"Measurement values must be finite and non-negative.",
-			);
-		}
-		if (resolved.metric.dimension === "fraction" && measurement.value > 1) {
-			throw new RangeError(
-				"Fraction measurements must be between zero and one.",
-			);
-		}
-		measurementSlugs.add(measurement.metricSlug);
 	}
 }
 
@@ -287,70 +242,22 @@ export class CheckInStore {
 		return new Set(moods.map((mood) => mood.localDay));
 	}
 
-	async save(
-		draft: CheckInDraft,
+	/**
+	 * Records one mood-and-energy pair. The two rows are written together so a
+	 * check-in never exists half-scored, and the reminder schedule is refreshed
+	 * afterwards because only this pair marks the day as checked in.
+	 */
+	async saveCheckIn(
+		draft: CheckInScores,
 		entry: CheckInEntry | null = null,
 	): Promise<TodayCheckIn> {
-		assertDraft(draft);
-		if (entry && draft.measurements.length > 0) {
-			throw new TypeError(
-				"Measurements can only be logged with a new check-in.",
-			);
-		}
+		assertScores(draft);
 		const capturedAt = this.now();
 		const observedAt = capturedAt.getTime();
 		const localDay = localDayOf(capturedAt);
 		const tzOffsetMinutes = capturedAt.getTimezoneOffset();
-		const selectedFactors = new Set(draft.selectedFactorSlugs);
-		const measurements = new Map(
-			draft.measurements.map((measurement) => [
-				measurement.metricSlug,
-				measurement.value,
-			]),
-		);
 
 		await this.db.withTransactionAsync(async () => {
-			const tracked = await this.trackedMetrics.listResolved(
-				DEFAULT_TRACKED_METRICS,
-			);
-			const activeFactorSlugs = new Set(
-				tracked
-					.filter((metric) => {
-						const resolved = resolveMetric(metric.metricSlug);
-						return (
-							metric.enabled &&
-							resolved.kind === "known" &&
-							resolved.metric.kind === "factor"
-						);
-					})
-					.map((metric) => metric.metricSlug),
-			);
-			const activeMeasurementSlugs = new Set(
-				tracked
-					.filter((metric) => {
-						const resolved = resolveMetric(metric.metricSlug);
-						return (
-							metric.enabled &&
-							resolved.kind === "known" &&
-							resolved.metric.kind === "measurement" &&
-							resolved.metric.userEnterable
-						);
-					})
-					.map((metric) => metric.metricSlug),
-			);
-			for (const slug of selectedFactors) {
-				if (!activeFactorSlugs.has(slug)) {
-					throw new TypeError(`Factor is not active in this check-in: ${slug}`);
-				}
-			}
-			for (const slug of measurements.keys()) {
-				if (!activeMeasurementSlugs.has(slug)) {
-					throw new TypeError(
-						`Measurement is not active in this check-in: ${slug}`,
-					);
-				}
-			}
-
 			if (entry) {
 				// An edit rewrites the value, never the row's scale snapshot: rows
 				// recorded under an older scale must keep the bounds they were
@@ -371,64 +278,32 @@ export class CheckInStore {
 					localDay: entry.energy.localDay,
 					tzOffsetMinutes: entry.energy.tzOffsetMinutes,
 				});
-			} else {
-				await this.observations.create({
-					metricSlug: "mood",
-					value: draft.mood,
-					scaleMin: 1,
-					scaleMax: 5,
-					observedAt,
-					localDay,
-					tzOffsetMinutes,
-					source: "user",
-					sourceRecordId: null,
-					assessmentId: null,
-				});
-				await this.observations.create({
-					metricSlug: "energy",
-					value: draft.energy,
-					scaleMin: 1,
-					scaleMax: 5,
-					observedAt,
-					localDay,
-					tzOffsetMinutes,
-					source: "user",
-					sourceRecordId: null,
-					assessmentId: null,
-				});
+				return;
 			}
-
-			await this.reconcileFactors(
-				localDay,
+			await this.observations.create({
+				metricSlug: "mood",
+				value: draft.mood,
+				scaleMin: 1,
+				scaleMax: 5,
 				observedAt,
+				localDay,
 				tzOffsetMinutes,
-				activeFactorSlugs,
-				selectedFactors,
-			);
-			for (const [metricSlug, value] of measurements) {
-				await this.observations.create({
-					metricSlug,
-					value,
-					scaleMin: null,
-					scaleMax: null,
-					observedAt,
-					localDay,
-					tzOffsetMinutes,
-					source: "user",
-					sourceRecordId: null,
-					assessmentId: null,
-				});
-			}
-			if (draft.note.trim().length > 0) {
-				await this.notes.upsertForDayInCurrentTransaction(localDay, draft.note);
-			} else {
-				// The form prefills the day's note, so an emptied field is an
-				// explicit clear of the note the user was shown — not an absent one.
-				const [uiNote] = await this.notes.listByDay(localDay);
-				if (uiNote) {
-					await this.notes.delete(uiNote.id);
-				}
-			}
+				source: "user",
+				sourceRecordId: null,
+				assessmentId: null,
+			});
+			await this.observations.create({
+				metricSlug: "energy",
+				value: draft.energy,
+				scaleMin: 1,
+				scaleMax: 5,
+				observedAt,
+				localDay,
+				tzOffsetMinutes,
+				source: "user",
+				sourceRecordId: null,
+				assessmentId: null,
+			});
 		});
 
 		const today = await this.loadToday(capturedAt);
@@ -437,6 +312,78 @@ export class CheckInStore {
 		// appear to have failed.
 		await this.refreshReminders().catch(reportReminderRefreshFailure);
 		return today;
+	}
+
+	/**
+	 * Replaces the day's whole factor set. Factors describe the day rather than
+	 * any one check-in, so callers pass everything currently selected and the
+	 * day is reconciled to match.
+	 */
+	async saveDayFactors(
+		selectedFactorSlugs: readonly string[],
+	): Promise<TodayCheckIn> {
+		for (const slug of selectedFactorSlugs) {
+			const resolved = resolveMetric(slug);
+			if (resolved.kind !== "known" || resolved.metric.kind !== "factor") {
+				throw new TypeError(`Unknown factor slug: ${slug}`);
+			}
+		}
+		const capturedAt = this.now();
+		const observedAt = capturedAt.getTime();
+		const localDay = localDayOf(capturedAt);
+		const tzOffsetMinutes = capturedAt.getTimezoneOffset();
+		const selected = new Set(selectedFactorSlugs);
+
+		await this.db.withTransactionAsync(async () => {
+			const tracked = await this.trackedMetrics.listResolved(
+				DEFAULT_TRACKED_METRICS,
+			);
+			const activeFactorSlugs = new Set(
+				tracked
+					.filter((metric) => {
+						const resolved = resolveMetric(metric.metricSlug);
+						return (
+							metric.enabled &&
+							resolved.kind === "known" &&
+							resolved.metric.kind === "factor"
+						);
+					})
+					.map((metric) => metric.metricSlug),
+			);
+			for (const slug of selected) {
+				if (!activeFactorSlugs.has(slug)) {
+					throw new TypeError(`Factor is not active today: ${slug}`);
+				}
+			}
+			await this.reconcileFactors(
+				localDay,
+				observedAt,
+				tzOffsetMinutes,
+				activeFactorSlugs,
+				selected,
+			);
+		});
+
+		return await this.loadToday(capturedAt);
+	}
+
+	/** Replaces the day's single note; an empty body clears it. */
+	async saveDayNote(note: string): Promise<TodayCheckIn> {
+		const capturedAt = this.now();
+		const localDay = localDayOf(capturedAt);
+
+		if (note.trim().length > 0) {
+			await this.notes.upsertForDay(localDay, note);
+		} else {
+			// The form prefills the day's note, so an emptied field is an explicit
+			// clear of the note the user was shown — not an absent one.
+			const [uiNote] = await this.notes.listByDay(localDay);
+			if (uiNote) {
+				await this.notes.delete(uiNote.id);
+			}
+		}
+
+		return await this.loadToday(capturedAt);
 	}
 
 	private async reconcileFactors(

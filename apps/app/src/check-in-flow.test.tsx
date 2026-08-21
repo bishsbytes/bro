@@ -94,72 +94,84 @@ describe("daily check-in flow", () => {
 		await act(async () => undefined);
 		await view.findByText("How are you?");
 
+		// The energy tap is what commits the check-in — there is no Save button.
 		await fireEvent.press(view.getByLabelText("Mood 4"));
-		await fireEvent.press(view.getByLabelText("Energy 3"));
-		await fireEvent.press(view.getByLabelText("Outdoors"));
-		await fireEvent.changeText(view.getByLabelText("Weight (stones)"), "12");
-		await fireEvent.changeText(view.getByLabelText("Weight (pounds)"), "4");
-		await fireEvent.changeText(
-			view.getByPlaceholderText("Anything worth remembering?"),
-			"Strong finish",
-		);
-		await fireEvent.press(view.getByText("Save check-in"));
+		await fireEvent.press(await view.findByLabelText("Energy 3"));
 
 		expect(await view.findByText("1 check-in")).toBeTruthy();
 		const observations = new databaseApp.ObservationRepository(db);
 		const notes = new databaseApp.DayNoteRepository(db);
-		const firstDay = await observations.listByDay(
-			(await new CheckInStore(db).loadToday()).localDay,
+		const localDay = (await new CheckInStore(db).loadToday()).localDay;
+		expect(
+			(await observations.listByDay(localDay)).map((r) => r.metricSlug),
+		).toEqual(["mood", "energy"]);
+		// The pair is one transaction: a check-in never exists half-scored.
+		expect(transaction).toHaveBeenCalledTimes(1);
+
+		// Factors and the note describe the day, and each save its own write.
+		await fireEvent.press(view.getByLabelText("Outdoors"));
+		await act(async () => undefined);
+		expect(transaction).toHaveBeenCalledTimes(2);
+		await fireEvent.changeText(
+			view.getByPlaceholderText("Anything worth remembering?"),
+			"Strong finish",
 		);
+		await fireEvent.press(view.getByText("Save note"));
+		await act(async () => undefined);
+		expect(await notes.listByDay(localDay)).toMatchObject([
+			{ body: "Strong finish" },
+		]);
+
+		// Measurements are day-level and logged from the Log screen (covered by
+		// the body flow); seeding one here proves Today reads the day back.
+		await observations.create({
+			metricSlug: "weight",
+			value: 172 * KILOGRAMS_PER_POUND,
+			scaleMin: null,
+			scaleMax: null,
+			observedAt: Date.now(),
+			localDay,
+			tzOffsetMinutes: new Date().getTimezoneOffset(),
+			source: "user",
+			sourceRecordId: null,
+			assessmentId: null,
+		});
+
+		const firstDay = await observations.listByDay(localDay);
 		expect(firstDay.map((row) => row.metricSlug).sort()).toEqual([
 			"energy",
 			"mood",
 			"outdoors",
 			"weight",
 		]);
-		expect(firstDay.find((row) => row.metricSlug === "weight")).toMatchObject({
-			value: 172 * KILOGRAMS_PER_POUND,
-			scaleMin: null,
-			scaleMax: null,
-			source: "user",
-			sourceRecordId: null,
-			assessmentId: null,
-		});
-		expect(await notes.listByDay(firstDay[0].localDay)).toMatchObject([
-			{ body: "Strong finish" },
-		]);
-		expect(transaction).toHaveBeenCalledTimes(1);
 
-		await fireEvent.press(view.getByText("Add another check-in"));
 		await fireEvent.press(view.getByLabelText("Mood 5"));
-		await fireEvent.press(view.getByLabelText("Energy 4"));
-		await fireEvent.press(view.getByLabelText("Outdoors"));
-		await fireEvent.press(view.getByLabelText("Training"));
-		await fireEvent.changeText(view.getByLabelText("Weight (stones)"), "12");
-		await fireEvent.changeText(view.getByLabelText("Weight (pounds)"), "3");
-		await fireEvent.press(view.getByText("Save check-in"));
-
+		await fireEvent.press(await view.findByLabelText("Energy 4"));
 		expect(await view.findByText("2 check-ins")).toBeTruthy();
-		const secondDay = await observations.listByDay(firstDay[0].localDay);
-		expect(secondDay.filter((row) => row.metricSlug === "mood")).toHaveLength(
-			2,
-		);
-		expect(secondDay.filter((row) => row.metricSlug === "energy")).toHaveLength(
-			2,
-		);
+
+		// Factors belong to the day, so deselecting clears it for the day rather
+		// than for the newest check-in only.
+		await fireEvent.press(view.getByLabelText("Outdoors"));
+		await act(async () => undefined);
+		await fireEvent.press(view.getByLabelText("Training"));
+		await act(async () => undefined);
+
+		const secondDay = await observations.listByDay(localDay);
 		expect(
 			secondDay.filter((row) => row.metricSlug === "outdoors"),
 		).toHaveLength(0);
 		expect(
 			secondDay.filter((row) => row.metricSlug === "training"),
 		).toHaveLength(1);
-		expect(secondDay.filter((row) => row.metricSlug === "weight")).toHaveLength(
+		expect(secondDay.filter((row) => row.metricSlug === "mood")).toHaveLength(
 			2,
 		);
-		expect(
-			secondDay.filter((row) => row.metricSlug === "weight").at(-1),
-		).toMatchObject({ value: 171 * KILOGRAMS_PER_POUND });
-		expect(transaction).toHaveBeenCalledTimes(2);
+		expect(secondDay.filter((row) => row.metricSlug === "energy")).toHaveLength(
+			2,
+		);
+		expect(secondDay.filter((row) => row.metricSlug === "weight")).toHaveLength(
+			1,
+		);
 		expect(globalThis.fetch).not.toHaveBeenCalled();
 
 		view.unmount();
@@ -170,7 +182,7 @@ describe("daily check-in flow", () => {
 
 		expect(await view.findByText("2 check-ins")).toBeTruthy();
 		expect(
-			await view.findByText("Measurements: Weight 12 st 3 lb"),
+			await view.findByText("Measurements: Weight 12 st 4 lb"),
 		).toBeTruthy();
 		// Two product opens across the cold relaunch plus one local-store open.
 		expect(mockSqlite.openDatabaseAsync).toHaveBeenCalledTimes(3);

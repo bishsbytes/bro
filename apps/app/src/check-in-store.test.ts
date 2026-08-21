@@ -82,14 +82,8 @@ describe("check-in store", () => {
 		);
 		const store = new CheckInStore(db, () => CAPTURED_AT);
 
-		await store.save(
-			{
-				mood: 4,
-				energy: 3,
-				selectedFactorSlugs: [],
-				measurements: [],
-				note: "",
-			},
+		await store.saveCheckIn(
+			{ mood: 4, energy: 3 },
 			{ id: mood.id, observedAt: mood.observedAt, mood, energy },
 		);
 
@@ -142,40 +136,92 @@ describe("check-in store", () => {
 	it("deletes the day's note when the prefilled field is saved empty", async () => {
 		const notes = new databaseApp.DayNoteRepository(db);
 		const store = new CheckInStore(db, () => CAPTURED_AT);
-		const draft = {
-			mood: 4,
-			energy: 3,
-			selectedFactorSlugs: [],
-			measurements: [],
-		};
 
-		const saved = await store.save({ ...draft, note: "Keep me" });
+		const saved = await store.saveDayNote("Keep me");
 		expect(saved.note).toBe("Keep me");
 
-		const cleared = await store.save({ ...draft, note: "   " }, null);
+		const cleared = await store.saveDayNote("   ");
 		expect(cleared.note).toBe("");
 		expect(await notes.listByDay(LOCAL_DAY)).toEqual([]);
+	});
+
+	it("writes a check-in as exactly one mood and energy pair", async () => {
+		const observations = new databaseApp.ObservationRepository(db);
+		const transaction = jest.spyOn(db, "withTransactionAsync");
+		const store = new CheckInStore(db, () => CAPTURED_AT);
+
+		const saved = await store.saveCheckIn({ mood: 4, energy: 3 });
+
+		expect(transaction).toHaveBeenCalledTimes(1);
+		expect(await observations.listByDay(LOCAL_DAY)).toMatchObject([
+			{ metricSlug: "mood", value: 4, scaleMin: 1, scaleMax: 5 },
+			{ metricSlug: "energy", value: 3, scaleMin: 1, scaleMax: 5 },
+		]);
+		expect(saved.entries).toMatchObject([
+			{ mood: { value: 4 }, energy: { value: 3 } },
+		]);
+		expect(saved.selectedFactorSlugs).toEqual([]);
+		expect(saved.note).toBe("");
+		transaction.mockRestore();
+	});
+
+	it("rejects a score outside the scale without writing anything", async () => {
+		const observations = new databaseApp.ObservationRepository(db);
+		const store = new CheckInStore(db, () => CAPTURED_AT);
+
+		await expect(store.saveCheckIn({ mood: 0, energy: 3 })).rejects.toThrow(
+			"Mood must be a whole number from 1 to 5.",
+		);
+		await expect(store.saveCheckIn({ mood: 4, energy: 6 })).rejects.toThrow(
+			"Energy must be a whole number from 1 to 5.",
+		);
+		expect(await observations.listByDay(LOCAL_DAY)).toEqual([]);
 	});
 
 	it("writes factor rows with exactly the presence value and null bounds", async () => {
 		const observations = new databaseApp.ObservationRepository(db);
 		const store = new CheckInStore(db, () => CAPTURED_AT);
 
-		await store.save({
-			mood: 4,
-			energy: 3,
-			selectedFactorSlugs: ["outdoors", "training"],
-			measurements: [],
-			note: "",
-		});
+		await store.saveDayFactors(["outdoors", "training"]);
 
-		const factorRows = (await observations.listByDay(LOCAL_DAY)).filter(
-			(row) => row.metricSlug !== "mood" && row.metricSlug !== "energy",
-		);
+		const factorRows = await observations.listByDay(LOCAL_DAY);
 		expect(factorRows).toHaveLength(2);
 		for (const row of factorRows) {
 			expect(row).toMatchObject({ value: 1, scaleMin: null, scaleMax: null });
 		}
+	});
+
+	it("reconciles the day's factors to the set it is given", async () => {
+		const observations = new databaseApp.ObservationRepository(db);
+		const store = new CheckInStore(db, () => CAPTURED_AT);
+
+		await store.saveDayFactors(["outdoors", "training"]);
+		// A repeated slug must not multiply the day's rows.
+		const kept = await store.saveDayFactors(["training", "training"]);
+
+		expect(kept.selectedFactorSlugs).toEqual(["training"]);
+		expect(await observations.listByDay(LOCAL_DAY)).toMatchObject([
+			{ metricSlug: "training" },
+		]);
+
+		const cleared = await store.saveDayFactors([]);
+		expect(cleared.selectedFactorSlugs).toEqual([]);
+		expect(await observations.listByDay(LOCAL_DAY)).toEqual([]);
+	});
+
+	it("refuses a factor the day is not tracking", async () => {
+		const observations = new databaseApp.ObservationRepository(db);
+		await new databaseApp.TrackedMetricsRepository(db).configure(
+			"training",
+			0,
+			false,
+		);
+		const store = new CheckInStore(db, () => CAPTURED_AT);
+
+		await expect(store.saveDayFactors(["training"])).rejects.toThrow(
+			"Factor is not active today: training",
+		);
+		expect(await observations.listByDay(LOCAL_DAY)).toEqual([]);
 	});
 
 	it("keeps measurements default-off and resolves enabled units from preference", async () => {
@@ -210,19 +256,9 @@ describe("check-in store", () => {
 		await tracked.configure("steps", 99, true);
 
 		expect((await store.loadToday()).availableMeasurements).toEqual([]);
-		await expect(
-			store.save({
-				mood: 4,
-				energy: 3,
-				selectedFactorSlugs: [],
-				measurements: [{ metricSlug: "steps", value: 10_000 }],
-				note: "",
-			}),
-		).rejects.toThrow("Unknown measurement slug: steps");
 	});
 
-	it("writes canonical measurements and exposes the day's last value", async () => {
-		let capturedAt = CAPTURED_AT;
+	it("exposes the day's last measurement value in the current unit", async () => {
 		const tracked = new databaseApp.TrackedMetricsRepository(db);
 		const preferences = new databaseApp.UnitPreferenceRepository(db);
 		const observations = new databaseApp.ObservationRepository(db);
@@ -230,41 +266,32 @@ describe("check-in store", () => {
 		await preferences.set("mass", "st");
 		const store = new CheckInStore(
 			db,
-			() => capturedAt,
+			() => CAPTURED_AT,
 			() => "en-GB",
 		);
 		const firstValue = 172 * KILOGRAMS_PER_POUND;
+		const secondValue = 171 * KILOGRAMS_PER_POUND;
 
-		const first = await store.save({
-			mood: 4,
-			energy: 3,
-			selectedFactorSlugs: [],
-			measurements: [{ metricSlug: "weight", value: firstValue }],
-			note: "",
+		// Measurements are logged from the Log screen; the check-in only reads
+		// back whatever the day holds.
+		await observations.create({
+			...scoredObservation("weight", firstValue, 0, 0),
+			scaleMin: null,
+			scaleMax: null,
 		});
-		expect(first.loggedMeasurements).toMatchObject([
+		expect((await store.loadToday()).loggedMeasurements).toMatchObject([
 			{
 				metricSlug: "weight",
 				formattedValue: "12 st 4 lb",
-				observation: {
-					value: firstValue,
-					scaleMin: null,
-					scaleMax: null,
-					source: "user",
-					sourceRecordId: null,
-					assessmentId: null,
-				},
+				observation: { value: firstValue, source: "user" },
 			},
 		]);
 
-		capturedAt = new Date(CAPTURED_AT.getTime() + 60_000);
-		const secondValue = 171 * KILOGRAMS_PER_POUND;
-		await store.save({
-			mood: 5,
-			energy: 4,
-			selectedFactorSlugs: [],
-			measurements: [{ metricSlug: "weight", value: secondValue }],
-			note: "",
+		await observations.create({
+			...scoredObservation("weight", secondValue, 0, 0),
+			scaleMin: null,
+			scaleMax: null,
+			observedAt: CAPTURED_AT.getTime() + 60_000,
 		});
 		const weightRows = (await observations.listByDay(LOCAL_DAY)).filter(
 			(row) => row.metricSlug === "weight",
@@ -285,24 +312,6 @@ describe("check-in store", () => {
 				observation: { value: secondValue },
 			},
 		]);
-		expect(weightRows[0]?.value).toBe(firstValue);
-		expect(weightRows[1]?.value).toBe(secondValue);
-	});
-
-	it("rolls back the check-in when a measurement is not active", async () => {
-		const observations = new databaseApp.ObservationRepository(db);
-		const store = new CheckInStore(db, () => CAPTURED_AT);
-
-		await expect(
-			store.save({
-				mood: 4,
-				energy: 3,
-				selectedFactorSlugs: [],
-				measurements: [{ metricSlug: "weight", value: 78 }],
-				note: "",
-			}),
-		).rejects.toThrow("Measurement is not active");
-		expect(await observations.listByDay(LOCAL_DAY)).toEqual([]);
 	});
 
 	it("ignores assessment and measurement overlays as factors", async () => {
@@ -318,40 +327,22 @@ describe("check-in store", () => {
 		expect(today.availableFactors.some(({ slug }) => slug === "weight")).toBe(
 			false,
 		);
-		await expect(
-			store.save({
-				mood: 4,
-				energy: 3,
-				selectedFactorSlugs: ["wheel:career"],
-				measurements: [],
-				note: "",
-			}),
-		).rejects.toThrow("Unknown factor slug: wheel:career");
-		await expect(
-			store.save({
-				mood: 4,
-				energy: 3,
-				selectedFactorSlugs: ["weight"],
-				measurements: [],
-				note: "",
-			}),
-		).rejects.toThrow("Unknown factor slug: weight");
+		await expect(store.saveDayFactors(["wheel:career"])).rejects.toThrow(
+			"Unknown factor slug: wheel:career",
+		);
+		await expect(store.saveDayFactors(["weight"])).rejects.toThrow(
+			"Unknown factor slug: weight",
+		);
 	});
 
 	it("clears only the note the form showed, retaining manufactured duplicates", async () => {
 		const notes = new databaseApp.DayNoteRepository(db);
 		const store = new CheckInStore(db, () => CAPTURED_AT);
-		const draft = {
-			mood: 4,
-			energy: 3,
-			selectedFactorSlugs: [],
-			measurements: [],
-		};
 
-		await store.save({ ...draft, note: "Shown in the form" });
+		await store.saveDayNote("Shown in the form");
 		const duplicate = await notes.create(LOCAL_DAY, "Replicated duplicate");
 
-		await store.save({ ...draft, note: "" });
+		await store.saveDayNote("");
 
 		expect(await notes.listByDay(LOCAL_DAY)).toMatchObject([
 			{ id: duplicate.id, body: "Replicated duplicate" },
@@ -366,18 +357,18 @@ describe("check-in store", () => {
 		});
 		const store = new CheckInStore(db, () => CAPTURED_AT, undefined, refresh);
 
-		await store.save({
-			mood: 4,
-			energy: 3,
-			selectedFactorSlugs: [],
-			measurements: [],
-			note: "",
-		});
+		await store.saveCheckIn({ mood: 4, energy: 3 });
 
 		expect(refresh).toHaveBeenCalledTimes(1);
 		// The refresh is what cancels today's nudge, so it has to run after the
 		// transaction commits and see the pair that proves the check-in happened.
 		expect(hasCompletedCheckIn(visibleToRefresh)).toBe(true);
+
+		// Neither factors nor the note change whether the day counts as checked
+		// in, so neither has a reminder schedule to reconcile.
+		await store.saveDayFactors(["training"]);
+		await store.saveDayNote("Strong finish");
+		expect(refresh).toHaveBeenCalledTimes(1);
 	});
 
 	it("keeps a check-in saved when the reminder refresh fails", async () => {
@@ -390,13 +381,7 @@ describe("check-in store", () => {
 			() => Promise.reject(new Error("no notification permission")),
 		);
 
-		const saved = await store.save({
-			mood: 4,
-			energy: 3,
-			selectedFactorSlugs: [],
-			measurements: [],
-			note: "",
-		});
+		const saved = await store.saveCheckIn({ mood: 4, energy: 3 });
 
 		expect(saved.entries).toHaveLength(1);
 		expect(await observations.listByDay(LOCAL_DAY)).toHaveLength(2);
