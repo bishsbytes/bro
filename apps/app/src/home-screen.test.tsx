@@ -39,8 +39,9 @@ const FIXED_NOW = () => new Date(2026, 7, 14, 12);
 const emptyToday: TodayCheckIn = {
 	localDay: "2026-08-14",
 	entries: [] as CheckInEntry[],
-	energyEnabled: true,
-	availableOptionalScores: [],
+	availableOptionalScores: listScoredMetrics().filter(
+		(metric) => metric.slug === "energy",
+	),
 	selectedTagSlugs: [],
 	availableTags: listTags(),
 	availableMeasurements: [],
@@ -121,8 +122,7 @@ function historyDay(localDay: string) {
 				id: mood.id,
 				observedAt: mood.observedAt,
 				mood,
-				energy,
-				optionalScores: [],
+				optionalScores: [energy],
 			},
 		],
 		unpairedScored: [],
@@ -331,7 +331,7 @@ describe("home screen", () => {
 
 		await waitFor(() =>
 			expect(store.saveCheckIn).toHaveBeenCalledWith(
-				{ mood: 4, energy: 3 },
+				{ mood: 4, optional: { energy: 3 } },
 				null,
 			),
 		);
@@ -342,7 +342,9 @@ describe("home screen", () => {
 		const store = checkInStore({
 			...emptyToday,
 			availableOptionalScores: listScoredMetrics().filter((metric) =>
-				["motivation", "productivity", "libido"].includes(metric.slug),
+				["energy", "motivation", "productivity", "libido"].includes(
+					metric.slug,
+				),
 			),
 		});
 		const screen = await render(
@@ -365,8 +367,12 @@ describe("home screen", () => {
 			expect(store.saveCheckIn).toHaveBeenCalledWith(
 				{
 					mood: 4,
-					energy: 3,
-					additional: { motivation: 5, productivity: 4, libido: 2 },
+					optional: {
+						energy: 3,
+						motivation: 5,
+						productivity: 4,
+						libido: 2,
+					},
 				},
 				null,
 			),
@@ -376,7 +382,6 @@ describe("home screen", () => {
 	it("skips Energy when it is disabled", async () => {
 		const store = checkInStore({
 			...emptyToday,
-			energyEnabled: false,
 			availableOptionalScores: listScoredMetrics().filter(
 				(metric) => metric.slug === "motivation",
 			),
@@ -395,7 +400,7 @@ describe("home screen", () => {
 
 		await waitFor(() =>
 			expect(store.saveCheckIn).toHaveBeenCalledWith(
-				{ mood: 4, additional: { motivation: 5 } },
+				{ mood: 4, optional: { motivation: 5 } },
 				null,
 			),
 		);
@@ -434,8 +439,7 @@ describe("home screen", () => {
 			id: mood.id,
 			observedAt: mood.observedAt,
 			mood,
-			energy,
-			optionalScores: [],
+			optionalScores: [energy],
 		};
 		const store = checkInStore({ ...emptyToday, entries: [entry] });
 		const screen = await render(
@@ -478,8 +482,7 @@ describe("home screen", () => {
 			id: mood.id,
 			observedAt: mood.observedAt,
 			mood,
-			energy,
-			optionalScores: [],
+			optionalScores: [energy],
 		};
 		const store = checkInStore({ ...emptyToday, entries: [entry] });
 		const screen = await render(
@@ -499,7 +502,7 @@ describe("home screen", () => {
 
 		await waitFor(() =>
 			expect(store.saveCheckIn).toHaveBeenCalledWith(
-				{ mood: 5, energy: 4 },
+				{ mood: 5, optional: { energy: 4 } },
 				entry,
 			),
 		);
@@ -512,8 +515,7 @@ describe("home screen", () => {
 			id: mood.id,
 			observedAt: mood.observedAt,
 			mood,
-			energy,
-			optionalScores: [],
+			optionalScores: [energy],
 		};
 		const store = checkInStore({ ...emptyToday, entries: [entry] });
 		const screen = await render(

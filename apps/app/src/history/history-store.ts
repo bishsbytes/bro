@@ -20,7 +20,7 @@ import { previousLocalDay } from "@bro/domain";
 import { resolveChallenge } from "@bro/domain/challenge-catalogue";
 import { resolveHabit } from "@bro/domain/habit-catalogue";
 import {
-	ADDITIONAL_CHECK_IN_METRIC_SLUGS,
+	CONFIGURABLE_CHECK_IN_METRIC_SLUGS,
 	resolveMetric,
 } from "@bro/domain/metric-registry";
 import {
@@ -60,11 +60,10 @@ export type HistoricalCheckIn = {
 	id: string;
 	observedAt: number;
 	mood: Observation;
-	energy: Observation | null;
 	optionalScores: Observation[];
 };
 
-const optionalScoreSlugs = new Set<string>(ADDITIONAL_CHECK_IN_METRIC_SLUGS);
+const optionalScoreSlugs = new Set<string>(CONFIGURABLE_CHECK_IN_METRIC_SLUGS);
 
 export type HistoryDay = {
 	localDay: string;
@@ -115,42 +114,30 @@ function habitLabel(habit: Habit | undefined): string {
 	);
 }
 
-function pairCheckIns(
+function groupCheckIns(
 	observations: readonly Observation[],
 ): HistoricalCheckIn[] {
 	const moods = observations.filter((row) => row.metricSlug === "mood");
-	const energies = observations.filter((row) => row.metricSlug === "energy");
-	const usedEnergyIds = new Set<string>();
+	const usedScoreIds = new Set<string>();
 	const checkIns: HistoricalCheckIn[] = [];
 
 	for (const mood of moods) {
-		const energy =
-			energies.find(
-				(row) => !usedEnergyIds.has(row.id) && row.sourceRecordId === mood.id,
-			) ??
-			energies.find(
-				(row) =>
-					!usedEnergyIds.has(row.id) &&
-					row.sourceRecordId === null &&
-					row.observedAt === mood.observedAt,
-			) ??
-			null;
-		if (energy) usedEnergyIds.add(energy.id);
+		const optionalScores = observations.filter(
+			(row) =>
+				optionalScoreSlugs.has(row.metricSlug) &&
+				!usedScoreIds.has(row.id) &&
+				(row.sourceRecordId === mood.id ||
+					(row.sourceRecordId === null && row.observedAt === mood.observedAt)),
+		);
+		for (const score of optionalScores) usedScoreIds.add(score.id);
 		checkIns.push({
 			id: mood.id,
 			observedAt: Math.max(
 				mood.observedAt,
-				energy?.observedAt ?? mood.observedAt,
+				...optionalScores.map((score) => score.observedAt),
 			),
 			mood,
-			energy,
-			optionalScores: observations.filter(
-				(row) =>
-					optionalScoreSlugs.has(row.metricSlug) &&
-					(row.sourceRecordId === mood.id ||
-						(row.sourceRecordId === null &&
-							row.observedAt === mood.observedAt)),
-			),
+			optionalScores,
 		});
 	}
 
@@ -255,11 +242,10 @@ export function assembleHistoryDay(
 	enrolments: readonly ChallengeEnrolment[] = [],
 	challengeProgress: readonly ChallengeProgress[] = [],
 ): HistoryDay {
-	const checkIns = pairCheckIns(observations);
+	const checkIns = groupCheckIns(observations);
 	const pairedIds = new Set(
 		checkIns.flatMap((checkIn) => [
 			checkIn.mood.id,
-			...(checkIn.energy ? [checkIn.energy.id] : []),
 			...checkIn.optionalScores.map((score) => score.id),
 		]),
 	);
@@ -563,8 +549,7 @@ export class HistoryStore {
 	async updateCheckIn(
 		checkIn: HistoricalCheckIn,
 		mood: number,
-		energy: number | null,
-		additional: Readonly<Record<string, number>> = {},
+		optional: Readonly<Record<string, number>> = {},
 	): Promise<HistoryDay> {
 		await this.db.withTransactionAsync(async () => {
 			await this.observations.update(checkIn.mood.id, {
@@ -575,18 +560,8 @@ export class HistoryStore {
 				localDay: checkIn.mood.localDay,
 				tzOffsetMinutes: checkIn.mood.tzOffsetMinutes,
 			});
-			if (checkIn.energy && energy !== null) {
-				await this.observations.update(checkIn.energy.id, {
-					value: energy,
-					scaleMin: checkIn.energy.scaleMin,
-					scaleMax: checkIn.energy.scaleMax,
-					observedAt: checkIn.energy.observedAt,
-					localDay: checkIn.energy.localDay,
-					tzOffsetMinutes: checkIn.energy.tzOffsetMinutes,
-				});
-			}
 			for (const score of checkIn.optionalScores) {
-				const value = additional[score.metricSlug];
+				const value = optional[score.metricSlug];
 				if (value === undefined) continue;
 				await this.observations.update(score.id, {
 					value,
@@ -604,7 +579,6 @@ export class HistoryStore {
 	async deleteCheckIn(checkIn: HistoricalCheckIn): Promise<HistoryDay> {
 		await this.db.withTransactionAsync(async () => {
 			await this.observations.delete(checkIn.mood.id);
-			if (checkIn.energy) await this.observations.delete(checkIn.energy.id);
 			for (const score of checkIn.optionalScores) {
 				await this.observations.delete(score.id);
 			}

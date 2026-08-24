@@ -51,7 +51,7 @@ describe("history store", () => {
 		const mood = observation("mood", "mood", 4);
 		const day = assembleHistoryDay("2026-08-14", [mood], []);
 
-		expect(day.checkIns).toMatchObject([{ mood, energy: null }]);
+		expect(day.checkIns).toMatchObject([{ mood, optionalScores: [] }]);
 		expect(day.unpairedScored).toEqual([]);
 	});
 
@@ -84,6 +84,7 @@ describe("history store", () => {
 
 		expect(day.checkIns).toHaveLength(1);
 		expect(day.checkIns[0]?.optionalScores).toMatchObject([
+			{ metricSlug: "energy", value: 3 },
 			{ metricSlug: "motivation", value: 5 },
 		]);
 		expect(day.tags.map(({ metricSlug }) => metricSlug)).toEqual(["stress"]);

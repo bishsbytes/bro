@@ -83,13 +83,12 @@ describe("check-in store", () => {
 		const store = new CheckInStore(db, () => CAPTURED_AT);
 
 		await store.saveCheckIn(
-			{ mood: 4, energy: 3 },
+			{ mood: 4, optional: { energy: 3 } },
 			{
 				id: mood.id,
 				observedAt: mood.observedAt,
 				mood,
-				energy,
-				optionalScores: [],
+				optionalScores: [energy],
 			},
 		);
 
@@ -156,7 +155,10 @@ describe("check-in store", () => {
 		const transaction = jest.spyOn(db, "withTransactionAsync");
 		const store = new CheckInStore(db, () => CAPTURED_AT);
 
-		const saved = await store.saveCheckIn({ mood: 4, energy: 3 });
+		const saved = await store.saveCheckIn({
+			mood: 4,
+			optional: { energy: 3 },
+		});
 
 		expect(transaction).toHaveBeenCalledTimes(1);
 		expect(await observations.listByDay(LOCAL_DAY)).toMatchObject([
@@ -164,7 +166,10 @@ describe("check-in store", () => {
 			{ metricSlug: "energy", value: 3, scaleMin: 1, scaleMax: 5 },
 		]);
 		expect(saved.entries).toMatchObject([
-			{ mood: { value: 4 }, energy: { value: 3 } },
+			{
+				mood: { value: 4 },
+				optionalScores: [{ metricSlug: "energy", value: 3 }],
+			},
 		]);
 		expect(saved.selectedTagSlugs).toEqual([]);
 		expect(saved.note).toBe("");
@@ -177,19 +182,25 @@ describe("check-in store", () => {
 		await tracked.configure("energy", 1, false);
 		const store = new CheckInStore(db, () => CAPTURED_AT);
 
-		expect((await store.loadToday()).energyEnabled).toBe(false);
+		expect(
+			(await store.loadToday()).availableOptionalScores.map(
+				(metric) => metric.slug,
+			),
+		).toEqual(["motivation", "productivity", "libido"]);
 		const saved = await store.saveCheckIn({ mood: 4 });
 
 		expect(await observations.listByDay(LOCAL_DAY)).toMatchObject([
 			{ metricSlug: "mood", value: 4, scaleMin: 1, scaleMax: 5 },
 		]);
-		expect(saved.entries).toMatchObject([{ mood: { value: 4 }, energy: null }]);
+		expect(saved.entries).toMatchObject([
+			{ mood: { value: 4 }, optionalScores: [] },
+		]);
 		expect(hasCompletedCheckIn(await observations.listByDay(LOCAL_DAY))).toBe(
 			true,
 		);
 	});
 
-	it("writes enabled additional scores and retains them when disabled", async () => {
+	it("writes enabled optional scores and retains them when disabled", async () => {
 		const observations = new databaseApp.ObservationRepository(db);
 		const tracked = new databaseApp.TrackedMetricsRepository(db);
 		await tracked.configure("motivation", 2, true);
@@ -197,16 +208,19 @@ describe("check-in store", () => {
 		await tracked.configure("libido", 4, true);
 		const store = new CheckInStore(db, () => CAPTURED_AT);
 
-		expect((await store.loadToday()).energyEnabled).toBe(true);
 		expect(
 			(await store.loadToday()).availableOptionalScores.map(
 				(metric) => metric.slug,
 			),
-		).toEqual(["motivation", "productivity", "libido"]);
+		).toEqual(["energy", "motivation", "productivity", "libido"]);
 		const saved = await store.saveCheckIn({
 			mood: 4,
-			energy: 3,
-			additional: { motivation: 5, productivity: 4, libido: 2 },
+			optional: {
+				energy: 3,
+				motivation: 5,
+				productivity: 4,
+				libido: 2,
+			},
 		});
 
 		expect(
@@ -222,6 +236,7 @@ describe("check-in store", () => {
 			["libido", 2],
 		]);
 		expect(saved.entries[0]?.optionalScores).toMatchObject([
+			{ metricSlug: "energy", value: 3 },
 			{ metricSlug: "motivation", value: 5 },
 			{ metricSlug: "productivity", value: 4 },
 			{ metricSlug: "libido", value: 2 },
@@ -231,8 +246,12 @@ describe("check-in store", () => {
 		await store.saveCheckIn(
 			{
 				mood: 3,
-				energy: 2,
-				additional: { motivation: 4, productivity: 3, libido: 1 },
+				optional: {
+					energy: 2,
+					motivation: 4,
+					productivity: 3,
+					libido: 1,
+				},
 			},
 			entry,
 		);
@@ -248,25 +267,24 @@ describe("check-in store", () => {
 		const reloaded = await store.loadToday();
 		expect(
 			reloaded.availableOptionalScores.map((metric) => metric.slug),
-		).toEqual(["motivation", "productivity"]);
-		expect(reloaded.entries[0]?.optionalScores).toHaveLength(3);
+		).toEqual(["energy", "motivation", "productivity"]);
+		expect(reloaded.entries[0]?.optionalScores).toHaveLength(4);
 	});
 
 	it("rejects a score outside the scale without writing anything", async () => {
 		const observations = new databaseApp.ObservationRepository(db);
 		const store = new CheckInStore(db, () => CAPTURED_AT);
 
-		await expect(store.saveCheckIn({ mood: 0, energy: 3 })).rejects.toThrow(
-			"Mood must be a whole number from 1 to 5.",
-		);
-		await expect(store.saveCheckIn({ mood: 4, energy: 6 })).rejects.toThrow(
-			"Energy must be a whole number from 1 to 5.",
-		);
+		await expect(
+			store.saveCheckIn({ mood: 0, optional: { energy: 3 } }),
+		).rejects.toThrow("Mood must be a whole number from 1 to 5.");
+		await expect(
+			store.saveCheckIn({ mood: 4, optional: { energy: 6 } }),
+		).rejects.toThrow("Energy must be a whole number from 1 to 5.");
 		await expect(
 			store.saveCheckIn({
 				mood: 4,
-				energy: 3,
-				additional: { libido: 0 },
+				optional: { energy: 3, libido: 0 },
 			}),
 		).rejects.toThrow("Libido must be a whole number from 1 to 5.");
 		expect(await observations.listByDay(LOCAL_DAY)).toEqual([]);
@@ -524,7 +542,7 @@ describe("check-in store", () => {
 		});
 		const store = new CheckInStore(db, () => CAPTURED_AT, undefined, refresh);
 
-		await store.saveCheckIn({ mood: 4, energy: 3 });
+		await store.saveCheckIn({ mood: 4, optional: { energy: 3 } });
 
 		expect(refresh).toHaveBeenCalledTimes(1);
 		// The refresh is what cancels today's nudge, so it has to run after the
@@ -548,7 +566,10 @@ describe("check-in store", () => {
 			() => Promise.reject(new Error("no notification permission")),
 		);
 
-		const saved = await store.saveCheckIn({ mood: 4, energy: 3 });
+		const saved = await store.saveCheckIn({
+			mood: 4,
+			optional: { energy: 3 },
+		});
 
 		expect(saved.entries).toHaveLength(1);
 		expect(await observations.listByDay(LOCAL_DAY)).toHaveLength(2);

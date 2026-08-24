@@ -380,13 +380,6 @@ export const CONFIGURABLE_CHECK_IN_METRIC_SLUGS = [
 	"libido",
 ] as const;
 
-/** Configurable scores associated with a check-in through its Mood observation. */
-export const ADDITIONAL_CHECK_IN_METRIC_SLUGS = [
-	"motivation",
-	"productivity",
-	"libido",
-] as const;
-
 function defaultsToEnabled(metric: MetricDefinition): boolean {
 	if (metric.kind === "measurement") return false;
 	if (metric.kind === "tag") return metric.defaultEnabled;

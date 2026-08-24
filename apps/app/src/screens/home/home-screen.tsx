@@ -112,11 +112,7 @@ function checkInScoreSummary(
 			resolved.kind === "known" ? resolved.metric.label : score.metricSlug;
 		return `${label} ${score.value}`;
 	});
-	return [
-		`Mood ${checkIn.mood.value}`,
-		...(checkIn.energy ? [`Energy ${checkIn.energy.value}`] : []),
-		...optional,
-	].join(" · ");
+	return [`Mood ${checkIn.mood.value}`, ...optional].join(" · ");
 }
 
 type PastDaySectionProps = {
@@ -404,10 +400,7 @@ export function HomeScreen({
 		null,
 	);
 	const [mood, setMood] = useState<number | null>(null);
-	const [energy, setEnergy] = useState<number | null>(null);
-	const [additionalScores, setAdditionalScores] = useState<
-		Record<string, number>
-	>({});
+	const [scoreValues, setScoreValues] = useState<Record<string, number>>({});
 	const [selectedTags, setSelectedTags] = useState<string[]>([]);
 	const [note, setNote] = useState("");
 	const [editing, setEditing] = useState<CheckInEntry | null>(null);
@@ -764,8 +757,7 @@ export function HomeScreen({
 
 	function startEditing(entry: CheckInEntry) {
 		setMood(entry.mood.value);
-		setEnergy(entry.energy?.value ?? null);
-		setAdditionalScores(
+		setScoreValues(
 			Object.fromEntries(
 				entry.optionalScores.map((score) => [score.metricSlug, score.value]),
 			),
@@ -776,16 +768,14 @@ export function HomeScreen({
 
 	function cancelEditing() {
 		setMood(null);
-		setEnergy(null);
-		setAdditionalScores({});
+		setScoreValues({});
 		setEditing(null);
 		setError(null);
 	}
 
 	async function commitCheckIn(
 		moodScore: number,
-		energyScore: number | undefined,
-		additional: Readonly<Record<string, number>>,
+		optional: Readonly<Record<string, number>>,
 	) {
 		if (!today || savingRef.current) return;
 		savingRef.current = true;
@@ -794,18 +784,17 @@ export function HomeScreen({
 		todayWriteRef.current += 1;
 		const stamp = todayWriteRef.current;
 		try {
-			const activeAdditional = Object.fromEntries(
+			const activeOptional = Object.fromEntries(
 				today.availableOptionalScores.map((metric) => [
 					metric.slug,
-					additional[metric.slug],
+					optional[metric.slug],
 				]),
 			);
 			const saved = await checkIns.saveCheckIn(
 				{
 					mood: moodScore,
-					...(energyScore === undefined ? {} : { energy: energyScore }),
 					...(today.availableOptionalScores.length > 0
-						? { additional: activeAdditional }
+						? { optional: activeOptional }
 						: {}),
 				},
 				editing,
@@ -813,8 +802,7 @@ export function HomeScreen({
 			if (stamp === todayWriteRef.current) setToday(saved);
 			invalidateIndicatorDay(saved.localDay);
 			setMood(null);
-			setEnergy(null);
-			setAdditionalScores({});
+			setScoreValues({});
 			setEditing(null);
 		} catch (caught) {
 			setError(caught instanceof Error ? caught.message : String(caught));
@@ -824,26 +812,12 @@ export function HomeScreen({
 		}
 	}
 
-	/** Energy commits immediately unless extra prompts have been enabled. */
-	function chooseEnergy(score: number) {
-		if (!today || mood === null || savingRef.current) return;
-		playSelectionHaptic();
-		setEnergy(score);
-		setAdditionalScores({});
-		if (today.availableOptionalScores.length === 0) {
-			void commitCheckIn(mood, score, {});
-		}
-	}
-
-	function chooseAdditionalScore(
+	function chooseOptionalScore(
 		metricSlug: string,
 		score: number,
 		index: number,
 	) {
 		if (!today || mood === null || savingRef.current) return;
-		const energyRequired =
-			today.energyEnabled || (editing !== null && editing.energy !== null);
-		if (energyRequired && energy === null) return;
 		playSelectionHaptic();
 		const laterSlugs = new Set(
 			today.availableOptionalScores
@@ -851,13 +825,13 @@ export function HomeScreen({
 				.map((metric) => metric.slug),
 		);
 		const next = Object.fromEntries(
-			Object.entries({ ...additionalScores, [metricSlug]: score }).filter(
+			Object.entries({ ...scoreValues, [metricSlug]: score }).filter(
 				([slug]) => !laterSlugs.has(slug),
 			),
 		);
-		setAdditionalScores(next);
+		setScoreValues(next);
 		if (index === today.availableOptionalScores.length - 1) {
-			void commitCheckIn(mood, energy ?? undefined, next);
+			void commitCheckIn(mood, next);
 		}
 	}
 
@@ -865,13 +839,10 @@ export function HomeScreen({
 		if (!today || savingRef.current) return;
 		playSelectionHaptic();
 		setMood(score);
-		setEnergy(null);
-		setAdditionalScores({});
+		setScoreValues({});
 		setError(null);
-		const energyRequired =
-			today.energyEnabled || (editing !== null && editing.energy !== null);
-		if (!energyRequired && today.availableOptionalScores.length === 0) {
-			void commitCheckIn(score, undefined, {});
+		if (today.availableOptionalScores.length === 0) {
+			void commitCheckIn(score, {});
 		}
 	}
 
@@ -931,8 +902,6 @@ export function HomeScreen({
 		}),
 	);
 	const checkInCount = today.entries.length;
-	const showEnergy =
-		today.energyEnabled || (editing !== null && editing.energy !== null);
 	const checkInsSection = (
 		<View style={styles.section}>
 			<SectionHeader
@@ -972,38 +941,12 @@ export function HomeScreen({
 					disabled={saving}
 				/>
 
-				{mood !== null && showEnergy ? (
-					<>
-						<AppText
-							variant="label"
-							style={[styles.prompt, styles.promptSpaced]}
-						>
-							Energy
-						</AppText>
-						<ScoreRow
-							accessibilityPrefix="Energy"
-							selected={energy}
-							onSelect={chooseEnergy}
-							disabled={saving}
-						/>
-						<AppText variant="caption" color="subtle" style={styles.hint}>
-							{saving
-								? "Saving your check-in…"
-								: today.availableOptionalScores.length > 0
-									? "Pick your energy to continue."
-									: "Pick your energy to save this check-in."}
-						</AppText>
-					</>
-				) : null}
-
 				{today.availableOptionalScores.map((metric, index) => {
 					const previousComplete =
 						mood !== null &&
-						(!showEnergy || energy !== null) &&
 						(index === 0 ||
-							additionalScores[
-								today.availableOptionalScores[index - 1]?.slug
-							] !== undefined);
+							scoreValues[today.availableOptionalScores[index - 1]?.slug] !==
+								undefined);
 					if (!previousComplete) return null;
 					const isLast = index === today.availableOptionalScores.length - 1;
 					return (
@@ -1016,9 +959,9 @@ export function HomeScreen({
 							</AppText>
 							<ScoreRow
 								accessibilityPrefix={metric.label}
-								selected={additionalScores[metric.slug] ?? null}
+								selected={scoreValues[metric.slug] ?? null}
 								onSelect={(score) =>
-									chooseAdditionalScore(metric.slug, score, index)
+									chooseOptionalScore(metric.slug, score, index)
 								}
 								disabled={saving}
 							/>
@@ -1359,7 +1302,7 @@ const styles = StyleSheet.create((theme) => ({
 		fontWeight: "600",
 		marginBottom: theme.spacing.sm,
 	},
-	/** Separates the energy prompt from the mood row; the first prompt sits flush. */
+	/** Separates each optional score prompt from the row before it. */
 	promptSpaced: { marginTop: theme.spacing.lg },
 	choiceSelected: {
 		borderColor: theme.colors.brand,

@@ -1,5 +1,4 @@
 import {
-	ADDITIONAL_CHECK_IN_METRIC_SLUGS,
 	CHECK_IN_METRIC_SLUGS,
 	CONFIGURABLE_CHECK_IN_METRIC_SLUGS,
 	DEFAULT_TRACKED_METRICS,
@@ -96,11 +95,6 @@ describe("metric registry", () => {
 				DEFAULT_TRACKED_METRICS.find((metric) => metric.metricSlug === slug),
 			).not.toHaveProperty("enabled", false);
 		}
-		expect(ADDITIONAL_CHECK_IN_METRIC_SLUGS).toEqual([
-			"motivation",
-			"productivity",
-			"libido",
-		]);
 		expect(listMeasurements()).toEqual([
 			expect.objectContaining({
 				slug: "weight",

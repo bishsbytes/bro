@@ -40,14 +40,12 @@ function CheckInEditor({
 	onSave: (
 		checkIn: HistoricalCheckIn,
 		mood: number,
-		energy: number | null,
-		additional: Readonly<Record<string, number>>,
+		optional: Readonly<Record<string, number>>,
 	) => void;
 	onDelete: (checkIn: HistoricalCheckIn) => void;
 }) {
 	const [mood, setMood] = useState(checkIn.mood.value);
-	const [energy, setEnergy] = useState(checkIn.energy?.value ?? null);
-	const [additional, setAdditional] = useState<Record<string, number>>(
+	const [optional, setOptional] = useState<Record<string, number>>(
 		Object.fromEntries(
 			checkIn.optionalScores.map((score) => [score.metricSlug, score.value]),
 		),
@@ -63,24 +61,11 @@ function CheckInEditor({
 			</AppText>
 			<AppText variant="micro" color="subtle">
 				Mood source: {checkIn.mood.source}
-				{checkIn.energy ? ` · Energy source: ${checkIn.energy.source}` : ""}
 			</AppText>
 			<AppText variant="label" color="muted">
 				Mood
 			</AppText>
 			<ScoreRow accessibilityPrefix="Mood" selected={mood} onSelect={setMood} />
-			{checkIn.energy ? (
-				<>
-					<AppText variant="label" color="muted">
-						Energy
-					</AppText>
-					<ScoreRow
-						accessibilityPrefix="Energy"
-						selected={energy}
-						onSelect={setEnergy}
-					/>
-				</>
-			) : null}
 			{checkIn.optionalScores.map((score) => {
 				const resolved = resolveMetric(score.metricSlug);
 				const label =
@@ -92,9 +77,9 @@ function CheckInEditor({
 						</AppText>
 						<ScoreRow
 							accessibilityPrefix={label}
-							selected={additional[score.metricSlug] ?? score.value}
+							selected={optional[score.metricSlug] ?? score.value}
 							onSelect={(value) =>
-								setAdditional((current) => ({
+								setOptional((current) => ({
 									...current,
 									[score.metricSlug]: value,
 								}))
@@ -106,7 +91,7 @@ function CheckInEditor({
 			<View style={styles.actions}>
 				<Button
 					label="Save changes"
-					onPress={() => onSave(checkIn, mood, energy, additional)}
+					onPress={() => onSave(checkIn, mood, optional)}
 				/>
 				<Button
 					label="Delete check-in"
@@ -266,10 +251,8 @@ export function HistoryDayScreen({ localDay, store }: HistoryDayScreenProps) {
 						<CheckInEditor
 							key={checkIn.id}
 							checkIn={checkIn}
-							onSave={(entry, mood, energy, additional) =>
-								void mutate(() =>
-									history.updateCheckIn(entry, mood, energy, additional),
-								)
+							onSave={(entry, mood, optional) =>
+								void mutate(() => history.updateCheckIn(entry, mood, optional))
 							}
 							onDelete={(entry) =>
 								void mutate(() => history.deleteCheckIn(entry))

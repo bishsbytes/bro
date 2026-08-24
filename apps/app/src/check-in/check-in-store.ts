@@ -15,7 +15,7 @@ import {
 	systemLocale,
 } from "@bro/domain";
 import {
-	ADDITIONAL_CHECK_IN_METRIC_SLUGS,
+	CONFIGURABLE_CHECK_IN_METRIC_SLUGS,
 	DEFAULT_TRACKED_METRICS,
 	listTags,
 	resolveMetric,
@@ -38,14 +38,12 @@ export type CheckInEntry = {
 	id: string;
 	observedAt: number;
 	mood: Observation;
-	energy: Observation | null;
 	optionalScores: Observation[];
 };
 
 export type TodayCheckIn = {
 	localDay: string;
 	entries: CheckInEntry[];
-	energyEnabled: boolean;
 	availableOptionalScores: ScoredMetricDefinition[];
 	selectedTagSlugs: string[];
 	availableTags: TagMetricDefinition[];
@@ -64,46 +62,33 @@ export type LoggedCheckInMeasurement = CheckInMeasurement & {
 
 export type CheckInScores = {
 	mood: number;
-	energy?: number;
-	additional?: Readonly<Record<string, number>>;
+	optional?: Readonly<Record<string, number>>;
 };
 
-const optionalScoreSlugs = new Set<string>(ADDITIONAL_CHECK_IN_METRIC_SLUGS);
+const optionalScoreSlugs = new Set<string>(CONFIGURABLE_CHECK_IN_METRIC_SLUGS);
 
-function pairCheckIns(observations: readonly Observation[]): CheckInEntry[] {
+function groupCheckIns(observations: readonly Observation[]): CheckInEntry[] {
 	const moods = observations.filter((row) => row.metricSlug === "mood");
-	const energies = observations.filter((row) => row.metricSlug === "energy");
-	const usedEnergyIds = new Set<string>();
+	const usedScoreIds = new Set<string>();
 	const entries: CheckInEntry[] = [];
 
 	for (const mood of moods) {
-		const energy =
-			energies.find(
-				(row) => !usedEnergyIds.has(row.id) && row.sourceRecordId === mood.id,
-			) ??
-			energies.find(
-				(row) =>
-					!usedEnergyIds.has(row.id) &&
-					row.sourceRecordId === null &&
-					row.observedAt === mood.observedAt,
-			) ??
-			null;
-		if (energy) usedEnergyIds.add(energy.id);
+		const optionalScores = observations.filter(
+			(row) =>
+				optionalScoreSlugs.has(row.metricSlug) &&
+				!usedScoreIds.has(row.id) &&
+				(row.sourceRecordId === mood.id ||
+					(row.sourceRecordId === null && row.observedAt === mood.observedAt)),
+		);
+		for (const score of optionalScores) usedScoreIds.add(score.id);
 		entries.push({
 			id: mood.id,
 			observedAt: Math.max(
 				mood.observedAt,
-				energy?.observedAt ?? mood.observedAt,
+				...optionalScores.map((score) => score.observedAt),
 			),
 			mood,
-			energy,
-			optionalScores: observations.filter(
-				(row) =>
-					optionalScoreSlugs.has(row.metricSlug) &&
-					(row.sourceRecordId === mood.id ||
-						(row.sourceRecordId === null &&
-							row.observedAt === mood.observedAt)),
-			),
+			optionalScores,
 		});
 	}
 
@@ -134,9 +119,8 @@ function latestObservation(
 
 function assertScores(scores: CheckInScores): void {
 	const values: (readonly [string, number])[] = [["Mood", scores.mood]];
-	if (scores.energy !== undefined) values.push(["Energy", scores.energy]);
 	values.push(
-		...Object.entries(scores.additional ?? {}).map(([slug, value]) => {
+		...Object.entries(scores.optional ?? {}).map(([slug, value]) => {
 			const resolved = resolveMetric(slug);
 			if (
 				!optionalScoreSlugs.has(slug) ||
@@ -195,7 +179,7 @@ export class CheckInStore {
 				.filter((metric) => metric.enabled)
 				.map((metric) => metric.metricSlug),
 		);
-		const availableOptionalScores = ADDITIONAL_CHECK_IN_METRIC_SLUGS.flatMap(
+		const availableOptionalScores = CONFIGURABLE_CHECK_IN_METRIC_SLUGS.flatMap(
 			(slug) => {
 				if (!enabledSlugs.has(slug)) return [];
 				const resolved = resolveMetric(slug);
@@ -264,8 +248,7 @@ export class CheckInStore {
 
 		return {
 			localDay,
-			entries: pairCheckIns(observations),
-			energyEnabled: enabledSlugs.has("energy"),
+			entries: groupCheckIns(observations),
 			availableOptionalScores,
 			selectedTagSlugs: [
 				...new Set(
@@ -330,31 +313,8 @@ export class CheckInStore {
 					localDay: entry.mood.localDay,
 					tzOffsetMinutes: entry.mood.tzOffsetMinutes,
 				});
-				if (entry.energy && draft.energy !== undefined) {
-					await this.observations.update(entry.energy.id, {
-						value: draft.energy,
-						scaleMin: entry.energy.scaleMin,
-						scaleMax: entry.energy.scaleMax,
-						observedAt: entry.energy.observedAt,
-						localDay: entry.energy.localDay,
-						tzOffsetMinutes: entry.energy.tzOffsetMinutes,
-					});
-				} else if (!entry.energy && draft.energy !== undefined) {
-					await this.observations.create({
-						metricSlug: "energy",
-						value: draft.energy,
-						scaleMin: 1,
-						scaleMax: 5,
-						observedAt: entry.mood.observedAt,
-						localDay: entry.mood.localDay,
-						tzOffsetMinutes: entry.mood.tzOffsetMinutes,
-						source: "user",
-						sourceRecordId: entry.id,
-						assessmentId: null,
-					});
-				}
 				for (const [metricSlug, value] of Object.entries(
-					draft.additional ?? {},
+					draft.optional ?? {},
 				)) {
 					const existing = entry.optionalScores.find(
 						(row) => row.metricSlug === metricSlug,
@@ -397,23 +357,7 @@ export class CheckInStore {
 				sourceRecordId: null,
 				assessmentId: null,
 			});
-			if (draft.energy !== undefined) {
-				await this.observations.create({
-					metricSlug: "energy",
-					value: draft.energy,
-					scaleMin: 1,
-					scaleMax: 5,
-					observedAt,
-					localDay,
-					tzOffsetMinutes,
-					source: "user",
-					sourceRecordId: mood.id,
-					assessmentId: null,
-				});
-			}
-			for (const [metricSlug, value] of Object.entries(
-				draft.additional ?? {},
-			)) {
+			for (const [metricSlug, value] of Object.entries(draft.optional ?? {})) {
 				await this.observations.create({
 					metricSlug,
 					value,

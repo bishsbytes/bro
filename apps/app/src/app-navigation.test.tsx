@@ -36,7 +36,6 @@ jest.mock("./check-in/check-in-store", () => ({
 		loadToday: async () => ({
 			localDay: "2026-08-14",
 			entries: [],
-			energyEnabled: true,
 			availableOptionalScores: [],
 			selectedTagSlugs: [],
 			availableTags: [],
