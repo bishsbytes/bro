@@ -8,6 +8,17 @@ import { monthHeaderLabel } from "./components/today-header-month-context";
 import * as themeModule from "./theme/unistyles";
 
 let mockThemeOverride: unknown;
+const mockSafeAreaInsets = {
+	top: 24,
+	right: 0,
+	bottom: 24,
+	left: 0,
+};
+
+jest.mock("react-native-safe-area-context", () => ({
+	...jest.requireActual("react-native-safe-area-context"),
+	useSafeAreaInsets: () => mockSafeAreaInsets,
+}));
 
 jest.mock("./theme/unistyles", () => {
 	const actual = jest.requireActual("./theme/unistyles");
@@ -83,9 +94,9 @@ describe("TabLayout", () => {
 			tabBarStyle: Record<string, unknown>;
 			tabBarItemStyle?: Record<string, unknown>;
 		};
-		// React Navigation owns both the device inset and the internal item spacing.
-		// Overriding either makes the bar overlap or compress on Android devices.
-		expect(screenOptions.tabBarStyle).not.toHaveProperty("height");
+		// The custom label is taller than React Navigation's 49-point default.
+		// Keep a 56-point content area above the full device inset.
+		expect(screenOptions.tabBarStyle.height).toBe(80);
 		expect(screenOptions.tabBarStyle).not.toHaveProperty("paddingTop");
 		expect(screenOptions.tabBarItemStyle).toBeUndefined();
 

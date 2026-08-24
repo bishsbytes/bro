@@ -3,6 +3,7 @@ import MaterialIcons from "@expo/vector-icons/MaterialIcons";
 import { router, Tabs, usePathname, useSegments } from "expo-router";
 import { useLayoutEffect, useRef } from "react";
 import { TouchableOpacity, View } from "react-native";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { AppHeader } from "../../components/app-header";
 import { AvatarIdentityContext } from "../../components/avatar-identity-context";
 import {
@@ -19,8 +20,11 @@ const TAB_TITLES = {
 	"/life": "Life",
 } as const;
 
+const TAB_BAR_CONTENT_HEIGHT = 56;
+
 function TabShell() {
 	const { theme } = useUnistyles();
+	const insets = useSafeAreaInsets();
 	const { user } = useAuth();
 	const pathname = usePathname();
 	const segments = useSegments() as string[];
@@ -87,6 +91,7 @@ function TabShell() {
 							borderTopWidth: 0,
 							shadowOpacity: 0,
 							elevation: 0,
+							height: TAB_BAR_CONTENT_HEIGHT + insets.bottom,
 						},
 						tabBarLabelStyle: {
 							...theme.typography.micro,
