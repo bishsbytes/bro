@@ -785,15 +785,15 @@ export function HomeScreen({
 		const stamp = todayWriteRef.current;
 		try {
 			const activeOptional = Object.fromEntries(
-				today.availableOptionalScores.map((metric) => [
-					metric.slug,
-					optional[metric.slug],
-				]),
+				today.availableOptionalScores.flatMap((metric) => {
+					const value = optional[metric.slug];
+					return value === undefined ? [] : [[metric.slug, value]];
+				}),
 			);
 			const saved = await checkIns.saveCheckIn(
 				{
 					mood: moodScore,
-					...(today.availableOptionalScores.length > 0
+					...(Object.keys(activeOptional).length > 0
 						? { optional: activeOptional }
 						: {}),
 				},
@@ -812,38 +812,17 @@ export function HomeScreen({
 		}
 	}
 
-	function chooseOptionalScore(
-		metricSlug: string,
-		score: number,
-		index: number,
-	) {
+	function chooseOptionalScore(metricSlug: string, score: number) {
 		if (!today || mood === null || savingRef.current) return;
 		playSelectionHaptic();
-		const laterSlugs = new Set(
-			today.availableOptionalScores
-				.slice(index + 1)
-				.map((metric) => metric.slug),
-		);
-		const next = Object.fromEntries(
-			Object.entries({ ...scoreValues, [metricSlug]: score }).filter(
-				([slug]) => !laterSlugs.has(slug),
-			),
-		);
-		setScoreValues(next);
-		if (index === today.availableOptionalScores.length - 1) {
-			void commitCheckIn(mood, next);
-		}
+		setScoreValues((current) => ({ ...current, [metricSlug]: score }));
 	}
 
 	function chooseMood(score: number) {
 		if (!today || savingRef.current) return;
 		playSelectionHaptic();
 		setMood(score);
-		setScoreValues({});
 		setError(null);
-		if (today.availableOptionalScores.length === 0) {
-			void commitCheckIn(score, {});
-		}
 	}
 
 	async function saveNote() {
@@ -941,40 +920,39 @@ export function HomeScreen({
 					disabled={saving}
 				/>
 
-				{today.availableOptionalScores.map((metric, index) => {
-					const previousComplete =
-						mood !== null &&
-						(index === 0 ||
-							scoreValues[today.availableOptionalScores[index - 1]?.slug] !==
-								undefined);
-					if (!previousComplete) return null;
-					const isLast = index === today.availableOptionalScores.length - 1;
-					return (
-						<View key={metric.slug}>
-							<AppText
-								variant="label"
-								style={[styles.prompt, styles.promptSpaced]}
-							>
-								{metric.label}
-							</AppText>
-							<ScoreRow
-								accessibilityPrefix={metric.label}
-								selected={scoreValues[metric.slug] ?? null}
-								onSelect={(score) =>
-									chooseOptionalScore(metric.slug, score, index)
-								}
-								disabled={saving}
-							/>
-							{isLast ? (
-								<AppText variant="caption" color="subtle" style={styles.hint}>
-									{saving
-										? "Saving your check-in…"
-										: `Pick your ${metric.label.toLowerCase()} to save this check-in.`}
+				{mood !== null
+					? today.availableOptionalScores.map((metric) => (
+							<View key={metric.slug}>
+								<AppText
+									variant="label"
+									style={[styles.prompt, styles.promptSpaced]}
+								>
+									{metric.label}
 								</AppText>
-							) : null}
-						</View>
-					);
-				})}
+								<ScoreRow
+									accessibilityPrefix={metric.label}
+									selected={scoreValues[metric.slug] ?? null}
+									onSelect={(score) => chooseOptionalScore(metric.slug, score)}
+									disabled={saving}
+								/>
+							</View>
+						))
+					: null}
+
+				{mood !== null ? (
+					<>
+						{today.availableOptionalScores.length > 0 ? (
+							<AppText variant="caption" color="subtle" style={styles.hint}>
+								Optional — add any other scores that feel useful today.
+							</AppText>
+						) : null}
+						<Button
+							label={editing ? "Save changes" : "Save check-in"}
+							loading={saving}
+							onPress={() => void commitCheckIn(mood, scoreValues)}
+						/>
+					</>
+				) : null}
 
 				{editing ? (
 					<Button

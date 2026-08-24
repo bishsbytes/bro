@@ -176,17 +176,15 @@ describe("check-in store", () => {
 		transaction.mockRestore();
 	});
 
-	it("writes a Mood-only check-in when Energy is disabled", async () => {
+	it("writes Mood alone even while optional scores are enabled", async () => {
 		const observations = new databaseApp.ObservationRepository(db);
-		const tracked = new databaseApp.TrackedMetricsRepository(db);
-		await tracked.configure("energy", 1, false);
 		const store = new CheckInStore(db, () => CAPTURED_AT);
 
 		expect(
 			(await store.loadToday()).availableOptionalScores.map(
 				(metric) => metric.slug,
 			),
-		).toEqual(["motivation", "productivity", "libido"]);
+		).toEqual(["energy", "motivation", "productivity", "libido"]);
 		const saved = await store.saveCheckIn({ mood: 4 });
 
 		expect(await observations.listByDay(LOCAL_DAY)).toMatchObject([

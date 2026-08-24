@@ -313,7 +313,7 @@ describe("home screen", () => {
 		expect(await screen.findByText(/4 day streak/)).toBeTruthy();
 	});
 
-	it("saves the check-in as soon as an energy score is chosen", async () => {
+	it("saves Mood alone while enabled optional scores remain available", async () => {
 		const store = checkInStore();
 		const screen = await render(
 			<HomeScreen
@@ -324,21 +324,18 @@ describe("home screen", () => {
 		);
 		await screen.findByLabelText("Mood 4");
 
-		// Energy is only offered once a mood is chosen, and choosing it commits.
+		// Optional scores appear after Mood, but none is required to save.
 		expect(screen.queryByLabelText("Energy 3")).toBeNull();
 		await fireEvent.press(screen.getByLabelText("Mood 4"));
-		await fireEvent.press(screen.getByLabelText("Energy 3"));
+		expect(screen.getByLabelText("Energy 3")).toBeTruthy();
+		await fireEvent.press(screen.getByText("Save check-in"));
 
 		await waitFor(() =>
-			expect(store.saveCheckIn).toHaveBeenCalledWith(
-				{ mood: 4, optional: { energy: 3 } },
-				null,
-			),
+			expect(store.saveCheckIn).toHaveBeenCalledWith({ mood: 4 }, null),
 		);
-		expect(screen.queryByText("Save check-in")).toBeNull();
 	});
 
-	it("continues through enabled optional scores before saving", async () => {
+	it("saves any selected optional scores with Mood", async () => {
 		const store = checkInStore({
 			...emptyToday,
 			availableOptionalScores: listScoredMetrics().filter((metric) =>
@@ -360,8 +357,9 @@ describe("home screen", () => {
 		expect(store.saveCheckIn).not.toHaveBeenCalled();
 		await fireEvent.press(await screen.findByLabelText("Motivation 5"));
 		await fireEvent.press(await screen.findByLabelText("Productivity 4"));
-		expect(store.saveCheckIn).not.toHaveBeenCalled();
 		await fireEvent.press(await screen.findByLabelText("Libido 2"));
+		expect(store.saveCheckIn).not.toHaveBeenCalled();
+		await fireEvent.press(screen.getByText("Save check-in"));
 
 		await waitFor(() =>
 			expect(store.saveCheckIn).toHaveBeenCalledWith(
@@ -397,6 +395,7 @@ describe("home screen", () => {
 		await fireEvent.press(await screen.findByLabelText("Mood 4"));
 		expect(screen.queryByLabelText("Energy 3")).toBeNull();
 		await fireEvent.press(await screen.findByLabelText("Motivation 5"));
+		await fireEvent.press(screen.getByText("Save check-in"));
 
 		await waitFor(() =>
 			expect(store.saveCheckIn).toHaveBeenCalledWith(
@@ -406,7 +405,7 @@ describe("home screen", () => {
 		);
 	});
 
-	it("commits only one check-in when energy is tapped twice", async () => {
+	it("commits only one check-in when Save is tapped twice", async () => {
 		const store = checkInStore();
 		let release: (() => void) | null = null;
 		store.saveCheckIn.mockImplementation(async () => {
@@ -426,7 +425,9 @@ describe("home screen", () => {
 
 		await fireEvent.press(screen.getByLabelText("Mood 4"));
 		await fireEvent.press(screen.getByLabelText("Energy 3"));
-		await fireEvent.press(screen.getByLabelText("Energy 3"));
+		const saveButton = screen.getByLabelText("Save check-in");
+		await fireEvent.press(saveButton);
+		await fireEvent.press(saveButton);
 
 		expect(store.saveCheckIn).toHaveBeenCalledTimes(1);
 		await act(async () => release?.());
@@ -499,6 +500,7 @@ describe("home screen", () => {
 		expect(screen.getByText("Editing check-in")).toBeTruthy();
 		await fireEvent.press(screen.getByLabelText("Mood 5"));
 		await fireEvent.press(screen.getByLabelText("Energy 4"));
+		await fireEvent.press(screen.getByText("Save changes"));
 
 		await waitFor(() =>
 			expect(store.saveCheckIn).toHaveBeenCalledWith(
@@ -952,6 +954,7 @@ describe("home screen", () => {
 		await screen.findByLabelText("Mood 4");
 		await fireEvent.press(screen.getByLabelText("Mood 4"));
 		await fireEvent.press(screen.getByLabelText("Energy 3"));
+		await fireEvent.press(screen.getByText("Save check-in"));
 
 		await waitFor(() => expect(store.saveCheckIn).toHaveBeenCalledTimes(1));
 		await waitFor(() =>

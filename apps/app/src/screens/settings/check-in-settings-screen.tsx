@@ -86,8 +86,8 @@ export function CheckInSettingsScreen({ store }: CheckInSettingsScreenProps) {
 	return (
 		<Screen scroll padded gap="lg">
 			<AppText color="muted">
-				Mood is always included. Choose which other scores you want to answer
-				during each check-in.
+				Mood is always included. Choose which optional scores you want available
+				during check-ins.
 			</AppText>
 			{error ? <AppText color="danger">{error}</AppText> : null}
 			<View style={styles.section}>

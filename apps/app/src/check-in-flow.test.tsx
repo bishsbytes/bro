@@ -94,12 +94,13 @@ describe("daily check-in flow", () => {
 		await act(async () => undefined);
 		await view.findByLabelText("Mood 4");
 
-		// The last enabled score commits the check-in — there is no Save button.
+		// Mood is sufficient; the enabled optional scores are included when chosen.
 		await fireEvent.press(view.getByLabelText("Mood 4"));
 		await fireEvent.press(await view.findByLabelText("Energy 3"));
 		await fireEvent.press(await view.findByLabelText("Motivation 5"));
 		await fireEvent.press(await view.findByLabelText("Productivity 4"));
 		await fireEvent.press(await view.findByLabelText("Libido 2"));
+		await fireEvent.press(view.getByText("Save check-in"));
 
 		expect(await view.findByText("1 check-in")).toBeTruthy();
 		const observations = new databaseApp.ObservationRepository(db);
@@ -156,6 +157,7 @@ describe("daily check-in flow", () => {
 		await fireEvent.press(await view.findByLabelText("Motivation 4"));
 		await fireEvent.press(await view.findByLabelText("Productivity 3"));
 		await fireEvent.press(await view.findByLabelText("Libido 1"));
+		await fireEvent.press(view.getByText("Save check-in"));
 		expect(await view.findByText("2 check-ins")).toBeTruthy();
 
 		// Tags belong to the day, so deselecting clears it for the day rather
