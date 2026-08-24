@@ -81,10 +81,7 @@ export type TagMetricDefinition = MetricDefinitionBase & {
 	category: TagCategory;
 	dimension: null;
 	/**
-	 * Whether the tag is in the panel before the user chooses. The check-in is
-	 * budgeted in seconds, so the catalogue may grow without the default panel
-	 * growing with it: anything shipped after the original set starts off and
-	 * is opted into from settings.
+	 * Whether the tag is in the panel before the user changes their settings.
 	 */
 	defaultEnabled: boolean;
 };
@@ -312,45 +309,26 @@ export const METRIC_REGISTRY = [
 	tag("travel", "Travel", "social", 13),
 	tag("masturbation", "Masturbation", "sexual", 14, {
 		sensitive: true,
-		defaultEnabled: false,
 	}),
 	tag("porn", "Porn", "sexual", 15, {
 		sensitive: true,
-		defaultEnabled: false,
 	}),
 	tag("morning_erection", "Morning erection", "sexual", 16, {
 		sensitive: true,
-		defaultEnabled: false,
 	}),
 	tag("hangover", "Hangover", "body", 17, {
 		sensitive: true,
-		defaultEnabled: false,
 	}),
-	tag("muscle_soreness", "Muscle soreness", "body", 18, {
-		defaultEnabled: false,
-	}),
-	tag("cold_exposure", "Cold exposure", "body", 19, {
-		defaultEnabled: false,
-	}),
+	tag("muscle_soreness", "Muscle soreness", "body", 18),
+	tag("cold_exposure", "Cold exposure", "body", 19),
 	tag("nicotine", "Nicotine", "lifestyle", 20, {
 		sensitive: true,
-		defaultEnabled: false,
 	}),
-	tag("long_hours", "Long hours", "lifestyle", 21, {
-		defaultEnabled: false,
-	}),
-	tag("meditation", "Meditation", "mind", 22, {
-		defaultEnabled: false,
-	}),
-	tag("anxiety", "Anxiety", "mind", 23, {
-		defaultEnabled: false,
-	}),
-	tag("family_time", "Family time", "social", 24, {
-		defaultEnabled: false,
-	}),
-	tag("conflict", "Conflict", "social", 25, {
-		defaultEnabled: false,
-	}),
+	tag("long_hours", "Long hours", "lifestyle", 21),
+	tag("meditation", "Meditation", "mind", 22),
+	tag("anxiety", "Anxiety", "mind", 23),
+	tag("family_time", "Family time", "social", 24),
+	tag("conflict", "Conflict", "social", 25),
 	measurement("weight", "Weight", "mass", 0),
 	measurement("waist", "Waist", "length", 1),
 	measurement("body_fat", "Body fat", "fraction", 2),

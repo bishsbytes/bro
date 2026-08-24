@@ -81,24 +81,11 @@ describe("metric registry", () => {
 			"hangover",
 			"nicotine",
 		]);
-		// The check-in is budgeted in seconds, so the catalogue may grow without
-		// the shipped panel growing with it.
 		expect(
 			listTags()
 				.filter((metric) => metric.defaultEnabled)
 				.map((metric) => metric.slug),
-		).toEqual([
-			"training",
-			"illness",
-			"poor_sleep_environment",
-			"late_screen",
-			"junk_food",
-			"stress",
-			"outdoors",
-			"social",
-			"sex",
-			"travel",
-		]);
+		).toEqual(listTags().map((metric) => metric.slug));
 		expect(resolveMetric("libido")).toMatchObject({
 			kind: "known",
 			metric: { kind: "scored", sensitive: true },

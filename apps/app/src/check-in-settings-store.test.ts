@@ -64,7 +64,7 @@ describe("check-in settings store", () => {
 		);
 	});
 
-	it("offers every tag but leaves the ones added after the first panel off", async () => {
+	it("offers and enables every tag by default", async () => {
 		const store = new CheckInSettingsStore(db);
 		const { tags } = await store.load();
 
@@ -73,29 +73,18 @@ describe("check-in settings store", () => {
 		);
 		expect(
 			tags.filter((tag) => tag.enabled).map((tag) => tag.metricSlug),
-		).toEqual([
-			"training",
-			"illness",
-			"poor_sleep_environment",
-			"late_screen",
-			"junk_food",
-			"stress",
-			"outdoors",
-			"social",
-			"sex",
-			"travel",
-		]);
+		).toEqual(listTags().map((tag) => tag.slug));
 		expect(tags.find((tag) => tag.metricSlug === "masturbation")).toEqual({
 			metricSlug: "masturbation",
 			label: "Masturbation",
-			enabled: false,
+			enabled: true,
 			sensitive: true,
 			category: "sexual",
 		});
 
-		const toggled = await store.setEnabled("masturbation", true);
+		const toggled = await store.setEnabled("masturbation", false);
 		expect(
 			toggled.tags.find((tag) => tag.metricSlug === "masturbation")?.enabled,
-		).toBe(true);
+		).toBe(false);
 	});
 });
