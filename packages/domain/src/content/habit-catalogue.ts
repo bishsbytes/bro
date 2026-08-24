@@ -2,6 +2,7 @@ import type { HabitDirection } from "../tracking";
 import type { LifeAreaSlug } from "./life-area-catalogue";
 import type {
 	ConsumptionDerivedMeasurementSlug,
+	FactorSlug,
 	ImportedOnlyMeasurementSlug,
 } from "./metric-registry";
 
@@ -22,6 +23,13 @@ export type ManualHabitTemplate = HabitTemplateBase & {
 	metricSlug: null;
 	direction: null;
 	defaultTargetValue: null;
+	/**
+	 * The check-in factor this habit is the same fact as. Completing the habit
+	 * writes that factor's presence row, and the check-in panel drops the tag
+	 * while the habit is active, so the day is recorded once rather than twice.
+	 * Null where the habit has no factor counterpart.
+	 */
+	factorSlug: FactorSlug | null;
 };
 
 export type MetricHabitTemplate = HabitTemplateBase & {
@@ -29,6 +37,8 @@ export type MetricHabitTemplate = HabitTemplateBase & {
 	metricSlug: ImportedOnlyMeasurementSlug | ConsumptionDerivedMeasurementSlug;
 	direction: HabitDirection;
 	defaultTargetValue: number;
+	/** Quantified habits measure their metric directly; no factor stands in. */
+	factorSlug: null;
 };
 
 export type HabitTemplate = ManualHabitTemplate | MetricHabitTemplate;
@@ -53,6 +63,7 @@ export const HABIT_CATALOGUE = [
 		metricSlug: "steps",
 		direction: "at_least",
 		defaultTargetValue: 10_000,
+		factorSlug: null,
 		defaultDaysOfWeek: EVERY_DAY,
 		areaSlug: "wheel:health",
 		sensitive: false,
@@ -66,6 +77,7 @@ export const HABIT_CATALOGUE = [
 		metricSlug: "sleep_duration",
 		direction: "at_least",
 		defaultTargetValue: 25_200,
+		factorSlug: null,
 		defaultDaysOfWeek: EVERY_DAY,
 		areaSlug: "wheel:health",
 		sensitive: false,
@@ -80,6 +92,7 @@ export const HABIT_CATALOGUE = [
 		metricSlug: "alcohol_intake",
 		direction: "at_most",
 		defaultTargetValue: 0,
+		factorSlug: null,
 		defaultDaysOfWeek: WEEKDAYS,
 		areaSlug: "wheel:sobriety",
 		sensitive: true,
@@ -94,6 +107,7 @@ export const HABIT_CATALOGUE = [
 		metricSlug: null,
 		direction: null,
 		defaultTargetValue: null,
+		factorSlug: "training",
 		defaultDaysOfWeek: MONDAY_WEDNESDAY_FRIDAY,
 		areaSlug: "wheel:health",
 		sensitive: false,
@@ -107,6 +121,7 @@ export const HABIT_CATALOGUE = [
 		metricSlug: null,
 		direction: null,
 		defaultTargetValue: null,
+		factorSlug: "outdoors",
 		defaultDaysOfWeek: EVERY_DAY,
 		areaSlug: "wheel:health",
 		sensitive: false,
@@ -120,6 +135,7 @@ export const HABIT_CATALOGUE = [
 		metricSlug: null,
 		direction: null,
 		defaultTargetValue: null,
+		factorSlug: null,
 		defaultDaysOfWeek: EVERY_DAY,
 		areaSlug: "wheel:growth",
 		sensitive: false,
@@ -133,6 +149,7 @@ export const HABIT_CATALOGUE = [
 		metricSlug: null,
 		direction: null,
 		defaultTargetValue: null,
+		factorSlug: null,
 		defaultDaysOfWeek: EVERY_DAY,
 		areaSlug: "wheel:purpose",
 		sensitive: false,
@@ -146,6 +163,7 @@ export const HABIT_CATALOGUE = [
 		metricSlug: null,
 		direction: null,
 		defaultTargetValue: null,
+		factorSlug: null,
 		defaultDaysOfWeek: SUNDAY,
 		areaSlug: "wheel:friends",
 		sensitive: false,
@@ -159,6 +177,7 @@ export const HABIT_CATALOGUE = [
 		metricSlug: null,
 		direction: null,
 		defaultTargetValue: null,
+		factorSlug: null,
 		defaultDaysOfWeek: SATURDAY,
 		areaSlug: "wheel:partner",
 		sensitive: false,
@@ -172,6 +191,7 @@ export const HABIT_CATALOGUE = [
 		metricSlug: null,
 		direction: null,
 		defaultTargetValue: null,
+		factorSlug: null,
 		defaultDaysOfWeek: SUNDAY,
 		areaSlug: "wheel:environment",
 		sensitive: false,
@@ -185,6 +205,7 @@ export const HABIT_CATALOGUE = [
 		metricSlug: null,
 		direction: null,
 		defaultTargetValue: null,
+		factorSlug: null,
 		defaultDaysOfWeek: MONDAY,
 		areaSlug: "wheel:career",
 		sensitive: false,
@@ -198,6 +219,7 @@ export const HABIT_CATALOGUE = [
 		metricSlug: null,
 		direction: null,
 		defaultTargetValue: null,
+		factorSlug: null,
 		defaultDaysOfWeek: SUNDAY,
 		areaSlug: "wheel:money",
 		sensitive: false,
@@ -211,6 +233,7 @@ export const HABIT_CATALOGUE = [
 		metricSlug: null,
 		direction: null,
 		defaultTargetValue: null,
+		factorSlug: null,
 		defaultDaysOfWeek: SUNDAY,
 		areaSlug: "wheel:family",
 		sensitive: false,
@@ -225,6 +248,7 @@ export const HABIT_CATALOGUE = [
 		metricSlug: null,
 		direction: null,
 		defaultTargetValue: null,
+		factorSlug: null,
 		defaultDaysOfWeek: SATURDAY,
 		areaSlug: "wheel:fun",
 		sensitive: false,
@@ -239,6 +263,7 @@ export const HABIT_CATALOGUE = [
 		metricSlug: null,
 		direction: null,
 		defaultTargetValue: null,
+		factorSlug: null,
 		defaultDaysOfWeek: EVERY_DAY,
 		areaSlug: "wheel:faith",
 		sensitive: true,
@@ -253,6 +278,7 @@ export const HABIT_CATALOGUE = [
 		metricSlug: null,
 		direction: null,
 		defaultTargetValue: null,
+		factorSlug: null,
 		defaultDaysOfWeek: EVERY_DAY,
 		areaSlug: "wheel:fatherhood",
 		sensitive: false,

@@ -96,6 +96,87 @@ describe("habits store", () => {
 		expect(today.habits.map(({ streak }) => streak)).toEqual([1, 1]);
 	});
 
+	it("records and releases the factor a manual habit stands in for", async () => {
+		const observations = new databaseApp.ObservationRepository(db);
+		const trained = await store.addTemplate(habit("habit:training"), {
+			label: "Train",
+			daysOfWeek: 0b111_1111,
+			targetValue: null,
+			areaSlug: null,
+		});
+
+		await store.toggleManual(trained.id, "2026-08-17");
+		const afterComplete = (await observations.listByDay("2026-08-17")).filter(
+			(row) => row.metricSlug === "training",
+		);
+		expect(afterComplete).toHaveLength(1);
+		expect(afterComplete[0]).toMatchObject({
+			value: 1,
+			scaleMin: null,
+			scaleMax: null,
+			source: "user",
+			sourceRecordId: trained.id,
+		});
+
+		await store.toggleManual(trained.id, "2026-08-17");
+		expect(
+			(await observations.listByDay("2026-08-17")).filter(
+				(row) => row.metricSlug === "training",
+			),
+		).toEqual([]);
+	});
+
+	it("leaves a factor the user tapped themselves alone", async () => {
+		const observations = new databaseApp.ObservationRepository(db);
+		const trained = await store.addTemplate(habit("habit:training"), {
+			label: "Train",
+			daysOfWeek: 0b111_1111,
+			targetValue: null,
+			areaSlug: null,
+		});
+		const tapped = await observations.create({
+			metricSlug: "training",
+			value: 1,
+			scaleMin: null,
+			scaleMax: null,
+			observedAt: now.getTime(),
+			localDay: "2026-08-17",
+			tzOffsetMinutes: 0,
+			source: "user",
+			sourceRecordId: null,
+			assessmentId: null,
+		});
+
+		// Completing does not duplicate the day's presence...
+		await store.toggleManual(trained.id, "2026-08-17");
+		expect(
+			(await observations.listByDay("2026-08-17")).filter(
+				(row) => row.metricSlug === "training",
+			),
+		).toEqual([expect.objectContaining({ id: tapped.id })]);
+
+		// ...and un-completing does not delete a row the habit never wrote.
+		await store.toggleManual(trained.id, "2026-08-17");
+		expect(
+			(await observations.listByDay("2026-08-17")).filter(
+				(row) => row.metricSlug === "training",
+			),
+		).toEqual([expect.objectContaining({ id: tapped.id })]);
+	});
+
+	it("writes no factor for a habit that stands in for none", async () => {
+		const observations = new databaseApp.ObservationRepository(db);
+		const reading = await store.addTemplate(habit("habit:reading"), {
+			label: "Read",
+			daysOfWeek: 0b111_1111,
+			targetValue: null,
+			areaSlug: null,
+		});
+
+		await store.toggleManual(reading.id, "2026-08-17");
+		expect(await observations.listByDay("2026-08-17")).toEqual([]);
+	});
+
 	it("self-completes an alcohol-free day from the drink log", async () => {
 		const alcoholFree = await store.addTemplate(habit("habit:alcohol-free"), {
 			label: "Have an alcohol-free day",

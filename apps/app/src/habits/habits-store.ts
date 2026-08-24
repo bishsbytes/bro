@@ -30,6 +30,7 @@ import {
 	resolveLifeAreas,
 } from "@bro/domain/life-area-catalogue";
 import {
+	FACTOR_PRESENCE_VALUE,
 	isConsumptionDerivedMeasurementSlug,
 	resolveMetric,
 } from "@bro/domain/metric-registry";
@@ -39,6 +40,7 @@ import {
 	formatMetricValue,
 	type HabitAdherenceDay,
 	type HabitMetricSlug,
+	habitFactorSlug,
 	habitMetricDayValue,
 	isHabitMetricSlug,
 	isHabitScheduled,
@@ -534,10 +536,88 @@ export class HabitsStore {
 		return [...summaries.values()];
 	}
 
+	/**
+	 * Toggles the day's completion and, where the habit stands in for a check-in
+	 * factor, the factor row with it.
+	 *
+	 * The two writes are sequenced rather than wrapped: `complete` opens its own
+	 * transaction and SQLite does not nest. The completion is the user's intent
+	 * and goes first, so a failed factor write leaves a completed habit with a
+	 * missing presence row — one lost correlation day, healed by the next toggle
+	 * — rather than a factor no habit accounts for.
+	 */
 	async toggleManual(habitId: string, localDay: string): Promise<void> {
+		const habit = await this.habits.findById(habitId);
+		const factorSlug = habit === null ? null : habitFactorSlug(habit.slug);
 		const existing = await this.completions.findByHabitDay(habitId, localDay);
-		if (existing) await this.completions.uncomplete(habitId, localDay);
-		else await this.completions.complete(habitId, localDay);
+
+		if (existing) {
+			await this.completions.uncomplete(habitId, localDay);
+			if (factorSlug !== null) {
+				await this.releaseHabitFactor(habitId, factorSlug, localDay);
+			}
+		} else {
+			await this.completions.complete(habitId, localDay);
+			if (factorSlug !== null) {
+				await this.recordHabitFactor(habitId, factorSlug, localDay);
+			}
+		}
+	}
+
+	/**
+	 * Writes the habit's factor presence row for the day, unless the day already
+	 * carries that factor. A row the user tapped at check-in is left as it is:
+	 * presence is presence, and a second row would only be a duplicate to
+	 * collapse later.
+	 */
+	private async recordHabitFactor(
+		habitId: string,
+		factorSlug: string,
+		localDay: string,
+	): Promise<void> {
+		const existing = await this.factorRowsForDay(factorSlug, localDay);
+		if (existing.length > 0) return;
+
+		const capturedAt = this.now();
+		await this.observations.create({
+			metricSlug: factorSlug,
+			value: FACTOR_PRESENCE_VALUE,
+			scaleMin: null,
+			scaleMax: null,
+			observedAt: capturedAt.getTime(),
+			localDay,
+			tzOffsetMinutes: capturedAt.getTimezoneOffset(),
+			source: "user",
+			sourceRecordId: habitId,
+			assessmentId: null,
+		});
+	}
+
+	/**
+	 * Removes only the rows this habit wrote. A factor the user tapped
+	 * themselves — `sourceRecordId` null, or another habit's id — outlives an
+	 * un-complete here, so undoing a habit never deletes a fact it did not
+	 * record.
+	 */
+	private async releaseHabitFactor(
+		habitId: string,
+		factorSlug: string,
+		localDay: string,
+	): Promise<void> {
+		const rows = await this.factorRowsForDay(factorSlug, localDay);
+		for (const row of rows) {
+			if (row.sourceRecordId === habitId) {
+				await this.observations.delete(row.id);
+			}
+		}
+	}
+
+	private async factorRowsForDay(
+		factorSlug: string,
+		localDay: string,
+	): Promise<Observation[]> {
+		const rows = await this.observations.listByDay(localDay);
+		return rows.filter((row) => row.metricSlug === factorSlug);
 	}
 
 	async loadSettings(): Promise<HabitSettingsSnapshot> {

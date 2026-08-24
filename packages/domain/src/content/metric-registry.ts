@@ -10,6 +10,17 @@ import { LIFE_AREA_CATALOGUE, type LifeAreaSlug } from "./life-area-catalogue";
 export type MetricKind = "scored" | "factor" | "assessment" | "measurement";
 export type MetricAggregation = "mean" | "presence" | "last" | "sum";
 export type FactorCategory = "body" | "lifestyle" | "mind" | "social";
+export type FactorSlug =
+	| "training"
+	| "illness"
+	| "poor_sleep_environment"
+	| "late_screen"
+	| "junk_food"
+	| "stress"
+	| "outdoors"
+	| "social"
+	| "sex"
+	| "travel";
 export type UserEnterableMeasurementSlug = "weight" | "waist" | "body_fat";
 export type UserEnterableMeasurementDimension = "mass" | "length" | "fraction";
 export type ImportedOnlyMeasurementSlug =
@@ -151,10 +162,11 @@ const scored = (
 });
 
 const factor = (
-	slug: string,
+	slug: FactorSlug,
 	label: string,
 	category: FactorCategory,
 	defaultPosition: number,
+	sensitive = false,
 ): FactorMetricDefinition => ({
 	slug,
 	label,
@@ -163,7 +175,7 @@ const factor = (
 	scaleMax: null,
 	category,
 	aggregation: "presence",
-	sensitive: false,
+	sensitive,
 	userEnterable: true,
 	deprecated: false,
 	defaultPosition,
@@ -276,7 +288,7 @@ export const METRIC_REGISTRY = [
 	factor("stress", "Stress", "mind", 9),
 	factor("outdoors", "Outdoors", "mind", 10),
 	factor("social", "Social", "social", 11),
-	factor("sex", "Sex", "social", 12),
+	factor("sex", "Sex", "social", 12, true),
 	factor("travel", "Travel", "social", 13),
 	measurement("weight", "Weight", "mass", 0),
 	measurement("waist", "Waist", "length", 1),

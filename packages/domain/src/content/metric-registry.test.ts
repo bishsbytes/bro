@@ -59,6 +59,11 @@ describe("metric registry", () => {
 			"libido",
 		]);
 		expect(listFactors()).toHaveLength(10);
+		expect(
+			listFactors()
+				.filter((metric) => metric.sensitive)
+				.map((metric) => metric.slug),
+		).toEqual(["sex"]);
 		expect(resolveMetric("libido")).toMatchObject({
 			kind: "known",
 			metric: { kind: "scored", sensitive: true },

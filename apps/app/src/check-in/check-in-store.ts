@@ -1,6 +1,7 @@
 import {
 	DayNoteRepository,
 	getDb,
+	HabitRepository,
 	type Observation,
 	ObservationRepository,
 	TrackedMetricsRepository,
@@ -23,6 +24,7 @@ import {
 	type ScoredMetricDefinition,
 } from "@bro/domain/metric-registry";
 import {
+	coveredFactorSlugs,
 	type MeasurementPresentation,
 	toMeasurementPresentation,
 } from "@bro/logic";
@@ -143,6 +145,7 @@ export class CheckInStore {
 	private readonly notes: DayNoteRepository;
 	private readonly trackedMetrics: TrackedMetricsRepository;
 	private readonly unitPreferences: UnitPreferenceRepository;
+	private readonly habits: HabitRepository;
 
 	constructor(
 		private readonly db: SQLiteDatabase,
@@ -155,17 +158,20 @@ export class CheckInStore {
 		this.notes = new DayNoteRepository(db);
 		this.trackedMetrics = new TrackedMetricsRepository(db);
 		this.unitPreferences = new UnitPreferenceRepository(db);
+		this.habits = new HabitRepository(db);
 	}
 
 	async loadToday(date = this.now()): Promise<TodayCheckIn> {
 		const localDay = localDayOf(date);
 		const inputLocale = this.locale();
-		const [observations, notes, tracked, preferences] = await Promise.all([
-			this.observations.listByDay(localDay),
-			this.notes.listByDay(localDay),
-			this.trackedMetrics.listResolved(DEFAULT_TRACKED_METRICS),
-			this.unitPreferences.resolveLatestPerDimension(),
-		]);
+		const [observations, notes, tracked, preferences, activeHabits] =
+			await Promise.all([
+				this.observations.listByDay(localDay),
+				this.notes.listByDay(localDay),
+				this.trackedMetrics.listResolved(DEFAULT_TRACKED_METRICS),
+				this.unitPreferences.resolveLatestPerDimension(),
+				this.habits.listActive(),
+			]);
 		const preferenceByDimension = new Map(
 			preferences.map((preference) => [preference.dimension, preference.unit]),
 		);
@@ -183,8 +189,11 @@ export class CheckInStore {
 					: [];
 			},
 		);
-		const availableFactors = listFactors().filter((factor) =>
-			enabledSlugs.has(factor.slug),
+		// A factor an active habit already records is tapped in Habits, not here:
+		// showing both tags would ask the same question twice a day.
+		const covered = coveredFactorSlugs(activeHabits);
+		const availableFactors = listFactors().filter(
+			(factor) => enabledSlugs.has(factor.slug) && !covered.has(factor.slug),
 		);
 		const factorSlugs = new Set(availableFactors.map((factor) => factor.slug));
 		const resolvedMeasurements = tracked.flatMap((overlay) => {
@@ -416,15 +425,21 @@ export class CheckInStore {
 		const selected = new Set(selectedFactorSlugs);
 
 		await this.db.withTransactionAsync(async () => {
-			const tracked = await this.trackedMetrics.listResolved(
-				DEFAULT_TRACKED_METRICS,
-			);
+			const [tracked, activeHabits] = await Promise.all([
+				this.trackedMetrics.listResolved(DEFAULT_TRACKED_METRICS),
+				this.habits.listActive(),
+			]);
+			// Covered factors are not active here, which keeps them out of the
+			// panel's authority twice over: they cannot be passed in, and
+			// reconciliation will not delete the row their habit owns.
+			const covered = coveredFactorSlugs(activeHabits);
 			const activeFactorSlugs = new Set(
 				tracked
 					.filter((metric) => {
 						const resolved = resolveMetric(metric.metricSlug);
 						return (
 							metric.enabled &&
+							!covered.has(metric.metricSlug) &&
 							resolved.kind === "known" &&
 							resolved.metric.kind === "factor"
 						);

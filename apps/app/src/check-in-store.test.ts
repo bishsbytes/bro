@@ -284,6 +284,79 @@ describe("check-in store", () => {
 		expect(await observations.listByDay(LOCAL_DAY)).toEqual([]);
 	});
 
+	it("drops a factor an active habit already records from the panel", async () => {
+		const habits = new databaseApp.HabitRepository(db);
+		const trained = await habits.create({
+			slug: "habit:training",
+			customLabel: null,
+			kind: "manual",
+			metricSlug: null,
+			direction: null,
+			targetValue: null,
+			areaSlug: "wheel:health",
+			daysOfWeek: 0b111_1111,
+			position: 0,
+		});
+		const store = new CheckInStore(db, () => CAPTURED_AT);
+
+		const today = await store.loadToday();
+		expect(today.availableFactors.some(({ slug }) => slug === "training")).toBe(
+			false,
+		);
+		// Its uncovered neighbours are untouched.
+		expect(today.availableFactors.some(({ slug }) => slug === "outdoors")).toBe(
+			true,
+		);
+		// The panel has no authority over a covered factor, so it cannot be saved
+		// through the check-in either.
+		await expect(store.saveDayFactors(["training"])).rejects.toThrow(
+			"Factor is not active today: training",
+		);
+
+		// Removing the habit hands the tag back.
+		await habits.remove(trained.id);
+		const afterRemoval = await store.loadToday();
+		expect(
+			afterRemoval.availableFactors.some(({ slug }) => slug === "training"),
+		).toBe(true);
+	});
+
+	it("leaves a habit-owned factor row untouched when reconciling", async () => {
+		const observations = new databaseApp.ObservationRepository(db);
+		const habits = new databaseApp.HabitRepository(db);
+		const trained = await habits.create({
+			slug: "habit:training",
+			customLabel: null,
+			kind: "manual",
+			metricSlug: null,
+			direction: null,
+			targetValue: null,
+			areaSlug: "wheel:health",
+			daysOfWeek: 0b111_1111,
+			position: 0,
+		});
+		await observations.create({
+			metricSlug: "training",
+			value: 1,
+			scaleMin: null,
+			scaleMax: null,
+			observedAt: CAPTURED_AT.getTime(),
+			localDay: LOCAL_DAY,
+			tzOffsetMinutes: 0,
+			source: "user",
+			sourceRecordId: trained.id,
+			assessmentId: null,
+		});
+		const store = new CheckInStore(db, () => CAPTURED_AT);
+
+		// Clearing every tag the panel owns must not reach the habit's row.
+		const cleared = await store.saveDayFactors([]);
+		expect(cleared.selectedFactorSlugs).toEqual([]);
+		expect(await observations.listByDay(LOCAL_DAY)).toMatchObject([
+			{ metricSlug: "training", sourceRecordId: trained.id },
+		]);
+	});
+
 	it("refuses a factor the day is not tracking", async () => {
 		const observations = new databaseApp.ObservationRepository(db);
 		await new databaseApp.TrackedMetricsRepository(db).configure(

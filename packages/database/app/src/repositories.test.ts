@@ -482,24 +482,23 @@ describe("product repositories", () => {
 				)
 				.every((metric) => !metric.enabled),
 		).toBe(true);
+		// Derived from the defaults rather than a hand-kept list: this asserts the
+		// repository materialises what the registry declares, and does not need
+		// editing every time an opt-in metric joins it.
+		const disabledByDefault = new Set(
+			DEFAULT_TRACKED_METRICS.filter(
+				(metric) => "enabled" in metric && metric.enabled === false,
+			).map((metric) => metric.metricSlug),
+		);
 		expect(
 			initial
-				.filter(
-					({ metricSlug }) =>
-						![
-							"weight",
-							"waist",
-							"body_fat",
-							"alcohol_intake",
-							"caffeine_intake",
-							"fluid_intake",
-							"energy_intake",
-							"protein_intake",
-							"carbs_intake",
-							"fat_intake",
-						].includes(metricSlug),
-				)
+				.filter(({ metricSlug }) => !disabledByDefault.has(metricSlug))
 				.every((metric) => metric.enabled),
+		).toBe(true);
+		expect(
+			initial
+				.filter(({ metricSlug }) => disabledByDefault.has(metricSlug))
+				.every((metric) => !metric.enabled),
 		).toBe(true);
 		expect(await repository.listAll()).toEqual([]);
 

@@ -58,6 +58,11 @@ export {
 	type MetricHabit,
 } from "./habits/completion";
 export {
+	coveredFactorSlugs,
+	type FactorCoveredHabit,
+	habitFactorSlug,
+} from "./habits/factor-coverage";
+export {
 	type HabitMetricSlug,
 	isHabitMetricSlug,
 } from "./habits/metric-support";
