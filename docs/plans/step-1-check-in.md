@@ -6,6 +6,8 @@ Code-complete through slices 1–6 on 14 August 2026, with automated acceptance 
 
 The route locations and navigation descriptions in this plan record the step 1 implementation as it landed; the subsequent [app shell and shared components plan](app-shell-and-components.md) moved the top-level screens into `(tabs)` without changing their public pathnames or product behavior.
 
+The check-in journey below likewise records what step 1 shipped. It has since been superseded by the [check-in flow plan](check-in-flow.md): the scores moved off Today into a stepped flow at `/check-in`, so the "three taps plus save with no intermediate screens" contract in [User journeys](#check-in) no longer holds. Tags, the note, and the one-transaction-per-check-in rule are unchanged.
+
 Umbrella [Phase 1](offline-first-identity-onboarding-premium.md#phase-1-local-first-app-entry) is complete and [Phase 2](phase-2-optional-accounts.md) is code-complete; this step assumes both and requires neither Phase 3 nor any native dependency.
 
 ## Outcome

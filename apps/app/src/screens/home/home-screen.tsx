@@ -1,11 +1,15 @@
 import { localDayOf, shiftLocalDay, type WeekStartDay } from "@bro/domain";
-import { resolveMetric, type TagCategory } from "@bro/domain/metric-registry";
+import type { TagCategory } from "@bro/domain/metric-registry";
 import { formatLocalDayLabel, isWheelReviewDue } from "@bro/logic";
 import { type Href, router, useFocusEffect, useScrollToTop } from "expo-router";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { TouchableOpacity, View } from "react-native";
 import {
-	type CheckInEntry,
+	checkInScoreSummary,
+	MOOD_FACES,
+	metricLabel,
+} from "../../check-in/check-in-presentation";
+import {
 	type CheckInStore,
 	createCheckInStore,
 	type TodayCheckIn,
@@ -67,7 +71,6 @@ type HomeScreenProps = {
 	now?: () => Date;
 };
 
-const MOOD_FACES = ["😞", "🙁", "😐", "🙂", "😄"] as const;
 const systemNow = () => new Date();
 
 function localDaysBetween(fromLocalDay: string, throughLocalDay: string) {
@@ -101,18 +104,6 @@ function measurementChangeDetailLabel(
 	return `${change.formattedDelta} ${
 		change.direction === "increase" ? "higher" : "lower"
 	} than previous day`;
-}
-
-function checkInScoreSummary(
-	checkIn: CheckInEntry | HistoryDay["checkIns"][number],
-) {
-	const optional = checkIn.optionalScores.map((score) => {
-		const resolved = resolveMetric(score.metricSlug);
-		const label =
-			resolved.kind === "known" ? resolved.metric.label : score.metricSlug;
-		return `${label} ${score.value}`;
-	});
-	return [`Mood ${checkIn.mood.value}`, ...optional].join(" · ");
 }
 
 type PastDaySectionProps = {
@@ -192,12 +183,7 @@ function PastDaySection({
 							<Card>
 								<AppText color="muted">
 									{day.tags
-										.map((tag) => {
-											const resolved = resolveMetric(tag.metricSlug);
-											return resolved.kind === "known"
-												? resolved.metric.label
-												: tag.metricSlug;
-										})
+										.map((tag) => metricLabel(tag.metricSlug))
 										.join(", ")}
 								</AppText>
 							</Card>
@@ -399,16 +385,9 @@ export function HomeScreen({
 	const [finishedChallenge, setFinishedChallenge] = useState<string | null>(
 		null,
 	);
-	const [mood, setMood] = useState<number | null>(null);
-	const [scoreValues, setScoreValues] = useState<Record<string, number>>({});
 	const [selectedTags, setSelectedTags] = useState<string[]>([]);
 	const [note, setNote] = useState("");
-	const [editing, setEditing] = useState<CheckInEntry | null>(null);
-	const [saving, setSaving] = useState(false);
 	const [error, setError] = useState<string | null>(null);
-	// A tap commits the check-in, so the guard has to close before React has
-	// re-rendered: a second tap in the same frame would still see `saving` false.
-	const savingRef = useRef(false);
 	// Only the latest tag toggle may apply its result, and a reload must not
 	// pull the chips back to a set the user has already moved on from.
 	const tagRequestRef = useRef(0);
@@ -755,74 +734,9 @@ export function HomeScreen({
 		}
 	}
 
-	function startEditing(entry: CheckInEntry) {
-		setMood(entry.mood.value);
-		setScoreValues(
-			Object.fromEntries(
-				entry.optionalScores.map((score) => [score.metricSlug, score.value]),
-			),
-		);
-		setEditing(entry);
-		setError(null);
-	}
-
-	function cancelEditing() {
-		setMood(null);
-		setScoreValues({});
-		setEditing(null);
-		setError(null);
-	}
-
-	async function commitCheckIn(
-		moodScore: number,
-		optional: Readonly<Record<string, number>>,
-	) {
-		if (!today || savingRef.current) return;
-		savingRef.current = true;
-		setSaving(true);
-		setError(null);
-		todayWriteRef.current += 1;
-		const stamp = todayWriteRef.current;
-		try {
-			const activeOptional = Object.fromEntries(
-				today.availableOptionalScores.flatMap((metric) => {
-					const value = optional[metric.slug];
-					return value === undefined ? [] : [[metric.slug, value]];
-				}),
-			);
-			const saved = await checkIns.saveCheckIn(
-				{
-					mood: moodScore,
-					...(Object.keys(activeOptional).length > 0
-						? { optional: activeOptional }
-						: {}),
-				},
-				editing,
-			);
-			if (stamp === todayWriteRef.current) setToday(saved);
-			invalidateIndicatorDay(saved.localDay);
-			setMood(null);
-			setScoreValues({});
-			setEditing(null);
-		} catch (caught) {
-			setError(caught instanceof Error ? caught.message : String(caught));
-		} finally {
-			savingRef.current = false;
-			setSaving(false);
-		}
-	}
-
-	function chooseOptionalScore(metricSlug: string, score: number) {
-		if (!today || mood === null || savingRef.current) return;
+	function startCheckIn(moodScore: number) {
 		playSelectionHaptic();
-		setScoreValues((current) => ({ ...current, [metricSlug]: score }));
-	}
-
-	function chooseMood(score: number) {
-		if (!today || savingRef.current) return;
-		playSelectionHaptic();
-		setMood(score);
-		setError(null);
+		router.push(`/check-in?mood=${moodScore}` as Href);
 	}
 
 	async function saveNote() {
@@ -881,6 +795,7 @@ export function HomeScreen({
 		}),
 	);
 	const checkInCount = today.entries.length;
+	const latestCheckIn = today.entries[0] ?? null;
 	const checkInsSection = (
 		<View style={styles.section}>
 			<SectionHeader
@@ -903,65 +818,25 @@ export function HomeScreen({
 				}
 			/>
 
+			{/* Today reads the day; the scores themselves are answered in the
+			    check-in flow, so nothing here grows under the user's thumb. */}
 			<Card>
-				{editing ? (
-					<AppText variant="caption" color="brand" style={styles.prompt}>
-						Editing check-in
-					</AppText>
-				) : null}
 				<AppText variant="label" style={styles.prompt}>
-					Mood
+					{checkInCount === 0 ? "How's today?" : "Check in again"}
 				</AppText>
 				<ScoreRow
 					accessibilityPrefix="Mood"
-					selected={mood}
-					onSelect={chooseMood}
+					selected={null}
+					onSelect={startCheckIn}
 					faces={MOOD_FACES}
-					disabled={saving}
 				/>
-
-				{mood !== null
-					? today.availableOptionalScores.map((metric) => (
-							<View key={metric.slug}>
-								<AppText
-									variant="label"
-									style={[styles.prompt, styles.promptSpaced]}
-								>
-									{metric.label}
-								</AppText>
-								<ScoreRow
-									accessibilityPrefix={metric.label}
-									selected={scoreValues[metric.slug] ?? null}
-									onSelect={(score) => chooseOptionalScore(metric.slug, score)}
-									disabled={saving}
-								/>
-							</View>
-						))
-					: null}
-
-				{mood !== null ? (
-					<>
-						{today.availableOptionalScores.length > 0 ? (
-							<AppText variant="caption" color="subtle" style={styles.hint}>
-								Optional — add any other scores that feel useful today.
-							</AppText>
-						) : null}
-						<Button
-							label={editing ? "Save changes" : "Save check-in"}
-							loading={saving}
-							onPress={() => void commitCheckIn(mood, scoreValues)}
-						/>
-					</>
-				) : null}
-
-				{editing ? (
-					<Button
-						label="Cancel edit"
-						variant="text"
-						disabled={saving}
-						onPress={cancelEditing}
-					/>
-				) : null}
+				<AppText variant="caption" color="subtle" style={styles.hint}>
+					{latestCheckIn
+						? `Last check-in ${checkInScoreSummary(latestCheckIn)}`
+						: today.availableOptionalScores.length > 0
+							? "Tap a face to start — the rest takes seconds."
+							: "Tap a face to check in."}
+				</AppText>
 				{error ? <AppText color="danger">{error}</AppText> : null}
 			</Card>
 
@@ -977,7 +852,13 @@ export function HomeScreen({
 									})}
 								</AppText>
 							</View>
-							<TouchableOpacity onPress={() => startEditing(entry)}>
+							<TouchableOpacity
+								accessibilityRole="button"
+								accessibilityLabel={`Edit check-in ${checkInScoreSummary(entry)}`}
+								onPress={() =>
+									router.push(`/check-in?entry=${entry.id}` as Href)
+								}
+							>
 								<AppText variant="label" color="brand">
 									Edit
 								</AppText>
@@ -1280,8 +1161,6 @@ const styles = StyleSheet.create((theme) => ({
 		fontWeight: "600",
 		marginBottom: theme.spacing.sm,
 	},
-	/** Separates each optional score prompt from the row before it. */
-	promptSpaced: { marginTop: theme.spacing.lg },
 	choiceSelected: {
 		borderColor: theme.colors.brand,
 		backgroundColor: theme.colors.selected,

@@ -1,6 +1,7 @@
 import { listScoredMetrics, listTags } from "@bro/domain/metric-registry";
 import { act, fireEvent, render, waitFor } from "@testing-library/react-native";
 import * as Haptics from "expo-haptics";
+import { router } from "expo-router";
 import { Text } from "react-native";
 import type { CheckInEntry, TodayCheckIn } from "./check-in/check-in-store";
 import {
@@ -313,7 +314,7 @@ describe("home screen", () => {
 		expect(await screen.findByText(/4 day streak/)).toBeTruthy();
 	});
 
-	it("saves Mood alone while enabled optional scores remain available", async () => {
+	it("opens the check-in flow on the mood that was tapped", async () => {
 		const store = checkInStore();
 		const screen = await render(
 			<HomeScreen
@@ -324,113 +325,14 @@ describe("home screen", () => {
 		);
 		await screen.findByLabelText("Mood 4");
 
-		// Optional scores appear after Mood, but none is required to save.
+		// The optional scores belong to the flow; tapping a face must not grow
+		// the card the rest of Today is laid out under.
 		expect(screen.queryByLabelText("Energy 3")).toBeNull();
 		await fireEvent.press(screen.getByLabelText("Mood 4"));
-		expect(screen.getByLabelText("Energy 3")).toBeTruthy();
-		await fireEvent.press(screen.getByText("Save check-in"));
-
-		await waitFor(() =>
-			expect(store.saveCheckIn).toHaveBeenCalledWith({ mood: 4 }, null),
-		);
-	});
-
-	it("saves any selected optional scores with Mood", async () => {
-		const store = checkInStore({
-			...emptyToday,
-			availableOptionalScores: listScoredMetrics().filter((metric) =>
-				["energy", "motivation", "productivity", "libido"].includes(
-					metric.slug,
-				),
-			),
-		});
-		const screen = await render(
-			<HomeScreen
-				{...supportingProps()}
-				habitsStore={habitsStore()}
-				store={store}
-			/>,
-		);
-
-		await fireEvent.press(await screen.findByLabelText("Mood 4"));
-		await fireEvent.press(await screen.findByLabelText("Energy 3"));
-		expect(store.saveCheckIn).not.toHaveBeenCalled();
-		await fireEvent.press(await screen.findByLabelText("Motivation 5"));
-		await fireEvent.press(await screen.findByLabelText("Productivity 4"));
-		await fireEvent.press(await screen.findByLabelText("Libido 2"));
-		expect(store.saveCheckIn).not.toHaveBeenCalled();
-		await fireEvent.press(screen.getByText("Save check-in"));
-
-		await waitFor(() =>
-			expect(store.saveCheckIn).toHaveBeenCalledWith(
-				{
-					mood: 4,
-					optional: {
-						energy: 3,
-						motivation: 5,
-						productivity: 4,
-						libido: 2,
-					},
-				},
-				null,
-			),
-		);
-	});
-
-	it("skips Energy when it is disabled", async () => {
-		const store = checkInStore({
-			...emptyToday,
-			availableOptionalScores: listScoredMetrics().filter(
-				(metric) => metric.slug === "motivation",
-			),
-		});
-		const screen = await render(
-			<HomeScreen
-				{...supportingProps()}
-				habitsStore={habitsStore()}
-				store={store}
-			/>,
-		);
-
-		await fireEvent.press(await screen.findByLabelText("Mood 4"));
 		expect(screen.queryByLabelText("Energy 3")).toBeNull();
-		await fireEvent.press(await screen.findByLabelText("Motivation 5"));
-		await fireEvent.press(screen.getByText("Save check-in"));
 
-		await waitFor(() =>
-			expect(store.saveCheckIn).toHaveBeenCalledWith(
-				{ mood: 4, optional: { motivation: 5 } },
-				null,
-			),
-		);
-	});
-
-	it("commits only one check-in when Save is tapped twice", async () => {
-		const store = checkInStore();
-		let release: (() => void) | null = null;
-		store.saveCheckIn.mockImplementation(async () => {
-			await new Promise<void>((resolve) => {
-				release = resolve;
-			});
-			return emptyToday;
-		});
-		const screen = await render(
-			<HomeScreen
-				{...supportingProps()}
-				habitsStore={habitsStore()}
-				store={store}
-			/>,
-		);
-		await screen.findByLabelText("Mood 4");
-
-		await fireEvent.press(screen.getByLabelText("Mood 4"));
-		await fireEvent.press(screen.getByLabelText("Energy 3"));
-		const saveButton = screen.getByLabelText("Save check-in");
-		await fireEvent.press(saveButton);
-		await fireEvent.press(saveButton);
-
-		expect(store.saveCheckIn).toHaveBeenCalledTimes(1);
-		await act(async () => release?.());
+		expect(router.push).toHaveBeenCalledWith("/check-in?mood=4");
+		expect(store.saveCheckIn).not.toHaveBeenCalled();
 	});
 
 	it("keeps the day's check-ins behind a count affordance", async () => {
@@ -476,7 +378,7 @@ describe("home screen", () => {
 		expect(screen.queryByLabelText("Review check-ins")).toBeNull();
 	});
 
-	it("edits an existing check-in through the same two taps", async () => {
+	it("opens the check-in flow to edit an existing entry", async () => {
 		const mood = { ...observation("mood", 2), localDay: "2026-08-14" };
 		const energy = { ...observation("energy", 3), localDay: "2026-08-14" };
 		const entry = {
@@ -497,44 +399,9 @@ describe("home screen", () => {
 		// The entries live behind the count affordance in the Check-ins header.
 		await fireEvent.press(await screen.findByLabelText("Review check-ins"));
 		await fireEvent.press(screen.getByText("Edit"));
-		expect(screen.getByText("Editing check-in")).toBeTruthy();
-		await fireEvent.press(screen.getByLabelText("Mood 5"));
-		await fireEvent.press(screen.getByLabelText("Energy 4"));
-		await fireEvent.press(screen.getByText("Save changes"));
 
-		await waitFor(() =>
-			expect(store.saveCheckIn).toHaveBeenCalledWith(
-				{ mood: 5, optional: { energy: 4 } },
-				entry,
-			),
-		);
-	});
-
-	it("leaves the check-in untouched when an edit is cancelled", async () => {
-		const mood = { ...observation("mood", 2), localDay: "2026-08-14" };
-		const energy = { ...observation("energy", 3), localDay: "2026-08-14" };
-		const entry = {
-			id: mood.id,
-			observedAt: mood.observedAt,
-			mood,
-			optionalScores: [energy],
-		};
-		const store = checkInStore({ ...emptyToday, entries: [entry] });
-		const screen = await render(
-			<HomeScreen
-				{...supportingProps()}
-				habitsStore={habitsStore()}
-				store={store}
-			/>,
-		);
-
-		await fireEvent.press(await screen.findByLabelText("Review check-ins"));
-		await fireEvent.press(screen.getByText("Edit"));
-		await fireEvent.press(screen.getByLabelText("Mood 5"));
-		await fireEvent.press(screen.getByText("Cancel edit"));
-
+		expect(router.push).toHaveBeenCalledWith("/check-in?entry=mood-1");
 		expect(store.saveCheckIn).not.toHaveBeenCalled();
-		expect(screen.queryByText("Editing check-in")).toBeNull();
 	});
 
 	it("persists a tag the moment it is toggled, without a check-in", async () => {
@@ -934,13 +801,9 @@ describe("home screen", () => {
 		);
 	});
 
-	it("fills today's check-in dot after saving", async () => {
+	it("fills today's check-in dot when the flow hands the screen back", async () => {
 		let saved = false;
 		const store = checkInStore();
-		store.saveCheckIn.mockImplementation(async () => {
-			saved = true;
-			return emptyToday;
-		});
 		store.loadCheckInDays.mockImplementation(async () =>
 			saved ? new Set(["2026-08-14"]) : new Set<string>(),
 		);
@@ -952,11 +815,18 @@ describe("home screen", () => {
 			/>,
 		);
 		await screen.findByLabelText("Mood 4");
-		await fireEvent.press(screen.getByLabelText("Mood 4"));
-		await fireEvent.press(screen.getByLabelText("Energy 3"));
-		await fireEvent.press(screen.getByText("Save check-in"));
+		await waitFor(() =>
+			expect(
+				screen.getByTestId("week-strip-day-2026-08-14").props
+					.accessibilityLabel,
+			).not.toMatch(/check-in logged/),
+		);
 
-		await waitFor(() => expect(store.saveCheckIn).toHaveBeenCalledTimes(1));
+		// The check-in itself is written on the flow screen; Today learns about
+		// it by refetching the days it is showing when it regains focus.
+		saved = true;
+		await act(async () => triggerFocus?.());
+
 		await waitFor(() =>
 			expect(
 				screen.getByTestId("week-strip-day-2026-08-14").props

@@ -99,6 +99,7 @@ function RootNavigator() {
 			</Stack.Protected>
 			<Stack.Protected guard={settings.onboardingComplete}>
 				<Stack.Screen name="(tabs)" options={{ headerShown: false }} />
+				<Stack.Screen name="check-in" options={{ headerShown: false }} />
 				<Stack.Screen name="review" options={{ headerShown: false }} />
 				<Stack.Screen name="history" options={{ headerShown: false }} />
 				<Stack.Screen name="settings" options={{ headerShown: false }} />
