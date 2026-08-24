@@ -19,7 +19,7 @@ The step is successful when a measurement entered as `12 st 4 lb` is stored once
 - **No resting heart rate.** It is user-enterable in principle, but almost nobody measures it by hand; it arrives properly with health import (step 5) where a device reports it. Adding it later is one registry entry.
 - **No height, no BMI.** No derived indices at this step; height ships when something needs it. Its unit preference is modelled ahead of the metric so the `height`/`length` split lands before any row is written.
 - **No energy unit.** Kilocalories versus kilojoules ([open decision 5](product-domains-and-data.md#open-decisions)'s energy half) is taken when food logging ships — the decision recurs per metric, and this step takes only the three it writes.
-- **No quantified factor counterparts.** `alcohol_intake` and friends follow the same canonical-unit discipline but belong to the check-in domain's own step; nothing here anticipates them beyond proving the discipline.
+- **No quantified tag counterparts.** `alcohol_intake` and friends follow the same canonical-unit discipline but belong to the check-in domain's own step; nothing here anticipates them beyond proving the discipline.
 - **No import, no precedence rule.** User-versus-tracker precedence (open decision 12) is step 5's; every row this step writes has `source: 'user'`.
 - **No arbitrary per-metric unit overrides.** Preferences use stable measurement-context keys. Height has its own additive `height` preference (`cm` or compound `ft/in`) independently of the `length` preference (`cm` or `in`) used by waist and other circumferences; both still convert through canonical metres.
 - **No weigh-in reminder.** Same refusal as step 3's review-cadence prompt: the `reminders` table stays kind-less until the prompt is designed.
@@ -29,7 +29,7 @@ The step is successful when a measurement entered as `12 st 4 lb` is stored once
 
 - Migrations 001–003 shipped; the multi-migration path is proven on real step-1 and step-2 database files; migration 004 follows a twice-walked road.
 - `goals` is live with create/achieve/abandon, canonical `target_value`, derived progress — built in step 3 explicitly so this step reuses it unchanged.
-- The metric registry has three kinds (`scored`, `factor`, `assessment`) with per-kind filtering proven as a guarded invariant on every surface; `TrackedMetricDefault` carries an `enabled` flag, so a registry metric can ship default-off in the check-in overlay.
+- The metric registry has three kinds (`scored`, `tag`, `assessment`) with per-kind filtering proven as a guarded invariant on every surface; `TrackedMetricDefault` carries an `enabled` flag, so a registry metric can ship default-off in the check-in overlay.
 - `tracked_metrics` overlay: position, enabled, `custom_label`, with `configureMany` for atomic multi-row changes.
 - The trends screen renders per-metric series with per-kind aggregation (`mean`, `presence`); scale renormalisation from snapshotted bounds is in production.
 - `settings/life-areas` is the child-route precedent for a customisation screen; shared components and the token-parity theme test cover both colour schemes.
@@ -44,10 +44,10 @@ The step is successful when a measurement entered as `12 st 4 lb` is stored once
 - **Display units per preference dimension: mass in `kg`, `lb`, or `st` (compound stones and pounds); height in `cm` or compound `ft/in`; other body lengths in `cm` or `in`; fraction always `%`.** The preference is global and universal: one choice per context applies on every surface — check-in entry, Body view, history, trends, goal targets, settings preview — with no surface exempt and no metric shipping in a fixed unit. Compound units are a presentation problem: `12 st 4 lb` and `5 ft 11 in` are composed on display and entered as one numeric field per part, and nothing below the formatter knows they exist. Each preference has a fixed display resolution (0.1 kg / 0.2 lb / whole pounds within stones; whole inches within feet; 0.5 cm / 0.25 in; 0.1 percentage point) — rounding happens at render only, never on write.
 - **`unit_preferences` is a `bro.db` table and will replicate** — resolving [open decision 6](product-domains-and-data.md#open-decisions) as recommended: it describes the person, not the handset. One row per dimension, latest `updated_at` wins at read (no unique constraint, per the standing two-offline-devices rule); a missing or unknown preference falls back to the locale default, and an unknown `unit` value from a future version falls back to canonical display rather than erroring.
 - **Locale seeds the default, then never changes silently.** First read without a stored preference resolves from the device region (US → lb, in, and ft; UK → st, cm, and ft; otherwise kg and cm throughout) without writing a row; the first explicit choice writes one. A user who switched to kilograms did so deliberately.
-- **Measurements join the check-in through the overlay, default-off.** The three metrics ship with `enabled: false` defaults — the daily loop stays two scores and a tap row until a user opts in. The check-in gains a measurements section that renders only tracked measurement metrics, parses input in the preferred unit, and writes canonical values with `source: 'user'` and null bounds. Scored and factor surfaces provably ignore measurement metrics and vice versa — the same guarded invariant as `wheel:*`.
+- **Measurements join the check-in through the overlay, default-off.** The three metrics ship with `enabled: false` defaults — the daily loop stays two scores and a tap row until a user opts in. The check-in gains a measurements section that renders only tracked measurement metrics, parses input in the preferred unit, and writes canonical values with `source: 'user'` and null bounds. Scored and tag surfaces provably ignore measurement metrics and vice versa — the same guarded invariant as `wheel:*`.
 - **The Body view is a `body` stack outside the tabs**, the `review` precedent exactly: `/body` (latest value, trend sparkline, and goal per tracked measurement; tracking toggles for the untracked), `/body/[slug]` (full history for one metric, goal create/manage). Entry from the trends screen beside the wheel entry. The tab bar stays at four.
 - **Goals on measurements reuse the step 3 table and repository unchanged** — that was the point of shipping them early. Targets are entered in the preferred unit, stored canonical, and inherit the display unit at render, so changing preference never moves a goal. Direction is inferred from target versus latest value, as the wheel does.
-- **Unit conversion is one pure module.** Parse (including compound), convert, format, and display-resolution tables live in `packages/domain/src/units/` with no dependency on the database or React; every other surface — check-in, Body, trends, goals, export display — calls it rather than owning arithmetic. Conversion factors are exact definitions (1 lb = 0.45359237 kg), not approximations.
+- **Unit conversion is one pure module.** Parse (including compound), convert, format, and display-resolution tables live in `packages/domain/src/units/` with no dependency on the database or React; every other surface — check-in, Body, trends, goals, export display — calls it rather than owning arithmetic. Conversion tags are exact definitions (1 lb = 0.45359237 kg), not approximations.
 - **`unit_preferences` joins `PRODUCT_TABLE_NAMES`**, so migration verification and delete-local-data inherit it by construction.
 - **Export bumps to format v3**, adding a `unitPreferences` section beside the existing five. Measurement observations already ride in `observations` as canonical values — the export stores what the database stores, and v1 and v2 fixtures keep parsing.
 
@@ -71,7 +71,7 @@ No indexes — a handful of rows read in full. No unique constraint on `dimensio
 
 ### Log from the check-in
 
-Opt in once (Body view or the check-in's own management affordance), then the daily check-in shows a measurements row: weight in the user's unit, one field, saved as canonical kilograms alongside the day's mood and factors. Compound entry accepts `12 st 4` and `12st 4lb`; a bare number in stones mode is stones. Nothing appears for users who never opt in.
+Opt in once (Body view or the check-in's own management affordance), then the daily check-in shows a measurements row: weight in the user's unit, one field, saved as canonical kilograms alongside the day's mood and tags. Compound entry accepts `12 st 4` and `12st 4lb`; a bare number in stones mode is stones. Nothing appears for users who never opt in.
 
 ### See where it's going
 
@@ -102,7 +102,7 @@ Unchanged copy; the action now also clears `unit_preferences` via the shared tab
 ### Slice 2: Dimensions, the units module, and the registry extension
 
 1. `packages/domain/src/units/`: dimension model, exact conversion factors, parse (compound included), format with per-dimension display resolution, locale defaulting. Pure functions, exhaustively tested — round-trips, boundary rounding, malformed input.
-2. Registry kind `"measurement"` with `dimension`; aggregation `"last"` added to trend math; the three slugs with labels. Regression tests: scored, factor, and assessment surfaces ignore measurement metrics; `DEFAULT_TRACKED_METRICS` ships them `enabled: false`.
+2. Registry kind `"measurement"` with `dimension`; aggregation `"last"` added to trend math; the three slugs with labels. Regression tests: scored, tag, and assessment surfaces ignore measurement metrics; `DEFAULT_TRACKED_METRICS` ships them `enabled: false`.
 3. **Canonical units, display units, labels, and display resolutions are the sign-off gate for this slice.**
 
 ### Slice 3: The check-in measurements section
@@ -143,7 +143,7 @@ Unchanged copy; the action now also clears `unit_preferences` via the shared tab
 | Compound parsing | `12 st 4`, `12st 4lb`, `172 lb`, `78,0` (locale decimal) parse; garbage is rejected with the field-level message; formatting composes compounds correctly at boundaries (`11 st 14 lb` never rendered). |
 | Rounding | Display honours per-dimension resolution; repeated unit switches never drift a stored value; no implied precision (80 kg never renders `176.37 lb`). |
 | Preference resolution | Latest row per dimension wins; no row falls back to locale default; unknown future unit falls back to canonical display without erroring. |
-| Check-in isolation | Measurement metrics never appear in scored or factor surfaces, nor wheel sittings; scored/factor/assessment surfaces unchanged by measurement overlay rows. |
+| Check-in isolation | Measurement metrics never appear in scored or tag surfaces, nor wheel sittings; scored/tag/assessment surfaces unchanged by measurement overlay rows. |
 | Default-off | A fresh install shows no measurements section; opting in via Body or settings shows it that day. |
 | Aggregation | Two weigh-ins one day → trends shows the later; gaps stay gaps. |
 | Goals | Weight-decrease goal from the Body view: canonical target, derived progress against the series, achieve/abandon round-trips; changing display unit moves neither target nor progress. |

@@ -134,7 +134,7 @@ Disconnect stops imports and clears tokens; copy states plainly that already-imp
 
 ### Slice 2: Registry, mapping, and rollup math — the sign-off gate
 
-1. Registry entries for `sleep_duration`, `steps`, `resting_heart_rate` (`userEnterable: false`); dimensions `time`, `count`, `rate_bpm` with display formatting (compound `h m`, count, `bpm`) in the units module; aggregation `"sum"`. Regression tests: check-in, scored, factor, and assessment surfaces provably ignore imported-only metrics; `wheel:*`-style invariants.
+1. Registry entries for `sleep_duration`, `steps`, `resting_heart_rate` (`userEnterable: false`); dimensions `time`, `count`, `rate_bpm` with display formatting (compound `h m`, count, `bpm`) in the units module; aggregation `"sum"`. Regression tests: check-in, scored, tag, and assessment surfaces provably ignore imported-only metrics; `wheel:*`-style invariants.
 2. Pure import math in `packages/logic/src/health/`: platform-sample → canonical mapping (unit conversion at the boundary), local-day attribution including the sleep-crosses-midnight rule and DST days, per-metric rollup (`sum`/`mean`/`last`), touched-day recompute over additions and deletions, and the resolved-day precedence merge. No database, no React, exhaustively tested.
 3. **Sign-off gate: canonical units, attribution rule, v1 metric set, sensitivity flags, precedence, backfill depth, and retention window.**
 
@@ -219,7 +219,7 @@ One process deviation is recorded rather than repaired: the Android prebuild reg
 | Rollup rules | Steps sum; sleep sums across a midnight-crossing session onto the wake day; RHR means; weight takes the day's last; deletions recompute touched days, including to removal. |
 | Canonical conversion | A platform sample in pounds/minutes/percent lands canonical; renders through the step-4 preference machinery unchanged. |
 | Precedence | A day with a typed weight and a scale import shows the import, keeps both rows, labels provenance; no-import days show the typed value. |
-| Isolation | Imported-only metrics never appear in check-in, scored, factor, or assessment surfaces; a user with no connection sees no import UI beyond the settings entry. |
+| Isolation | Imported-only metrics never appear in check-in, scored, tag, or assessment surfaces; a user with no connection sees no import UI beyond the settings entry. |
 | Token discipline | A failed apply leaves the token unadvanced; the retry converges to the same state. |
 | Pruning | Samples older than the window are pruned; rollups for pruned days remain and still render. |
 | Backfill | Connect on a seeded platform fixture yields 365 days of rollups and the trends render them. |

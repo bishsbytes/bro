@@ -2,7 +2,7 @@
 
 ## Status
 
-Code-complete through slices 1–6 on 14 August 2026, with automated acceptance green. The remaining exit item is the native Android/iOS acceptance pass listed in slice 6: airplane-mode relaunch, near-midnight entry, both colour schemes, and the fifteen-second timing require physical devices and are not claimed by Jest. This is the delivery plan for [sequencing step 1 of the product domains plan](product-domains-and-data.md#sequencing): the check-in domain — mood, energy, and the factor panel — plus day notes, the first per-metric trend view, delete local data, and the export serialisation design.
+Code-complete through slices 1–6 on 14 August 2026, with automated acceptance green. The remaining exit item is the native Android/iOS acceptance pass listed in slice 6: airplane-mode relaunch, near-midnight entry, both colour schemes, and the fifteen-second timing require physical devices and are not claimed by Jest. This is the delivery plan for [sequencing step 1 of the product domains plan](product-domains-and-data.md#sequencing): the check-in domain — mood, energy, and the tag panel — plus day notes, the first per-metric trend view, delete local data, and the export serialisation design.
 
 The route locations and navigation descriptions in this plan record the step 1 implementation as it landed; the subsequent [app shell and shared components plan](app-shell-and-components.md) moved the top-level screens into `(tabs)` without changing their public pathnames or product behavior.
 
@@ -10,15 +10,15 @@ Umbrella [Phase 1](offline-first-identity-onboarding-premium.md#phase-1-local-fi
 
 ## Outcome
 
-A user who finishes onboarding can check in — tap mood, tap energy, tap the factors that apply, optionally write a note — in under fifteen seconds, see today and past days on a timeline, and see a mood and energy trend after a week. The first product tables exist in `bro.db`, carried there by the first real migration. Delete local data works, with the reserved copy from Phase 2. The export format is designed and implemented as a tested serialiser, without UI.
+A user who finishes onboarding can check in — tap mood, tap energy, tap the tags that apply, optionally write a note — in under fifteen seconds, see today and past days on a timeline, and see a mood and energy trend after a week. The first product tables exist in `bro.db`, carried there by the first real migration. Delete local data works, with the reserved copy from Phase 2. The export format is designed and implemented as a tested serialiser, without UI.
 
 The step is successful when the daily loop is real: log, relaunch, see it back. Everything in it works offline, with no account, and issues no backend request.
 
 ## Non-goals
 
 - **No assessments, goals, habits, challenges, imports, insight, or food.** Later steps; the schema must not anticipate them beyond what the observation spine already provides.
-- **No correlation.** Trends are single-metric arithmetic. The factor "genuine no" rule is recorded in the product plan for step 7; nothing here computes it.
-- **No custom metrics or factors.** Overlay support ships as enable/disable/reorder of the authored set (product [open decision 8](product-domains-and-data.md#open-decisions): the cheap three first). Slug namespacing and "not in the catalogue" handling are still built now, so custom items later cost no migration.
+- **No correlation.** Trends are single-metric arithmetic. The tag "genuine no" rule is recorded in the product plan for step 7; nothing here computes it.
+- **No custom metrics or tags.** Overlay support ships as enable/disable/reorder of the authored set (product [open decision 8](product-domains-and-data.md#open-decisions): the cheap three first). Slug namespacing and "not in the catalogue" handling are still built now, so custom items later cost no migration.
 - **No reminders.** Step 2, and the first native dependency.
 - **No `bro-local.db`.** The third store arrives with health import in step 5. Delete local data at this step clears product tables in `bro.db` only, written so a second store can join the same transaction pattern later.
 - **No sync interaction.** But every table, id, and index follows the [conventions](product-domains-and-data.md#conventions-to-lock-in-now) so Phase 5 can replicate them unchanged.
@@ -35,10 +35,10 @@ The step is successful when the daily loop is real: log, relaunch, see it back. 
 
 These implement decisions the product plan has already taken; the rationale lives there.
 
-- **Scale: 5 points** for mood and energy, bounds snapshotted per observation as `scaleMin`/`scaleMax` (1 and 5). Null for factors.
+- **Scale: 5 points** for mood and energy, bounds snapshotted per observation as `scaleMin`/`scaleMax` (1 and 5). Null for tags.
 - **Several check-ins per day are allowed.** No unique index on `(metricSlug, localDay)` — two offline devices logging the same day must both survive. The day view shows every entry; the trend aggregates per the registry rule (mean for mood and energy).
-- **Factors write value 1 on tap; untapping the same day hard-deletes the row.** Untapped is unrecorded, never 0. A factor row's value is exactly 1 forever: a factor that later needs quantity (alcohol units for a reduction challenge) gets a separate quantified-counterpart metric rather than a richer value — the convention is in the [product plan's check-in domain](product-domains-and-data.md#1-check-in--mood-energy-and-factors).
-- **The registry is a typed TypeScript module in the app**, not data: slug, label, kind (`scored` | `factor`), scale bounds, category, aggregation rule, `sensitive`, `userEnterable`, deprecation status. The v1 set: `mood` and `energy` (scored, 1–5), and a factor vocabulary of roughly a dozen (alcohol, caffeine, training, late screen, poor sleep environment, stress, social, outdoors, travel, illness, junk food, sex — draft; the shipped list is product [open decision 7](product-domains-and-data.md#open-decisions) and needs sign-off before the panel is built). No v1 metric is `sensitive`, but the flag exists and one code path (export) already honours it, so the pattern is set.
+- **Tags write value 1 on tap; untapping the same day hard-deletes the row.** Untapped is unrecorded, never 0. A tag row's value is exactly 1 forever: a tag that later needs quantity (alcohol units for a reduction challenge) gets a separate quantified-counterpart metric rather than a richer value — the convention is in the [product plan's check-in domain](product-domains-and-data.md#1-check-in--mood-energy-and-tags).
+- **The registry is a typed TypeScript module in the app**, not data: slug, label, kind (`scored` | `tag`), scale bounds, category, aggregation rule, `sensitive`, `userEnterable`, deprecation status. The v1 set: `mood` and `energy` (scored, 1–5), and a tag vocabulary of roughly a dozen (alcohol, caffeine, training, late screen, poor sleep environment, stress, social, outdoors, travel, illness, junk food, sex — draft; the shipped list is product [open decision 7](product-domains-and-data.md#open-decisions) and needs sign-off before the panel is built). No v1 metric is `sensitive`, but the flag exists and one code path (export) already honours it, so the pattern is set.
 - **`trackedMetrics` materialises lazily.** No rows means "registry defaults". Rows are written only when the user deviates (disable, reorder). This avoids two devices each seeding defaults into a future synced database, and it is why "make it yours" costs nothing at rest.
 - **Ids are UUIDv7** (small local generator; `expo-crypto` provides randomness). Timestamps are epoch-ms UTC with `localDay` and `tzOffsetMinutes` stored, never derived. `tzOffsetMinutes` follows the JavaScript `getTimezoneOffset()` convention (local + offset = UTC; UTC+2 stores −120) — see the [product conventions](product-domains-and-data.md#conventions-to-lock-in-now).
 - **Migration 001 is conflict-tolerant end to end**: `CREATE TABLE IF NOT EXISTS` / `CREATE INDEX IF NOT EXISTS` in the shipped SQL (drizzle-kit's generated output is adjusted before committing — the generated file is the artefact, the generator is not sacred), and the migrator's marker insert uses `ON CONFLICT DO NOTHING`. The umbrella plan is explicit that retrofitting tolerance into migration 001 is impossible once it has run on a device.
@@ -96,15 +96,15 @@ No unique index on `day_notes.local_day` or on `observations (metric_slug, local
 
 ### Check-in
 
-Home (`/`) becomes the today screen. Its primary state is the check-in: five mood faces, five energy levels, the factor panel grouped by category, an optional note field, one save action. After saving, today shows what was logged with an edit affordance. Multiple check-ins in a day append; the day view lists them all. The note field is always prefilled with the day's current note, so saving with the field emptied deletes that note — the field shows exactly what will be stored.
+Home (`/`) becomes the today screen. Its primary state is the check-in: five mood faces, five energy levels, the tag panel grouped by category, an optional note field, one save action. After saving, today shows what was logged with an edit affordance. Multiple check-ins in a day append; the day view lists them all. The note field is always prefilled with the day's current note, so saving with the field emptied deletes that note — the field shows exactly what will be stored.
 
-Two deliberate simplifications on the write/read path, to revisit when sync (Phase 5) can produce rows this device did not write: the today screen presents mood/energy as index-paired entries and does not render an unpaired scored row (the day view does, as `unpairedScored`); and saving a check-in reconciles the day's factor rows against the panel, which collapses duplicate same-slug factor rows for that day into one. Both preserve the per-day semantics; neither loses a fact a screen was showing.
+Two deliberate simplifications on the write/read path, to revisit when sync (Phase 5) can produce rows this device did not write: the today screen presents mood/energy as index-paired entries and does not render an unpaired scored row (the day view does, as `unpairedScored`); and saving a check-in reconciles the day's tag rows against the panel, which collapses duplicate same-slug tag rows for that day into one. Both preserve the per-day semantics; neither loses a fact a screen was showing.
 
 Timing is a requirement, not an aspiration: from cold app open to saved check-in in under fifteen seconds on a mid-range device, and the automated tests assert the flow is three taps plus save with no intermediate screens.
 
 ### Look back
 
-A history route: a list of days, newest first, each showing logged values, tapped factors, and the note. A day view allows editing — change a value, untap a factor, edit or delete the note, delete an entry. Provenance is trivially `user` for everything at this step, but the day view reads it from the row, not from an assumption.
+A history route: a list of days, newest first, each showing logged values, tapped tags, and the note. A day view allows editing — change a value, untap a tag, edit or delete the note, delete an entry. Provenance is trivially `user` for everything at this step, but the day view reads it from the row, not from an assumption.
 
 ### Trends
 
@@ -143,16 +143,16 @@ Version 1 is UTF-8 JSON with a trailing newline and this top-level shape:
 
 ### Slice 2: Registry and repositories
 
-1. Add `packages/domain/src/content/metric-registry.ts`: types, the v1 metrics and factors, categories, and lookup helpers that return a typed "unknown slug" result rather than throwing — the "not in the catalogue" path exists from the first resolver, per the product plan.
-2. Registry invariant tests: slugs unique and permanent-format, scored metrics have sane bounds, factors have categories, aggregation rules total.
+1. Add `packages/domain/src/content/metric-registry.ts`: types, the v1 metrics and tags, categories, and lookup helpers that return a typed "unknown slug" result rather than throwing — the "not in the catalogue" path exists from the first resolver, per the product plan.
+2. Registry invariant tests: slugs unique and permanent-format, scored metrics have sane bounds, tags have categories, aggregation rules total.
 3. Add `ObservationRepository`, `DayNoteRepository`, and `TrackedMetricsRepository` per the repository recipe: create/edit/delete observation; observations by day and by metric-and-range; upsert-by-day note semantics in the repository method (not a unique index); overlay read that overlays stored rows onto registry defaults.
 4. A UUIDv7 helper with tests (monotonicity within a millisecond is not required; time-ordering to the millisecond is).
-5. Repository tests against real SQLite files, mirroring the device-settings suite: round-trips, day boundaries with non-UTC offsets (a 23:30 check-in belongs to the `localDay` where it was written), factor untap deleting the row, edits bumping `updatedAt`.
+5. Repository tests against real SQLite files, mirroring the device-settings suite: round-trips, day boundaries with non-UTC offsets (a 23:30 check-in belongs to the `localDay` where it was written), tag untap deleting the row, edits bumping `updatedAt`.
 
 ### Slice 3: Check-in and today
 
 1. Replace the placeholder home content with the today screen: check-in entry, today's logged state, links to history, trends, and settings. Account entry point remains.
-2. Build the check-in flow: mood, energy, factor panel from the registry filtered through `TrackedMetricsRepository`, note field writing through `DayNoteRepository`.
+2. Build the check-in flow: mood, energy, tag panel from the registry filtered through `TrackedMetricsRepository`, note field writing through `DayNoteRepository`.
 3. Writes are wrapped in one transaction per save.
 4. Router tests: onboarding completion lands on today; a full check-in persists across a simulated relaunch; saving issues no backend request; a second check-in the same day appends.
 5. Styling uses only `src/theme/unistyles.ts` tokens; add scale/face tokens to both themes if needed (token-parity test covers them).
@@ -177,7 +177,7 @@ Version 1 is UTF-8 JSON with a trailing newline and this top-level shape:
 3. Extend the repositories README's example to point at a real repository instead of the hypothetical.
 4. Native Android/iOS acceptance pass:
    - full check-in, kill, relaunch, data present — in airplane mode throughout;
-   - factor untap same-day and next-day edit;
+   - tag untap same-day and next-day edit;
    - day-boundary check-in near midnight in a non-UTC timezone;
    - delete local data with a signed-in account: data gone, session and onboarding intact;
    - both colour schemes;
@@ -205,12 +205,12 @@ Version 1 is UTF-8 JSON with a trailing newline and this top-level shape:
 | Fresh install, onboarding, first check-in | Saved offline; no backend request; visible after relaunch. |
 | Migration 001 on a fresh and an already-migrated file | Applies once; re-run is a no-op; marker race does not fail startup. |
 | Two check-ins same day | Both stored; day view shows both; trend uses the registry aggregation. |
-| Factor tap and same-day untap | Row written, then hard-deleted; no zero-value rows ever. |
-| Scale snapshot | Every scored observation carries `scaleMin`/`scaleMax`; factors carry null. |
+| Tag tap and same-day untap | Row written, then hard-deleted; no zero-value rows ever. |
+| Scale snapshot | Every scored observation carries `scaleMin`/`scaleMax`; tags carry null. |
 | Day boundary, non-UTC offset | `localDay` matches where the user was, not UTC. |
 | Note upsert | One note per day through the UI path; a manufactured duplicate renders as two, hiding nothing. |
 | Unknown slug in history | Renders raw slug and value; no crash, no silent omission. |
-| Overlay defaults | Empty `tracked_metrics` yields the registry default panel; disabling a factor persists and survives relaunch. |
+| Overlay defaults | Empty `tracked_metrics` yields the registry default panel; disabling a tag persists and survives relaunch. |
 | Delete local data while signed in | Product rows gone; migrations table, device settings, session, onboarding intact. |
 | Sentinel continuity | Seeded product rows survive sign-in, sign-out, account switch, and account deletion. |
 | Export | Golden-file match; version present; exclusion flag honoured; empty export valid. |
@@ -233,7 +233,7 @@ Preserve the complete output of a failing command.
 - Phase 2's structural continuity assertions are sentinel-row assertions.
 - Delete local data ships with the reserved copy and touches nothing but product tables.
 - The export format is documented and its serialiser tested.
-- Registry sign-off obtained for the shipped factor vocabulary (product open decision 7) before the panel is user-visible.
+- Registry sign-off obtained for the shipped tag vocabulary (product open decision 7) before the panel is user-visible.
 - Automated suites, typecheck, lint, and the native acceptance pass succeed.
 
 ## Step 2 hand-off

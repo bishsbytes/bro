@@ -27,7 +27,7 @@ The step is successful when the review loop closes twice: a first sitting that e
 
 - Migration 002 shipped and the multi-migration path is proven on a real step-1 database file; migration 003 follows a walked road.
 - `observations` already carries a nullable `assessment_id` (indexed queries not needed — sittings are read by id, trends by the existing day/metric indexes).
-- The metric registry (`packages/domain/src/content/metric-registry.ts`) is a typed authored catalogue with `kind: "scored" | "factor"`, per-kind scale bounds, sensitivity, deprecation, and a proven "unknown slug" resolution path.
+- The metric registry (`packages/domain/src/content/metric-registry.ts`) is a typed authored catalogue with `kind: "scored" | "tag"`, per-kind scale bounds, sensitivity, deprecation, and a proven "unknown slug" resolution path.
 - `tracked_metrics` is the overlay pattern in production: `metricSlug`, `position`, `addedAt`/`removedAt`, driving the check-in panel through the registry.
 - The settings stack has a child-route precedent (`settings/reminders`); shared components (Card, SectionHeader, EmptyState, Button, FormField, Screen) and the unistyles theme with a token-parity test cover both colour schemes.
 - Export serialisation v1 covers observations, day notes, and tracked metrics with a committed fixture.
@@ -53,10 +53,10 @@ The step is successful when the review loop closes twice: a first sitting that e
   | `wheel:faith` | Faith & spirituality | off |
   | `wheel:sobriety` | Sobriety & recovery | off |
 
-  The factor half of open decision 7 was settled de facto by step 1's shipped factor set; this table settles the area half. Labels are copy and need the same sign-off discipline as step 2's notification text.
+  The tag half of open decision 7 was settled de facto by step 1's shipped tag set; this table settles the area half. Labels are copy and need the same sign-off discipline as step 2's notification text.
 - **Wheel items score 1–10.** A sitting is a deliberate, seated act, not the fifteen-second loop, and the wheel's value is its shape — ten points give the shape resolution five would flatten. Bounds are snapshotted per observation row like every scored metric, so this stays renormalisable, not sacred.
 - **Wheel items are registry metrics of a new kind `"assessment"`.** Scale 1–10, aggregation `mean`, `userEnterable: false` — enterable only through a sitting, never the check-in. Every surface that reads the registry filters by kind; the check-in panel ignoring assessment metrics is a guarded, tested invariant, not an accident.
-- **The overlay is `tracked_metrics`, reused.** Active areas, order, and relabels are rows with `wheel:*` slugs in the table that already does this job for the check-in panel — the catalogue-overlay pattern solved once, the same way everywhere, as the product plan demands. Migration 003 adds one nullable `custom_label` column, which gives factors and scored metrics relabelling for free the day a screen offers it.
+- **The overlay is `tracked_metrics`, reused.** Active areas, order, and relabels are rows with `wheel:*` slugs in the table that already does this job for the check-in panel — the catalogue-overlay pattern solved once, the same way everywhere, as the product plan demands. Migration 003 adds one nullable `custom_label` column, which gives tags and scored metrics relabelling for free the day a screen offers it.
 - **The sitting is transactional and whole.** One transaction writes the `assessments` row and its N observation rows (`assessmentId` set, `source: 'user'`, bounds 1–10, `localDay`/`tzOffsetMinutes` per convention). Abandoning mid-flow writes nothing; there is no draft state. `completed_at` is nullable to match the product schema but v1 always writes it.
 - **The snapshot is written at save, from what was displayed.** `items` stores slug, label as rendered (custom label if set), and position; `focus_item_slugs` stores the user's selection. A later relabel — theirs or ours — must not rewrite what a past sitting appears to say. `template_version` covers our edits; the snapshot covers everything.
 - **Goals attach to metric slugs, not to sittings.** `direction`, canonical `target_value`, optional `target_date`; progress is derived by querying observations, never stored. At this step the useful targets are wheel-area scores ("Partner & love to 7 by December"); step 4's body metrics reuse the table unchanged, which is the point of shipping it now.
@@ -134,7 +134,7 @@ Unchanged copy; the action now also clears `assessments` and `goals` via the sha
 ### Slice 2: Catalogue, vocabulary, and the registry extension
 
 1. Area catalogue and wheel template in the typed authored pattern: the twelve areas, `templateVersion`, the `locked` flag (false for the wheel), tests pinning slug permanence.
-2. Registry kind `"assessment"`: 1–10 bounds, excluded from check-in surfaces — regression tests that the factor panel and scored panel ignore `wheel:*` rows in `tracked_metrics`.
+2. Registry kind `"assessment"`: 1–10 bounds, excluded from check-in surfaces — regression tests that the tag panel and scored panel ignore `wheel:*` rows in `tracked_metrics`.
 3. Overlay resolution for areas: active set, order, `custom_label` precedence, unknown-slug tolerance. **Vocabulary and label sign-off gates the end of this slice.**
 
 ### Slice 3: The sitting flow

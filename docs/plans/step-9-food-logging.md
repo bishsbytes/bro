@@ -238,7 +238,7 @@ Unchanged copy; now also clears `custom_consumables`, `custom_consumable_compone
 | Cache | Looked-up foods land in `bro-local.db` only; deleting the local store loses no logged entry and no custom food. |
 | Default-off | A fresh install shows no food surface in Today or Trends; opting in shows it that day; the check-in is byte-identical either way. |
 | Check-in isolation | Logging food on a day with no check-in leaves `hasCompletedCheckIn` false, streaks unchanged, reminders unaffected. |
-| Insight unchanged | Sixteen pairs still; the teaser count is unchanged; no macro metric appears in any pair, scored, factor, assessment, or user-enterable surface. |
+| Insight unchanged | Sixteen pairs still; the teaser count is unchanged; no macro metric appears in any pair, scored, tag, assessment, or user-enterable surface. |
 | Export v7 | Macros, `customConsumables`, and `customConsumableComponents` present; sensitive exclusion unchanged; v1–v6 fixtures still parse; v7 round-trips. |
 | Delete local data | Entry, custom consumable, component, and cache rows gone; steps 1–8 guarantees still hold. |
 
