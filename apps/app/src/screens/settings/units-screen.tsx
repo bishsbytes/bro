@@ -7,7 +7,7 @@ import { Button } from "../../components/button";
 import { Card } from "../../components/card";
 import { EmptyState } from "../../components/empty-state";
 import { LoadingIndicator } from "../../components/loading-indicator";
-import { Screen } from "../../components/screen";
+import { StackScreen as Screen } from "../../components/screen";
 import { SectionHeader } from "../../components/section-header";
 import { StyleSheet } from "../../theme/unistyles";
 import {

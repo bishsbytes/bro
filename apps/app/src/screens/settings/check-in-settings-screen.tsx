@@ -11,7 +11,7 @@ import { AppText } from "../../components/app-text";
 import { Card } from "../../components/card";
 import { EmptyState } from "../../components/empty-state";
 import { LoadingIndicator } from "../../components/loading-indicator";
-import { Screen } from "../../components/screen";
+import { StackScreen as Screen } from "../../components/screen";
 import { SectionHeader } from "../../components/section-header";
 import { ThemedSwitch } from "../../components/themed-switch";
 import { StyleSheet } from "../../theme/unistyles";

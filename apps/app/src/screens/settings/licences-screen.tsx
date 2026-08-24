@@ -1,7 +1,7 @@
 import { View } from "react-native";
 import { AppText } from "../../components/app-text";
 import { Card } from "../../components/card";
-import { Screen } from "../../components/screen";
+import { StackScreen as Screen } from "../../components/screen";
 import { SectionHeader } from "../../components/section-header";
 import { StyleSheet } from "../../theme/unistyles";
 

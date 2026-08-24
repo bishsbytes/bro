@@ -6,7 +6,7 @@ import { AppText } from "../../components/app-text";
 import { EmptyState } from "../../components/empty-state";
 import { ListRow } from "../../components/list-row";
 import { LoadingIndicator } from "../../components/loading-indicator";
-import { Screen } from "../../components/screen";
+import { StackScreen as Screen } from "../../components/screen";
 import {
 	createHistoryStore,
 	type HistoryDaySummary,

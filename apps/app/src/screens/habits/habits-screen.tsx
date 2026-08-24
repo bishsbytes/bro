@@ -10,7 +10,7 @@ import { Card } from "../../components/card";
 import { EmptyState } from "../../components/empty-state";
 import { FormField } from "../../components/form-field";
 import { LoadingIndicator } from "../../components/loading-indicator";
-import { Screen } from "../../components/screen";
+import { StackScreen as Screen } from "../../components/screen";
 import { SectionHeader } from "../../components/section-header";
 import {
 	createHabitsStore,

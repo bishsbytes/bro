@@ -3,7 +3,7 @@ import { View } from "react-native";
 import { AppText } from "../../components/app-text";
 import { Button } from "../../components/button";
 import { Card } from "../../components/card";
-import { Screen } from "../../components/screen";
+import { StackScreen as Screen } from "../../components/screen";
 import { SectionHeader } from "../../components/section-header";
 import { ThemedSwitch } from "../../components/themed-switch";
 import { createExportStore, type ExportStore } from "../../export/export-store";

@@ -6,7 +6,7 @@ import { AppText } from "../../components/app-text";
 import { Button } from "../../components/button";
 import { Card } from "../../components/card";
 import { ListRow } from "../../components/list-row";
-import { Screen } from "../../components/screen";
+import { StackScreen as Screen } from "../../components/screen";
 import { SectionHeader } from "../../components/section-header";
 import type { HealthGatewayAvailability } from "../../health/gateway";
 import { healthImportEngine } from "../../health/import-service";

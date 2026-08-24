@@ -3,7 +3,7 @@ import MaterialIcons from "@expo/vector-icons/MaterialIcons";
 import { TouchableOpacity, View } from "react-native";
 import { AppText } from "../../components/app-text";
 import { Card } from "../../components/card";
-import { Screen } from "../../components/screen";
+import { StackScreen as Screen } from "../../components/screen";
 import { SectionHeader } from "../../components/section-header";
 import { useDeviceSettings } from "../../providers/device-settings-provider";
 import {

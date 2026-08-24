@@ -8,7 +8,7 @@ import { Card } from "../../components/card";
 import { FormField } from "../../components/form-field";
 import { LoadingIndicator } from "../../components/loading-indicator";
 import { ScoreRow } from "../../components/score-row";
-import { Screen } from "../../components/screen";
+import { StackScreen as Screen } from "../../components/screen";
 import { SectionHeader } from "../../components/section-header";
 import {
 	createHistoryStore,
