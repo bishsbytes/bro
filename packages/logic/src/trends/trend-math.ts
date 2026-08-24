@@ -39,7 +39,7 @@ function valueOnCurrentScale(
 	metric: MetricDefinition,
 ): number {
 	if (
-		metric.kind === "factor" ||
+		metric.kind === "tag" ||
 		metric.scaleMin === null ||
 		metric.scaleMax === null ||
 		row.scaleMin === null ||

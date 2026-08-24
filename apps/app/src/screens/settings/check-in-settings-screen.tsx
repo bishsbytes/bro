@@ -6,11 +6,13 @@ import {
 	type CheckInSettingsStore,
 	createCheckInSettingsStore,
 } from "../../check-in/check-in-settings-store";
+import { TAG_CATEGORY_LABELS } from "../../check-in/tag-categories";
 import { AppText } from "../../components/app-text";
 import { Card } from "../../components/card";
 import { EmptyState } from "../../components/empty-state";
 import { LoadingIndicator } from "../../components/loading-indicator";
 import { Screen } from "../../components/screen";
+import { SectionHeader } from "../../components/section-header";
 import { ThemedSwitch } from "../../components/themed-switch";
 import { StyleSheet } from "../../theme/unistyles";
 
@@ -74,6 +76,13 @@ export function CheckInSettingsScreen({ store }: CheckInSettingsScreenProps) {
 		);
 	}
 
+	const groupedTags = Object.entries(TAG_CATEGORY_LABELS).flatMap(
+		([category, label]) => {
+			const tags = snapshot.tags.filter((tag) => tag.category === category);
+			return tags.length > 0 ? [{ category, label, tags }] : [];
+		},
+	);
+
 	return (
 		<Screen scroll padded gap="lg">
 			<AppText color="muted">
@@ -105,6 +114,41 @@ export function CheckInSettingsScreen({ store }: CheckInSettingsScreenProps) {
 			</View>
 			<AppText variant="caption" color="subtle">
 				Turning a score off does not delete anything you already logged.
+			</AppText>
+			<SectionHeader title="What happened" />
+			<AppText color="muted">
+				Choose the tags you want to see under your check-in. Keep the list short
+				enough to tap through in seconds.
+			</AppText>
+			{groupedTags.map(({ category, label, tags }) => (
+				<View key={category} style={styles.section}>
+					<AppText variant="caption" color="subtle">
+						{label}
+					</AppText>
+					{tags.map((tag) => (
+						<Card key={tag.metricSlug} style={styles.row}>
+							<View style={styles.grow}>
+								<AppText variant="label">{tag.label}</AppText>
+								{tag.sensitive ? (
+									<AppText variant="caption" color="muted">
+										Sensitive
+									</AppText>
+								) : null}
+							</View>
+							<ThemedSwitch
+								accessibilityLabel={`${tag.enabled ? "Remove" : "Add"} ${tag.label} tag`}
+								value={tag.enabled}
+								disabled={busyKey !== null}
+								onValueChange={(enabled) =>
+									void setEnabled(tag.metricSlug, enabled)
+								}
+							/>
+						</Card>
+					))}
+				</View>
+			))}
+			<AppText variant="caption" color="subtle">
+				Turning a tag off does not delete anything you already logged.
 			</AppText>
 		</Screen>
 	);

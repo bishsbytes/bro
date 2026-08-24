@@ -31,9 +31,9 @@ import {
 	resolveLifeAreas,
 } from "@bro/domain/life-area-catalogue";
 import {
-	FACTOR_PRESENCE_VALUE,
 	isConsumptionDerivedMeasurementSlug,
 	resolveMetric,
+	TAG_PRESENCE_VALUE,
 } from "@bro/domain/metric-registry";
 import {
 	deriveHabitAdherence,
@@ -41,8 +41,8 @@ import {
 	formatMetricValue,
 	type HabitAdherenceDay,
 	type HabitMetricSlug,
-	habitFactorSlug,
 	habitMetricDayValue,
+	habitTagSlug,
 	isHabitMetricSlug,
 	isHabitScheduled,
 	isMetricHabitComplete,
@@ -539,47 +539,47 @@ export class HabitsStore {
 
 	/**
 	 * Toggles the day's completion and, where the habit stands in for a check-in
-	 * factor, the factor row with it. The two land together or not at all, so a
+	 * tag, the tag row with it. The two land together or not at all, so a
 	 * completed habit never leaves its presence row behind and vice versa.
 	 */
 	async toggleManual(habitId: string, localDay: string): Promise<void> {
 		const habit = await this.habits.findById(habitId);
-		const factorSlug = habit === null ? null : habitFactorSlug(habit.slug);
+		const tagSlug = habit === null ? null : habitTagSlug(habit.slug);
 
 		await withTransaction(this.db, async (scope) => {
 			const existing = await this.completions.findByHabitDay(habitId, localDay);
 			if (existing) {
 				await this.completions.uncomplete(habitId, localDay);
-				if (factorSlug !== null) {
-					await this.releaseHabitFactor(habitId, factorSlug, localDay);
+				if (tagSlug !== null) {
+					await this.releaseHabitTag(habitId, tagSlug, localDay);
 				}
 			} else {
 				await this.completions.complete(habitId, localDay, scope);
-				if (factorSlug !== null) {
-					await this.recordHabitFactor(habitId, factorSlug, localDay);
+				if (tagSlug !== null) {
+					await this.recordHabitTag(habitId, tagSlug, localDay);
 				}
 			}
 		});
 	}
 
 	/**
-	 * Writes the habit's factor presence row for the day, unless the day already
-	 * carries that factor. A row the user tapped at check-in is left as it is:
+	 * Writes the habit's tag presence row for the day, unless the day already
+	 * carries that tag. A row the user tapped at check-in is left as it is:
 	 * presence is presence, and a second row would only be a duplicate to
 	 * collapse later.
 	 */
-	private async recordHabitFactor(
+	private async recordHabitTag(
 		habitId: string,
-		factorSlug: string,
+		tagSlug: string,
 		localDay: string,
 	): Promise<void> {
-		const existing = await this.factorRowsForDay(factorSlug, localDay);
+		const existing = await this.tagRowsForDay(tagSlug, localDay);
 		if (existing.length > 0) return;
 
 		const capturedAt = this.now();
 		await this.observations.create({
-			metricSlug: factorSlug,
-			value: FACTOR_PRESENCE_VALUE,
+			metricSlug: tagSlug,
+			value: TAG_PRESENCE_VALUE,
 			scaleMin: null,
 			scaleMax: null,
 			observedAt: capturedAt.getTime(),
@@ -592,17 +592,17 @@ export class HabitsStore {
 	}
 
 	/**
-	 * Removes only the rows this habit wrote. A factor the user tapped
+	 * Removes only the rows this habit wrote. A tag the user tapped
 	 * themselves — `sourceRecordId` null, or another habit's id — outlives an
 	 * un-complete here, so undoing a habit never deletes a fact it did not
 	 * record.
 	 */
-	private async releaseHabitFactor(
+	private async releaseHabitTag(
 		habitId: string,
-		factorSlug: string,
+		tagSlug: string,
 		localDay: string,
 	): Promise<void> {
-		const rows = await this.factorRowsForDay(factorSlug, localDay);
+		const rows = await this.tagRowsForDay(tagSlug, localDay);
 		for (const row of rows) {
 			if (row.sourceRecordId === habitId) {
 				await this.observations.delete(row.id);
@@ -610,12 +610,12 @@ export class HabitsStore {
 		}
 	}
 
-	private async factorRowsForDay(
-		factorSlug: string,
+	private async tagRowsForDay(
+		tagSlug: string,
 		localDay: string,
 	): Promise<Observation[]> {
 		const rows = await this.observations.listByDay(localDay);
-		return rows.filter((row) => row.metricSlug === factorSlug);
+		return rows.filter((row) => row.metricSlug === tagSlug);
 	}
 
 	async loadSettings(): Promise<HabitSettingsSnapshot> {

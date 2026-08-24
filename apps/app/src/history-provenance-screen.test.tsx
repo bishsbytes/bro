@@ -28,7 +28,7 @@ describe("history measurement provenance", () => {
 			localDay: "2026-08-16",
 			checkIns: [],
 			unpairedScored: [],
-			factors: [],
+			tags: [],
 			assessments: [],
 			measurements: [
 				{

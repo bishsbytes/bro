@@ -200,10 +200,7 @@ export class ObservationRepository extends BaseRepository {
 		return result.changes > 0;
 	}
 
-	async untapFactorForDay(
-		metricSlug: string,
-		localDay: string,
-	): Promise<number> {
+	async untapTagForDay(metricSlug: string, localDay: string): Promise<number> {
 		const result = await this.run(
 			`DELETE FROM observations
 			 WHERE metric_slug = ? AND local_day = ? AND source = 'user'

@@ -85,9 +85,9 @@ export function HistoryScreen({ store }: HistoryScreenProps) {
 								{day.energyValues.join(", ")}
 							</AppText>
 						) : null}
-						{day.factorLabels.length > 0 ? (
+						{day.tagLabels.length > 0 ? (
 							<AppText color="muted">
-								Factors: {day.factorLabels.join(", ")}
+								What happened: {day.tagLabels.join(", ")}
 							</AppText>
 						) : null}
 						{day.assessmentCount > 0 ? (

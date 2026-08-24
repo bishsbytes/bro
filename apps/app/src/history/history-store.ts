@@ -70,7 +70,7 @@ export type HistoryDay = {
 	localDay: string;
 	checkIns: HistoricalCheckIn[];
 	unpairedScored: Observation[];
-	factors: Observation[];
+	tags: Observation[];
 	assessments: Observation[];
 	measurements: HistoryMeasurement[];
 	unknown: Observation[];
@@ -97,7 +97,7 @@ export type HistoryDaySummary = {
 	localDay: string;
 	moodValues: number[];
 	energyValues: number[];
-	factorLabels: string[];
+	tagLabels: string[];
 	noteBodies: string[];
 	/** Distinct wheel sittings whose scores landed on this day. */
 	assessmentCount: number;
@@ -251,7 +251,7 @@ export function assembleHistoryDay(
 		]),
 	);
 	const unpairedScored: Observation[] = [];
-	const factors: Observation[] = [];
+	const tags: Observation[] = [];
 	const assessments: Observation[] = [];
 	const measurementObservations: Observation[] = [];
 	const unknown: Observation[] = [];
@@ -260,8 +260,8 @@ export function assembleHistoryDay(
 		const resolved = resolveMetric(observation.metricSlug);
 		if (resolved.kind === "unknown") {
 			unknown.push(observation);
-		} else if (resolved.metric.kind === "factor") {
-			factors.push(observation);
+		} else if (resolved.metric.kind === "tag") {
+			tags.push(observation);
 		} else if (resolved.metric.kind === "assessment") {
 			assessments.push(observation);
 		} else if (resolved.metric.kind === "measurement") {
@@ -285,7 +285,7 @@ export function assembleHistoryDay(
 		localDay,
 		checkIns,
 		unpairedScored,
-		factors,
+		tags,
 		assessments,
 		measurements,
 		unknown,
@@ -444,9 +444,9 @@ export class HistoryStore {
 						.filter((row) => row.localDay === localDay)
 						.map((row) => row.assessmentId ?? row.id),
 				);
-				const factors = dayObservations.flatMap((row) => {
+				const tags = dayObservations.flatMap((row) => {
 					const resolved = resolveMetric(row.metricSlug);
-					return resolved.kind === "known" && resolved.metric.kind === "factor"
+					return resolved.kind === "known" && resolved.metric.kind === "tag"
 						? [resolved.metric.label]
 						: [];
 				});
@@ -478,7 +478,7 @@ export class HistoryStore {
 					energyValues: dayObservations
 						.filter((row) => row.metricSlug === "energy")
 						.map((row) => row.value),
-					factorLabels: [...new Set(factors)],
+					tagLabels: [...new Set(tags)],
 					noteBodies: notes
 						.filter((note) => note.localDay === localDay)
 						.map((note) => note.body),

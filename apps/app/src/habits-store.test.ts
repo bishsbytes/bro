@@ -96,7 +96,7 @@ describe("habits store", () => {
 		expect(today.habits.map(({ streak }) => streak)).toEqual([1, 1]);
 	});
 
-	it("records and releases the factor a manual habit stands in for", async () => {
+	it("records and releases the tag a manual habit stands in for", async () => {
 		const observations = new databaseApp.ObservationRepository(db);
 		const trained = await store.addTemplate(habit("habit:training"), {
 			label: "Train",
@@ -126,7 +126,7 @@ describe("habits store", () => {
 		).toEqual([]);
 	});
 
-	it("leaves a factor the user tapped themselves alone", async () => {
+	it("leaves a tag the user tapped themselves alone", async () => {
 		const observations = new databaseApp.ObservationRepository(db);
 		const trained = await store.addTemplate(habit("habit:training"), {
 			label: "Train",
@@ -164,7 +164,7 @@ describe("habits store", () => {
 		).toEqual([expect.objectContaining({ id: tapped.id })]);
 	});
 
-	it("writes no factor for a habit that stands in for none", async () => {
+	it("writes no tag for a habit that stands in for none", async () => {
 		const observations = new databaseApp.ObservationRepository(db);
 		const reading = await store.addTemplate(habit("habit:reading"), {
 			label: "Read",

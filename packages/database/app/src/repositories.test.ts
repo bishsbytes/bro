@@ -146,7 +146,7 @@ describe("product repositories", () => {
 		await expect(repository.findById(first.id)).resolves.toBeNull();
 	});
 
-	it("hard-deletes factor taps without touching scored observations", async () => {
+	it("hard-deletes tag taps without touching scored observations", async () => {
 		let nextId = 0;
 		const repository = new databaseApp.ObservationRepository(db, {
 			createId: () => {
@@ -173,7 +173,7 @@ describe("product repositories", () => {
 		const mood = await repository.create(observation());
 
 		await expect(
-			repository.untapFactorForDay("alcohol", "2026-08-14"),
+			repository.untapTagForDay("alcohol", "2026-08-14"),
 		).resolves.toBe(2);
 		expect(await repository.listByDay("2026-08-14")).toEqual([mood]);
 	});

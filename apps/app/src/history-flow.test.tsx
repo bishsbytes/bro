@@ -124,7 +124,7 @@ describe("history and day view", () => {
 			scaleMax: null,
 			source: "future-sync",
 		});
-		const factor = await observations.create({
+		const tag = await observations.create({
 			...base,
 			metricSlug: "stress",
 			value: 1,
@@ -173,7 +173,7 @@ describe("history and day view", () => {
 		expect(await observations.findById(unknown.id)).toBeNull();
 		await fireEvent.press(view.getByText("Remove"));
 		await waitFor(() => expect(view.queryByText("Stress")).toBeNull());
-		expect(await observations.findById(factor.id)).toBeNull();
+		expect(await observations.findById(tag.id)).toBeNull();
 
 		await fireEvent.changeText(
 			view.getByDisplayValue("First synced note"),

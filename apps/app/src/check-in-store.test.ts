@@ -166,7 +166,7 @@ describe("check-in store", () => {
 		expect(saved.entries).toMatchObject([
 			{ mood: { value: 4 }, energy: { value: 3 } },
 		]);
-		expect(saved.selectedFactorSlugs).toEqual([]);
+		expect(saved.selectedTagSlugs).toEqual([]);
 		expect(saved.note).toBe("");
 		transaction.mockRestore();
 	});
@@ -253,38 +253,38 @@ describe("check-in store", () => {
 		expect(await observations.listByDay(LOCAL_DAY)).toEqual([]);
 	});
 
-	it("writes factor rows with exactly the presence value and null bounds", async () => {
+	it("writes tag rows with exactly the presence value and null bounds", async () => {
 		const observations = new databaseApp.ObservationRepository(db);
 		const store = new CheckInStore(db, () => CAPTURED_AT);
 
-		await store.saveDayFactors(["outdoors", "training"]);
+		await store.saveDayTags(["outdoors", "training"]);
 
-		const factorRows = await observations.listByDay(LOCAL_DAY);
-		expect(factorRows).toHaveLength(2);
-		for (const row of factorRows) {
+		const tagRows = await observations.listByDay(LOCAL_DAY);
+		expect(tagRows).toHaveLength(2);
+		for (const row of tagRows) {
 			expect(row).toMatchObject({ value: 1, scaleMin: null, scaleMax: null });
 		}
 	});
 
-	it("reconciles the day's factors to the set it is given", async () => {
+	it("reconciles the day's tags to the set it is given", async () => {
 		const observations = new databaseApp.ObservationRepository(db);
 		const store = new CheckInStore(db, () => CAPTURED_AT);
 
-		await store.saveDayFactors(["outdoors", "training"]);
+		await store.saveDayTags(["outdoors", "training"]);
 		// A repeated slug must not multiply the day's rows.
-		const kept = await store.saveDayFactors(["training", "training"]);
+		const kept = await store.saveDayTags(["training", "training"]);
 
-		expect(kept.selectedFactorSlugs).toEqual(["training"]);
+		expect(kept.selectedTagSlugs).toEqual(["training"]);
 		expect(await observations.listByDay(LOCAL_DAY)).toMatchObject([
 			{ metricSlug: "training" },
 		]);
 
-		const cleared = await store.saveDayFactors([]);
-		expect(cleared.selectedFactorSlugs).toEqual([]);
+		const cleared = await store.saveDayTags([]);
+		expect(cleared.selectedTagSlugs).toEqual([]);
 		expect(await observations.listByDay(LOCAL_DAY)).toEqual([]);
 	});
 
-	it("drops a factor an active habit already records from the panel", async () => {
+	it("drops a tag an active habit already records from the panel", async () => {
 		const habits = new databaseApp.HabitRepository(db);
 		const trained = await habits.create({
 			slug: "habit:training",
@@ -300,28 +300,28 @@ describe("check-in store", () => {
 		const store = new CheckInStore(db, () => CAPTURED_AT);
 
 		const today = await store.loadToday();
-		expect(today.availableFactors.some(({ slug }) => slug === "training")).toBe(
+		expect(today.availableTags.some(({ slug }) => slug === "training")).toBe(
 			false,
 		);
 		// Its uncovered neighbours are untouched.
-		expect(today.availableFactors.some(({ slug }) => slug === "outdoors")).toBe(
+		expect(today.availableTags.some(({ slug }) => slug === "outdoors")).toBe(
 			true,
 		);
-		// The panel has no authority over a covered factor, so it cannot be saved
+		// The panel has no authority over a covered tag, so it cannot be saved
 		// through the check-in either.
-		await expect(store.saveDayFactors(["training"])).rejects.toThrow(
-			"Factor is not active today: training",
+		await expect(store.saveDayTags(["training"])).rejects.toThrow(
+			"Tag is not active today: training",
 		);
 
 		// Removing the habit hands the tag back.
 		await habits.remove(trained.id);
 		const afterRemoval = await store.loadToday();
 		expect(
-			afterRemoval.availableFactors.some(({ slug }) => slug === "training"),
+			afterRemoval.availableTags.some(({ slug }) => slug === "training"),
 		).toBe(true);
 	});
 
-	it("leaves a habit-owned factor row untouched when reconciling", async () => {
+	it("leaves a habit-owned tag row untouched when reconciling", async () => {
 		const observations = new databaseApp.ObservationRepository(db);
 		const habits = new databaseApp.HabitRepository(db);
 		const trained = await habits.create({
@@ -350,14 +350,14 @@ describe("check-in store", () => {
 		const store = new CheckInStore(db, () => CAPTURED_AT);
 
 		// Clearing every tag the panel owns must not reach the habit's row.
-		const cleared = await store.saveDayFactors([]);
-		expect(cleared.selectedFactorSlugs).toEqual([]);
+		const cleared = await store.saveDayTags([]);
+		expect(cleared.selectedTagSlugs).toEqual([]);
 		expect(await observations.listByDay(LOCAL_DAY)).toMatchObject([
 			{ metricSlug: "training", sourceRecordId: trained.id },
 		]);
 	});
 
-	it("refuses a factor the day is not tracking", async () => {
+	it("refuses a tag the day is not tracking", async () => {
 		const observations = new databaseApp.ObservationRepository(db);
 		await new databaseApp.TrackedMetricsRepository(db).configure(
 			"training",
@@ -366,8 +366,8 @@ describe("check-in store", () => {
 		);
 		const store = new CheckInStore(db, () => CAPTURED_AT);
 
-		await expect(store.saveDayFactors(["training"])).rejects.toThrow(
-			"Factor is not active today: training",
+		await expect(store.saveDayTags(["training"])).rejects.toThrow(
+			"Tag is not active today: training",
 		);
 		expect(await observations.listByDay(LOCAL_DAY)).toEqual([]);
 	});
@@ -462,7 +462,7 @@ describe("check-in store", () => {
 		]);
 	});
 
-	it("ignores assessment and measurement overlays as factors", async () => {
+	it("ignores assessment and measurement overlays as tags", async () => {
 		const tracked = new databaseApp.TrackedMetricsRepository(db);
 		await tracked.configure("wheel:career", 0, true);
 		await tracked.configure("weight", 0, true);
@@ -470,16 +470,16 @@ describe("check-in store", () => {
 
 		const today = await store.loadToday();
 		expect(
-			today.availableFactors.some(({ slug }) => slug.startsWith("wheel:")),
+			today.availableTags.some(({ slug }) => slug.startsWith("wheel:")),
 		).toBe(false);
-		expect(today.availableFactors.some(({ slug }) => slug === "weight")).toBe(
+		expect(today.availableTags.some(({ slug }) => slug === "weight")).toBe(
 			false,
 		);
-		await expect(store.saveDayFactors(["wheel:career"])).rejects.toThrow(
-			"Unknown factor slug: wheel:career",
+		await expect(store.saveDayTags(["wheel:career"])).rejects.toThrow(
+			"Unknown tag slug: wheel:career",
 		);
-		await expect(store.saveDayFactors(["weight"])).rejects.toThrow(
-			"Unknown factor slug: weight",
+		await expect(store.saveDayTags(["weight"])).rejects.toThrow(
+			"Unknown tag slug: weight",
 		);
 	});
 
@@ -512,9 +512,9 @@ describe("check-in store", () => {
 		// transaction commits and see the pair that proves the check-in happened.
 		expect(hasCompletedCheckIn(visibleToRefresh)).toBe(true);
 
-		// Neither factors nor the note change whether the day counts as checked
+		// Neither tags nor the note change whether the day counts as checked
 		// in, so neither has a reminder schedule to reconcile.
-		await store.saveDayFactors(["training"]);
+		await store.saveDayTags(["training"]);
 		await store.saveDayNote("Strong finish");
 		expect(refresh).toHaveBeenCalledTimes(1);
 	});

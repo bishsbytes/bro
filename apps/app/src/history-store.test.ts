@@ -78,7 +78,7 @@ describe("history store", () => {
 		expect(day.checkIns[0]?.optionalScores).toMatchObject([
 			{ metricSlug: "motivation", value: 5 },
 		]);
-		expect(day.factors.map(({ metricSlug }) => metricSlug)).toEqual(["stress"]);
+		expect(day.tags.map(({ metricSlug }) => metricSlug)).toEqual(["stress"]);
 		expect(day.assessments).toEqual([wheel]);
 		expect(day.unpairedScored).toEqual([]);
 		expect(day.unknown).toEqual([unknownWheel]);

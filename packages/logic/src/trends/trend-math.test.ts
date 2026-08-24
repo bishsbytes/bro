@@ -101,7 +101,7 @@ describe("trend math", () => {
 	});
 
 	it("uses presence aggregation and produces inclusive 30-day ranges", () => {
-		const factor = knownMetric("stress");
+		const tag = knownMetric("stress");
 		const series = buildTrendSeries(
 			[
 				observation("stress-1", "2026-08-14", 9, {
@@ -110,7 +110,7 @@ describe("trend math", () => {
 					scaleMax: null,
 				}),
 			],
-			factor,
+			tag,
 			"2026-08-14",
 			30,
 		);

@@ -162,7 +162,7 @@ function ObservationRow({
 	const resolved = resolveMetric(observation.metricSlug);
 	const title =
 		resolved.kind === "known"
-			? resolved.metric.kind === "factor"
+			? resolved.metric.kind === "tag"
 				? resolved.metric.label
 				: `${resolved.metric.label}: ${observation.value}`
 			: `${observation.metricSlug}: ${observation.value}`;
@@ -285,11 +285,11 @@ export function HistoryDayScreen({ localDay, store }: HistoryDayScreenProps) {
 						/>
 					))}
 
-					{day.factors.length > 0 ? <SectionHeader title="Factors" /> : null}
-					{day.factors.map((factor) => (
+					{day.tags.length > 0 ? <SectionHeader title="What happened" /> : null}
+					{day.tags.map((tag) => (
 						<ObservationRow
-							key={factor.id}
-							observation={factor}
+							key={tag.id}
+							observation={tag}
 							onDelete={(row) =>
 								void mutate(() => history.deleteObservation(row))
 							}

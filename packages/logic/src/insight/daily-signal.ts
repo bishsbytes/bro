@@ -1,7 +1,4 @@
-import {
-	FACTOR_PRESENCE_VALUE,
-	resolveMetric,
-} from "@bro/domain/metric-registry";
+import { resolveMetric, TAG_PRESENCE_VALUE } from "@bro/domain/metric-registry";
 import type {
 	ConsumptionEntry,
 	DailyMetric,
@@ -19,7 +16,7 @@ export type DailySignalSource = {
 	observations: readonly Observation[];
 	dailyMetrics: readonly DailyMetric[];
 	consumptionEntries?: readonly ConsumptionEntry[];
-	factorActive?: (metricSlug: string, localDay: string) => boolean;
+	tagActive?: (metricSlug: string, localDay: string) => boolean;
 };
 
 export type DailySignalReader = (
@@ -71,15 +68,13 @@ export function createDailySignalReader(
 		const dayRows =
 			observationsByKey.get(signalKey(metricSlug, localDay)) ?? [];
 
-		if (metric.kind === "factor") {
-			const present = dayRows.some(
-				(row) => row.value === FACTOR_PRESENCE_VALUE,
-			);
+		if (metric.kind === "tag") {
+			const present = dayRows.some((row) => row.value === TAG_PRESENCE_VALUE);
 			if (present) {
 				return { metricSlug, localDay, value: 1 };
 			}
 			return checkInDays.has(localDay) &&
-				(source.factorActive?.(metricSlug, localDay) ?? true)
+				(source.tagActive?.(metricSlug, localDay) ?? true)
 				? { metricSlug, localDay, value: 0 }
 				: null;
 		}

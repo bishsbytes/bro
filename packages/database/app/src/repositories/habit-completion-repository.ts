@@ -33,7 +33,7 @@ export class HabitCompletionRepository extends BaseRepository {
 	 * Marks a manual habit complete for the day, idempotently.
 	 *
 	 * Pass `scope` to join a transaction the caller already holds — a completion
-	 * that must land with something else, such as the check-in factor the habit
+	 * that must land with something else, such as the check-in tag the habit
 	 * stands in for.
 	 */
 	async complete(

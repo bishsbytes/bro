@@ -1,8 +1,5 @@
 import { localDayOf, shiftLocalDay, type WeekStartDay } from "@bro/domain";
-import {
-	type FactorCategory,
-	resolveMetric,
-} from "@bro/domain/metric-registry";
+import { resolveMetric, type TagCategory } from "@bro/domain/metric-registry";
 import { formatLocalDayLabel, isWheelReviewDue } from "@bro/logic";
 import { type Href, router, useFocusEffect, useScrollToTop } from "expo-router";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
@@ -13,6 +10,7 @@ import {
 	createCheckInStore,
 	type TodayCheckIn,
 } from "../../check-in/check-in-store";
+import { TAG_CATEGORY_LABELS } from "../../check-in/tag-categories";
 import { AppText } from "../../components/app-text";
 import { Button } from "../../components/button";
 import { Card } from "../../components/card";
@@ -55,7 +53,7 @@ type HomeScreenProps = {
 		CheckInStore,
 		| "loadToday"
 		| "saveCheckIn"
-		| "saveDayFactors"
+		| "saveDayTags"
 		| "saveDayNote"
 		| "loadCheckInDays"
 	>;
@@ -70,13 +68,6 @@ type HomeScreenProps = {
 };
 
 const MOOD_FACES = ["😞", "🙁", "😐", "🙂", "😄"] as const;
-const CATEGORY_LABELS: Record<FactorCategory, string> = {
-	body: "Body",
-	lifestyle: "Lifestyle",
-	mind: "Mind",
-	social: "Social",
-};
-
 const systemNow = () => new Date();
 
 function localDaysBetween(fromLocalDay: string, throughLocalDay: string) {
@@ -199,17 +190,17 @@ function PastDaySection({
 							))
 						)}
 					</View>
-					{day.factors.length > 0 ? (
+					{day.tags.length > 0 ? (
 						<View style={styles.section}>
-							<SectionHeader title="Factors" />
+							<SectionHeader title="What happened" />
 							<Card>
 								<AppText color="muted">
-									{day.factors
-										.map((factor) => {
-											const resolved = resolveMetric(factor.metricSlug);
+									{day.tags
+										.map((tag) => {
+											const resolved = resolveMetric(tag.metricSlug);
 											return resolved.kind === "known"
 												? resolved.metric.label
-												: factor.metricSlug;
+												: tag.metricSlug;
 										})
 										.join(", ")}
 								</AppText>
@@ -417,7 +408,7 @@ export function HomeScreen({
 	const [additionalScores, setAdditionalScores] = useState<
 		Record<string, number>
 	>({});
-	const [selectedFactors, setSelectedFactors] = useState<string[]>([]);
+	const [selectedTags, setSelectedTags] = useState<string[]>([]);
 	const [note, setNote] = useState("");
 	const [editing, setEditing] = useState<CheckInEntry | null>(null);
 	const [saving, setSaving] = useState(false);
@@ -425,10 +416,10 @@ export function HomeScreen({
 	// A tap commits the check-in, so the guard has to close before React has
 	// re-rendered: a second tap in the same frame would still see `saving` false.
 	const savingRef = useRef(false);
-	// Only the latest factor toggle may apply its result, and a reload must not
+	// Only the latest tag toggle may apply its result, and a reload must not
 	// pull the chips back to a set the user has already moved on from.
-	const factorRequestRef = useRef(0);
-	const factorsInFlightRef = useRef(0);
+	const tagRequestRef = useRef(0);
+	const tagsInFlightRef = useRef(0);
 	// The note field is the user's draft until they save it; a background reload
 	// may only refill it while it matches what was last loaded or saved.
 	const savedNoteRef = useRef("");
@@ -448,8 +439,8 @@ export function HomeScreen({
 			const loaded = await checkIns.loadToday();
 			if (stamp !== todayWriteRef.current) return;
 			setToday(loaded);
-			if (factorsInFlightRef.current === 0) {
-				setSelectedFactors(loaded.selectedFactorSlugs);
+			if (tagsInFlightRef.current === 0) {
+				setSelectedTags(loaded.selectedTagSlugs);
 			}
 			const previouslySaved = savedNoteRef.current;
 			savedNoteRef.current = loaded.note;
@@ -742,32 +733,32 @@ export function HomeScreen({
 		}
 	}
 
-	async function toggleFactor(slug: string) {
-		const next = selectedFactors.includes(slug)
-			? selectedFactors.filter((selected) => selected !== slug)
-			: [...selectedFactors, slug];
-		const previous = selectedFactors;
+	async function toggleTag(slug: string) {
+		const next = selectedTags.includes(slug)
+			? selectedTags.filter((selected) => selected !== slug)
+			: [...selectedTags, slug];
+		const previous = selectedTags;
 		playSelectionHaptic();
-		setSelectedFactors(next);
+		setSelectedTags(next);
 		setError(null);
-		const request = factorRequestRef.current + 1;
-		factorRequestRef.current = request;
-		factorsInFlightRef.current += 1;
+		const request = tagRequestRef.current + 1;
+		tagRequestRef.current = request;
+		tagsInFlightRef.current += 1;
 		todayWriteRef.current += 1;
 		const stamp = todayWriteRef.current;
 		try {
-			const saved = await checkIns.saveDayFactors(next);
-			if (request !== factorRequestRef.current) return;
-			setSelectedFactors(saved.selectedFactorSlugs);
+			const saved = await checkIns.saveDayTags(next);
+			if (request !== tagRequestRef.current) return;
+			setSelectedTags(saved.selectedTagSlugs);
 			if (stamp !== todayWriteRef.current) return;
 			setToday(saved);
 			invalidateIndicatorDay(saved.localDay);
 		} catch (caught) {
-			if (request !== factorRequestRef.current) return;
-			setSelectedFactors(previous);
+			if (request !== tagRequestRef.current) return;
+			setSelectedTags(previous);
 			setError(caught instanceof Error ? caught.message : String(caught));
 		} finally {
-			factorsInFlightRef.current -= 1;
+			tagsInFlightRef.current -= 1;
 		}
 	}
 
@@ -923,13 +914,11 @@ export function HomeScreen({
 			</Screen>
 		);
 	}
-	const groupedFactors = Object.entries(CATEGORY_LABELS).map(
+	const groupedTags = Object.entries(TAG_CATEGORY_LABELS).map(
 		([category, label]) => ({
-			category: category as FactorCategory,
+			category: category as TagCategory,
 			label,
-			factors: today.availableFactors.filter(
-				(factor) => factor.category === category,
-			),
+			tags: today.availableTags.filter((tag) => tag.category === category),
 		}),
 	);
 	const checkInCount = today.entries.length;
@@ -1066,16 +1055,16 @@ export function HomeScreen({
 		</View>
 	);
 
-	const factorsSection =
-		today.availableFactors.length > 0 ? (
+	const tagsSection =
+		today.availableTags.length > 0 ? (
 			<View style={styles.section}>
-				<SectionHeader title="Factors" />
+				<SectionHeader title="What happened" />
 				<AppText variant="caption" color="subtle">
-					What applied today?
+					Tap anything that applied today.
 				</AppText>
-				{groupedFactors.map(({ category, label, factors }) =>
-					factors.length > 0 ? (
-						<View key={category} style={styles.factorGroup}>
+				{groupedTags.map(({ category, label, tags }) =>
+					tags.length > 0 ? (
+						<View key={category} style={styles.tagGroup}>
 							<AppText
 								variant="caption"
 								color="subtle"
@@ -1083,27 +1072,27 @@ export function HomeScreen({
 							>
 								{label}
 							</AppText>
-							<View style={styles.factorRow}>
-								{factors.map((factor) => {
-									const selected = selectedFactors.includes(factor.slug);
+							<View style={styles.tagRow}>
+								{tags.map((tag) => {
+									const selected = selectedTags.includes(tag.slug);
 									return (
 										<TouchableOpacity
-											key={factor.slug}
+											key={tag.slug}
 											accessibilityRole="button"
-											accessibilityLabel={factor.label}
+											accessibilityLabel={tag.label}
 											accessibilityState={{ selected }}
 											style={[
-												styles.factorButton,
+												styles.tagButton,
 												selected && styles.choiceSelected,
 											]}
-											onPress={() => void toggleFactor(factor.slug)}
+											onPress={() => void toggleTag(tag.slug)}
 										>
 											<AppText
 												variant="caption"
 												color="muted"
 												style={[selected && styles.choiceSelectedText]}
 											>
-												{factor.label}
+												{tag.label}
 											</AppText>
 										</TouchableOpacity>
 									);
@@ -1287,7 +1276,7 @@ export function HomeScreen({
 								Wheel review status could not be loaded: {wheelError}
 							</AppText>
 						) : null}
-						{factorsSection}
+						{tagsSection}
 						{noteSection}
 					</>
 				)}
@@ -1365,10 +1354,10 @@ const styles = StyleSheet.create((theme) => ({
 		backgroundColor: theme.colors.selected,
 	},
 	choiceSelectedText: { color: theme.colors.onSelected },
-	factorGroup: { marginBottom: theme.spacing.md },
+	tagGroup: { marginBottom: theme.spacing.md },
 	categoryLabel: { marginBottom: theme.spacing.xs },
-	factorRow: { flexDirection: "row", flexWrap: "wrap", gap: theme.spacing.sm },
-	factorButton: {
+	tagRow: { flexDirection: "row", flexWrap: "wrap", gap: theme.spacing.sm },
+	tagButton: {
 		borderWidth: 1,
 		borderColor: theme.colors.border,
 		borderRadius: theme.radius.md,

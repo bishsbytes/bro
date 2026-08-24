@@ -7,10 +7,10 @@ import type {
 } from "../units";
 import { LIFE_AREA_CATALOGUE, type LifeAreaSlug } from "./life-area-catalogue";
 
-export type MetricKind = "scored" | "factor" | "assessment" | "measurement";
+export type MetricKind = "scored" | "tag" | "assessment" | "measurement";
 export type MetricAggregation = "mean" | "presence" | "last" | "sum";
-export type FactorCategory = "body" | "lifestyle" | "mind" | "social";
-export type FactorSlug =
+export type TagCategory = "body" | "lifestyle" | "mind" | "social" | "sexual";
+export type TagSlug =
 	| "training"
 	| "illness"
 	| "poor_sleep_environment"
@@ -20,7 +20,15 @@ export type FactorSlug =
 	| "outdoors"
 	| "social"
 	| "sex"
-	| "travel";
+	| "travel"
+	| "masturbation"
+	| "porn"
+	| "morning_erection"
+	| "nicotine"
+	| "hangover"
+	| "muscle_soreness"
+	| "cold_exposure"
+	| "long_hours";
 export type UserEnterableMeasurementSlug = "weight" | "waist" | "body_fat";
 export type UserEnterableMeasurementDimension = "mass" | "length" | "fraction";
 export type ImportedOnlyMeasurementSlug =
@@ -61,13 +69,20 @@ export type ScoredMetricDefinition = MetricDefinitionBase & {
 	dimension: null;
 };
 
-export type FactorMetricDefinition = MetricDefinitionBase & {
-	kind: "factor";
+export type TagMetricDefinition = MetricDefinitionBase & {
+	kind: "tag";
 	aggregation: "presence";
 	scaleMin: null;
 	scaleMax: null;
-	category: FactorCategory;
+	category: TagCategory;
 	dimension: null;
+	/**
+	 * Whether the tag is in the panel before the user chooses. The check-in is
+	 * budgeted in seconds, so the catalogue may grow without the default panel
+	 * growing with it: anything shipped after the original set starts off and
+	 * is opted into from settings.
+	 */
+	defaultEnabled: boolean;
 };
 
 export type AssessmentMetricDefinition = MetricDefinitionBase & {
@@ -124,7 +139,7 @@ export type MeasurementMetricDefinition =
 
 export type MetricDefinition =
 	| ScoredMetricDefinition
-	| FactorMetricDefinition
+	| TagMetricDefinition
 	| AssessmentMetricDefinition
 	| MeasurementMetricDefinition;
 
@@ -133,13 +148,13 @@ export type MetricResolution =
 	| { kind: "unknown"; slug: string };
 
 /**
- * The only value a factor observation ever carries. A factor that later needs
+ * The only value a tag observation ever carries. A tag that later needs
  * quantity gets a separate quantified-counterpart metric — as when the alcohol
- * and caffeine factors were replaced outright by the consumption-derived
- * `alcohol_intake`/`caffeine_intake`; reusing a factor's value would make
+ * and caffeine tags were replaced outright by the consumption-derived
+ * `alcohol_intake`/`caffeine_intake`; reusing a tag's value would make
  * existing rows ambiguous. Convention: product plan, check-in domain.
  */
-export const FACTOR_PRESENCE_VALUE = 1;
+export const TAG_PRESENCE_VALUE = 1;
 
 const scored = (
 	slug: string,
@@ -161,25 +176,26 @@ const scored = (
 	dimension: null,
 });
 
-const factor = (
-	slug: FactorSlug,
+const tag = (
+	slug: TagSlug,
 	label: string,
-	category: FactorCategory,
+	category: TagCategory,
 	defaultPosition: number,
-	sensitive = false,
-): FactorMetricDefinition => ({
+	options: { sensitive?: boolean; defaultEnabled?: boolean } = {},
+): TagMetricDefinition => ({
 	slug,
 	label,
-	kind: "factor",
+	kind: "tag",
 	scaleMin: null,
 	scaleMax: null,
 	category,
 	aggregation: "presence",
-	sensitive,
+	sensitive: options.sensitive ?? false,
 	userEnterable: true,
 	deprecated: false,
 	defaultPosition,
 	dimension: null,
+	defaultEnabled: options.defaultEnabled ?? true,
 });
 
 const assessment = (
@@ -280,16 +296,45 @@ export const METRIC_REGISTRY = [
 	scored("motivation", "Motivation", 2),
 	scored("productivity", "Productivity", 3),
 	scored("libido", "Libido", 4, true),
-	factor("training", "Training", "body", 2),
-	factor("illness", "Illness", "body", 3),
-	factor("poor_sleep_environment", "Poor sleep environment", "body", 4),
-	factor("late_screen", "Late screen", "lifestyle", 7),
-	factor("junk_food", "Junk food", "lifestyle", 8),
-	factor("stress", "Stress", "mind", 9),
-	factor("outdoors", "Outdoors", "mind", 10),
-	factor("social", "Social", "social", 11),
-	factor("sex", "Sex", "social", 12, true),
-	factor("travel", "Travel", "social", 13),
+	tag("training", "Training", "body", 2),
+	tag("illness", "Illness", "body", 3),
+	tag("poor_sleep_environment", "Poor sleep environment", "body", 4),
+	tag("late_screen", "Late screen", "lifestyle", 7),
+	tag("junk_food", "Junk food", "lifestyle", 8),
+	tag("stress", "Stress", "mind", 9),
+	tag("outdoors", "Outdoors", "mind", 10),
+	tag("social", "Social", "social", 11),
+	tag("sex", "Sex", "sexual", 12, { sensitive: true }),
+	tag("travel", "Travel", "social", 13),
+	tag("masturbation", "Masturbation", "sexual", 14, {
+		sensitive: true,
+		defaultEnabled: false,
+	}),
+	tag("porn", "Porn", "sexual", 15, {
+		sensitive: true,
+		defaultEnabled: false,
+	}),
+	tag("morning_erection", "Morning erection", "sexual", 16, {
+		sensitive: true,
+		defaultEnabled: false,
+	}),
+	tag("hangover", "Hangover", "body", 17, {
+		sensitive: true,
+		defaultEnabled: false,
+	}),
+	tag("muscle_soreness", "Muscle soreness", "body", 18, {
+		defaultEnabled: false,
+	}),
+	tag("cold_exposure", "Cold exposure", "body", 19, {
+		defaultEnabled: false,
+	}),
+	tag("nicotine", "Nicotine", "lifestyle", 20, {
+		sensitive: true,
+		defaultEnabled: false,
+	}),
+	tag("long_hours", "Long hours", "lifestyle", 21, {
+		defaultEnabled: false,
+	}),
 	measurement("weight", "Weight", "mass", 0),
 	measurement("waist", "Waist", "length", 1),
 	measurement("body_fat", "Body fat", "fraction", 2),
@@ -344,6 +389,13 @@ const optionalCheckInMetricSlugs = new Set<string>(
 	OPTIONAL_CHECK_IN_METRIC_SLUGS,
 );
 
+function defaultsToEnabled(metric: MetricDefinition): boolean {
+	if (metric.kind === "measurement") return false;
+	if (optionalCheckInMetricSlugs.has(metric.slug)) return false;
+	if (metric.kind === "tag") return metric.defaultEnabled;
+	return true;
+}
+
 export const DEFAULT_TRACKED_METRICS = METRIC_REGISTRY.filter(
 	(metric) =>
 		metric.userEnterable ||
@@ -353,10 +405,7 @@ export const DEFAULT_TRACKED_METRICS = METRIC_REGISTRY.filter(
 ).map((metric) => ({
 	metricSlug: metric.slug,
 	position: metric.defaultPosition,
-	...(metric.kind === "measurement" ||
-	optionalCheckInMetricSlugs.has(metric.slug)
-		? { enabled: false }
-		: {}),
+	...(defaultsToEnabled(metric) ? {} : { enabled: false }),
 }));
 
 /**
@@ -398,9 +447,9 @@ export function listScoredMetrics(): ScoredMetricDefinition[] {
 	);
 }
 
-export function listFactors(): FactorMetricDefinition[] {
+export function listTags(): TagMetricDefinition[] {
 	return METRIC_REGISTRY.filter(
-		(metric): metric is FactorMetricDefinition => metric.kind === "factor",
+		(metric): metric is TagMetricDefinition => metric.kind === "tag",
 	);
 }
 

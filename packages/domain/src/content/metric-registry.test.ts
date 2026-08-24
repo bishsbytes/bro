@@ -4,10 +4,10 @@ import {
 	hasCompletedCheckIn,
 	listAssessmentMetrics,
 	listConsumptionDerivedMeasurements,
-	listFactors,
 	listImportedOnlyMeasurements,
 	listMeasurements,
 	listScoredMetrics,
+	listTags,
 	listUserEnterableMeasurements,
 	METRIC_REGISTRY,
 	OPTIONAL_CHECK_IN_METRIC_SLUGS,
@@ -30,11 +30,13 @@ describe("metric registry", () => {
 
 	it("defines valid scales, categories, and aggregation for every metric", () => {
 		for (const metric of METRIC_REGISTRY) {
-			if (metric.kind === "factor") {
+			if (metric.kind === "tag") {
 				expect(metric.scaleMin).toBeNull();
 				expect(metric.scaleMax).toBeNull();
 				expect(metric.aggregation).toBe("presence");
-				expect(metric.category).toMatch(/^(body|lifestyle|mind|social)$/);
+				expect(metric.category).toMatch(
+					/^(body|lifestyle|mind|social|sexual)$/,
+				);
 			} else if (metric.kind === "measurement") {
 				expect(metric.scaleMin).toBeNull();
 				expect(metric.scaleMax).toBeNull();
@@ -58,12 +60,37 @@ describe("metric registry", () => {
 			"productivity",
 			"libido",
 		]);
-		expect(listFactors()).toHaveLength(10);
+		expect(listTags()).toHaveLength(18);
 		expect(
-			listFactors()
+			listTags()
 				.filter((metric) => metric.sensitive)
 				.map((metric) => metric.slug),
-		).toEqual(["sex"]);
+		).toEqual([
+			"sex",
+			"masturbation",
+			"porn",
+			"morning_erection",
+			"hangover",
+			"nicotine",
+		]);
+		// The check-in is budgeted in seconds, so the catalogue may grow without
+		// the shipped panel growing with it.
+		expect(
+			listTags()
+				.filter((metric) => metric.defaultEnabled)
+				.map((metric) => metric.slug),
+		).toEqual([
+			"training",
+			"illness",
+			"poor_sleep_environment",
+			"late_screen",
+			"junk_food",
+			"stress",
+			"outdoors",
+			"social",
+			"sex",
+			"travel",
+		]);
 		expect(resolveMetric("libido")).toMatchObject({
 			kind: "known",
 			metric: { kind: "scored", sensitive: true },
@@ -257,7 +284,8 @@ describe("metric registry", () => {
 				metricSlug: metric.slug,
 				position: metric.defaultPosition,
 				...(metric.kind === "measurement" ||
-				OPTIONAL_CHECK_IN_METRIC_SLUGS.some((slug) => slug === metric.slug)
+				OPTIONAL_CHECK_IN_METRIC_SLUGS.some((slug) => slug === metric.slug) ||
+				(metric.kind === "tag" && !metric.defaultEnabled)
 					? { enabled: false }
 					: {}),
 			})),
@@ -285,7 +313,7 @@ describe("metric registry", () => {
 			expect(listScoredMetrics().some(({ slug }) => slug === imported)).toBe(
 				false,
 			);
-			expect(listFactors().some(({ slug }) => slug === imported)).toBe(false);
+			expect(listTags().some(({ slug }) => slug === imported)).toBe(false);
 			expect(
 				listAssessmentMetrics().some(({ slug }) => slug === imported),
 			).toBe(false);
@@ -303,7 +331,7 @@ describe("metric registry", () => {
 			expect(listUserEnterableMeasurements()).not.toContainEqual(derived);
 			expect(listImportedOnlyMeasurements()).not.toContainEqual(derived);
 			expect(listScoredMetrics()).not.toContainEqual(derived);
-			expect(listFactors()).not.toContainEqual(derived);
+			expect(listTags()).not.toContainEqual(derived);
 			expect(listAssessmentMetrics()).not.toContainEqual(derived);
 		}
 	});

@@ -58,15 +58,15 @@ export {
 	type MetricHabit,
 } from "./habits/completion";
 export {
-	coveredFactorSlugs,
-	type FactorCoveredHabit,
-	habitFactorSlug,
-} from "./habits/factor-coverage";
-export {
 	type HabitMetricSlug,
 	isHabitMetricSlug,
 } from "./habits/metric-support";
 export { deriveHabitStreak, type HabitStreakInput } from "./habits/streak";
+export {
+	coveredTagSlugs,
+	habitTagSlug,
+	type TagCoveredHabit,
+} from "./habits/tag-coverage";
 export {
 	type CanonicalHealthSample,
 	type HealthSampleUnit,

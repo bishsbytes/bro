@@ -108,7 +108,7 @@ describe("daily check-in flow", () => {
 		// The pair is one transaction: a check-in never exists half-scored.
 		expect(transaction).toHaveBeenCalledTimes(1);
 
-		// Factors and the note describe the day, and each save its own write.
+		// Tags and the note describe the day, and each save its own write.
 		await fireEvent.press(view.getByLabelText("Outdoors"));
 		await act(async () => undefined);
 		expect(transaction).toHaveBeenCalledTimes(2);
@@ -149,7 +149,7 @@ describe("daily check-in flow", () => {
 		await fireEvent.press(await view.findByLabelText("Energy 4"));
 		expect(await view.findByText("2 check-ins")).toBeTruthy();
 
-		// Factors belong to the day, so deselecting clears it for the day rather
+		// Tags belong to the day, so deselecting clears it for the day rather
 		// than for the newest check-in only.
 		await fireEvent.press(view.getByLabelText("Outdoors"));
 		await act(async () => undefined);

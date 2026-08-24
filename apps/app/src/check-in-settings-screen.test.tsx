@@ -23,6 +23,22 @@ const initial = {
 			sensitive: true,
 		},
 	],
+	tags: [
+		{
+			metricSlug: "training",
+			label: "Training",
+			enabled: true,
+			sensitive: false,
+			category: "body" as const,
+		},
+		{
+			metricSlug: "masturbation",
+			label: "Masturbation",
+			enabled: false,
+			sensitive: true,
+			category: "sexual" as const,
+		},
+	],
 };
 
 describe("check-in settings screen", () => {
@@ -32,6 +48,9 @@ describe("check-in settings screen", () => {
 			setEnabled: jest.fn(async (metricSlug: string, enabled: boolean) => ({
 				metrics: initial.metrics.map((metric) =>
 					metric.metricSlug === metricSlug ? { ...metric, enabled } : metric,
+				),
+				tags: initial.tags.map((tag) =>
+					tag.metricSlug === metricSlug ? { ...tag, enabled } : tag,
 				),
 			})),
 		};
@@ -51,5 +70,32 @@ describe("check-in settings screen", () => {
 		expect(
 			view.getByLabelText("Remove Motivation from check-ins"),
 		).toBeTruthy();
+	});
+
+	it("groups the panel tags by category and turns one on", async () => {
+		const store = {
+			load: jest.fn(async () => initial),
+			setEnabled: jest.fn(async (metricSlug: string, enabled: boolean) => ({
+				metrics: initial.metrics,
+				tags: initial.tags.map((tag) =>
+					tag.metricSlug === metricSlug ? { ...tag, enabled } : tag,
+				),
+			})),
+		};
+		const view = await render(<CheckInSettingsScreen store={store} />);
+
+		expect(await view.findByText("Sexual")).toBeTruthy();
+		expect(view.getByText("Body")).toBeTruthy();
+		expect(view.getByLabelText("Remove Training tag")).toBeTruthy();
+
+		await fireEvent(
+			view.getByLabelText("Add Masturbation tag"),
+			"valueChange",
+			true,
+		);
+		await waitFor(() =>
+			expect(store.setEnabled).toHaveBeenCalledWith("masturbation", true),
+		);
+		expect(view.getByLabelText("Remove Masturbation tag")).toBeTruthy();
 	});
 });

@@ -163,7 +163,7 @@ describe("review store", () => {
 				localDay: "2026-08-14",
 				moodValues: [],
 				energyValues: [],
-				factorLabels: [],
+				tagLabels: [],
 				noteBodies: [],
 				assessmentCount: 1,
 			},

@@ -16,15 +16,15 @@ import {
 } from "@bro/domain";
 import {
 	DEFAULT_TRACKED_METRICS,
-	FACTOR_PRESENCE_VALUE,
-	type FactorMetricDefinition,
-	listFactors,
+	listTags,
 	OPTIONAL_CHECK_IN_METRIC_SLUGS,
 	resolveMetric,
 	type ScoredMetricDefinition,
+	TAG_PRESENCE_VALUE,
+	type TagMetricDefinition,
 } from "@bro/domain/metric-registry";
 import {
-	coveredFactorSlugs,
+	coveredTagSlugs,
 	type MeasurementPresentation,
 	toMeasurementPresentation,
 } from "@bro/logic";
@@ -46,8 +46,8 @@ export type TodayCheckIn = {
 	localDay: string;
 	entries: CheckInEntry[];
 	availableOptionalScores: ScoredMetricDefinition[];
-	selectedFactorSlugs: string[];
-	availableFactors: FactorMetricDefinition[];
+	selectedTagSlugs: string[];
+	availableTags: TagMetricDefinition[];
 	availableMeasurements: CheckInMeasurement[];
 	loggedMeasurements: LoggedCheckInMeasurement[];
 	inputLocale: string | undefined;
@@ -189,13 +189,13 @@ export class CheckInStore {
 					: [];
 			},
 		);
-		// A factor an active habit already records is tapped in Habits, not here:
+		// A tag an active habit already records is tapped in Habits, not here:
 		// showing both tags would ask the same question twice a day.
-		const covered = coveredFactorSlugs(activeHabits);
-		const availableFactors = listFactors().filter(
-			(factor) => enabledSlugs.has(factor.slug) && !covered.has(factor.slug),
+		const covered = coveredTagSlugs(activeHabits);
+		const availableTags = listTags().filter(
+			(tag) => enabledSlugs.has(tag.slug) && !covered.has(tag.slug),
 		);
-		const factorSlugs = new Set(availableFactors.map((factor) => factor.slug));
+		const tagSlugs = new Set(availableTags.map((tag) => tag.slug));
 		const resolvedMeasurements = tracked.flatMap((overlay) => {
 			const resolved = resolveMetric(overlay.metricSlug);
 			if (
@@ -251,14 +251,14 @@ export class CheckInStore {
 			localDay,
 			entries: pairCheckIns(observations),
 			availableOptionalScores,
-			selectedFactorSlugs: [
+			selectedTagSlugs: [
 				...new Set(
 					observations
-						.filter((row) => factorSlugs.has(row.metricSlug))
+						.filter((row) => tagSlugs.has(row.metricSlug))
 						.map((row) => row.metricSlug),
 				),
 			],
-			availableFactors,
+			availableTags,
 			availableMeasurements: resolvedMeasurements.flatMap(
 				({ measurement, enabled }) => (enabled ? [measurement] : []),
 			),
@@ -405,35 +405,35 @@ export class CheckInStore {
 	}
 
 	/**
-	 * Replaces the day's whole factor set. Factors describe the day rather than
+	 * Replaces the day's whole tag set. Tags describe the day rather than
 	 * any one check-in, so callers pass everything currently selected and the
 	 * day is reconciled to match.
 	 */
-	async saveDayFactors(
-		selectedFactorSlugs: readonly string[],
+	async saveDayTags(
+		selectedTagSlugs: readonly string[],
 	): Promise<TodayCheckIn> {
-		for (const slug of selectedFactorSlugs) {
+		for (const slug of selectedTagSlugs) {
 			const resolved = resolveMetric(slug);
-			if (resolved.kind !== "known" || resolved.metric.kind !== "factor") {
-				throw new TypeError(`Unknown factor slug: ${slug}`);
+			if (resolved.kind !== "known" || resolved.metric.kind !== "tag") {
+				throw new TypeError(`Unknown tag slug: ${slug}`);
 			}
 		}
 		const capturedAt = this.now();
 		const observedAt = capturedAt.getTime();
 		const localDay = localDayOf(capturedAt);
 		const tzOffsetMinutes = capturedAt.getTimezoneOffset();
-		const selected = new Set(selectedFactorSlugs);
+		const selected = new Set(selectedTagSlugs);
 
 		await this.db.withTransactionAsync(async () => {
 			const [tracked, activeHabits] = await Promise.all([
 				this.trackedMetrics.listResolved(DEFAULT_TRACKED_METRICS),
 				this.habits.listActive(),
 			]);
-			// Covered factors are not active here, which keeps them out of the
+			// Covered tags are not active here, which keeps them out of the
 			// panel's authority twice over: they cannot be passed in, and
 			// reconciliation will not delete the row their habit owns.
-			const covered = coveredFactorSlugs(activeHabits);
-			const activeFactorSlugs = new Set(
+			const covered = coveredTagSlugs(activeHabits);
+			const activeTagSlugs = new Set(
 				tracked
 					.filter((metric) => {
 						const resolved = resolveMetric(metric.metricSlug);
@@ -441,21 +441,21 @@ export class CheckInStore {
 							metric.enabled &&
 							!covered.has(metric.metricSlug) &&
 							resolved.kind === "known" &&
-							resolved.metric.kind === "factor"
+							resolved.metric.kind === "tag"
 						);
 					})
 					.map((metric) => metric.metricSlug),
 			);
 			for (const slug of selected) {
-				if (!activeFactorSlugs.has(slug)) {
-					throw new TypeError(`Factor is not active today: ${slug}`);
+				if (!activeTagSlugs.has(slug)) {
+					throw new TypeError(`Tag is not active today: ${slug}`);
 				}
 			}
-			await this.reconcileFactors(
+			await this.reconcileTags(
 				localDay,
 				observedAt,
 				tzOffsetMinutes,
-				activeFactorSlugs,
+				activeTagSlugs,
 				selected,
 			);
 		});
@@ -482,7 +482,7 @@ export class CheckInStore {
 		return await this.loadToday(capturedAt);
 	}
 
-	private async reconcileFactors(
+	private async reconcileTags(
 		localDay: string,
 		observedAt: number,
 		tzOffsetMinutes: number,
@@ -495,17 +495,17 @@ export class CheckInStore {
 				return (
 					active.has(row.metricSlug) &&
 					resolved.kind === "known" &&
-					resolved.metric.kind === "factor"
+					resolved.metric.kind === "tag"
 				);
 			},
 		);
 		const kept = new Set<string>();
 
-		for (const factor of current) {
-			if (!selected.has(factor.metricSlug) || kept.has(factor.metricSlug)) {
-				await this.observations.delete(factor.id);
+		for (const tag of current) {
+			if (!selected.has(tag.metricSlug) || kept.has(tag.metricSlug)) {
+				await this.observations.delete(tag.id);
 			} else {
-				kept.add(factor.metricSlug);
+				kept.add(tag.metricSlug);
 			}
 		}
 
@@ -515,7 +515,7 @@ export class CheckInStore {
 			}
 			await this.observations.create({
 				metricSlug: slug,
-				value: FACTOR_PRESENCE_VALUE,
+				value: TAG_PRESENCE_VALUE,
 				scaleMin: null,
 				scaleMax: null,
 				observedAt,

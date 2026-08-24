@@ -1,4 +1,4 @@
-import { listFactors, listScoredMetrics } from "@bro/domain/metric-registry";
+import { listScoredMetrics, listTags } from "@bro/domain/metric-registry";
 import { act, fireEvent, render, waitFor } from "@testing-library/react-native";
 import * as Haptics from "expo-haptics";
 import { Text } from "react-native";
@@ -40,8 +40,8 @@ const emptyToday: TodayCheckIn = {
 	localDay: "2026-08-14",
 	entries: [] as CheckInEntry[],
 	availableOptionalScores: [],
-	selectedFactorSlugs: [],
-	availableFactors: listFactors(),
+	selectedTagSlugs: [],
+	availableTags: listTags(),
 	availableMeasurements: [],
 	loggedMeasurements: [],
 	inputLocale: "en-GB",
@@ -125,7 +125,7 @@ function historyDay(localDay: string) {
 			},
 		],
 		unpairedScored: [],
-		factors: [],
+		tags: [],
 		assessments: [],
 		measurements: [],
 		unknown: [],
@@ -140,7 +140,7 @@ function checkInStore(today = emptyToday) {
 		loadToday: jest.fn(async () => today),
 		loadCheckInDays: jest.fn(async () => new Set<string>()),
 		saveCheckIn: jest.fn(async () => today),
-		saveDayFactors: jest.fn(async () => today),
+		saveDayTags: jest.fn(async () => today),
 		saveDayNote: jest.fn(async () => today),
 	};
 }
@@ -161,7 +161,7 @@ function supportingProps() {
 				localDay,
 				checkIns: [],
 				unpairedScored: [],
-				factors: [],
+				tags: [],
 				assessments: [],
 				measurements: [],
 				unknown: [],
@@ -504,7 +504,7 @@ describe("home screen", () => {
 		expect(screen.queryByText("Editing check-in")).toBeNull();
 	});
 
-	it("persists a factor the moment it is toggled, without a check-in", async () => {
+	it("persists a tag the moment it is toggled, without a check-in", async () => {
 		const store = checkInStore();
 		const screen = await render(
 			<HomeScreen
@@ -518,7 +518,7 @@ describe("home screen", () => {
 		await fireEvent.press(screen.getByLabelText("Training"));
 
 		await waitFor(() =>
-			expect(store.saveDayFactors).toHaveBeenCalledWith(["training"]),
+			expect(store.saveDayTags).toHaveBeenCalledWith(["training"]),
 		);
 		expect(store.saveCheckIn).not.toHaveBeenCalled();
 	});
@@ -946,7 +946,7 @@ describe("home screen", () => {
 					})),
 					loadCheckInDays: jest.fn(async () => new Set<string>()),
 					saveCheckIn: jest.fn(async () => emptyToday),
-					saveDayFactors: jest.fn(async () => emptyToday),
+					saveDayTags: jest.fn(async () => emptyToday),
 					saveDayNote: jest.fn(async () => emptyToday),
 				}}
 			/>,

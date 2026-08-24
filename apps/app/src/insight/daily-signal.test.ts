@@ -39,7 +39,7 @@ describe("daily insight signal", () => {
 
 	afterAll(() => mockSqlite.cleanup());
 
-	it("resolves scored, imported, factor, and consumption-derived signals", async () => {
+	it("resolves scored, imported, tag, and consumption-derived signals", async () => {
 		const observations = new databaseApp.ObservationRepository(db);
 		const daily = new databaseApp.DailyMetricRepository(db);
 		const consumption = new databaseApp.ConsumptionEntryRepository(db);
@@ -146,7 +146,7 @@ describe("daily insight signal", () => {
 		expect(
 			readDailySignal("training", "2026-08-16", {
 				...source,
-				factorActive: () => false,
+				tagActive: () => false,
 			}),
 		).toBeNull();
 		expect(readDailySignal("training", "2026-08-16", source)?.value).toBe(0);

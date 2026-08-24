@@ -74,18 +74,18 @@ export class InsightStore {
 				this.consumptionEntries.listAll(),
 				this.trackedMetrics.listAll(),
 			]);
-		const factorWindows = new Map<
+		const tagWindows = new Map<
 			string,
 			{ addedOn: string | null; removedOn: string | null }
 		>();
 		for (const tracked of trackedMetrics) {
-			if (factorWindows.has(tracked.metricSlug)) continue;
-			// Materialising an overlay for a default-on factor (for example by
+			if (tagWindows.has(tracked.metricSlug)) continue;
+			// Materialising an overlay for a default-on tag (for example by
 			// reordering it) stamps addedAt === createdAt; that is not evidence the
-			// factor was absent before then. A later re-enable has a newer addedAt.
+			// tag was absent before then. A later re-enable has a newer addedAt.
 			const effectiveAddedAt =
 				tracked.addedAt === tracked.createdAt ? null : tracked.addedAt;
-			factorWindows.set(tracked.metricSlug, {
+			tagWindows.set(tracked.metricSlug, {
 				addedOn:
 					effectiveAddedAt === null
 						? null
@@ -101,8 +101,8 @@ export class InsightStore {
 				(metric) => metric.metricSlug,
 			),
 		);
-		const factorActive = (metricSlug: string, localDay: string) => {
-			const window = factorWindows.get(metricSlug);
+		const tagActive = (metricSlug: string, localDay: string) => {
+			const window = tagWindows.get(metricSlug);
 			if (!window) return enabledByDefault.has(metricSlug);
 			if (window.addedOn !== null && localDay < window.addedOn) return false;
 			if (window.removedOn !== null && localDay > window.removedOn)
@@ -113,7 +113,7 @@ export class InsightStore {
 			observations: observations.filter(inWindow),
 			dailyMetrics: dailyMetrics.filter(inWindow),
 			consumptionEntries: consumptionEntries.filter(inWindow),
-			factorActive,
+			tagActive,
 		});
 	}
 
