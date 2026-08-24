@@ -28,7 +28,11 @@ export type TagSlug =
 	| "hangover"
 	| "muscle_soreness"
 	| "cold_exposure"
-	| "long_hours";
+	| "long_hours"
+	| "meditation"
+	| "anxiety"
+	| "family_time"
+	| "conflict";
 export type UserEnterableMeasurementSlug = "weight" | "waist" | "body_fat";
 export type UserEnterableMeasurementDimension = "mass" | "length" | "fraction";
 export type ImportedOnlyMeasurementSlug =
@@ -298,7 +302,7 @@ export const METRIC_REGISTRY = [
 	scored("libido", "Libido", 4, true),
 	tag("training", "Training", "body", 2),
 	tag("illness", "Illness", "body", 3),
-	tag("poor_sleep_environment", "Poor sleep environment", "body", 4),
+	tag("poor_sleep_environment", "Poor sleep environment", "lifestyle", 4),
 	tag("late_screen", "Late screen", "lifestyle", 7),
 	tag("junk_food", "Junk food", "lifestyle", 8),
 	tag("stress", "Stress", "mind", 9),
@@ -333,6 +337,18 @@ export const METRIC_REGISTRY = [
 		defaultEnabled: false,
 	}),
 	tag("long_hours", "Long hours", "lifestyle", 21, {
+		defaultEnabled: false,
+	}),
+	tag("meditation", "Meditation", "mind", 22, {
+		defaultEnabled: false,
+	}),
+	tag("anxiety", "Anxiety", "mind", 23, {
+		defaultEnabled: false,
+	}),
+	tag("family_time", "Family time", "social", 24, {
+		defaultEnabled: false,
+	}),
+	tag("conflict", "Conflict", "social", 25, {
 		defaultEnabled: false,
 	}),
 	measurement("weight", "Weight", "mass", 0),

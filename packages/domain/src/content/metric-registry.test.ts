@@ -60,7 +60,15 @@ describe("metric registry", () => {
 			"productivity",
 			"libido",
 		]);
-		expect(listTags()).toHaveLength(18);
+		expect(listTags()).toHaveLength(22);
+		expect(
+			Object.fromEntries(
+				["body", "lifestyle", "mind", "social", "sexual"].map((category) => [
+					category,
+					listTags().filter((metric) => metric.category === category).length,
+				]),
+			),
+		).toEqual({ body: 5, lifestyle: 5, mind: 4, social: 4, sexual: 4 });
 		expect(
 			listTags()
 				.filter((metric) => metric.sensitive)
