@@ -47,6 +47,14 @@ function dailyMetric(
 }
 
 describe("history store", () => {
+	it("treats a Mood observation as a check-in when Energy was disabled", () => {
+		const mood = observation("mood", "mood", 4);
+		const day = assembleHistoryDay("2026-08-14", [mood], []);
+
+		expect(day.checkIns).toMatchObject([{ mood, energy: null }]);
+		expect(day.unpairedScored).toEqual([]);
+	});
+
 	it("classifies assessment metrics separately from daily scored metrics", () => {
 		const wheel = observation(
 			"wheel-career",

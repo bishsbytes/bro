@@ -39,6 +39,7 @@ const FIXED_NOW = () => new Date(2026, 7, 14, 12);
 const emptyToday: TodayCheckIn = {
 	localDay: "2026-08-14",
 	entries: [] as CheckInEntry[],
+	energyEnabled: true,
 	availableOptionalScores: [],
 	selectedTagSlugs: [],
 	availableTags: listTags(),
@@ -367,6 +368,34 @@ describe("home screen", () => {
 					energy: 3,
 					additional: { motivation: 5, productivity: 4, libido: 2 },
 				},
+				null,
+			),
+		);
+	});
+
+	it("skips Energy when it is disabled", async () => {
+		const store = checkInStore({
+			...emptyToday,
+			energyEnabled: false,
+			availableOptionalScores: listScoredMetrics().filter(
+				(metric) => metric.slug === "motivation",
+			),
+		});
+		const screen = await render(
+			<HomeScreen
+				{...supportingProps()}
+				habitsStore={habitsStore()}
+				store={store}
+			/>,
+		);
+
+		await fireEvent.press(await screen.findByLabelText("Mood 4"));
+		expect(screen.queryByLabelText("Energy 3")).toBeNull();
+		await fireEvent.press(await screen.findByLabelText("Motivation 5"));
+
+		await waitFor(() =>
+			expect(store.saveCheckIn).toHaveBeenCalledWith(
+				{ mood: 4, additional: { motivation: 5 } },
 				null,
 			),
 		);

@@ -372,20 +372,23 @@ const metricsBySlug = new Map<string, MetricDefinition>(
 	METRIC_REGISTRY.map((metric) => [metric.slug, metric]),
 );
 
-/** Optional scored prompts that can be added to the core mood/energy check-in. */
-export const OPTIONAL_CHECK_IN_METRIC_SLUGS = [
+/** Scored prompts after Mood that users may include in or remove from check-ins. */
+export const CONFIGURABLE_CHECK_IN_METRIC_SLUGS = [
+	"energy",
 	"motivation",
 	"productivity",
 	"libido",
 ] as const;
 
-const optionalCheckInMetricSlugs = new Set<string>(
-	OPTIONAL_CHECK_IN_METRIC_SLUGS,
-);
+/** Configurable scores associated with a check-in through its Mood observation. */
+export const ADDITIONAL_CHECK_IN_METRIC_SLUGS = [
+	"motivation",
+	"productivity",
+	"libido",
+] as const;
 
 function defaultsToEnabled(metric: MetricDefinition): boolean {
 	if (metric.kind === "measurement") return false;
-	if (optionalCheckInMetricSlugs.has(metric.slug)) return false;
 	if (metric.kind === "tag") return metric.defaultEnabled;
 	return true;
 }
@@ -403,12 +406,11 @@ export const DEFAULT_TRACKED_METRICS = METRIC_REGISTRY.filter(
 }));
 
 /**
- * A check-in writes exactly these two scored metrics, together, in one
- * transaction. Any other observation on the same day — a weight, a wheel
- * review — is not a check-in, so nothing may infer "the user checked in
- * today" from an observation count.
+ * Mood is the one required check-in score. Every other scored prompt can be
+ * disabled, so completion must not depend on Energy or another configurable
+ * metric. Unrelated observations on the same day still do not count.
  */
-export const CHECK_IN_METRIC_SLUGS = ["mood", "energy"] as const;
+export const CHECK_IN_METRIC_SLUGS = ["mood"] as const;
 
 export function hasCompletedCheckIn(
 	observations: readonly { readonly metricSlug: string }[],

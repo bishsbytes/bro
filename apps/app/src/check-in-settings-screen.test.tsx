@@ -11,9 +11,15 @@ jest.mock("expo-router", () => ({
 const initial = {
 	metrics: [
 		{
+			metricSlug: "energy",
+			label: "Energy",
+			enabled: true,
+			sensitive: false,
+		},
+		{
 			metricSlug: "motivation",
 			label: "Motivation",
-			enabled: false,
+			enabled: true,
 			sensitive: false,
 		},
 		{
@@ -42,7 +48,7 @@ const initial = {
 };
 
 describe("check-in settings screen", () => {
-	it("labels sensitive prompts and persists an enabled prompt", async () => {
+	it("labels sensitive prompts and lets Energy be removed", async () => {
 		const store = {
 			load: jest.fn(async () => initial),
 			setEnabled: jest.fn(async (metricSlug: string, enabled: boolean) => ({
@@ -60,16 +66,14 @@ describe("check-in settings screen", () => {
 			await view.findByText("Sensitive · scored from 1 to 5"),
 		).toBeTruthy();
 		await fireEvent(
-			view.getByLabelText("Add Motivation from check-ins"),
+			view.getByLabelText("Remove Energy from check-ins"),
 			"valueChange",
-			true,
+			false,
 		);
 		await waitFor(() =>
-			expect(store.setEnabled).toHaveBeenCalledWith("motivation", true),
+			expect(store.setEnabled).toHaveBeenCalledWith("energy", false),
 		);
-		expect(
-			view.getByLabelText("Remove Motivation from check-ins"),
-		).toBeTruthy();
+		expect(view.getByLabelText("Add Energy from check-ins")).toBeTruthy();
 	});
 
 	it("groups the panel tags by category and turns one on", async () => {

@@ -211,6 +211,6 @@ describe("history and day view", () => {
 		expect(trendsView.getByText("Energy")).toBeTruthy();
 		expect(trendsView.getByText("7 days")).toBeTruthy();
 		expect(trendsView.getByText("30 days")).toBeTruthy();
-		expect(trendsView.getAllByText(/Log 7 more days/)).toHaveLength(2);
+		expect(trendsView.getAllByText(/Log 7 more days/)).toHaveLength(5);
 	});
 });

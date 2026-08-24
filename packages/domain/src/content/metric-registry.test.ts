@@ -1,5 +1,7 @@
 import {
+	ADDITIONAL_CHECK_IN_METRIC_SLUGS,
 	CHECK_IN_METRIC_SLUGS,
+	CONFIGURABLE_CHECK_IN_METRIC_SLUGS,
 	DEFAULT_TRACKED_METRICS,
 	hasCompletedCheckIn,
 	listAssessmentMetrics,
@@ -10,7 +12,6 @@ import {
 	listTags,
 	listUserEnterableMeasurements,
 	METRIC_REGISTRY,
-	OPTIONAL_CHECK_IN_METRIC_SLUGS,
 	resolveMetric,
 } from "./metric-registry";
 
@@ -90,11 +91,16 @@ describe("metric registry", () => {
 			kind: "known",
 			metric: { kind: "scored", sensitive: true },
 		});
-		for (const slug of ["motivation", "productivity", "libido"]) {
+		for (const slug of CONFIGURABLE_CHECK_IN_METRIC_SLUGS) {
 			expect(
 				DEFAULT_TRACKED_METRICS.find((metric) => metric.metricSlug === slug),
-			).toMatchObject({ enabled: false });
+			).not.toHaveProperty("enabled", false);
 		}
+		expect(ADDITIONAL_CHECK_IN_METRIC_SLUGS).toEqual([
+			"motivation",
+			"productivity",
+			"libido",
+		]);
 		expect(listMeasurements()).toEqual([
 			expect.objectContaining({
 				slug: "weight",
@@ -279,7 +285,6 @@ describe("metric registry", () => {
 				metricSlug: metric.slug,
 				position: metric.defaultPosition,
 				...(metric.kind === "measurement" ||
-				OPTIONAL_CHECK_IN_METRIC_SLUGS.some((slug) => slug === metric.slug) ||
 				(metric.kind === "tag" && !metric.defaultEnabled)
 					? { enabled: false }
 					: {}),
@@ -331,12 +336,12 @@ describe("metric registry", () => {
 		}
 	});
 
-	it("counts a check-in only from the full scored pair", () => {
+	it("counts Mood as a check-in without requiring configurable scores", () => {
 		for (const slug of CHECK_IN_METRIC_SLUGS) {
 			expect(listScoredMetrics().some((metric) => metric.slug === slug)).toBe(
 				true,
 			);
-			expect(hasCompletedCheckIn([{ metricSlug: slug }])).toBe(false);
+			expect(hasCompletedCheckIn([{ metricSlug: slug }])).toBe(true);
 		}
 
 		expect(hasCompletedCheckIn([])).toBe(false);
@@ -346,10 +351,9 @@ describe("metric registry", () => {
 				{ metricSlug: "wheel:physical-health" },
 			]),
 		).toBe(false);
+		expect(hasCompletedCheckIn([{ metricSlug: "energy" }])).toBe(false);
 		expect(
-			hasCompletedCheckIn(
-				CHECK_IN_METRIC_SLUGS.map((metricSlug) => ({ metricSlug })),
-			),
+			hasCompletedCheckIn([{ metricSlug: "mood" }, { metricSlug: "energy" }]),
 		).toBe(true);
 	});
 });

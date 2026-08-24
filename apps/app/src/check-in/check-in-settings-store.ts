@@ -1,30 +1,30 @@
 import { getDb, TrackedMetricsRepository } from "@bro/database-app";
 import {
+	CONFIGURABLE_CHECK_IN_METRIC_SLUGS,
 	DEFAULT_TRACKED_METRICS,
-	OPTIONAL_CHECK_IN_METRIC_SLUGS,
 	resolveMetric,
 	type TagCategory,
 } from "@bro/domain/metric-registry";
 import type { SQLiteDatabase } from "expo-sqlite";
 
-export type OptionalCheckInSetting = {
+export type CheckInScoreSetting = {
 	metricSlug: string;
 	label: string;
 	enabled: boolean;
 	sensitive: boolean;
 };
 
-export type CheckInTagSetting = OptionalCheckInSetting & {
+export type CheckInTagSetting = CheckInScoreSetting & {
 	category: TagCategory;
 };
 
 export type CheckInSettingsSnapshot = {
-	metrics: OptionalCheckInSetting[];
+	metrics: CheckInScoreSetting[];
 	tags: CheckInTagSetting[];
 };
 
-const optionalDefaults = DEFAULT_TRACKED_METRICS.filter((metric) =>
-	OPTIONAL_CHECK_IN_METRIC_SLUGS.some((slug) => slug === metric.metricSlug),
+const scoreDefaults = DEFAULT_TRACKED_METRICS.filter((metric) =>
+	CONFIGURABLE_CHECK_IN_METRIC_SLUGS.some((slug) => slug === metric.metricSlug),
 );
 
 const tagDefaults = DEFAULT_TRACKED_METRICS.filter((metric) => {
@@ -36,7 +36,7 @@ const tagDefaults = DEFAULT_TRACKED_METRICS.filter((metric) => {
  * Everything this screen may toggle. Both lists resolve in one read so the
  * scores and the panel tags cannot disagree about the overlay they came from.
  */
-const configurableDefaults = [...optionalDefaults, ...tagDefaults];
+const configurableDefaults = [...scoreDefaults, ...tagDefaults];
 
 export class CheckInSettingsStore {
 	private readonly trackedMetrics: TrackedMetricsRepository;
@@ -48,7 +48,7 @@ export class CheckInSettingsStore {
 	async load(): Promise<CheckInSettingsSnapshot> {
 		const overlays =
 			await this.trackedMetrics.listResolved(configurableDefaults);
-		const metrics: OptionalCheckInSetting[] = [];
+		const metrics: CheckInScoreSetting[] = [];
 		const tags: CheckInTagSetting[] = [];
 
 		for (const overlay of overlays) {

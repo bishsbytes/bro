@@ -30,35 +30,41 @@ describe("check-in settings store", () => {
 
 	afterAll(() => mockSqlite.cleanup());
 
-	it("keeps optional prompts off by default and persists each toggle", async () => {
+	it("enables every configurable score by default and persists each toggle", async () => {
 		const store = new CheckInSettingsStore(db);
 		const loaded = await store.load();
 		expect(loaded.metrics).toEqual([
 			{
+				metricSlug: "energy",
+				label: "Energy",
+				enabled: true,
+				sensitive: false,
+			},
+			{
 				metricSlug: "motivation",
 				label: "Motivation",
-				enabled: false,
+				enabled: true,
 				sensitive: false,
 			},
 			{
 				metricSlug: "productivity",
 				label: "Productivity",
-				enabled: false,
+				enabled: true,
 				sensitive: false,
 			},
 			{
 				metricSlug: "libido",
 				label: "Libido",
-				enabled: false,
+				enabled: true,
 				sensitive: true,
 			},
 		]);
 
 		expect(
-			(await store.setEnabled("motivation", true)).metrics.find(
-				(metric) => metric.metricSlug === "motivation",
+			(await store.setEnabled("energy", false)).metrics.find(
+				(metric) => metric.metricSlug === "energy",
 			),
-		).toMatchObject({ metricSlug: "motivation", enabled: true });
+		).toMatchObject({ metricSlug: "energy", enabled: false });
 		await expect(store.setEnabled("mood", false)).rejects.toThrow(
 			"Unknown check-in setting: mood",
 		);

@@ -94,9 +94,12 @@ describe("daily check-in flow", () => {
 		await act(async () => undefined);
 		await view.findByLabelText("Mood 4");
 
-		// The energy tap is what commits the check-in — there is no Save button.
+		// The last enabled score commits the check-in — there is no Save button.
 		await fireEvent.press(view.getByLabelText("Mood 4"));
 		await fireEvent.press(await view.findByLabelText("Energy 3"));
+		await fireEvent.press(await view.findByLabelText("Motivation 5"));
+		await fireEvent.press(await view.findByLabelText("Productivity 4"));
+		await fireEvent.press(await view.findByLabelText("Libido 2"));
 
 		expect(await view.findByText("1 check-in")).toBeTruthy();
 		const observations = new databaseApp.ObservationRepository(db);
@@ -104,8 +107,8 @@ describe("daily check-in flow", () => {
 		const localDay = (await new CheckInStore(db).loadToday()).localDay;
 		expect(
 			(await observations.listByDay(localDay)).map((r) => r.metricSlug),
-		).toEqual(["mood", "energy"]);
-		// The pair is one transaction: a check-in never exists half-scored.
+		).toEqual(["mood", "energy", "motivation", "productivity", "libido"]);
+		// Every enabled score is written in one transaction.
 		expect(transaction).toHaveBeenCalledTimes(1);
 
 		// Tags and the note describe the day, and each save its own write.
@@ -140,13 +143,19 @@ describe("daily check-in flow", () => {
 		const firstDay = await observations.listByDay(localDay);
 		expect(firstDay.map((row) => row.metricSlug).sort()).toEqual([
 			"energy",
+			"libido",
 			"mood",
+			"motivation",
 			"outdoors",
+			"productivity",
 			"weight",
 		]);
 
 		await fireEvent.press(view.getByLabelText("Mood 5"));
 		await fireEvent.press(await view.findByLabelText("Energy 4"));
+		await fireEvent.press(await view.findByLabelText("Motivation 4"));
+		await fireEvent.press(await view.findByLabelText("Productivity 3"));
+		await fireEvent.press(await view.findByLabelText("Libido 1"));
 		expect(await view.findByText("2 check-ins")).toBeTruthy();
 
 		// Tags belong to the day, so deselecting clears it for the day rather

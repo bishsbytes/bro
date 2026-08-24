@@ -40,13 +40,13 @@ function CheckInEditor({
 	onSave: (
 		checkIn: HistoricalCheckIn,
 		mood: number,
-		energy: number,
+		energy: number | null,
 		additional: Readonly<Record<string, number>>,
 	) => void;
 	onDelete: (checkIn: HistoricalCheckIn) => void;
 }) {
 	const [mood, setMood] = useState(checkIn.mood.value);
-	const [energy, setEnergy] = useState(checkIn.energy.value);
+	const [energy, setEnergy] = useState(checkIn.energy?.value ?? null);
 	const [additional, setAdditional] = useState<Record<string, number>>(
 		Object.fromEntries(
 			checkIn.optionalScores.map((score) => [score.metricSlug, score.value]),
@@ -62,21 +62,25 @@ function CheckInEditor({
 				})}
 			</AppText>
 			<AppText variant="micro" color="subtle">
-				Mood source: {checkIn.mood.source} · Energy source:{" "}
-				{checkIn.energy.source}
+				Mood source: {checkIn.mood.source}
+				{checkIn.energy ? ` · Energy source: ${checkIn.energy.source}` : ""}
 			</AppText>
 			<AppText variant="label" color="muted">
 				Mood
 			</AppText>
 			<ScoreRow accessibilityPrefix="Mood" selected={mood} onSelect={setMood} />
-			<AppText variant="label" color="muted">
-				Energy
-			</AppText>
-			<ScoreRow
-				accessibilityPrefix="Energy"
-				selected={energy}
-				onSelect={setEnergy}
-			/>
+			{checkIn.energy ? (
+				<>
+					<AppText variant="label" color="muted">
+						Energy
+					</AppText>
+					<ScoreRow
+						accessibilityPrefix="Energy"
+						selected={energy}
+						onSelect={setEnergy}
+					/>
+				</>
+			) : null}
 			{checkIn.optionalScores.map((score) => {
 				const resolved = resolveMetric(score.metricSlug);
 				const label =

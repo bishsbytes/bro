@@ -54,7 +54,7 @@ describe("trends store", () => {
 
 		expect(
 			(await store.load(7)).metrics.map(({ metric }) => metric.slug),
-		).toEqual(["mood", "energy"]);
+		).toEqual(["mood", "energy", "motivation", "productivity", "libido"]);
 		await tracked.configure("weight", 0, true);
 		await tracked.relabel("weight", "Morning weight", {
 			position: 0,
@@ -90,17 +90,17 @@ describe("trends store", () => {
 		expect(weight?.series.points.at(-1)?.value).toBe(77.56429527);
 	});
 
-	it("adds optional check-in scores to trends only after opt-in", async () => {
+	it("includes every default score and removes one after opt-out", async () => {
 		const tracked = new databaseApp.TrackedMetricsRepository(db);
 		const store = new TrendsStore(db);
 
 		expect(
 			(await store.load(7)).metrics.map(({ metric }) => metric.slug),
-		).toEqual(["mood", "energy"]);
-		await tracked.configure("motivation", 2, true);
+		).toEqual(["mood", "energy", "motivation", "productivity", "libido"]);
+		await tracked.configure("energy", 1, false);
 		expect(
 			(await store.load(7)).metrics.map(({ metric }) => metric.slug),
-		).toEqual(["mood", "energy", "motivation"]);
+		).toEqual(["mood", "motivation", "productivity", "libido"]);
 	});
 
 	it("keeps the no-connection trends snapshot unchanged", async () => {
@@ -113,7 +113,7 @@ describe("trends store", () => {
 
 		expect(
 			(await store.load(7)).metrics.map(({ metric }) => metric.slug),
-		).toEqual(["mood", "energy"]);
+		).toEqual(["mood", "energy", "motivation", "productivity", "libido"]);
 	});
 
 	it("adds imported metrics and resolves tracker values over manual values", async () => {
@@ -161,6 +161,9 @@ describe("trends store", () => {
 		expect(snapshot.metrics.map(({ metric }) => metric.slug)).toEqual([
 			"mood",
 			"energy",
+			"motivation",
+			"productivity",
+			"libido",
 			"weight",
 			"sleep_duration",
 			"resting_heart_rate",

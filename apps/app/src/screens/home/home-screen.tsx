@@ -114,7 +114,7 @@ function checkInScoreSummary(
 	});
 	return [
 		`Mood ${checkIn.mood.value}`,
-		`Energy ${checkIn.energy.value}`,
+		...(checkIn.energy ? [`Energy ${checkIn.energy.value}`] : []),
 		...optional,
 	].join(" · ");
 }
@@ -764,7 +764,7 @@ export function HomeScreen({
 
 	function startEditing(entry: CheckInEntry) {
 		setMood(entry.mood.value);
-		setEnergy(entry.energy.value);
+		setEnergy(entry.energy?.value ?? null);
 		setAdditionalScores(
 			Object.fromEntries(
 				entry.optionalScores.map((score) => [score.metricSlug, score.value]),
@@ -783,10 +783,11 @@ export function HomeScreen({
 	}
 
 	async function commitCheckIn(
-		energyScore: number,
+		moodScore: number,
+		energyScore: number | undefined,
 		additional: Readonly<Record<string, number>>,
 	) {
-		if (!today || mood === null || savingRef.current) return;
+		if (!today || savingRef.current) return;
 		savingRef.current = true;
 		setSaving(true);
 		setError(null);
@@ -801,8 +802,8 @@ export function HomeScreen({
 			);
 			const saved = await checkIns.saveCheckIn(
 				{
-					mood,
-					energy: energyScore,
+					mood: moodScore,
+					...(energyScore === undefined ? {} : { energy: energyScore }),
 					...(today.availableOptionalScores.length > 0
 						? { additional: activeAdditional }
 						: {}),
@@ -830,7 +831,7 @@ export function HomeScreen({
 		setEnergy(score);
 		setAdditionalScores({});
 		if (today.availableOptionalScores.length === 0) {
-			void commitCheckIn(score, {});
+			void commitCheckIn(mood, score, {});
 		}
 	}
 
@@ -839,7 +840,10 @@ export function HomeScreen({
 		score: number,
 		index: number,
 	) {
-		if (!today || energy === null || savingRef.current) return;
+		if (!today || mood === null || savingRef.current) return;
+		const energyRequired =
+			today.energyEnabled || (editing !== null && editing.energy !== null);
+		if (energyRequired && energy === null) return;
 		playSelectionHaptic();
 		const laterSlugs = new Set(
 			today.availableOptionalScores
@@ -853,17 +857,22 @@ export function HomeScreen({
 		);
 		setAdditionalScores(next);
 		if (index === today.availableOptionalScores.length - 1) {
-			void commitCheckIn(energy, next);
+			void commitCheckIn(mood, energy ?? undefined, next);
 		}
 	}
 
 	function chooseMood(score: number) {
-		if (savingRef.current) return;
+		if (!today || savingRef.current) return;
 		playSelectionHaptic();
 		setMood(score);
 		setEnergy(null);
 		setAdditionalScores({});
 		setError(null);
+		const energyRequired =
+			today.energyEnabled || (editing !== null && editing.energy !== null);
+		if (!energyRequired && today.availableOptionalScores.length === 0) {
+			void commitCheckIn(score, undefined, {});
+		}
 	}
 
 	async function saveNote() {
@@ -922,6 +931,8 @@ export function HomeScreen({
 		}),
 	);
 	const checkInCount = today.entries.length;
+	const showEnergy =
+		today.energyEnabled || (editing !== null && editing.energy !== null);
 	const checkInsSection = (
 		<View style={styles.section}>
 			<SectionHeader
@@ -961,7 +972,7 @@ export function HomeScreen({
 					disabled={saving}
 				/>
 
-				{mood !== null ? (
+				{mood !== null && showEnergy ? (
 					<>
 						<AppText
 							variant="label"
@@ -987,7 +998,8 @@ export function HomeScreen({
 
 				{today.availableOptionalScores.map((metric, index) => {
 					const previousComplete =
-						energy !== null &&
+						mood !== null &&
+						(!showEnergy || energy !== null) &&
 						(index === 0 ||
 							additionalScores[
 								today.availableOptionalScores[index - 1]?.slug

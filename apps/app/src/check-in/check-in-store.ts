@@ -15,9 +15,9 @@ import {
 	systemLocale,
 } from "@bro/domain";
 import {
+	ADDITIONAL_CHECK_IN_METRIC_SLUGS,
 	DEFAULT_TRACKED_METRICS,
 	listTags,
-	OPTIONAL_CHECK_IN_METRIC_SLUGS,
 	resolveMetric,
 	type ScoredMetricDefinition,
 	TAG_PRESENCE_VALUE,
@@ -38,13 +38,14 @@ export type CheckInEntry = {
 	id: string;
 	observedAt: number;
 	mood: Observation;
-	energy: Observation;
+	energy: Observation | null;
 	optionalScores: Observation[];
 };
 
 export type TodayCheckIn = {
 	localDay: string;
 	entries: CheckInEntry[];
+	energyEnabled: boolean;
 	availableOptionalScores: ScoredMetricDefinition[];
 	selectedTagSlugs: string[];
 	availableTags: TagMetricDefinition[];
@@ -63,24 +64,37 @@ export type LoggedCheckInMeasurement = CheckInMeasurement & {
 
 export type CheckInScores = {
 	mood: number;
-	energy: number;
+	energy?: number;
 	additional?: Readonly<Record<string, number>>;
 };
 
-const optionalScoreSlugs = new Set<string>(OPTIONAL_CHECK_IN_METRIC_SLUGS);
+const optionalScoreSlugs = new Set<string>(ADDITIONAL_CHECK_IN_METRIC_SLUGS);
 
 function pairCheckIns(observations: readonly Observation[]): CheckInEntry[] {
 	const moods = observations.filter((row) => row.metricSlug === "mood");
 	const energies = observations.filter((row) => row.metricSlug === "energy");
-	const pairCount = Math.min(moods.length, energies.length);
+	const usedEnergyIds = new Set<string>();
 	const entries: CheckInEntry[] = [];
 
-	for (let index = 0; index < pairCount; index += 1) {
-		const mood = moods[index];
-		const energy = energies[index];
+	for (const mood of moods) {
+		const energy =
+			energies.find(
+				(row) => !usedEnergyIds.has(row.id) && row.sourceRecordId === mood.id,
+			) ??
+			energies.find(
+				(row) =>
+					!usedEnergyIds.has(row.id) &&
+					row.sourceRecordId === null &&
+					row.observedAt === mood.observedAt,
+			) ??
+			null;
+		if (energy) usedEnergyIds.add(energy.id);
 		entries.push({
 			id: mood.id,
-			observedAt: Math.max(mood.observedAt, energy.observedAt),
+			observedAt: Math.max(
+				mood.observedAt,
+				energy?.observedAt ?? mood.observedAt,
+			),
 			mood,
 			energy,
 			optionalScores: observations.filter(
@@ -119,9 +133,9 @@ function latestObservation(
 }
 
 function assertScores(scores: CheckInScores): void {
-	for (const [label, value] of [
-		["Mood", scores.mood],
-		["Energy", scores.energy],
+	const values: (readonly [string, number])[] = [["Mood", scores.mood]];
+	if (scores.energy !== undefined) values.push(["Energy", scores.energy]);
+	values.push(
 		...Object.entries(scores.additional ?? {}).map(([slug, value]) => {
 			const resolved = resolveMetric(slug);
 			if (
@@ -133,7 +147,8 @@ function assertScores(scores: CheckInScores): void {
 			}
 			return [resolved.metric.label, value] as const;
 		}),
-	] as const) {
+	);
+	for (const [label, value] of values) {
 		if (!Number.isInteger(value) || value < 1 || value > 5) {
 			throw new RangeError(`${label} must be a whole number from 1 to 5.`);
 		}
@@ -180,7 +195,7 @@ export class CheckInStore {
 				.filter((metric) => metric.enabled)
 				.map((metric) => metric.metricSlug),
 		);
-		const availableOptionalScores = OPTIONAL_CHECK_IN_METRIC_SLUGS.flatMap(
+		const availableOptionalScores = ADDITIONAL_CHECK_IN_METRIC_SLUGS.flatMap(
 			(slug) => {
 				if (!enabledSlugs.has(slug)) return [];
 				const resolved = resolveMetric(slug);
@@ -250,6 +265,7 @@ export class CheckInStore {
 		return {
 			localDay,
 			entries: pairCheckIns(observations),
+			energyEnabled: enabledSlugs.has("energy"),
 			availableOptionalScores,
 			selectedTagSlugs: [
 				...new Set(
@@ -287,9 +303,9 @@ export class CheckInStore {
 	}
 
 	/**
-	 * Records one mood-and-energy pair. The two rows are written together so a
-	 * check-in never exists half-scored, and the reminder schedule is refreshed
-	 * afterwards because only this pair marks the day as checked in.
+	 * Records one check-in rooted in Mood, plus whichever configurable scores
+	 * are active. The rows are written together and the reminder schedule is
+	 * refreshed afterwards because Mood marks the day as checked in.
 	 */
 	async saveCheckIn(
 		draft: CheckInScores,
@@ -314,14 +330,29 @@ export class CheckInStore {
 					localDay: entry.mood.localDay,
 					tzOffsetMinutes: entry.mood.tzOffsetMinutes,
 				});
-				await this.observations.update(entry.energy.id, {
-					value: draft.energy,
-					scaleMin: entry.energy.scaleMin,
-					scaleMax: entry.energy.scaleMax,
-					observedAt: entry.energy.observedAt,
-					localDay: entry.energy.localDay,
-					tzOffsetMinutes: entry.energy.tzOffsetMinutes,
-				});
+				if (entry.energy && draft.energy !== undefined) {
+					await this.observations.update(entry.energy.id, {
+						value: draft.energy,
+						scaleMin: entry.energy.scaleMin,
+						scaleMax: entry.energy.scaleMax,
+						observedAt: entry.energy.observedAt,
+						localDay: entry.energy.localDay,
+						tzOffsetMinutes: entry.energy.tzOffsetMinutes,
+					});
+				} else if (!entry.energy && draft.energy !== undefined) {
+					await this.observations.create({
+						metricSlug: "energy",
+						value: draft.energy,
+						scaleMin: 1,
+						scaleMax: 5,
+						observedAt: entry.mood.observedAt,
+						localDay: entry.mood.localDay,
+						tzOffsetMinutes: entry.mood.tzOffsetMinutes,
+						source: "user",
+						sourceRecordId: entry.id,
+						assessmentId: null,
+					});
+				}
 				for (const [metricSlug, value] of Object.entries(
 					draft.additional ?? {},
 				)) {
@@ -366,18 +397,20 @@ export class CheckInStore {
 				sourceRecordId: null,
 				assessmentId: null,
 			});
-			await this.observations.create({
-				metricSlug: "energy",
-				value: draft.energy,
-				scaleMin: 1,
-				scaleMax: 5,
-				observedAt,
-				localDay,
-				tzOffsetMinutes,
-				source: "user",
-				sourceRecordId: null,
-				assessmentId: null,
-			});
+			if (draft.energy !== undefined) {
+				await this.observations.create({
+					metricSlug: "energy",
+					value: draft.energy,
+					scaleMin: 1,
+					scaleMax: 5,
+					observedAt,
+					localDay,
+					tzOffsetMinutes,
+					source: "user",
+					sourceRecordId: mood.id,
+					assessmentId: null,
+				});
+			}
 			for (const [metricSlug, value] of Object.entries(
 				draft.additional ?? {},
 			)) {

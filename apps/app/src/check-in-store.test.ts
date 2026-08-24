@@ -171,7 +171,25 @@ describe("check-in store", () => {
 		transaction.mockRestore();
 	});
 
-	it("writes enabled optional scores with the check-in and retains them when disabled", async () => {
+	it("writes a Mood-only check-in when Energy is disabled", async () => {
+		const observations = new databaseApp.ObservationRepository(db);
+		const tracked = new databaseApp.TrackedMetricsRepository(db);
+		await tracked.configure("energy", 1, false);
+		const store = new CheckInStore(db, () => CAPTURED_AT);
+
+		expect((await store.loadToday()).energyEnabled).toBe(false);
+		const saved = await store.saveCheckIn({ mood: 4 });
+
+		expect(await observations.listByDay(LOCAL_DAY)).toMatchObject([
+			{ metricSlug: "mood", value: 4, scaleMin: 1, scaleMax: 5 },
+		]);
+		expect(saved.entries).toMatchObject([{ mood: { value: 4 }, energy: null }]);
+		expect(hasCompletedCheckIn(await observations.listByDay(LOCAL_DAY))).toBe(
+			true,
+		);
+	});
+
+	it("writes enabled additional scores and retains them when disabled", async () => {
 		const observations = new databaseApp.ObservationRepository(db);
 		const tracked = new databaseApp.TrackedMetricsRepository(db);
 		await tracked.configure("motivation", 2, true);
@@ -179,6 +197,7 @@ describe("check-in store", () => {
 		await tracked.configure("libido", 4, true);
 		const store = new CheckInStore(db, () => CAPTURED_AT);
 
+		expect((await store.loadToday()).energyEnabled).toBe(true);
 		expect(
 			(await store.loadToday()).availableOptionalScores.map(
 				(metric) => metric.slug,

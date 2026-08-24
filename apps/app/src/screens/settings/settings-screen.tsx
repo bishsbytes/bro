@@ -103,7 +103,7 @@ export function SettingsScreen({
 			<HealthSettingsEntry availability={healthAvailability} />
 			<ListRow
 				title="Check-ins"
-				detail="Add optional scores such as motivation, productivity, and libido."
+				detail="Choose which scores appear after Mood."
 				accessibilityLabel="Manage check-ins"
 				onPress={() => router.push("/settings/check-ins" as Href)}
 			/>
