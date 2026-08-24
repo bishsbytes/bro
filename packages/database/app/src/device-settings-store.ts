@@ -1,9 +1,9 @@
 export const DEVICE_SETTINGS_DATABASE_NAME = "bro-device.db";
 
-export const THEME_MODES = ["system", "light", "dark"] as const;
+const THEME_MODES = ["system", "light", "dark"] as const;
 export type ThemeMode = (typeof THEME_MODES)[number];
 
-export const ACCENT_COLORS = [
+const ACCENT_COLORS = [
 	"neutral",
 	"emerald",
 	"sky",

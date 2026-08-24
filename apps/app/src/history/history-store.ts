@@ -149,7 +149,7 @@ function pairCheckIns(
  * against the previous day can load those rows without assembling the check-ins,
  * notes, habits and challenges nobody reads from it.
  */
-export function assembleMeasurements(
+function assembleMeasurements(
 	localDay: string,
 	observations: readonly Observation[],
 	dailyMetrics: readonly DailyMetric[] = [],

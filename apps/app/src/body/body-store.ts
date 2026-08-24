@@ -84,7 +84,7 @@ function measurementDefaults() {
 	}));
 }
 
-export function formatPresentedMeasurement(
+function formatPresentedMeasurement(
 	value: number,
 	presentation: BodyMetricPresentation,
 ): string {

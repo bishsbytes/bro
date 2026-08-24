@@ -26,7 +26,7 @@ import {
 	scaleNullable,
 } from "../consumption/consumption-store";
 
-export const FOOD_METRIC_SLUGS = [
+const FOOD_METRIC_SLUGS = [
 	"energy_intake",
 	"protein_intake",
 	"carbs_intake",

@@ -35,7 +35,7 @@ import {
 	type PresentedConsumptionEntry,
 } from "../consumption/consumption-store";
 
-export const DRINK_METRIC_SLUGS = [
+const DRINK_METRIC_SLUGS = [
 	"alcohol_intake",
 	"caffeine_intake",
 	"fluid_intake",

@@ -41,7 +41,7 @@ type UnitPreferences = Pick<
 	"resolveLatestPerDimension" | "set"
 >;
 
-export const WEEK_START_PREFERENCE_DIMENSION = "week_start";
+const WEEK_START_PREFERENCE_DIMENSION = "week_start";
 
 export const WEEK_START_OPTIONS = [
 	{ day: "monday", label: "Monday" },

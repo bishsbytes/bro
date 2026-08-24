@@ -161,7 +161,7 @@ function uniqueRecents(
 	});
 }
 
-export function parseMetricInput(
+function parseMetricInput(
 	metric: ConsumptionDerivedMeasurementMetricDefinition,
 	displayUnit: DisplayUnit,
 	input: string,

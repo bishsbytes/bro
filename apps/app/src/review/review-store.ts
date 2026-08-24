@@ -128,7 +128,7 @@ function scoresFor(
 		});
 }
 
-export function compareWheelScores(
+function compareWheelScores(
 	current: readonly WheelScore[],
 	previous: readonly WheelScore[],
 ): WheelComparison[] {
