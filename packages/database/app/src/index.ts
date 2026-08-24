@@ -144,6 +144,11 @@ export {
 	UnitPreferenceRepository,
 } from "./repositories/unit-preference-repository";
 export {
+	assertScopeFor,
+	type TransactionScope,
+	withTransaction,
+} from "./transaction";
+export {
 	createDailyMetricId,
 	createUuidV5,
 	DAILY_METRIC_UUID_NAMESPACE,

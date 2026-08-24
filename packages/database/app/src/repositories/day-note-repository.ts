@@ -1,4 +1,5 @@
 import type { DayNote } from "@bro/mobile-model";
+import type { TransactionScope } from "../transaction";
 import { BaseRepository } from "./base-repository";
 
 export type { DayNote } from "@bro/mobile-model";
@@ -68,17 +69,24 @@ export class DayNoteRepository extends BaseRepository {
 		return rows.map(toDayNote);
 	}
 
-	async upsertForDay(localDay: string, body: string): Promise<DayNote> {
-		return await this.transaction(async () =>
-			this.upsertForDayInCurrentTransaction(localDay, body),
+	/**
+	 * Writes the day's single note, replacing any note already there.
+	 *
+	 * Pass `scope` to join a transaction the caller already holds, for a note
+	 * that must land with the rest of a larger domain write.
+	 */
+	async upsertForDay(
+		localDay: string,
+		body: string,
+		scope?: TransactionScope,
+	): Promise<DayNote> {
+		return await this.transaction(
+			async () => await this.upsert(localDay, body),
+			scope,
 		);
 	}
 
-	/** Used by a larger domain transaction that already owns the database lock. */
-	async upsertForDayInCurrentTransaction(
-		localDay: string,
-		body: string,
-	): Promise<DayNote> {
+	private async upsert(localDay: string, body: string): Promise<DayNote> {
 		const existing = await this.first<DayNoteRow>(
 			`SELECT id, local_day, body, created_at, updated_at
 			 FROM day_notes WHERE local_day = ?

@@ -1,5 +1,6 @@
 import { isCalendarDay } from "@bro/domain";
 import type { HabitCompletion } from "@bro/mobile-model";
+import type { TransactionScope } from "../transaction";
 import { BaseRepository } from "./base-repository";
 
 export type { HabitCompletion } from "@bro/mobile-model";
@@ -28,7 +29,18 @@ function toHabitCompletion(row: HabitCompletionRow): HabitCompletion {
 }
 
 export class HabitCompletionRepository extends BaseRepository {
-	async complete(habitId: string, localDay: string): Promise<HabitCompletion> {
+	/**
+	 * Marks a manual habit complete for the day, idempotently.
+	 *
+	 * Pass `scope` to join a transaction the caller already holds — a completion
+	 * that must land with something else, such as the check-in factor the habit
+	 * stands in for.
+	 */
+	async complete(
+		habitId: string,
+		localDay: string,
+		scope?: TransactionScope,
+	): Promise<HabitCompletion> {
 		if (!habitId.trim()) {
 			throw new TypeError("Habit id must not be empty.");
 		}
@@ -84,7 +96,7 @@ export class HabitCompletionRepository extends BaseRepository {
 				throw new Error("Habit completion did not persist a row.");
 			}
 			return persisted;
-		});
+		}, scope);
 	}
 
 	async findByHabitDay(

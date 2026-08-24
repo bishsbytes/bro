@@ -1,4 +1,9 @@
 import type { SQLiteDatabase, SQLiteRunResult } from "expo-sqlite";
+import {
+	assertScopeFor,
+	type TransactionScope,
+	withTransaction,
+} from "../transaction";
 import { createUuidV7 } from "../uuid-v7";
 
 export type SQLiteParam = string | number | null | Uint8Array;
@@ -67,14 +72,22 @@ export abstract class BaseRepository {
 		return await this.db.runAsync(sql, params);
 	}
 
-	/** Runs several reads and writes atomically and returns the callback result. */
+	/**
+	 * Runs several reads and writes atomically and returns the callback result.
+	 *
+	 * A caller already inside a transaction passes its `scope`, and the work
+	 * joins that transaction rather than opening a second one SQLite would
+	 * refuse. Methods that can be composed this way take an optional trailing
+	 * scope and hand it straight to here.
+	 */
 	protected async transaction<Result>(
 		work: () => Promise<Result>,
+		scope?: TransactionScope,
 	): Promise<Result> {
-		let result: Result | undefined;
-		await this.db.withTransactionAsync(async () => {
-			result = await work();
-		});
-		return result as Result;
+		if (scope !== undefined) {
+			assertScopeFor(scope, this.db);
+			return await work();
+		}
+		return await withTransaction(this.db, async () => await work());
 	}
 }

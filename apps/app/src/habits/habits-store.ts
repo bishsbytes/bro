@@ -14,6 +14,7 @@ import {
 	ObservationRepository,
 	TrackedMetricsRepository,
 	UnitPreferenceRepository,
+	withTransaction,
 } from "@bro/database-app";
 import { isCalendarDay, shiftLocalDay, systemLocale } from "@bro/domain";
 import {
@@ -538,30 +539,27 @@ export class HabitsStore {
 
 	/**
 	 * Toggles the day's completion and, where the habit stands in for a check-in
-	 * factor, the factor row with it.
-	 *
-	 * The two writes are sequenced rather than wrapped: `complete` opens its own
-	 * transaction and SQLite does not nest. The completion is the user's intent
-	 * and goes first, so a failed factor write leaves a completed habit with a
-	 * missing presence row — one lost correlation day, healed by the next toggle
-	 * — rather than a factor no habit accounts for.
+	 * factor, the factor row with it. The two land together or not at all, so a
+	 * completed habit never leaves its presence row behind and vice versa.
 	 */
 	async toggleManual(habitId: string, localDay: string): Promise<void> {
 		const habit = await this.habits.findById(habitId);
 		const factorSlug = habit === null ? null : habitFactorSlug(habit.slug);
-		const existing = await this.completions.findByHabitDay(habitId, localDay);
 
-		if (existing) {
-			await this.completions.uncomplete(habitId, localDay);
-			if (factorSlug !== null) {
-				await this.releaseHabitFactor(habitId, factorSlug, localDay);
+		await withTransaction(this.db, async (scope) => {
+			const existing = await this.completions.findByHabitDay(habitId, localDay);
+			if (existing) {
+				await this.completions.uncomplete(habitId, localDay);
+				if (factorSlug !== null) {
+					await this.releaseHabitFactor(habitId, factorSlug, localDay);
+				}
+			} else {
+				await this.completions.complete(habitId, localDay, scope);
+				if (factorSlug !== null) {
+					await this.recordHabitFactor(habitId, factorSlug, localDay);
+				}
 			}
-		} else {
-			await this.completions.complete(habitId, localDay);
-			if (factorSlug !== null) {
-				await this.recordHabitFactor(habitId, factorSlug, localDay);
-			}
-		}
+		});
 	}
 
 	/**
