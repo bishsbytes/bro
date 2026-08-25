@@ -60,9 +60,24 @@ describe("Screen safe areas", () => {
 		);
 		const content = view.getByText("Centered content").parent;
 
+			expect(StyleSheet.flatten(content?.props.style)).toMatchObject({
+				alignItems: "stretch",
+				justifyContent: "center",
+			});
+	});
+
+	it("keeps padded content close to the header", async () => {
+		const view = await render(
+			<Screen padded>
+				<Text>Page content</Text>
+			</Screen>,
+		);
+		const content = view.getByText("Page content").parent;
+
 		expect(StyleSheet.flatten(content?.props.style)).toMatchObject({
-			alignItems: "stretch",
-			justifyContent: "center",
+			paddingHorizontal: 16,
+			paddingTop: 12,
+			paddingBottom: 24,
 		});
 	});
 });

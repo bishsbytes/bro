@@ -82,7 +82,8 @@ const styles = StyleSheet.create((theme) => ({
 	content: { flexGrow: 1 },
 	padded: {
 		paddingHorizontal: theme.spacing.lg,
-		paddingVertical: theme.spacing.xl,
+		paddingTop: theme.spacing.md,
+		paddingBottom: theme.spacing.xl,
 	},
 	centered: { alignItems: "stretch", justifyContent: "center" },
 }));
