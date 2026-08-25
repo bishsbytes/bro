@@ -14,7 +14,7 @@ export default function StartRoute() {
 	};
 
 	return (
-		<Screen padded centered contentContainerStyle={styles.container}>
+		<Screen padded centered>
 			<AppText variant="display" style={styles.title}>
 				Ready when you are
 			</AppText>

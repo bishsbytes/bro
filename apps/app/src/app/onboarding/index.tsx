@@ -6,7 +6,7 @@ import { onboardingStyles as styles } from "../../screens/onboarding/onboarding-
 
 export default function WelcomeRoute() {
 	return (
-		<Screen padded centered contentContainerStyle={styles.container}>
+		<Screen padded centered>
 			<AppText variant="label" color="brand" style={styles.eyebrow}>
 				bro
 			</AppText>

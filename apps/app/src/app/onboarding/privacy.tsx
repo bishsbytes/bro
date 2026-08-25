@@ -6,7 +6,7 @@ import { PrivacyContent } from "../../screens/privacy/privacy-content";
 
 export default function PrivacyRoute() {
 	return (
-		<Screen scroll padded contentContainerStyle={styles.container}>
+		<Screen scroll padded>
 			<PrivacyContent />
 			<Button
 				label="Continue"

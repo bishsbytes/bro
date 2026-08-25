@@ -1,7 +1,6 @@
 import { StyleSheet } from "../../theme/unistyles";
 
 export const onboardingStyles = StyleSheet.create((theme) => ({
-	container: { paddingHorizontal: theme.spacing.xs },
 	eyebrow: { marginBottom: theme.spacing.md, fontWeight: "600" },
 	title: { marginBottom: theme.spacing.lg },
 	body: { marginBottom: theme.spacing.md },
