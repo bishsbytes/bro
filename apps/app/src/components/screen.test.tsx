@@ -60,10 +60,10 @@ describe("Screen safe areas", () => {
 		);
 		const content = view.getByText("Centered content").parent;
 
-			expect(StyleSheet.flatten(content?.props.style)).toMatchObject({
-				alignItems: "stretch",
-				justifyContent: "center",
-			});
+		expect(StyleSheet.flatten(content?.props.style)).toMatchObject({
+			alignItems: "stretch",
+			justifyContent: "center",
+		});
 	});
 
 	it("keeps padded content close to the header", async () => {
