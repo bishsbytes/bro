@@ -19,11 +19,10 @@ const customConfig = {
 	cacheVersion: "app",
 	server: {
 		enhanceMiddleware: (metroMiddleware) => (request, response, next) => {
-			// expo-sqlite's web worker uses SharedArrayBuffer for synchronous
-			// operations. Browsers expose it only to cross-origin-isolated pages,
-			// so both the document and worker responses need these headers.
+			// Match the Expo Router document policy configured in app.json so
+			// SQLite's worker and Metro assets are cross-origin isolated too.
 			response.setHeader("Cross-Origin-Opener-Policy", "same-origin");
-			response.setHeader("Cross-Origin-Embedder-Policy", "require-corp");
+			response.setHeader("Cross-Origin-Embedder-Policy", "credentialless");
 			return metroMiddleware(request, response, next);
 		},
 	},

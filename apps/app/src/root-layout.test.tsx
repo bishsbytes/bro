@@ -151,10 +151,27 @@ describe("startup", () => {
 		mockCloseLocalDb.mockResolvedValue(undefined);
 	});
 
-	it("opens and migrates the product database before showing the app", async () => {
+	it("opens databases sequentially before migrating and showing the app", async () => {
+		const openOrder: string[] = [];
+		mockInitDb.mockImplementationOnce(async () => {
+			openOrder.push("product opening");
+			await Promise.resolve();
+			openOrder.push("product opened");
+			return { handle: true };
+		});
+		mockInitLocalDb.mockImplementationOnce(async () => {
+			openOrder.push("local opening");
+			return { localHandle: true };
+		});
+
 		const view = await startApp();
 
 		expect(mockInitDb).toHaveBeenCalledWith();
+		expect(openOrder).toEqual([
+			"product opening",
+			"product opened",
+			"local opening",
+		]);
 		expect(mockRunMigrations).toHaveBeenCalledWith({ handle: true });
 		expect(mockInitLocalDb).toHaveBeenCalledWith();
 		expect(mockRunLocalMigrations).toHaveBeenCalledWith({ localHandle: true });

@@ -127,10 +127,13 @@ export default function RootLayout() {
 
 		try {
 			// Device settings read synchronously; both relational stores and their
-			// independent migrations are I/O the startup screen has to wait on.
+			// independent migrations are I/O the startup screen has to wait on. Open
+			// the stores in sequence because expo-sqlite's web VFS initialization is
+			// not safe when distinct databases perform their first open concurrently.
 			const settings = readDeviceSettings();
 			applyAppearance(settings.themeMode, settings.accentColor);
-			const [db, localDb] = await Promise.all([initDb(), initLocalDb()]);
+			const db = await initDb();
+			const localDb = await initLocalDb();
 			await Promise.all([runMigrations(db), runLocalMigrations(localDb)]);
 			setStartup({ kind: "ready", settings });
 		} catch (caught) {
