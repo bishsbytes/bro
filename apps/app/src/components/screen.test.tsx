@@ -80,4 +80,19 @@ describe("Screen safe areas", () => {
 			paddingBottom: 24,
 		});
 	});
+
+	it("constrains the safe-area boundary so web content scrolls inside it", async () => {
+		const view = await render(
+			<Screen scroll>
+				<Text>Scrollable content</Text>
+			</Screen>,
+		);
+
+		expect(
+			StyleSheet.flatten(view.getByTestId("safe-area-").props.style),
+		).toMatchObject({
+			flex: 1,
+			minHeight: 0,
+		});
+	});
 });

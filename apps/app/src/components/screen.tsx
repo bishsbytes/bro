@@ -44,9 +44,18 @@ export function Screen({
 		gap ? { gap: theme.spacing[gap] } : undefined,
 		contentContainerStyle,
 	];
+	// SafeAreaView flattens its style before forwarding it to a React Native View.
+	// On web that drops Unistyles' generated class, so keep this flex boundary as
+	// a plain style object. minHeight lets the boundary shrink to the navigator's
+	// viewport and gives the nested ScrollView a real scroll range.
+	const screenStyle: ViewStyle = {
+		flex: 1,
+		minHeight: 0,
+		backgroundColor: theme.colors.background,
+	};
 
 	return (
-		<SafeAreaView style={[styles.screen, style]} edges={edges}>
+		<SafeAreaView style={[screenStyle, style]} edges={edges}>
 			{scroll ? (
 				<ScrollView
 					style={styles.scroll}
@@ -77,7 +86,6 @@ export function FullScreen(props: FullScreenProps) {
 }
 
 const styles = StyleSheet.create((theme) => ({
-	screen: { flex: 1, backgroundColor: theme.colors.background },
 	scroll: { flex: 1, backgroundColor: theme.colors.background },
 	content: { flexGrow: 1 },
 	padded: {
