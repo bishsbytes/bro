@@ -14,7 +14,11 @@ export default function ReviewLayout() {
 			}}
 		>
 			<Stack.Screen name="index" options={{ title: t("review.index") }} />
-			<Stack.Screen name="new" options={{ title: t("review.new") }} />
+			{/* Take stock carries its own top bar, as the check-in flow does. */}
+			<Stack.Screen
+				name="new"
+				options={{ title: t("review.new"), headerShown: false }}
+			/>
 			<Stack.Screen name="[id]" options={{ title: t("review.result") }} />
 			<Stack.Screen name="goal" options={{ title: t("review.goal") }} />
 			<Stack.Screen

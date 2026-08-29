@@ -36,6 +36,13 @@ import { unitWords } from "../units/unit-words";
 export type ReviewDraft = {
 	startedAt: number;
 	items: AssessmentItemSnapshot[];
+	/**
+	 * What the last completed wheel scored each area, keyed by slug. A review is
+	 * a judgement about change, so the flow shows these while the person rates
+	 * rather than saving the comparison for the result screen. Empty on a first
+	 * sitting, and missing any area that wheel did not carry.
+	 */
+	previousScores: Record<string, number>;
 };
 
 export type WheelScore = AssessmentItemSnapshot & {
@@ -353,13 +360,17 @@ export class ReviewStore {
 	}
 
 	async beginSitting(): Promise<ReviewDraft> {
-		const overlays = await this.trackedMetrics.listResolved(
-			DEFAULT_LIFE_AREA_METRICS,
-		);
+		const [overlays, previous] = await Promise.all([
+			this.trackedMetrics.listResolved(DEFAULT_LIFE_AREA_METRICS),
+			this.listSittings().then((sittings) => sittings[0] ?? null),
+		]);
 		const areas = listActiveLifeAreas(overlays);
 		if (areas.length === 0) {
 			throw new Error(i18n.t("validation:review.enableAnArea"));
 		}
+		const previousObservations = previous
+			? await this.observations.listByAssessmentId(previous.id)
+			: [];
 		return {
 			startedAt: this.now().getTime(),
 			items: areas.map((area) => ({
@@ -367,6 +378,11 @@ export class ReviewStore {
 				label: area.label,
 				position: area.position,
 			})),
+			previousScores: Object.fromEntries(
+				(previous ? scoresFor(previous, previousObservations) : []).map(
+					(score) => [score.slug, score.value],
+				),
+			),
 		};
 	}
 

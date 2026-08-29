@@ -44,10 +44,26 @@ export const review = {
 	},
 	sitting: {
 		startFailed: "The wheel could not be started",
-		ratingsIntro:
-			"How satisfied are you with each area today? Choose a whole number from 1 to 10.",
-		/** Screen-reader label for one score button, e.g. "Work & career 6". */
-		scoreArea: "{{area}} {{score}}",
+		/** Shown under every area's scale so a 1 and a 10 mean the same thing. */
+		scoreHint: "1 is as low as it gets, 10 is as good as it gets.",
+		/** {{score}} is already formatted against its scale, e.g. "6/10". */
+		previousScore: "Last time {{score}}",
+		/** Reached from the focus step, to correct one area without walking back. */
+		changeAreaScore: "Change {{area}} score",
+		discardTitle: "Discard this review?",
+		discardBody_one: "Your {{count}} score has not been saved.",
+		discardBody_other: "Your {{count}} scores have not been saved.",
+		discard: "Discard",
+		keepGoing: "Keep going",
+		nav: {
+			back: "Back",
+			backA11y: "Previous area",
+			close: "Close",
+			closeA11y: "Close review",
+			/** Jumps to the focus step once every area carries a score. */
+			finish: "Focus",
+			position: "{{current}} of {{total}}",
+		},
 		chooseFocus: "Choose focus areas",
 		notSavedYet: "Nothing is saved until you finish.",
 		focusTitle: "Choose your focus",

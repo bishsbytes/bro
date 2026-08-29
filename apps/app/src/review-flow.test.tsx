@@ -63,12 +63,14 @@ describe("wheel-of-life review flow", () => {
 
 		await fireEvent.press(firstRun.getByRole("button", { name: "Take stock" }));
 		await waitFor(() => expect(expoRouter.canGoBack()).toBe(true));
+		// One area at a time, the way the check-in asks for one score at a time.
 		for (const area of LIFE_AREA_CATALOGUE.filter(
 			(candidate) => candidate.defaultEnabled,
 		)) {
+			expect(await firstRun.findByText(area.label)).toBeTruthy();
 			await fireEvent.press(firstRun.getByLabelText(`${area.label} 6`));
 		}
-		await fireEvent.press(firstRun.getByText("Choose focus areas"));
+		// Answering the last area lands on the focus step with no button to press.
 		expect(await firstRun.findByText("Choose your focus")).toBeTruthy();
 		await fireEvent.press(firstRun.getByLabelText("Focus on Work & career"));
 		await fireEvent.press(firstRun.getByText("Save review"));

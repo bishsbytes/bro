@@ -12,6 +12,7 @@ import { StackScreen as Screen } from "../../components/screen";
 import { SectionHeader } from "../../components/section-header";
 import { WheelChart } from "../../components/wheel-chart";
 import { challengeForArea, habitsForArea } from "../../content";
+import { formatScore } from "../../review/review-presentation";
 import {
 	createReviewStore,
 	type ReviewResult,
@@ -23,10 +24,6 @@ type ReviewResultScreenProps = {
 	assessmentId: string;
 	store?: Pick<ReviewStore, "loadResult">;
 };
-
-function formatScore(value: number): string {
-	return Number.isInteger(value) ? String(value) : value.toFixed(1);
-}
 
 function formatDelta(t: TFunction<"review">, value: number): string {
 	if (value === 0) {
