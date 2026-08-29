@@ -97,6 +97,8 @@ describe("TabLayout", () => {
 		// The custom label is taller than React Navigation's 49-point default.
 		// Keep a 56-point content area above the full device inset.
 		expect(screenOptions.tabBarStyle.height).toBe(80);
+		expect(screenOptions.tabBarStyle.boxShadow).toBe("none");
+		expect(screenOptions.tabBarStyle).not.toHaveProperty("shadowOpacity");
 		expect(screenOptions.tabBarStyle).not.toHaveProperty("paddingTop");
 		expect(screenOptions.tabBarItemStyle).toBeUndefined();
 

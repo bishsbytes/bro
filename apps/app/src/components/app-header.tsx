@@ -26,8 +26,11 @@ export function AppHeader({
 			<View style={styles.header}>
 				<View style={styles.leading}>{leading}</View>
 				<View
-					pointerEvents={centerTitle ? "none" : "auto"}
-					style={[styles.copy, centerTitle && styles.centeredCopy]}
+					style={[
+						styles.copy,
+						centerTitle && styles.centeredCopy,
+						{ pointerEvents: centerTitle ? "none" : "auto" },
+					]}
 				>
 					<Text style={styles.title}>{title}</Text>
 				</View>

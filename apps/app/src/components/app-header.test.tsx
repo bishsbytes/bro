@@ -1,5 +1,5 @@
 import { fireEvent, render } from "@testing-library/react-native";
-import { Text } from "react-native";
+import { StyleSheet as NativeStyleSheet, Text } from "react-native";
 import { AppHeader } from "./app-header";
 import { AvatarIdentityContext } from "./avatar-identity-context";
 
@@ -23,6 +23,10 @@ describe("AppHeader", () => {
 		expect(screen.getByText("Today")).toBeTruthy();
 		expect(screen.getByText("History")).toBeTruthy();
 		expect(screen.getByText("Filter")).toBeTruthy();
+		expect(
+			NativeStyleSheet.flatten(screen.getByText("Today").parent?.props.style)
+				.pointerEvents,
+		).toBe("none");
 
 		await fireEvent.press(screen.getByLabelText("Account"));
 		expect(onAvatarPress).toHaveBeenCalledTimes(1);

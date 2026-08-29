@@ -93,7 +93,7 @@ function TabShell() {
 						tabBarStyle: {
 							backgroundColor: theme.colors.tabBackground,
 							borderTopWidth: 0,
-							shadowOpacity: 0,
+							boxShadow: "none",
 							elevation: 0,
 							height: TAB_BAR_CONTENT_HEIGHT + insets.bottom,
 						},
