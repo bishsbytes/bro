@@ -16,7 +16,7 @@ const { assetExts, sourceExts } = defaultConfig.resolver;
  * @type {import('metro-config').MetroConfig}
  */
 const customConfig = {
-	cacheVersion: "app",
+	cacheVersion: "app-babel-config-v1",
 	server: {
 		enhanceMiddleware: (metroMiddleware) => (request, response, next) => {
 			// Match the Expo Router document policy configured in app.json so
@@ -27,7 +27,11 @@ const customConfig = {
 		},
 	},
 	transformer: {
-		babelTransformerPath: require.resolve("react-native-svg-transformer"),
+		// Preserve Expo's Babel pipeline when adding SVG support, and pin the app's
+		// config so Metro does not silently fall back to the preset-only default.
+		babelTransformerPath: require.resolve("react-native-svg-transformer/expo"),
+		enableBabelRCLookup: true,
+		extendsBabelConfigPath: require.resolve("./babel.config.js"),
 	},
 	resolver: {
 		assetExts: [...assetExts.filter((ext) => ext !== "svg"), "wasm"],
