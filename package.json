@@ -30,6 +30,7 @@
 		"babel-preset-expo": "catalog:",
 		"esbuild": "catalog:",
 		"eslint": "catalog:",
+		"eslint-plugin-i18next": "catalog:",
 		"jest": "catalog:",
 		"nx": "catalog:",
 		"tslib": "catalog:",

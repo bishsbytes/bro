@@ -1,5 +1,6 @@
 import { router } from "expo-router";
 import { useEffect, useMemo, useState } from "react";
+import { useTranslation } from "react-i18next";
 import { TouchableOpacity, View } from "react-native";
 import { AppText } from "../../components/app-text";
 import { Button } from "../../components/button";
@@ -18,11 +19,14 @@ import { StyleSheet } from "../../theme/unistyles";
 
 const SCORES = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10] as const;
 
+const MAX_FOCUS_AREAS = 3;
+
 type NewReviewScreenProps = {
 	store?: Pick<ReviewStore, "beginSitting" | "completeSitting">;
 };
 
 export function NewReviewScreen({ store }: NewReviewScreenProps) {
+	const { t } = useTranslation("review");
 	const reviews = useMemo(() => store ?? createReviewStore(), [store]);
 	const [draft, setDraft] = useState<ReviewDraft | null>(null);
 	const [scores, setScores] = useState<Record<string, number>>({});
@@ -84,7 +88,7 @@ export function NewReviewScreen({ store }: NewReviewScreenProps) {
 	if (!draft) {
 		return (
 			<Screen padded centered>
-				<EmptyState title="The wheel could not be started" body={error ?? ""} />
+				<EmptyState title={t("sitting.startFailed")} body={error ?? ""} />
 			</Screen>
 		);
 	}
@@ -104,8 +108,8 @@ export function NewReviewScreen({ store }: NewReviewScreenProps) {
 			);
 			return;
 		}
-		if (focusItemSlugs.length === 3) {
-			setError("Choose up to three focus areas.");
+		if (focusItemSlugs.length === MAX_FOCUS_AREAS) {
+			setError(t("sitting.focusLimit"));
 			return;
 		}
 		setFocusItemSlugs((current) => [...current, slug]);
@@ -115,15 +119,15 @@ export function NewReviewScreen({ store }: NewReviewScreenProps) {
 		return (
 			<Screen scroll padded contentContainerStyle={styles.content}>
 				<View style={styles.focusHeading}>
-					<AppText variant="display">Choose your focus</AppText>
-					<AppText color="muted">
-						Pick up to three areas to work on next. You can also save without
-						choosing one.
-					</AppText>
+					<AppText variant="display">{t("sitting.focusTitle")}</AppText>
+					<AppText color="muted">{t("sitting.focusIntro")}</AppText>
 				</View>
 				{wheelScores.length >= 3 ? <WheelChart scores={wheelScores} /> : null}
 				<AppText variant="caption" color="subtle">
-					{focusItemSlugs.length}/3 selected
+					{t("sitting.focusCount", {
+						selected: focusItemSlugs.length,
+						max: MAX_FOCUS_AREAS,
+					})}
 				</AppText>
 				{error ? <AppText color="danger">{error}</AppText> : null}
 				{wheelScores.map((item) => {
@@ -132,7 +136,7 @@ export function NewReviewScreen({ store }: NewReviewScreenProps) {
 						<TouchableOpacity
 							key={item.slug}
 							accessibilityRole="button"
-							accessibilityLabel={`Focus on ${item.label}`}
+							accessibilityLabel={t("sitting.focusOn", { area: item.label })}
 							accessibilityState={{ selected }}
 							onPress={() => toggleFocus(item.slug)}
 						>
@@ -141,19 +145,19 @@ export function NewReviewScreen({ store }: NewReviewScreenProps) {
 							>
 								<AppText variant="label">{item.label}</AppText>
 								<AppText variant="score" color={selected ? "brand" : "muted"}>
-									{item.value}/10
+									{t("scoreOutOf", { value: item.value })}
 								</AppText>
 							</Card>
 						</TouchableOpacity>
 					);
 				})}
 				<Button
-					label="Save review"
+					label={t("sitting.save")}
 					loading={saving}
 					onPress={() => void save()}
 				/>
 				<Button
-					label="Change scores"
+					label={t("sitting.changeScores")}
 					variant="secondary"
 					onPress={() => {
 						setError(null);
@@ -161,7 +165,7 @@ export function NewReviewScreen({ store }: NewReviewScreenProps) {
 					}}
 				/>
 				<AppText variant="caption" color="subtle" style={styles.footerCopy}>
-					Nothing is saved until you finish.
+					{t("sitting.notSavedYet")}
 				</AppText>
 			</Screen>
 		);
@@ -169,10 +173,7 @@ export function NewReviewScreen({ store }: NewReviewScreenProps) {
 
 	return (
 		<Screen scroll padded contentContainerStyle={styles.content}>
-			<AppText color="muted">
-				How satisfied are you with each area today? Choose a whole number from 1
-				to 10.
-			</AppText>
+			<AppText color="muted">{t("sitting.ratingsIntro")}</AppText>
 			{error ? <AppText color="danger">{error}</AppText> : null}
 
 			{draft.items.map((item) => (
@@ -180,7 +181,9 @@ export function NewReviewScreen({ store }: NewReviewScreenProps) {
 					<View style={styles.areaHeading}>
 						<AppText variant="section">{item.label}</AppText>
 						<AppText variant="score" color="brand">
-							{scores[item.slug] ?? "—"}/10
+							{t("scoreOutOf", {
+								value: scores[item.slug] ?? t("scoreUnset"),
+							})}
 						</AppText>
 					</View>
 					<View style={styles.scoreRow}>
@@ -188,7 +191,10 @@ export function NewReviewScreen({ store }: NewReviewScreenProps) {
 							<TouchableOpacity
 								key={score}
 								accessibilityRole="button"
-								accessibilityLabel={`${item.label} ${score}`}
+								accessibilityLabel={t("sitting.scoreArea", {
+									area: item.label,
+									score,
+								})}
 								accessibilityState={{ selected: scores[item.slug] === score }}
 								style={[
 									styles.scoreButton,
@@ -209,7 +215,7 @@ export function NewReviewScreen({ store }: NewReviewScreenProps) {
 			))}
 
 			<Button
-				label="Choose focus areas"
+				label={t("sitting.chooseFocus")}
 				disabled={!complete}
 				onPress={() => {
 					setError(null);
@@ -217,7 +223,7 @@ export function NewReviewScreen({ store }: NewReviewScreenProps) {
 				}}
 			/>
 			<AppText variant="caption" color="subtle" style={styles.footerCopy}>
-				Nothing is saved until you finish.
+				{t("sitting.notSavedYet")}
 			</AppText>
 		</Screen>
 	);

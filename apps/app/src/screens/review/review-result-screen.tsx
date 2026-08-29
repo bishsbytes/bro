@@ -1,7 +1,9 @@
 import { challengeForArea } from "@bro/domain/challenge-catalogue";
 import { habitsForArea } from "@bro/domain/habit-catalogue";
 import { router } from "expo-router";
+import type { TFunction } from "i18next";
 import { useEffect, useMemo, useState } from "react";
+import { useTranslation } from "react-i18next";
 import { View } from "react-native";
 import { AppText } from "../../components/app-text";
 import { Button } from "../../components/button";
@@ -11,6 +13,7 @@ import { LoadingIndicator } from "../../components/loading-indicator";
 import { StackScreen as Screen } from "../../components/screen";
 import { SectionHeader } from "../../components/section-header";
 import { WheelChart } from "../../components/wheel-chart";
+import { nonBreaking } from "../../i18n";
 import {
 	createReviewStore,
 	type ReviewResult,
@@ -27,9 +30,9 @@ function formatScore(value: number): string {
 	return Number.isInteger(value) ? String(value) : value.toFixed(1);
 }
 
-function formatDelta(value: number): string {
+function formatDelta(t: TFunction<"review">, value: number): string {
 	if (value === 0) {
-		return "No change";
+		return t("result.noChange");
 	}
 	return `${value > 0 ? "+" : ""}${formatScore(value)}`;
 }
@@ -38,6 +41,7 @@ export function ReviewResultScreen({
 	assessmentId,
 	store,
 }: ReviewResultScreenProps) {
+	const { t } = useTranslation("review");
 	const reviews = useMemo(() => store ?? createReviewStore(), [store]);
 	const [result, setResult] = useState<ReviewResult | null | undefined>(
 		undefined,
@@ -67,9 +71,9 @@ export function ReviewResultScreen({
 		return (
 			<Screen padded centered>
 				<EmptyState
-					title="Review not found"
-					body={error ?? "This review is no longer on this device."}
-					actionLabel="Back to reviews"
+					title={t("result.notFound")}
+					body={error ?? t("result.notFoundBody")}
+					actionLabel={t("backToReviews")}
 					onAction={() => router.replace("/review")}
 				/>
 			</Screen>
@@ -90,8 +94,10 @@ export function ReviewResultScreen({
 	return (
 		<Screen scroll padded contentContainerStyle={styles.content}>
 			<View>
-				<AppText variant="display">Your wheel</AppText>
-				<AppText color="muted">Completed {completed}</AppText>
+				<AppText variant="display">{t("result.title")}</AppText>
+				<AppText color="muted">
+					{t("result.completed", { date: completed })}
+				</AppText>
 			</View>
 
 			{result.scores.length >= 3 ? (
@@ -102,11 +108,11 @@ export function ReviewResultScreen({
 			) : null}
 
 			<SectionHeader
-				title="Life areas"
+				title={t("result.lifeAreas")}
 				action={
 					result.previousAssessment ? (
 						<AppText variant="caption" color="muted">
-							Compared with your previous review
+							{t("result.comparedWithPrevious")}
 						</AppText>
 					) : null
 				}
@@ -124,11 +130,13 @@ export function ReviewResultScreen({
 								</AppText>
 								{score.focused ? (
 									<AppText variant="caption" color="brand">
-										Focus
+										{t("result.focus")}
 									</AppText>
 								) : null}
 							</View>
-							<AppText variant="score">{formatScore(score.value)}/10</AppText>
+							<AppText variant="score">
+								{t("scoreOutOf", { value: formatScore(score.value) })}
+							</AppText>
 						</View>
 						{comparison ? (
 							<View>
@@ -136,24 +144,28 @@ export function ReviewResultScreen({
 									variant="caption"
 									color={comparison.delta === 0 ? "muted" : "brand"}
 								>
-									{formatDelta(comparison.delta)} from{" "}
-									{formatScore(comparison.previousValue)}
+									{t("result.delta", {
+										delta: formatDelta(t, comparison.delta),
+										previous: formatScore(comparison.previousValue),
+									})}
 								</AppText>
 								{comparison.previousLabel !== comparison.label ? (
 									<AppText variant="caption" color="subtle">
-										Previously “{comparison.previousLabel}”
+										{t("result.previousLabel", {
+											label: comparison.previousLabel,
+										})}
 									</AppText>
 								) : null}
 							</View>
 						) : result.previousAssessment ? (
 							<AppText variant="caption" color="muted">
-								Not rated in your previous review
+								{t("result.notPreviouslyRated")}
 							</AppText>
 						) : null}
 						{score.focused ? (
 							<View style={styles.nextActions}>
 								<Button
-									label={`Set a goal for ${score.label}`}
+									label={t("result.setGoal", { area: score.label })}
 									variant="secondary"
 									onPress={() =>
 										router.push({
@@ -167,7 +179,9 @@ export function ReviewResultScreen({
 								/>
 								{challenge ? (
 									<Button
-										label={`Read “${challenge.title}”`}
+										label={t("result.readChallenge", {
+											title: challenge.title,
+										})}
 										variant="text"
 										onPress={() =>
 											router.push({
@@ -182,7 +196,7 @@ export function ReviewResultScreen({
 									.map((template) => (
 										<Button
 											key={template.slug}
-											label={`Add habit “${template.label}”`}
+											label={t("result.addHabit", { label: template.label })}
 											variant="text"
 											onPress={() =>
 												router.push({
@@ -199,18 +213,16 @@ export function ReviewResultScreen({
 			})}
 
 			{!result.previousAssessment ? (
-				<AppText color="muted">
-					This is your first snapshot. Your next review will show what moved.
-				</AppText>
+				<AppText color="muted">{t("result.firstSnapshot")}</AppText>
 			) : null}
 
 			<Button
-				label={"Take\u00a0stock again"}
-				accessibilityLabel="Take stock again"
+				label={nonBreaking(t("result.takeStockAgain"))}
+				accessibilityLabel={t("result.takeStockAgain")}
 				onPress={() => router.push("/review/new")}
 			/>
 			<Button
-				label="Back to reviews"
+				label={t("backToReviews")}
 				variant="secondary"
 				onPress={() => router.replace("/review")}
 			/>

@@ -1,4 +1,5 @@
 import nx from "@nx/eslint-plugin";
+import i18next from "eslint-plugin-i18next";
 import tseslint from "typescript-eslint";
 
 export default [
@@ -75,6 +76,25 @@ export default [
 							],
 						},
 					],
+				},
+			],
+		},
+	},
+	{
+		// User-facing copy in these paths has to come from a catalogue in
+		// `apps/app/src/i18n`. The list is a ratchet rather than a blanket rule:
+		// add each feature's directory as it is migrated, so the rule stays an
+		// error everywhere it applies instead of a warning nobody reads.
+		files: ["apps/app/src/screens/review/**/*.tsx"],
+		plugins: { i18next },
+		rules: {
+			"i18next/no-literal-string": [
+				"error",
+				{
+					mode: "jsx-text-only",
+					"should-validate-template": true,
+					message:
+						"Move this copy into apps/app/src/i18n/locales/en and read it with useTranslation().",
 				},
 			],
 		},

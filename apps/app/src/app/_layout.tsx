@@ -17,6 +17,9 @@ import { Text, TouchableOpacity, View } from "react-native";
 import { SystemBars } from "react-native-edge-to-edge";
 import { LoadingIndicator } from "../components/loading-indicator";
 import { HealthImportEffects } from "../health/health-import-effects";
+// Initialises i18next before anything renders. Screens read copy through
+// `useTranslation`, which needs the instance ready on the first pass.
+import "../i18n";
 import {
 	DeviceSettingsProvider,
 	useDeviceSettings,

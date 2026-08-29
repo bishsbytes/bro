@@ -1,5 +1,6 @@
 import { router } from "expo-router";
 import { useEffect, useMemo, useState } from "react";
+import { useTranslation } from "react-i18next";
 import { AppText } from "../../components/app-text";
 import { Button } from "../../components/button";
 import { Card } from "../../components/card";
@@ -25,6 +26,7 @@ export function GoalScreen({
 	metricSlug,
 	store,
 }: GoalScreenProps) {
+	const { t } = useTranslation("review");
 	const reviews = useMemo(() => store ?? createReviewStore(), [store]);
 	const [setup, setSetup] = useState<GoalSetup | null | undefined>(undefined);
 	const [target, setTarget] = useState("");
@@ -85,9 +87,9 @@ export function GoalScreen({
 		return (
 			<Screen padded centered>
 				<EmptyState
-					title="Focus area not found"
-					body={error ?? "This area is not part of the saved review focus."}
-					actionLabel="Back to reviews"
+					title={t("goal.notFound")}
+					body={error ?? t("goal.notFoundBody")}
+					actionLabel={t("backToReviews")}
 					onAction={() => router.replace("/review")}
 				/>
 			</Screen>
@@ -104,28 +106,34 @@ export function GoalScreen({
 			<Card style={styles.summary}>
 				<AppText variant="section">{setup.label}</AppText>
 				<AppText color="muted">
-					Your current wheel score is {setup.currentValue}/10.
+					{t("goal.currentScore", {
+						score: t("scoreOutOf", { value: setup.currentValue }),
+					})}
 				</AppText>
 			</Card>
 
 			<FormField
-				label="Target score"
+				label={t("goal.targetScore")}
 				value={target}
 				onChangeText={setTarget}
 				keyboardType="number-pad"
-				placeholder="1–10"
+				placeholder={t("goal.targetScorePlaceholder")}
 			/>
 			<FormField
-				label="Target date (optional)"
+				label={t("goal.targetDate")}
 				value={targetDate}
 				onChangeText={setTargetDate}
 				autoCapitalize="none"
-				placeholder="YYYY-MM-DD"
+				placeholder={t("goal.targetDatePlaceholder")}
 			/>
 			{error ? <AppText color="danger">{error}</AppText> : null}
-			<Button label="Save goal" loading={saving} onPress={() => void save()} />
+			<Button
+				label={t("goal.save")}
+				loading={saving}
+				onPress={() => void save()}
+			/>
 			<AppText variant="caption" color="subtle">
-				Progress comes from future wheel scores; there is nothing extra to log.
+				{t("goal.progressNote")}
 			</AppText>
 		</Screen>
 	);

@@ -19,6 +19,17 @@ jest.mock("expo-haptics", () => ({
 	selectionAsync: jest.fn(async () => undefined),
 }));
 
+// expo-localization reads device constants Jest's native shim does not carry.
+// Pinning the locale keeps language selection deterministic across machines.
+jest.mock("expo-localization", () => ({
+	getLocales: jest.fn(() => [{ languageTag: "en-GB", languageCode: "en" }]),
+}));
+
+// Initialise i18next against the real English catalogues rather than a stub
+// that echoes keys back, so assertions on rendered copy also prove the key
+// exists and interpolates the way the screen expects.
+require("./i18n");
+
 // Unistyles ships this mock; it stands in for the Nitro native module and
 // resolves theme callbacks against whatever StyleSheet.configure registered.
 require("react-native-unistyles/mocks");
