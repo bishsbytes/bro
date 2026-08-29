@@ -1,9 +1,15 @@
-import type { DailyMetric, Observation } from "@bro/database-app";
+import type {
+	ChallengeProgress,
+	DailyMetric,
+	HabitCompletion,
+	Observation,
+} from "@bro/database-app";
 import { KILOGRAMS_PER_POUND } from "@bro/domain";
 import {
 	addPreviousDayMeasurementChanges,
 	assembleHistoryDay,
 } from "./history/history-store";
+import { i18n } from "./i18n";
 
 function observation(
 	id: string,
@@ -47,6 +53,89 @@ function dailyMetric(
 }
 
 describe("history store", () => {
+	it("localizes missing habit and challenge presentation fallbacks", () => {
+		const originalHabit = i18n.getResource(
+			"en",
+			"history",
+			"day.unknownHabit",
+		) as string;
+		const originalChallenge = i18n.getResource(
+			"en",
+			"history",
+			"day.unknownChallenge",
+		) as string;
+		const originalDayTitle = i18n.getResource(
+			"en",
+			"history",
+			"day.challengeDayTitle",
+		) as string;
+		i18n.addResource("en", "history", "day.unknownHabit", "Translated habit");
+		i18n.addResource(
+			"en",
+			"history",
+			"day.unknownChallenge",
+			"Translated challenge",
+		);
+		i18n.addResource(
+			"en",
+			"history",
+			"day.challengeDayTitle",
+			"Translated day {{day}}",
+		);
+
+		try {
+			const completion: HabitCompletion = {
+				id: "completion",
+				habitId: "missing-habit",
+				localDay: "2026-08-14",
+				completedAt: 1_000,
+				createdAt: 1_000,
+				updatedAt: 1_000,
+			};
+			const progress: ChallengeProgress = {
+				id: "progress",
+				enrolmentId: "missing-enrolment",
+				dayIndex: 3,
+				localDay: "2026-08-14",
+				completedAt: 1_000,
+				createdAt: 1_000,
+				updatedAt: 1_000,
+			};
+			const day = assembleHistoryDay(
+				"2026-08-14",
+				[],
+				[],
+				[],
+				new Map(),
+				"en-GB",
+				[],
+				[completion],
+				[],
+				[progress],
+			);
+
+			expect(day.habitCompletions[0]?.label).toBe("Translated habit");
+			expect(day.challengeSteps[0]).toMatchObject({
+				title: "Translated challenge",
+				dayTitle: "Translated day 3",
+			});
+		} finally {
+			i18n.addResource("en", "history", "day.unknownHabit", originalHabit);
+			i18n.addResource(
+				"en",
+				"history",
+				"day.unknownChallenge",
+				originalChallenge,
+			);
+			i18n.addResource(
+				"en",
+				"history",
+				"day.challengeDayTitle",
+				originalDayTitle,
+			);
+		}
+	});
+
 	it("treats a Mood observation as a check-in when Energy was disabled", () => {
 		const mood = observation("mood", "mood", 4);
 		const day = assembleHistoryDay("2026-08-14", [mood], []);

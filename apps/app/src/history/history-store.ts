@@ -27,6 +27,7 @@ import {
 } from "@bro/logic";
 import type { SQLiteDatabase } from "expo-sqlite";
 import { resolveChallenge, resolveHabit, resolveMetric } from "../content";
+import { i18n } from "../i18n";
 import { unitWords } from "../units/unit-words";
 
 export type HistoryMeasurement = {
@@ -103,7 +104,7 @@ export type HistoryDaySummary = {
 };
 
 function habitLabel(habit: Habit | undefined): string {
-	if (!habit) return "Habit";
+	if (!habit) return i18n.t("history:day.unknownHabit");
 	return (
 		habit.customLabel ??
 		resolveHabit(habit.slug)?.label ??
@@ -313,9 +314,11 @@ export function assembleHistoryDay(
 			return {
 				id: progress.id,
 				enrolmentId: progress.enrolmentId,
-				title: enrolment?.title ?? "Challenge",
+				title: enrolment?.title ?? i18n.t("history:day.unknownChallenge"),
 				dayIndex: progress.dayIndex,
-				dayTitle: day?.title ?? `Day ${progress.dayIndex}`,
+				dayTitle:
+					day?.title ??
+					i18n.t("history:day.challengeDayTitle", { day: progress.dayIndex }),
 			};
 		}),
 	};
@@ -473,7 +476,7 @@ export class HistoryStore {
 					.map(
 						(row) =>
 							enrolments.find((candidate) => candidate.id === row.enrolmentId)
-								?.title ?? "Challenge",
+								?.title ?? i18n.t("history:day.unknownChallenge"),
 					);
 
 				return {

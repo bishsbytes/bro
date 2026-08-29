@@ -16,6 +16,9 @@ export const history = {
 	day: {
 		habitsCompleted: "Habits completed",
 		challengeSteps: "Challenge steps",
+		unknownHabit: "Habit",
+		unknownChallenge: "Challenge",
+		challengeDayTitle: "Day {{day}}",
 		/** {{title}} names the challenge, {{day}} is its step number. */
 		challengeStep: "{{title}} · Day {{day}}",
 		checkIns: "Check-ins",

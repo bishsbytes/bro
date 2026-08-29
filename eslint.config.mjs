@@ -81,29 +81,10 @@ export default [
 		},
 	},
 	{
-		// User-facing JSX text and copy-bearing props in these paths have to come
-		// from a catalogue in `apps/app/src/i18n`. The list is a ratchet rather
-		// than a blanket rule: add each feature's directory as it is migrated, so
-		// the rule stays an error everywhere it applies.
-		files: [
-			"apps/app/src/app/**/*.tsx",
-			"apps/app/src/components/**/*.tsx",
-			"apps/app/src/screens/auth/**/*.tsx",
-			"apps/app/src/screens/body/**/*.tsx",
-			"apps/app/src/screens/challenges/**/*.tsx",
-			"apps/app/src/screens/check-in/**/*.tsx",
-			"apps/app/src/screens/drinks/**/*.tsx",
-			"apps/app/src/screens/food/**/*.tsx",
-			"apps/app/src/screens/habits/**/*.tsx",
-			"apps/app/src/screens/history/**/*.tsx",
-			"apps/app/src/screens/home/**/*.tsx",
-			"apps/app/src/screens/insights/**/*.tsx",
-			"apps/app/src/screens/life/**/*.tsx",
-			"apps/app/src/screens/log/**/*.tsx",
-			"apps/app/src/screens/privacy/**/*.tsx",
-			"apps/app/src/screens/review/**/*.tsx",
-			"apps/app/src/screens/settings/**/*.tsx",
-		],
+		// All user-facing JSX text and copy-bearing props in the app have to come
+		// from a catalogue in `apps/app/src/i18n`. Keeping this app-wide ensures a
+		// newly added route, provider, or feature directory is protected by default.
+		files: ["apps/app/src/**/*.tsx"],
 		ignores: ["**/*.test.tsx"],
 		plugins: { i18next },
 		rules: {
@@ -140,21 +121,23 @@ export default [
 		},
 	},
 	{
-		// Stores may still own presentation models. Guard the known copy-bearing
-		// fields without treating invariant diagnostics, slugs, or SQL as copy.
-		files: ["apps/app/src/consumption/**/*.ts", "apps/app/src/habits/**/*.ts"],
-		ignores: ["**/*.test.ts"],
-		plugins: { i18next },
+		// App services and stores may still own presentation models. Guard the
+		// known copy-bearing fields app-wide without treating invariant diagnostics,
+		// slugs, SQL, or the catalogues themselves as copy violations.
+		files: ["apps/app/src/**/*.{ts,tsx}"],
+		ignores: ["**/*.test.{ts,tsx}", "apps/app/src/i18n/**"],
 		rules: {
-			"i18next/no-literal-string": [
+			"no-restricted-syntax": [
 				"error",
 				{
-					mode: "all",
-					"object-properties": {
-						include: ["action", "dayTitle", "detail", "progressLabel"],
-					},
-					callees: { exclude: [".*"] },
-					"should-validate-template": true,
+					selector:
+						"Property[key.name=/^(action|dayTitle|detail|progressLabel)$/]:not(:has(CallExpression)) Literal[value=/./]",
+					message:
+						"Move presentation copy into apps/app/src/i18n/locales/en and resolve it before returning the model.",
+				},
+				{
+					selector:
+						"Property[key.name=/^(action|dayTitle|detail|progressLabel)$/]:not(:has(CallExpression)) TemplateLiteral",
 					message:
 						"Move presentation copy into apps/app/src/i18n/locales/en and resolve it before returning the model.",
 				},
