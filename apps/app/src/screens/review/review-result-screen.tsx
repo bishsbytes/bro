@@ -205,7 +205,8 @@ export function ReviewResultScreen({
 			) : null}
 
 			<Button
-				label="Take stock again"
+				label={"Take\u00a0stock again"}
+				accessibilityLabel="Take stock again"
 				onPress={() => router.push("/review/new")}
 			/>
 			<Button

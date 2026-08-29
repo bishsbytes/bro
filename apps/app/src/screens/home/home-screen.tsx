@@ -1079,7 +1079,8 @@ export function HomeScreen({
 									Rate the areas of your life and choose where to focus next.
 								</AppText>
 								<Button
-									label="Take stock"
+									label={"Take\u00a0stock"}
+									accessibilityLabel="Take stock"
 									variant="secondary"
 									onPress={() => router.push("/review/new")}
 								/>

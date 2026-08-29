@@ -153,7 +153,8 @@ export function ReviewScreen({ store }: ReviewScreenProps) {
 				eyebrow="WHEEL OF LIFE"
 				action={
 					<Button
-						label="Take stock"
+						label={"Take\u00a0stock"}
+						accessibilityLabel="Take stock"
 						variant="text"
 						onPress={() => router.push("/review/new")}
 					/>

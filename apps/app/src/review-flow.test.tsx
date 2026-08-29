@@ -61,7 +61,7 @@ describe("wheel-of-life review flow", () => {
 		await act(async () => undefined);
 		expect(await firstRun.findByText("No reviews yet")).toBeTruthy();
 
-		await fireEvent.press(firstRun.getByText("Take stock"));
+		await fireEvent.press(firstRun.getByRole("button", { name: "Take stock" }));
 		await waitFor(() => expect(expoRouter.canGoBack()).toBe(true));
 		for (const area of LIFE_AREA_CATALOGUE.filter(
 			(candidate) => candidate.defaultEnabled,
@@ -141,7 +141,9 @@ describe("wheel-of-life review flow", () => {
 		await fireEvent.press(secondRun.getByText("Mark Work & career achieved"));
 		expect(await secondRun.findByText("Achieved")).toBeTruthy();
 
-		await fireEvent.press(secondRun.getByText("Take stock"));
+		await fireEvent.press(
+			secondRun.getByRole("button", { name: "Take stock" }),
+		);
 		expect(
 			await secondRun.findByText("Nothing is saved until you finish."),
 		).toBeTruthy();

@@ -162,7 +162,8 @@ export function LifeScreen({ reviewStore, habitsStore, now }: LifeScreenProps) {
 						first snapshot to come back to.
 					</AppText>
 					<Button
-						label="Take stock"
+						label={"Take\u00a0stock"}
+						accessibilityLabel="Take stock"
 						onPress={() => router.push("/review/new")}
 					/>
 					<Button
@@ -237,7 +238,8 @@ export function LifeScreen({ reviewStore, habitsStore, now }: LifeScreenProps) {
 						has moved and choose your next focus.
 					</AppText>
 					<Button
-						label="Take stock"
+						label={"Take\u00a0stock"}
+						accessibilityLabel="Take stock"
 						onPress={() => router.push("/review/new")}
 					/>
 				</Card>
