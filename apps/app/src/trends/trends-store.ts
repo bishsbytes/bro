@@ -9,8 +9,6 @@ import {
 import { type DisplayUnit, localDayOf } from "@bro/domain";
 import {
 	DEFAULT_TRACKED_METRICS,
-	listMeasurements,
-	listScoredMetrics,
 	type MeasurementMetricDefinition,
 	type ScoredMetricDefinition,
 } from "@bro/domain/metric-registry";
@@ -24,6 +22,7 @@ import {
 	trendRange,
 } from "@bro/logic";
 import type { SQLiteDatabase } from "expo-sqlite";
+import { listMeasurements, listScoredMetrics } from "../content";
 
 export type MetricTrend = {
 	metric: ScoredMetricDefinition | MeasurementMetricDefinition;
@@ -66,6 +65,7 @@ export class TrendsStore {
 	}
 
 	async load(period: TrendPeriod): Promise<TrendsSnapshot> {
+		const locale = this.locale();
 		const throughLocalDay = localDayOf(this.now());
 		const range = trendRange(throughLocalDay, period);
 		const measurementSlugs = new Set<string>(
@@ -156,7 +156,12 @@ export class TrendsStore {
 					latestValue !== null &&
 					latestValue !== undefined
 				) {
-					latestFormatted = formatMetricValue(metric, latestValue, displayUnit);
+					latestFormatted = formatMetricValue(
+						metric,
+						latestValue,
+						displayUnit,
+						locale,
+					);
 				}
 				return { metric, label, series, displayUnit, latestFormatted };
 			}),

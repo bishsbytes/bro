@@ -51,11 +51,14 @@ export {
 	type VolumeDisplayUnit,
 } from "./dimensions";
 export {
+	DEFAULT_UNIT_WORDS,
 	formatIntrinsicDelta,
 	formatIntrinsicMeasurement,
 	formatMeasurement,
 	formatMeasurementDelta,
 	measurementEntryOf,
+	type UnitWordOverrides,
+	type UnitWords,
 } from "./formatting";
 export {
 	defaultUnitPreference,

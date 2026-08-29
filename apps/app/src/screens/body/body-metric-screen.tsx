@@ -76,7 +76,7 @@ function HistoryEditor({
 }) {
 	const { t } = useTranslation("body");
 	const [value, setValue] = useState(() =>
-		measurementInputOf(entry.observation.value, presentation),
+		measurementInputOf(entry.observation.value, presentation, inputLocale),
 	);
 	const [error, setError] = useState<string | null>(null);
 

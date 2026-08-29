@@ -1,5 +1,4 @@
 import type { DayNote, Observation } from "@bro/database-app";
-import { resolveMetric } from "@bro/domain/metric-registry";
 import type { TFunction } from "i18next";
 import { useEffect, useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
@@ -12,6 +11,7 @@ import { LoadingIndicator } from "../../components/loading-indicator";
 import { ScoreRow } from "../../components/score-row";
 import { StackScreen as Screen } from "../../components/screen";
 import { SectionHeader } from "../../components/section-header";
+import { resolveMetric } from "../../content";
 import {
 	createHistoryStore,
 	type HistoricalCheckIn,

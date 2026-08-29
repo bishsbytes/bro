@@ -1,5 +1,3 @@
-import { challengeForArea } from "@bro/domain/challenge-catalogue";
-import { habitsForArea } from "@bro/domain/habit-catalogue";
 import { router } from "expo-router";
 import type { TFunction } from "i18next";
 import { useEffect, useMemo, useState } from "react";
@@ -13,6 +11,7 @@ import { LoadingIndicator } from "../../components/loading-indicator";
 import { StackScreen as Screen } from "../../components/screen";
 import { SectionHeader } from "../../components/section-header";
 import { WheelChart } from "../../components/wheel-chart";
+import { challengeForArea, habitsForArea } from "../../content";
 import { nonBreaking } from "../../i18n";
 import {
 	createReviewStore,

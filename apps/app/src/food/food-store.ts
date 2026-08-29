@@ -25,6 +25,7 @@ import {
 	type PresentedConsumptionEntry,
 	scaleNullable,
 } from "../consumption/consumption-store";
+import { i18n } from "../i18n";
 
 const FOOD_METRIC_SLUGS = [
 	"energy_intake",
@@ -83,7 +84,6 @@ export type FoodSettingsSnapshot = {
 
 export class FoodStore extends ConsumptionStore<FoodMetricSlug> {
 	protected readonly kind: ConsumptionEntryKind = "food";
-	protected readonly noun = "Food";
 	protected readonly metricSlugs = FOOD_METRIC_SLUGS;
 
 	/**
@@ -131,10 +131,10 @@ export class FoodStore extends ConsumptionStore<FoodMetricSlug> {
 
 	async logFree(draft: FreeFoodDraft): Promise<ConsumptionEntry> {
 		this.assertQuantity(draft.quantity);
-		assertFiniteNonNegative(draft.energyKcal, "Food energy");
-		assertFiniteNonNegative(draft.proteinG, "Food protein");
-		assertFiniteNonNegative(draft.carbsG, "Food carbohydrate");
-		assertFiniteNonNegative(draft.fatG, "Food fat");
+		assertFiniteNonNegative(draft.energyKcal, "foodEnergy");
+		assertFiniteNonNegative(draft.proteinG, "foodProtein");
+		assertFiniteNonNegative(draft.carbsG, "foodCarbs");
+		assertFiniteNonNegative(draft.fatG, "foodFat");
 		return await this.entries.create({
 			kind: "food",
 			catalogueRef: null,
@@ -169,12 +169,12 @@ export class FoodStore extends ConsumptionStore<FoodMetricSlug> {
 			(candidate) => candidate.id === servingId,
 		);
 		if (!/^[^:\s]+:.+$/.test(result.ref) || !serving) {
-			throw new TypeError("Choose a searched food and serving.");
+			throw new TypeError(i18n.t("validation:food.chooseSearched"));
 		}
-		assertFiniteNonNegative(serving.energyKcal, "Food energy");
-		assertFiniteNonNegative(serving.proteinG, "Food protein");
-		assertFiniteNonNegative(serving.carbsG, "Food carbohydrate");
-		assertFiniteNonNegative(serving.fatG, "Food fat");
+		assertFiniteNonNegative(serving.energyKcal, "foodEnergy");
+		assertFiniteNonNegative(serving.proteinG, "foodProtein");
+		assertFiniteNonNegative(serving.carbsG, "foodCarbs");
+		assertFiniteNonNegative(serving.fatG, "foodFat");
 		return await this.entries.create({
 			kind: "food",
 			catalogueRef: null,
@@ -195,7 +195,7 @@ export class FoodStore extends ConsumptionStore<FoodMetricSlug> {
 
 	async saveCustom(draft: CustomFoodDraft): Promise<CustomConsumable> {
 		if (!draft.isRecipe && draft.components.length > 0) {
-			throw new TypeError("Only recipes can have components.");
+			throw new TypeError(i18n.t("validation:food.onlyRecipes"));
 		}
 		return await this.saveCustomConsumable(draft, draft.components);
 	}

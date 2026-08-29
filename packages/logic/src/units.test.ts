@@ -91,11 +91,44 @@ describe("measurement units", () => {
 	});
 
 	it("formats fixed health dimensions without creating unit preferences", () => {
-		expect(formatIntrinsicMeasurement(27_720, "time")).toBe("7 h 42 m");
-		expect(formatIntrinsicMeasurement(2_520, "time")).toBe("42 m");
-		expect(formatIntrinsicMeasurement(10_432, "count")).toBe("10432");
-		expect(formatIntrinsicMeasurement(61, "rate_bpm")).toBe("61 bpm");
-		expect(formatIntrinsicMeasurement(61.25, "rate_bpm")).toBe("61.3 bpm");
+		expect(formatIntrinsicMeasurement(27_720, "time", "en-GB")).toBe(
+			"7 h 42 m",
+		);
+		expect(formatIntrinsicMeasurement(2_520, "time", "en-GB")).toBe("42 m");
+		expect(formatIntrinsicMeasurement(10_432, "count", "en-GB")).toBe("10,432");
+		expect(formatIntrinsicMeasurement(61, "rate_bpm", "en-GB")).toBe("61 bpm");
+		expect(formatIntrinsicMeasurement(61.25, "rate_bpm", "en-GB")).toBe(
+			"61.3 bpm",
+		);
+	});
+
+	it("renders numbers in the reader's locale", () => {
+		// A comma decimal separator and a non-breaking-space group separator are
+		// what a French reader expects, and what the parser accepts back.
+		expect(formatMeasurement(78.017_887_64, "mass", "kg", "fr-FR")).toBe(
+			"78,0 kg",
+		);
+		expect(formatMeasurement(0.1846, "fraction", "%", "de-DE")).toBe("18,5%");
+		expect(formatIntrinsicMeasurement(10_432, "count", "de-DE")).toBe("10.432");
+	});
+
+	it("seeds editable fields without a group separator", () => {
+		// The field feeds a numeric keyboard and `parseMeasurement`, neither of
+		// which accepts a thousands separator; the decimal separator still
+		// follows the locale so the value round-trips.
+		expect(measurementEntryOf(78.017_887_64, "mass", "kg", "fr-FR")).toEqual({
+			major: "78,0",
+			minor: "",
+		});
+		expect(measurementEntryOf(9_999, "mass", "kg", "en-GB").major).toBe(
+			"9999.0",
+		);
+	});
+
+	it("falls back to a plain rendering when the locale is unusable", () => {
+		expect(formatMeasurement(78.017_887_64, "mass", "kg", "not a locale")).toBe(
+			"78.0 kg",
+		);
 	});
 
 	it("uses exact mass and length definitions", () => {

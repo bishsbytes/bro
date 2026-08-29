@@ -27,7 +27,6 @@ import {
 	type ConsumptionDerivedMeasurementMetricDefinition,
 	type ConsumptionDerivedMeasurementSlug,
 	listConsumptionDerivedMeasurements,
-	resolveMetric,
 } from "@bro/domain/metric-registry";
 import {
 	consumptionMetricDayTotal,
@@ -40,6 +39,9 @@ import {
 	resolveMetricObservations,
 } from "@bro/logic";
 import type { SQLiteDatabase } from "expo-sqlite";
+import { resolveMetric } from "../content";
+import { i18n } from "../i18n";
+import { unitWords } from "../units/unit-words";
 
 /** How many days of history the week totals on a day screen cover. */
 const WEEK_DAYS = 7;
@@ -111,12 +113,27 @@ export type CustomConsumableDraft = {
 	servings: CustomConsumableServing[];
 };
 
+/** Names the input in the message, via a key under `validation:fields`. */
+export type ValidationField =
+	| "drinkVolume"
+	| "drinkCaffeine"
+	| "drinkEnergy"
+	| "drinkAbv"
+	| "foodEnergy"
+	| "foodProtein"
+	| "foodCarbs"
+	| "foodFat";
+
 export function assertFiniteNonNegative(
 	value: number | null,
-	label: string,
+	field: ValidationField,
 ): void {
 	if (value !== null && (!Number.isFinite(value) || value < 0)) {
-		throw new RangeError(`${label} must be empty or a non-negative number.`);
+		throw new RangeError(
+			i18n.t("validation:nonNegativeNumber", {
+				field: i18n.t(`validation:fields.${field}` as const),
+			}),
+		);
 	}
 }
 
@@ -214,10 +231,11 @@ export abstract class ConsumptionStore<
 		this.preferences = new UnitPreferenceRepository(db);
 	}
 
-	/** The entry kind this store owns; entries of the other kind are invisible. */
+	/**
+	 * The entry kind this store owns; entries of the other kind are invisible.
+	 * It doubles as the i18next context for every message this store throws.
+	 */
 	protected abstract readonly kind: ConsumptionEntryKind;
-	/** Names this store's subject in user-facing errors, e.g. "Food", "Drink". */
-	protected abstract readonly noun: string;
 	/** The metrics this store presents, in the order it presents them. */
 	protected abstract readonly metricSlugs: readonly Slug[];
 
@@ -252,21 +270,24 @@ export abstract class ConsumptionStore<
 
 	protected assertQuantity(quantity: number): void {
 		if (!Number.isFinite(quantity) || quantity <= 0) {
-			throw new RangeError(`${this.noun} quantity must be a positive number.`);
+			throw new RangeError(
+				i18n.t("validation:consumption.quantityPositive", {
+					context: this.kind,
+				}),
+			);
 		}
 	}
 
-	/** Lower-cased subject for mid-sentence use, e.g. "Choose a custom drink". */
-	protected get subject(): string {
-		return this.noun.toLowerCase();
-	}
-
 	protected entryNotFound(): TypeError {
-		return new TypeError(`${this.noun} entry not found.`);
+		return new TypeError(
+			i18n.t("validation:consumption.entryNotFound", { context: this.kind }),
+		);
 	}
 
 	protected customNotFound(): TypeError {
-		return new TypeError(`Custom ${this.subject} not found.`);
+		return new TypeError(
+			i18n.t("validation:consumption.customNotFound", { context: this.kind }),
+		);
 	}
 
 	/** Reads the shared half of a day screen. */
@@ -327,12 +348,24 @@ export abstract class ConsumptionStore<
 				dayFormatted:
 					dayValue === null
 						? null
-						: formatMetricValue(metric, dayValue, displayUnit),
+						: formatMetricValue(
+								metric,
+								dayValue,
+								displayUnit,
+								locale,
+								unitWords(),
+							),
 				weekValue,
 				weekFormatted:
 					weekValue === null
 						? null
-						: formatMetricValue(metric, weekValue, displayUnit),
+						: formatMetricValue(
+								metric,
+								weekValue,
+								displayUnit,
+								locale,
+								unitWords(),
+							),
 				goals: goals
 					.filter((goal) => goal.metricSlug === metric.slug)
 					.map((goal) =>
@@ -379,7 +412,9 @@ export abstract class ConsumptionStore<
 			(candidate) => candidate.id === servingId,
 		);
 		if (consumable?.kind !== this.kind || !serving) {
-			throw new TypeError(`Choose a custom ${this.subject} and serving.`);
+			throw new TypeError(
+				i18n.t("validation:consumption.chooseCustom", { context: this.kind }),
+			);
 		}
 		return await this.entries.create({
 			kind: this.kind,
@@ -408,7 +443,11 @@ export abstract class ConsumptionStore<
 	): Promise<ConsumptionEntry> {
 		const entry = await this.entries.findById(id);
 		if (entry?.kind !== this.kind) {
-			throw new TypeError(`Recent ${this.subject} not found.`);
+			throw new TypeError(
+				i18n.t("validation:consumption.recentNotFound", {
+					context: this.kind,
+				}),
+			);
 		}
 		const {
 			id: _id,
@@ -574,10 +613,12 @@ export abstract class ConsumptionStore<
 			-1,
 		);
 		if (!latest) {
-			throw new TypeError(`Log ${this.subject} before setting a goal.`);
+			throw new TypeError(
+				i18n.t("validation:consumption.logBeforeGoal", { context: this.kind }),
+			);
 		}
 		if (parsed.canonicalValue === latest.value) {
-			throw new RangeError("Choose a target different from your latest total.");
+			throw new RangeError(i18n.t("validation:consumption.targetSameAsLatest"));
 		}
 		if (
 			goals.some(
@@ -585,7 +626,7 @@ export abstract class ConsumptionStore<
 					goal.metricSlug === metric.slug && goalStatus(goal) === "active",
 			)
 		) {
-			throw new TypeError("Finish the active goal before creating another.");
+			throw new TypeError(i18n.t("validation:consumption.activeGoalExists"));
 		}
 		return await this.goals.create({
 			metricSlug: metric.slug,
@@ -613,7 +654,12 @@ export abstract class ConsumptionStore<
 			resolved.metric.measurementSource !== "consumption" ||
 			!(this.metricSlugs as readonly string[]).includes(resolved.metric.slug)
 		) {
-			throw new TypeError(`Unknown ${this.subject} metric: ${metricSlug}`);
+			throw new TypeError(
+				i18n.t("validation:consumption.unknownMetric", {
+					context: this.kind,
+					slug: metricSlug,
+				}),
+			);
 		}
 		return resolved.metric as Metric;
 	}
@@ -651,7 +697,14 @@ export abstract class ConsumptionStore<
 						entries,
 					)
 				: null,
-			format: (value) => formatMetricValue(metric, value, displayUnit),
+			format: (value) =>
+				formatMetricValue(
+					metric,
+					value,
+					displayUnit,
+					this.locale(),
+					unitWords(),
+				),
 		});
 	}
 
@@ -663,7 +716,15 @@ export abstract class ConsumptionStore<
 			const value = this.contributionOf(entry, metric.slug);
 			return value === null
 				? []
-				: [formatMetricValue(metric, value, displayUnit)];
+				: [
+						formatMetricValue(
+							metric,
+							value,
+							displayUnit,
+							this.locale(),
+							unitWords(),
+						),
+					];
 		});
 		return {
 			entry,

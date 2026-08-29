@@ -9,7 +9,6 @@ import {
 	type LifeAreaSlug,
 	MAX_ACTIVE_LIFE_AREAS,
 	type ResolvedLifeArea,
-	resolveLifeAreas,
 } from "@bro/domain/life-area-catalogue";
 import { useFocusEffect } from "expo-router";
 import { useCallback, useMemo, useState } from "react";
@@ -23,6 +22,7 @@ import { FormField } from "../../components/form-field";
 import { LoadingIndicator } from "../../components/loading-indicator";
 import { StackScreen as Screen } from "../../components/screen";
 import { ThemedSwitch } from "../../components/themed-switch";
+import { resolveLifeAreas } from "../../content";
 import { StyleSheet } from "../../theme/unistyles";
 
 type LifeAreaRepository = Pick<

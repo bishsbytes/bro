@@ -3,8 +3,9 @@ import {
 	HealthConnectionRepository,
 	type HealthPlatform,
 } from "@bro/database-app";
-import { resolveMetric } from "@bro/domain/metric-registry";
 import { type HealthMetricSlug, V1_HEALTH_METRIC_SLUGS } from "@bro/logic";
+import { resolveMetric } from "../content";
+import { i18n } from "../i18n";
 import type { HealthGatewayAvailability } from "./gateway";
 import type { HealthImportEngine } from "./import-engine";
 import { healthImportEngine } from "./import-service";
@@ -29,10 +30,11 @@ type HealthSettingsEngine = Pick<
 	"availability" | "connect" | "refresh" | "disconnect" | "openSettings"
 >;
 
+/** Apple Health and Health Connect are product names and stay untranslated. */
 function platformLabel(platform: HealthPlatform | null): string {
 	if (platform === "healthkit") return "Apple Health";
 	if (platform === "health_connect") return "Health Connect";
-	return "Health data";
+	return i18n.t("settings:index.health");
 }
 
 function metricLabel(metricSlug: HealthMetricSlug): string {

@@ -1,5 +1,5 @@
 import type { WeekStartDay } from "@bro/domain";
-import { type HabitTemplate, resolveHabit } from "@bro/domain/habit-catalogue";
+import type { HabitTemplate } from "@bro/domain/habit-catalogue";
 import { orderedIsoWeekdays } from "@bro/logic";
 import { type Href, router, useFocusEffect } from "expo-router";
 import type { TFunction } from "i18next";
@@ -14,6 +14,7 @@ import { FormField } from "../../components/form-field";
 import { LoadingIndicator } from "../../components/loading-indicator";
 import { StackScreen as Screen } from "../../components/screen";
 import { SectionHeader } from "../../components/section-header";
+import { resolveHabit } from "../../content";
 import {
 	createHabitsStore,
 	type HabitEditorDraft,

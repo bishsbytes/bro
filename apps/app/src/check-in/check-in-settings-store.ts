@@ -2,10 +2,10 @@ import { getDb, TrackedMetricsRepository } from "@bro/database-app";
 import {
 	CONFIGURABLE_CHECK_IN_METRIC_SLUGS,
 	DEFAULT_TRACKED_METRICS,
-	resolveMetric,
 	type TagCategory,
 } from "@bro/domain/metric-registry";
 import type { SQLiteDatabase } from "expo-sqlite";
+import { resolveMetric } from "../content";
 
 export type CheckInScoreSetting = {
 	metricSlug: string;

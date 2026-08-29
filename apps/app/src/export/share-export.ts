@@ -2,6 +2,7 @@ import { localDayAt } from "@bro/logic";
 import { File, Paths } from "expo-file-system";
 import { StorageAccessFramework } from "expo-file-system/legacy";
 import { Platform, Share } from "react-native";
+import { i18n } from "../i18n";
 
 export type ExportShareResult = {
 	message: string;
@@ -28,7 +29,7 @@ export async function shareExport(
 			await StorageAccessFramework.requestDirectoryPermissionsAsync();
 		if (!permission.granted) {
 			return {
-				message: "Saving closed. Your data stayed on this device.",
+				message: i18n.t("settings:export.savingClosed"),
 				uri: null,
 			};
 		}
@@ -38,7 +39,7 @@ export async function shareExport(
 			"application/json",
 		);
 		await StorageAccessFramework.writeAsStringAsync(uri, payload);
-		return { message: "Export saved to the folder you chose.", uri };
+		return { message: i18n.t("settings:export.saved"), uri };
 	}
 
 	if (Platform.OS === "ios") {
@@ -47,19 +48,21 @@ export async function shareExport(
 		file.write(payload);
 		try {
 			const result = await Share.share(
-				{ url: file.uri, title: "bro data export" },
-				{ subject: "bro data export" },
+				{ url: file.uri, title: i18n.t("settings:export.shareTitle") },
+				{ subject: i18n.t("settings:export.shareTitle") },
 			);
 			if (result.action === Share.dismissedAction) {
 				return {
-					message: "Sharing closed. Your data stayed on this device.",
+					message: i18n.t("settings:export.sharingClosed"),
 					uri: null,
 				};
 			}
 			return {
 				message: result.activityType
-					? `Export shared with ${result.activityType}.`
-					: "Export handed to the app you chose.",
+					? i18n.t("settings:export.sharedWith", {
+							app: result.activityType,
+						})
+					: i18n.t("settings:export.handedOver"),
 				uri: null,
 			};
 		} finally {
@@ -73,5 +76,5 @@ export async function shareExport(
 		}
 	}
 
-	throw new Error("Data export is available on iOS and Android.");
+	throw new Error(i18n.t("settings:export.unsupportedPlatform"));
 }

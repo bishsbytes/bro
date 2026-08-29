@@ -17,12 +17,7 @@ import {
 	UnitPreferenceRepository,
 } from "@bro/database-app";
 import { previousLocalDay } from "@bro/domain";
-import { resolveChallenge } from "@bro/domain/challenge-catalogue";
-import { resolveHabit } from "@bro/domain/habit-catalogue";
-import {
-	CONFIGURABLE_CHECK_IN_METRIC_SLUGS,
-	resolveMetric,
-} from "@bro/domain/metric-registry";
+import { CONFIGURABLE_CHECK_IN_METRIC_SLUGS } from "@bro/domain/metric-registry";
 import {
 	formatMetricDelta,
 	formatMetricValue,
@@ -31,6 +26,7 @@ import {
 	resolveMetricDay,
 } from "@bro/logic";
 import type { SQLiteDatabase } from "expo-sqlite";
+import { resolveChallenge, resolveHabit, resolveMetric } from "../content";
 
 export type HistoryMeasurement = {
 	id: string;
@@ -209,6 +205,7 @@ function assembleMeasurements(
 					metric,
 					observation.value,
 					displayUnit,
+					locale,
 				),
 				source: observation.source,
 				selected: selectedIds.has(observation.id),
@@ -220,7 +217,12 @@ function assembleMeasurements(
 				metricSlug,
 				label: metric.label,
 				value: row.value,
-				formattedValue: formatMetricValue(metric, row.value, displayUnit),
+				formattedValue: formatMetricValue(
+					metric,
+					row.value,
+					displayUnit,
+					locale,
+				),
 				source: row.source,
 				selected: selectedIds.has(row.id),
 				observation: null,

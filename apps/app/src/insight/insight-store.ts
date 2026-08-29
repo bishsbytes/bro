@@ -6,10 +6,6 @@ import {
 	TrackedMetricsRepository,
 } from "@bro/database-app";
 import { shiftLocalDay } from "@bro/domain";
-import {
-	INSIGHT_CATALOGUE,
-	resolveInsight,
-} from "@bro/domain/insight-catalogue";
 import { DEFAULT_TRACKED_METRICS } from "@bro/domain/metric-registry";
 import {
 	aggregateInsightTeaser,
@@ -23,6 +19,7 @@ import {
 	type ShownInsight,
 } from "@bro/logic";
 import type { SQLiteDatabase } from "expo-sqlite";
+import { insightCatalogue, resolveInsight } from "../content";
 
 export type InsightSnapshot = {
 	state: "empty" | "not-yet" | "shown";
@@ -34,7 +31,7 @@ export type InsightSnapshot = {
 
 const MAX_LAG_DAYS = Math.max(
 	0,
-	...INSIGHT_CATALOGUE.map((pair) => pair.lagDays),
+	...insightCatalogue().map((pair) => pair.lagDays),
 );
 
 function systemTimeZone(): string {
@@ -120,7 +117,7 @@ export class InsightStore {
 	async load(): Promise<InsightSnapshot> {
 		const throughLocalDay = localDayAt(this.now().getTime(), this.timeZone());
 		const read = await this.createReader(throughLocalDay);
-		const evaluations = INSIGHT_CATALOGUE.map((pair) =>
+		const evaluations = insightCatalogue().map((pair) =>
 			evaluateInsight(pair, throughLocalDay, read),
 		);
 		const shown = evaluations.filter(

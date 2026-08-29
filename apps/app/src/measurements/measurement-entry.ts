@@ -46,16 +46,22 @@ export function parseMeasurementInput(
 	);
 }
 
-/** Splits a canonical value into the fields its display unit is typed in. */
+/**
+ * Splits a canonical value into the fields its display unit is typed in. Takes
+ * the same locale as `parseMeasurementInput` so a value seeded into a field
+ * parses back unchanged.
+ */
 export function measurementInputOf(
 	canonicalValue: number,
 	presentation: MeasurementPresentation,
+	locale: string | undefined,
 ): MeasurementEntry {
 	if (presentation.dimension === "mass") {
 		return measurementEntryOf(
 			canonicalValue,
 			presentation.dimension,
 			presentation.displayUnit,
+			locale,
 		);
 	}
 	if (presentation.dimension === "length") {
@@ -63,11 +69,13 @@ export function measurementInputOf(
 			canonicalValue,
 			presentation.dimension,
 			presentation.displayUnit,
+			locale,
 		);
 	}
 	return measurementEntryOf(
 		canonicalValue,
 		presentation.dimension,
 		presentation.displayUnit,
+		locale,
 	);
 }

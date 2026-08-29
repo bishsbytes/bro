@@ -17,22 +17,11 @@ import {
 	withTransaction,
 } from "@bro/database-app";
 import { isCalendarDay, shiftLocalDay, systemLocale } from "@bro/domain";
-import {
-	type ChallengeDay,
-	resolveChallenge,
-} from "@bro/domain/challenge-catalogue";
-import {
-	HABIT_CATALOGUE,
-	type HabitTemplate,
-	resolveHabit,
-} from "@bro/domain/habit-catalogue";
-import {
-	DEFAULT_LIFE_AREA_METRICS,
-	resolveLifeAreas,
-} from "@bro/domain/life-area-catalogue";
+import type { ChallengeDay } from "@bro/domain/challenge-catalogue";
+import type { HabitTemplate } from "@bro/domain/habit-catalogue";
+import { DEFAULT_LIFE_AREA_METRICS } from "@bro/domain/life-area-catalogue";
 import {
 	isConsumptionDerivedMeasurementSlug,
-	resolveMetric,
 	TAG_PRESENCE_VALUE,
 } from "@bro/domain/metric-registry";
 import {
@@ -52,6 +41,14 @@ import {
 	resolveMetricDay,
 } from "@bro/logic";
 import type { SQLiteDatabase } from "expo-sqlite";
+import {
+	habitCatalogue,
+	resolveChallenge,
+	resolveHabit,
+	resolveLifeAreas,
+	resolveMetric,
+} from "../content";
+import { i18n } from "../i18n";
 
 export type TodayHabit = {
 	habit: Habit;
@@ -205,12 +202,10 @@ function localDaysInRange(
 	throughLocalDay: string,
 ): string[] {
 	if (!isCalendarDay(fromLocalDay) || !isCalendarDay(throughLocalDay)) {
-		throw new TypeError(
-			"Habit adherence range must use real YYYY-MM-DD dates.",
-		);
+		throw new TypeError(i18n.t("validation:habits.adherenceDates"));
 	}
 	if (fromLocalDay > throughLocalDay) {
-		throw new RangeError("Habit adherence range must run forwards.");
+		throw new RangeError(i18n.t("validation:habits.adherenceForwards"));
 	}
 	const localDays: string[] = [];
 	for (
@@ -330,6 +325,7 @@ export class HabitsStore {
 			return null;
 		}
 		const metric = resolved.metric;
+		const locale = this.locale();
 		const preferences = await this.unitPreferences.resolveLatestPerDimension();
 		const displayUnit = metricDisplayUnit(
 			metric,
@@ -339,9 +335,9 @@ export class HabitsStore {
 					preference.unit,
 				]),
 			),
-			this.locale(),
+			locale,
 		);
-		return (value) => formatMetricValue(metric, value, displayUnit);
+		return (value) => formatMetricValue(metric, value, displayUnit, locale);
 	}
 
 	async loadToday(localDay = this.today()): Promise<TodayHabitsSnapshot> {
@@ -427,7 +423,7 @@ export class HabitsStore {
 					dayIndex,
 					durationDays: enrolment.durationDays,
 					dayTitle: day?.title ?? `Day ${dayIndex}`,
-					action: day?.action ?? "Open the challenge to review this step.",
+					action: day?.action ?? i18n.t("habits:challengeStepUnavailable"),
 				};
 			}),
 		);
@@ -645,7 +641,7 @@ export class HabitsStore {
 					areaSlug: area.slug,
 					areaLabel: area.label,
 					more: !area.enabled,
-					habits: HABIT_CATALOGUE.filter(
+					habits: habitCatalogue().filter(
 						(habit) =>
 							habit.areaSlug === area.slug && !activeSlugs.has(habit.slug),
 					),
@@ -736,7 +732,8 @@ export class HabitsStore {
 
 	async addCustom(draft: HabitEditorDraft): Promise<Habit> {
 		const label = draft.label.trim();
-		if (!label) throw new TypeError("Custom habit label must not be empty.");
+		if (!label)
+			throw new TypeError(i18n.t("validation:habits.customLabelEmpty"));
 		const timestamp = this.now().getTime();
 		const active = await this.habits.listActive();
 		return await this.habits.create({

@@ -1,5 +1,13 @@
+import { LIFE_AREA_CATALOGUE } from "@bro/domain/life-area-catalogue";
+import { resolveMetric } from "../content";
 import { i18n, nonBreaking, resolveLanguage } from ".";
 import { pseudoLocaliseString } from "./pseudo";
+
+function resolveLifeAreaLabel(slug: string): string {
+	const area = LIFE_AREA_CATALOGUE.find((candidate) => candidate.slug === slug);
+	if (!area) throw new Error(`Unknown life area ${slug}.`);
+	return area.label;
+}
 
 describe("resolveLanguage", () => {
 	it("takes the first tag whose base language we ship copy in", () => {
@@ -64,5 +72,49 @@ describe("pseudoLocaliseString", () => {
 		expect(pseudoLocaliseString("Target {{value}}")).toBe(
 			"⟦Ťáŕǵéť {{value}}···⟧",
 		);
+	});
+});
+
+describe("authored content", () => {
+	// The English half of `content` is derived from the domain catalogues, so a
+	// missing translation degrades to the authored wording rather than a key.
+	it("derives English from the domain catalogues", () => {
+		expect(i18n.t("content:metrics.mood")).toBe("Mood");
+		expect(i18n.t("content:lifeAreas.career")).toBe(
+			resolveLifeAreaLabel("wheel:career"),
+		);
+	});
+
+	it("reads authored copy back through the content accessors", () => {
+		const mood = resolveMetric("mood");
+		if (mood.kind !== "known") throw new Error("Expected a known metric.");
+		expect(mood.metric.label).toBe("Mood");
+	});
+
+	it("prefers a translation over the authored wording", () => {
+		i18n.addResourceBundle(
+			"en",
+			"content",
+			{ metrics: { mood: "Mood today" } },
+			true,
+			true,
+		);
+		try {
+			const mood = resolveMetric("mood");
+			if (mood.kind !== "known") throw new Error("Expected a known metric.");
+			expect(mood.metric.label).toBe("Mood today");
+			// A metric the bundle does not mention keeps its authored wording.
+			const energy = resolveMetric("energy");
+			if (energy.kind !== "known") throw new Error("Expected a known metric.");
+			expect(energy.metric.label).toBe("Energy");
+		} finally {
+			i18n.addResourceBundle(
+				"en",
+				"content",
+				{ metrics: { mood: "Mood" } },
+				true,
+				true,
+			);
+		}
 	});
 });

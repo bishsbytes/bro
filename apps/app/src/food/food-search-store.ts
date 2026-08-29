@@ -9,6 +9,7 @@ import {
 	isFoodSearchResult,
 } from "@bro/domain/food-search";
 import type { SQLiteDatabase } from "expo-sqlite";
+import { i18n } from "../i18n";
 
 export type FoodSearchSnapshot = {
 	query: string;
@@ -26,16 +27,21 @@ type FoodSearchStoreOptions = {
 	timeoutMs?: number;
 };
 
-const STILL_AVAILABLE =
-	"Your recents, custom foods, and saved results are still available.";
-const OFFLINE_MESSAGE = `Search needs a connection. ${STILL_AVAILABLE}`;
-const BUSY_MESSAGE = `Search is busy right now. Try again in a moment. ${STILL_AVAILABLE}`;
-const UNAVAILABLE_MESSAGE = `Search is temporarily unavailable. ${STILL_AVAILABLE}`;
+/**
+ * Each outcome ends with the same reassurance, so the catalogue keeps it as
+ * one sentence interpolated into the three, rather than three near-copies a
+ * translator has to keep in step.
+ */
+function searchMessage(outcome: "offline" | "busy" | "unavailable"): string {
+	return i18n.t(`food:search.${outcome}`, {
+		rest: i18n.t("food:search.stillAvailable"),
+	});
+}
 
 function normalizedQuery(query: string): string {
 	const normalized = query.trim();
 	if (normalized.length < 2 || normalized.length > 120) {
-		throw new RangeError("Enter between 2 and 120 characters.");
+		throw new RangeError(i18n.t("food:search.queryLength"));
 	}
 	return normalized;
 }
@@ -98,7 +104,9 @@ export class FoodSearchStore {
 					query,
 					normalized,
 					false,
-					response.status === 429 ? BUSY_MESSAGE : UNAVAILABLE_MESSAGE,
+					response.status === 429
+						? searchMessage("busy")
+						: searchMessage("unavailable"),
 				);
 			}
 			const payload: unknown = await response.json();
@@ -107,7 +115,7 @@ export class FoodSearchStore {
 					query,
 					normalized,
 					false,
-					UNAVAILABLE_MESSAGE,
+					searchMessage("unavailable"),
 				);
 			}
 			await Promise.all(
@@ -125,9 +133,7 @@ export class FoodSearchStore {
 				fromCache: false,
 				offline: false,
 				message:
-					payload.results.length === 0
-						? "No matching foods found. You can still add the food yourself."
-						: null,
+					payload.results.length === 0 ? i18n.t("food:search.noResults") : null,
 			};
 		} catch {
 			return await this.degraded(query, normalized, true);
@@ -173,7 +179,7 @@ export class FoodSearchStore {
 		query: string,
 		normalized: string,
 		offline: boolean,
-		message: string = OFFLINE_MESSAGE,
+		message: string = searchMessage("offline"),
 	): Promise<FoodSearchSnapshot> {
 		const cached = await this.cache.listByQuery<unknown>(normalized);
 		return {

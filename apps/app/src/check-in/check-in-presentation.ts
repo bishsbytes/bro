@@ -1,4 +1,4 @@
-import { resolveMetric } from "@bro/domain/metric-registry";
+import { resolveMetric } from "../content";
 
 /** One face per point of the Mood scale, lowest first. */
 export const MOOD_FACES = ["😞", "🙁", "😐", "🙂", "😄"] as const;

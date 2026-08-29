@@ -17,8 +17,6 @@ import {
 import {
 	CONFIGURABLE_CHECK_IN_METRIC_SLUGS,
 	DEFAULT_TRACKED_METRICS,
-	listTags,
-	resolveMetric,
 	type ScoredMetricDefinition,
 	TAG_PRESENCE_VALUE,
 	type TagMetricDefinition,
@@ -29,6 +27,8 @@ import {
 	toMeasurementPresentation,
 } from "@bro/logic";
 import type { SQLiteDatabase } from "expo-sqlite";
+import { listTags, resolveMetric } from "../content";
+import { i18n } from "../i18n";
 import {
 	refreshReminderNotifications,
 	reportReminderRefreshFailure,
@@ -134,7 +134,9 @@ function assertScores(scores: CheckInScores): void {
 	);
 	for (const [label, value] of values) {
 		if (!Number.isInteger(value) || value < 1 || value > 5) {
-			throw new RangeError(`${label} must be a whole number from 1 to 5.`);
+			throw new RangeError(
+				i18n.t("validation:checkIn.scoreRange", { score: label }),
+			);
 		}
 	}
 }
@@ -239,6 +241,7 @@ export class CheckInStore {
 									observation.value,
 									measurement.dimension,
 									measurement.displayUnit,
+									inputLocale,
 								),
 							},
 						]

@@ -15,6 +15,7 @@ import {
 	type WeekStartDay,
 } from "@bro/domain";
 import type { SQLiteDatabase } from "expo-sqlite";
+import { i18n } from "../i18n";
 
 export type UnitOption = {
 	unit: DisplayUnit;
@@ -73,25 +74,30 @@ export function defaultWeekStart(locale: string | undefined): WeekStartDay {
 	}
 }
 
-const UNIT_LABELS: Record<DisplayUnit, string> = {
-	kg: "Kilograms",
-	lb: "Pounds",
-	st: "Stones & pounds",
-	cm: "Centimetres",
-	in: "Inches",
-	ft: "Feet & inches",
-	"%": "Percent",
-	g: "Grams",
-	mg: "Milligrams",
-	uk_unit: "UK units",
-	us_standard_drink: "US standard drinks",
-	ml: "Millilitres",
-	l: "Litres",
-	fl_oz_uk: "UK fluid ounces",
-	fl_oz_us: "US fluid ounces",
-	kcal: "Kilocalories",
-	kJ: "Kilojoules",
-};
+/** Catalogue keys, not copy; `%` is not a legal key so it is spelled out. */
+const UNIT_LABEL_KEYS = {
+	kg: "unitNames.kg",
+	lb: "unitNames.lb",
+	st: "unitNames.st",
+	cm: "unitNames.cm",
+	in: "unitNames.in",
+	ft: "unitNames.ft",
+	"%": "unitNames.percent",
+	g: "unitNames.g",
+	mg: "unitNames.mg",
+	uk_unit: "unitNames.uk_unit",
+	us_standard_drink: "unitNames.us_standard_drink",
+	ml: "unitNames.ml",
+	l: "unitNames.l",
+	fl_oz_uk: "unitNames.fl_oz_uk",
+	fl_oz_us: "unitNames.fl_oz_us",
+	kcal: "unitNames.kcal",
+	kJ: "unitNames.kJ",
+} as const satisfies Record<DisplayUnit, string>;
+
+export function unitLabel(unit: DisplayUnit): string {
+	return i18n.t(`settings:${UNIT_LABEL_KEYS[unit]}`);
+}
 
 const GENERAL_UNIT_PREFERENCE_DIMENSIONS = [
 	"mass",
@@ -102,27 +108,15 @@ const GENERAL_UNIT_PREFERENCE_DIMENSIONS = [
 type GeneralUnitPreferenceDimension =
 	(typeof GENERAL_UNIT_PREFERENCE_DIMENSIONS)[number];
 
-const SETTING_COPY: Record<
-	GeneralUnitPreferenceDimension,
-	{ title: string; description: string }
-> = {
-	mass: {
-		title: "Weight",
-		description: "Used for weight entries, history, trends, and goals.",
-	},
-	height: {
-		title: "Height",
-		description: "Used for height measurements.",
-	},
-	length: {
-		title: "Other body measurements",
-		description: "Used for waist and other circumference measurements.",
-	},
-	fraction: {
-		title: "Body fat",
-		description: "Body fat is always displayed as a percentage.",
-	},
-};
+function settingCopy(dimension: GeneralUnitPreferenceDimension): {
+	title: string;
+	description: string;
+} {
+	return {
+		title: i18n.t(`settings:dimensions.${dimension}Title`),
+		description: i18n.t(`settings:dimensions.${dimension}Description`),
+	};
+}
 
 /** Canonical values chosen to read naturally in every unit on offer. */
 const PREVIEW_CANONICAL_VALUES = {
@@ -144,6 +138,7 @@ function previewFor(
 			PREVIEW_CANONICAL_VALUES[dimension],
 			DIMENSION_BY_UNIT_PREFERENCE[dimension],
 			resolvedUnit,
+			locale,
 		),
 	};
 }
@@ -180,11 +175,11 @@ export class UnitSettingsStore {
 				);
 				return {
 					dimension,
-					...SETTING_COPY[dimension],
+					...settingCopy(dimension),
 					options: DISPLAY_UNITS_BY_PREFERENCE_DIMENSION[dimension].map(
 						(unit) => ({
 							unit,
-							label: UNIT_LABELS[unit],
+							label: unitLabel(unit),
 						}),
 					),
 					resolvedUnit,

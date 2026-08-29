@@ -14,9 +14,7 @@ import {
 	resolveUnitPreference,
 } from "@bro/domain";
 import {
-	DRINK_CATALOGUE,
 	ethanolKgFromVolumeAndAbv,
-	resolveDrink,
 	snapshotDrinkServing,
 } from "@bro/domain/drink-catalogue";
 import type {
@@ -34,6 +32,10 @@ import {
 	ConsumptionStore,
 	type PresentedConsumptionEntry,
 } from "../consumption/consumption-store";
+import { drinkCatalogue, resolveDrink } from "../content";
+import { i18n } from "../i18n";
+import { unitLabel } from "../units/unit-settings-store";
+import { unitWords } from "../units/unit-words";
 
 const DRINK_METRIC_SLUGS = [
 	"alcohol_intake",
@@ -75,7 +77,7 @@ export type CustomDrinkDraft = {
 };
 
 export type DrinkDaySnapshot = ConsumptionDaySnapshot<DrinkMetric> & {
-	catalogue: typeof DRINK_CATALOGUE;
+	catalogue: ReturnType<typeof drinkCatalogue>;
 	customDrinks: CustomConsumable[];
 };
 
@@ -102,19 +104,18 @@ export type DrinkSettingsSnapshot = {
 
 const DRINK_UNIT_DIMENSIONS = ["alcohol", "volume"] as const;
 
-const UNIT_OPTIONS = {
-	alcohol: [
-		{ unit: "uk_unit", label: "UK units" },
-		{ unit: "us_standard_drink", label: "US standard drinks" },
-		{ unit: "g", label: "Grams" },
-	],
-	volume: [
-		{ unit: "ml", label: "Millilitres" },
-		{ unit: "l", label: "Litres" },
-		{ unit: "fl_oz_uk", label: "UK fluid ounces" },
-		{ unit: "fl_oz_us", label: "US fluid ounces" },
-	],
-} as const satisfies Record<DrinkUnitDimension, readonly DrinkUnitOption[]>;
+/** The units each dimension offers; names come from the settings catalogue. */
+const UNIT_CHOICES = {
+	alcohol: ["uk_unit", "us_standard_drink", "g"],
+	volume: ["ml", "l", "fl_oz_uk", "fl_oz_us"],
+} as const satisfies Record<DrinkUnitDimension, readonly DisplayUnit[]>;
+
+function unitOptions(dimension: DrinkUnitDimension): DrinkUnitOption[] {
+	return UNIT_CHOICES[dimension].map((unit) => ({
+		unit,
+		label: unitLabel(unit),
+	}));
+}
 
 /** A pint of lager, shown so a unit choice can be judged against something real. */
 const UNIT_PREVIEWS = {
@@ -122,20 +123,35 @@ const UNIT_PREVIEWS = {
 	volume: { canonicalValue: 0.568_261_25, dimension: "volume" },
 } as const;
 
-function unitPreview(dimension: DrinkUnitDimension, unit: DisplayUnit): string {
+function unitPreview(
+	dimension: DrinkUnitDimension,
+	unit: DisplayUnit,
+	locale: string | undefined,
+): string {
 	const preview = UNIT_PREVIEWS[dimension];
 	if (dimension === "alcohol" && isDisplayUnitForDimension("mass", unit)) {
-		return formatMeasurement(preview.canonicalValue, "mass", unit);
+		return formatMeasurement(
+			preview.canonicalValue,
+			"mass",
+			unit,
+			locale,
+			unitWords(),
+		);
 	}
 	if (dimension === "volume" && isDisplayUnitForDimension("volume", unit)) {
-		return formatMeasurement(preview.canonicalValue, "volume", unit);
+		return formatMeasurement(
+			preview.canonicalValue,
+			"volume",
+			unit,
+			locale,
+			unitWords(),
+		);
 	}
 	throw new TypeError(`Unit ${unit} does not measure ${dimension}.`);
 }
 
 export class DrinksStore extends ConsumptionStore<DrinkMetricSlug> {
 	protected readonly kind: ConsumptionEntryKind = "drink";
-	protected readonly noun = "Drink";
 	protected readonly metricSlugs = DRINK_METRIC_SLUGS;
 
 	/**
@@ -165,7 +181,7 @@ export class DrinksStore extends ConsumptionStore<DrinkMetricSlug> {
 			this.loadDayBase(localDay),
 			this.customConsumables.listByKind("drink"),
 		]);
-		return { ...base, catalogue: DRINK_CATALOGUE, customDrinks };
+		return { ...base, catalogue: drinkCatalogue(), customDrinks };
 	}
 
 	/** Logs a catalogue drink as the immutable snapshot the catalogue defines. */
@@ -180,7 +196,7 @@ export class DrinksStore extends ConsumptionStore<DrinkMetricSlug> {
 			(candidate) => candidate.id === servingId,
 		);
 		if (!drink || !serving) {
-			throw new TypeError("Choose a drink and serving from the catalogue.");
+			throw new TypeError(i18n.t("validation:drinks.chooseCatalogue"));
 		}
 		return await this.entries.create({
 			kind: "drink",
@@ -191,15 +207,15 @@ export class DrinksStore extends ConsumptionStore<DrinkMetricSlug> {
 
 	async logFree(draft: FreeDrinkDraft): Promise<ConsumptionEntry> {
 		this.assertQuantity(draft.quantity);
-		assertFiniteNonNegative(draft.volumeMl, "Drink volume");
-		assertFiniteNonNegative(draft.abvPercent, "Drink ABV");
-		assertFiniteNonNegative(draft.caffeineMg, "Drink caffeine");
-		assertFiniteNonNegative(draft.energyKcal, "Drink energy");
+		assertFiniteNonNegative(draft.volumeMl, "drinkVolume");
+		assertFiniteNonNegative(draft.abvPercent, "drinkAbv");
+		assertFiniteNonNegative(draft.caffeineMg, "drinkCaffeine");
+		assertFiniteNonNegative(draft.energyKcal, "drinkEnergy");
 		if (draft.abvPercent !== null && draft.abvPercent > 100) {
-			throw new RangeError("Drink ABV must not exceed 100%.");
+			throw new RangeError(i18n.t("validation:drinks.abvMaximum"));
 		}
 		if (draft.abvPercent !== null && draft.volumeMl === null) {
-			throw new TypeError("Enter a volume when entering an ABV.");
+			throw new TypeError(i18n.t("validation:drinks.volumeWithAbv"));
 		}
 		const volumeL =
 			draft.volumeMl === null
@@ -254,11 +270,11 @@ export class DrinksStore extends ConsumptionStore<DrinkMetricSlug> {
 				);
 				return {
 					dimension,
-					title: dimension === "alcohol" ? "Alcohol" : "Fluid",
+					title: i18n.t(`settings:dimensions.${dimension}Title`),
 					resolvedUnit,
 					explicitUnit,
-					preview: unitPreview(dimension, resolvedUnit),
-					options: [...UNIT_OPTIONS[dimension]],
+					preview: unitPreview(dimension, resolvedUnit, this.locale()),
+					options: unitOptions(dimension),
 				};
 			}),
 		};

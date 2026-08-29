@@ -1,3 +1,4 @@
+import { content } from "./content";
 import { auth } from "./en/auth";
 import { body } from "./en/body";
 import { challenges } from "./en/challenges";
@@ -17,6 +18,7 @@ import { onboarding } from "./en/onboarding";
 import { privacy } from "./en/privacy";
 import { review } from "./en/review";
 import { settings } from "./en/settings";
+import { validation } from "./en/validation";
 
 /**
  * Every catalogue ships in the bundle, so i18next initialises synchronously and
@@ -34,6 +36,7 @@ export const resources = {
 		challenges,
 		checkIn,
 		common,
+		content,
 		drinks,
 		food,
 		habits,
@@ -48,6 +51,7 @@ export const resources = {
 		privacy,
 		review,
 		settings,
+		validation,
 	},
 } as const;
 

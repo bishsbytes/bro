@@ -7,6 +7,7 @@ import {
 	formatMeasurementDelta,
 	INTRINSIC_DIMENSIONS,
 	resolveUnitPreference,
+	type UnitWordOverrides,
 } from "@bro/domain";
 import type { MeasurementMetricDefinition } from "@bro/domain/metric-registry";
 
@@ -38,9 +39,11 @@ export function formatMetricValue(
 	metric: MeasurementMetricDefinition,
 	value: number,
 	displayUnit: DisplayUnit | null,
+	locale?: string,
+	unitWords?: UnitWordOverrides,
 ): string {
 	if (isIntrinsicDimension(metric.dimension)) {
-		return formatIntrinsicMeasurement(value, metric.dimension);
+		return formatIntrinsicMeasurement(value, metric.dimension, locale);
 	}
 	if (!displayUnit) {
 		throw new TypeError(`A ${metric.dimension} metric needs a display unit.`);
@@ -49,6 +52,8 @@ export function formatMetricValue(
 		value,
 		metric.dimension as Dimension,
 		displayUnit as never,
+		locale,
+		unitWords,
 	);
 }
 
@@ -61,9 +66,11 @@ export function formatMetricDelta(
 	metric: MeasurementMetricDefinition,
 	magnitude: number,
 	displayUnit: DisplayUnit | null,
+	locale?: string,
+	unitWords?: UnitWordOverrides,
 ): string | null {
 	if (isIntrinsicDimension(metric.dimension)) {
-		return formatIntrinsicDelta(magnitude, metric.dimension);
+		return formatIntrinsicDelta(magnitude, metric.dimension, locale);
 	}
 	if (!displayUnit) {
 		throw new TypeError(`A ${metric.dimension} metric needs a display unit.`);
@@ -72,5 +79,7 @@ export function formatMetricDelta(
 		magnitude,
 		metric.dimension as Dimension,
 		displayUnit as never,
+		locale,
+		unitWords,
 	);
 }

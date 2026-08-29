@@ -13,7 +13,6 @@ import {
 	listUserEnterableMeasurements,
 	type MeasurementMetricDefinition,
 	type MeasurementSlug,
-	resolveMetric,
 	type UserEnterableMeasurementMetricDefinition,
 } from "@bro/domain/metric-registry";
 import {
@@ -31,6 +30,8 @@ import {
 	toMeasurementPresentation,
 } from "@bro/logic";
 import type { SQLiteDatabase } from "expo-sqlite";
+import { resolveMetric } from "../content";
+import { i18n } from "../i18n";
 
 export type { MeasurementPresentation };
 
@@ -87,12 +88,18 @@ function measurementDefaults() {
 function formatPresentedMeasurement(
 	value: number,
 	presentation: BodyMetricPresentation,
+	locale: string | undefined,
 ): string {
 	const resolved = resolveMetric(presentation.metricSlug);
 	if (resolved.kind !== "known" || resolved.metric.kind !== "measurement") {
 		throw new TypeError(`Unknown measurement slug: ${presentation.metricSlug}`);
 	}
-	return formatMetricValue(resolved.metric, value, presentation.displayUnit);
+	return formatMetricValue(
+		resolved.metric,
+		value,
+		presentation.displayUnit,
+		locale,
+	);
 }
 
 function ascendingObservations(rows: readonly Observation[]): Observation[] {
@@ -112,11 +119,12 @@ function progressFor(
 	goal: Goal,
 	rows: readonly Observation[],
 	presentation: BodyMetricPresentation,
+	locale: string | undefined,
 ): BodyGoalProgress {
 	return resolveGoalProgress({
 		goal,
 		series: ascendingObservations(rows),
-		format: (value) => formatPresentedMeasurement(value, presentation),
+		format: (value) => formatPresentedMeasurement(value, presentation, locale),
 	});
 }
 
@@ -125,10 +133,10 @@ function assertCanonicalValue(
 	value: number,
 ): void {
 	if (!Number.isFinite(value) || value < 0) {
-		throw new RangeError("Measurement values must be finite and non-negative.");
+		throw new RangeError(i18n.t("validation:body.valueRange"));
 	}
 	if (metric.dimension === "fraction" && value > 1) {
-		throw new RangeError("Fraction measurements must be between zero and one.");
+		throw new RangeError(i18n.t("validation:body.fractionRange"));
 	}
 }
 
@@ -170,6 +178,7 @@ export class BodyStore {
 	}
 
 	async loadMetric(metricSlug: string): Promise<BodyMetricDetail | null> {
+		const locale = this.locale();
 		const metric = resolveMetric(metricSlug);
 		if (metric.kind !== "known" || metric.metric.kind !== "measurement") {
 			return null;
@@ -210,12 +219,13 @@ export class BodyStore {
 					formattedValue: formatPresentedMeasurement(
 						observation.value,
 						summary,
+						locale,
 					),
 				})),
 			goals: goals
 				.filter((goal) => goal.metricSlug === metricSlug)
-				.map((goal) => progressFor(goal, resolvedRows, summary)),
-			inputLocale: this.locale(),
+				.map((goal) => progressFor(goal, resolvedRows, summary, locale)),
+			inputLocale: locale,
 		};
 	}
 
@@ -278,7 +288,7 @@ export class BodyStore {
 	): Promise<BodyMetricDetail | null> {
 		const observation = await this.observations.findById(id);
 		if (!observation) {
-			throw new TypeError("Measurement observation not found.");
+			throw new TypeError(i18n.t("validation:body.observationNotFound"));
 		}
 		const metric = resolveMeasurement(observation.metricSlug);
 		assertCanonicalValue(metric, canonicalValue);
@@ -296,7 +306,7 @@ export class BodyStore {
 	async deleteMeasurement(id: string): Promise<BodyMetricDetail | null> {
 		const observation = await this.observations.findById(id);
 		if (!observation) {
-			throw new TypeError("Measurement observation not found.");
+			throw new TypeError(i18n.t("validation:body.observationNotFound"));
 		}
 		const metric = resolveMeasurement(observation.metricSlug);
 		await this.observations.delete(observation.id);
@@ -328,12 +338,10 @@ export class BodyStore {
 				: metricRows,
 		);
 		if (!latest) {
-			throw new TypeError("Log a measurement before setting a goal.");
+			throw new TypeError(i18n.t("validation:body.logBeforeGoal"));
 		}
 		if (targetValue === latest.value) {
-			throw new RangeError(
-				"Choose a target different from your latest measurement.",
-			);
+			throw new RangeError(i18n.t("validation:body.targetSameAsLatest"));
 		}
 		if (
 			goals.some(
@@ -341,7 +349,7 @@ export class BodyStore {
 					goal.metricSlug === metric.slug && goalStatus(goal) === "active",
 			)
 		) {
-			throw new TypeError("Finish the active goal before creating another.");
+			throw new TypeError(i18n.t("validation:body.activeGoalExists"));
 		}
 		return await this.goals.create({
 			metricSlug: metric.slug,
@@ -423,7 +431,9 @@ export class BodyStore {
 				const latest = latestObservation(resolvedRows);
 				const metricGoals = goals
 					.filter((goal) => goal.metricSlug === metric.slug)
-					.map((goal) => progressFor(goal, resolvedRows, presentation));
+					.map((goal) =>
+						progressFor(goal, resolvedRows, presentation, inputLocale),
+					);
 				const tracked = overlay?.enabled ?? false;
 				const hasImportedData = importedRows.length > 0;
 				return {
@@ -436,7 +446,11 @@ export class BodyStore {
 					position: overlay?.position ?? metric.defaultPosition,
 					latest,
 					latestFormatted: latest
-						? formatPresentedMeasurement(latest.value, presentation)
+						? formatPresentedMeasurement(
+								latest.value,
+								presentation,
+								inputLocale,
+							)
 						: null,
 					series: buildTrendSeries(
 						resolvedRows,

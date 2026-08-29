@@ -13,15 +13,8 @@ import {
 	UnitPreferenceRepository,
 } from "@bro/database-app";
 import { localDayOf, systemLocale } from "@bro/domain";
-import {
-	DEFAULT_LIFE_AREA_METRICS,
-	listActiveLifeAreas,
-	resolveLifeAreas,
-} from "@bro/domain/life-area-catalogue";
-import {
-	isConsumptionDerivedMeasurementSlug,
-	resolveMetric,
-} from "@bro/domain/metric-registry";
+import { DEFAULT_LIFE_AREA_METRICS } from "@bro/domain/life-area-catalogue";
+import { isConsumptionDerivedMeasurementSlug } from "@bro/domain/metric-registry";
 import { WHEEL_OF_LIFE_TEMPLATE } from "@bro/domain/wheel-template";
 import {
 	consumptionMetricTrailingDailyMean,
@@ -32,6 +25,12 @@ import {
 	resolveMetricObservations,
 } from "@bro/logic";
 import type { SQLiteDatabase } from "expo-sqlite";
+import {
+	listActiveLifeAreas,
+	resolveLifeAreas,
+	resolveMetric,
+} from "../content";
+import { i18n } from "../i18n";
 
 export type ReviewDraft = {
 	startedAt: number;
@@ -160,13 +159,13 @@ function assertScores(
 		scoreSlugs.length !== itemSlugs.size ||
 		scoreSlugs.some((slug) => !itemSlugs.has(slug))
 	) {
-		throw new TypeError("Rate every displayed life area before saving.");
+		throw new TypeError(i18n.t("validation:review.rateEveryArea"));
 	}
 	for (const item of draft.items) {
 		const value = scores[item.slug];
 		if (!Number.isInteger(value) || value < 1 || value > 10) {
 			throw new RangeError(
-				`${item.label} must be a whole number from 1 to 10.`,
+				i18n.t("validation:review.scoreRange", { area: item.label }),
 			);
 		}
 	}
@@ -182,9 +181,7 @@ function assertFocusItems(
 		new Set(focusItemSlugs).size !== focusItemSlugs.length ||
 		focusItemSlugs.some((slug) => !itemSlugs.has(slug))
 	) {
-		throw new TypeError(
-			"Choose no more than three unique focus areas from this wheel.",
-		);
+		throw new TypeError(i18n.t("validation:review.focusLimit"));
 	}
 }
 
@@ -288,7 +285,7 @@ export class ReviewStore {
 					inputLocale,
 				);
 				const format = (value: number) =>
-					formatMetricValue(metric, value, displayUnit);
+					formatMetricValue(metric, value, displayUnit, inputLocale);
 				const slug = metric.slug;
 				if (isConsumptionDerivedMeasurementSlug(slug)) {
 					const series = resolveMetricObservations(
@@ -354,7 +351,7 @@ export class ReviewStore {
 		);
 		const areas = listActiveLifeAreas(overlays);
 		if (areas.length === 0) {
-			throw new Error("Enable at least one life area before taking stock.");
+			throw new Error(i18n.t("validation:review.enableAnArea"));
 		}
 		return {
 			startedAt: this.now().getTime(),
@@ -434,15 +431,13 @@ export class ReviewStore {
 	): Promise<Goal> {
 		const setup = await this.loadGoalSetup(assessmentId, metricSlug);
 		if (!setup) {
-			throw new TypeError("Goals can only be created from a saved focus area.");
+			throw new TypeError(i18n.t("validation:review.goalFromFocusArea"));
 		}
 		if (!Number.isInteger(targetValue) || targetValue < 1 || targetValue > 10) {
-			throw new RangeError("Choose a whole-number target from 1 to 10.");
+			throw new RangeError(i18n.t("validation:review.targetRange"));
 		}
 		if (targetValue === setup.currentValue) {
-			throw new RangeError(
-				"Choose a target different from your current score.",
-			);
+			throw new RangeError(i18n.t("validation:review.targetSameAsCurrent"));
 		}
 		return await this.goals.create({
 			metricSlug,

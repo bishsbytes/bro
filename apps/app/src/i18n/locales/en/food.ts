@@ -50,6 +50,14 @@ export const food = {
 	},
 	search: {
 		title: "Search foods",
+		stillAvailable:
+			"Your recents, custom foods, and saved results are still available.",
+		/** {{rest}} is the sentence above, appended to each outcome. */
+		offline: "Search needs a connection. {{rest}}",
+		busy: "Search is busy right now. Try again in a moment. {{rest}}",
+		unavailable: "Search is temporarily unavailable. {{rest}}",
+		queryLength: "Enter between 2 and 120 characters.",
+		noResults: "No matching foods found. You can still add the food yourself.",
 		/** Renders in capitals; see the note on eyebrows in the review catalogue. */
 		cachedEyebrow: "SAVED FOR OFFLINE",
 		field: "Food search",

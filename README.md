@@ -149,7 +149,23 @@ All user-facing copy in the app comes from typed catalogues in [`apps/app/src/i1
 - **Pseudo-locale.** Run with `EXPO_PUBLIC_PSEUDO_LOCALE=1` to render every string accented, padded ~35%, and bracketed. Plain ASCII means copy that never reached a catalogue; clipped text means a layout that will not survive a longer language; a bracket mid-sentence means fragments that will not reorder. It is a tool for running the app — the test suite asserts English and will fail under it.
 - **Outside the catalogues.** iOS permission prompts are read by the system before any JavaScript runs, so they live in [`apps/app/locales/en.json`](apps/app/locales/en.json), wired through the `locales` key in `app.json`.
 
+### Authored product content
+
+Metric names, life areas, habits, challenges, drinks, and insight copy stay in [`packages/domain/src/content`](packages/domain/src/content): that package is the product's definitional core and has no runtime dependencies, so it cannot call i18next.
+
+The English half of the `content` namespace is therefore *derived* from those catalogues at startup rather than retyped, keeping one source for the authored wording. Translation happens on the way out, in [`apps/app/src/content`](apps/app/src/content/index.ts), which wraps the domain accessors and substitutes the copy — so a screen still reads `metric.label` as it always has. Import those accessors from `src/content` rather than `@bro/domain/*` whenever the value reaches a screen. A language that omits a key falls through to the authored English, one string at a time.
+
+### Numbers, dates, and units
+
 Language follows the device and falls back to English. Dates, numbers, and units are formatted from the *device* locale via `Intl`, deliberately separate from the copy language, so a fallback to English copy does not also change number and date formats.
+
+`formatMeasurement` and friends take that locale and render through `Intl.NumberFormat`, so the decimal separator matches what `parseMeasurementInput` accepts back. Two details are deliberate: values that seed an editable field are formatted without a group separator, because a numeric keyboard cannot type one and the parser rejects it; and units written as words rather than symbols (`units`, `standard drinks`, `fl oz`) are passed in from the app through `UnitWordOverrides`, since `kg` and `ml` read the same everywhere but those do not.
+
+### Thrown messages
+
+Screens render `caught.message`, so a message a person can actually trigger belongs in [`validation.ts`](apps/app/src/i18n/locales/en/validation.ts) like any other copy. Messages that report a broken invariant — `Unknown measurement slug: …`, `Unit x does not measure y` — stay in English: they are diagnostics carrying a slug, and translating them would mean translating a bug report. No lint rule enforces this boundary, because nothing syntactic separates the two.
+
+The same reasoning applies to the field-validation messages in `packages/database/app`: the app layer validates before those can fire, so reaching one means a defect.
 
 ## Known rough edges
 
@@ -160,3 +176,4 @@ Language follows the device and falls back to English. Dates, numbers, and units
 - Only local embedded storage is currently supported. Replica connection and synchronization return in Phase 5 with API-minted credentials.
 - Reminder notifications bake their copy in at schedule time, and the materialiser reconciles by identifier alone. Adding an in-app language picker will need every scheduled reminder cancelled and rescheduled on the switch; see the note in [`reminders/notification-gateway.ts`](apps/app/src/reminders/notification-gateway.ts).
 - The map from a health source to its display name (`"healthkit"` → Apple Health) is duplicated in the log, body, and history screens, with the history copy differing on unknown sources. Worth consolidating when one of them next changes.
+- `src/content` rebuilds its wrapper objects on every call, so identity comparisons against a catalogue entry will not hold. Nothing compares them today; compare slugs if that need arises.

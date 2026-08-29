@@ -31,34 +31,91 @@ function decimalPlaces(resolution: number): number {
 	return text.includes(".") ? (text.split(".")[1]?.length ?? 0) : 0;
 }
 
-function formatRounded(value: number, unit: SimpleDisplayUnit): string {
+/**
+ * Renders the numeric part of a measurement in the reader's locale, so the
+ * decimal separator matches what `parseMeasurementInput` accepts back.
+ *
+ * `grouping` is off for the values that seed an editable field: a thousands
+ * separator is not typeable on a numeric keyboard and the parser rejects it.
+ */
+function formatNumber(
+	value: number,
+	fractionDigits: number,
+	locale: string | undefined,
+	grouping: boolean,
+): string {
+	try {
+		return new Intl.NumberFormat(locale, {
+			minimumFractionDigits: fractionDigits,
+			maximumFractionDigits: fractionDigits,
+			useGrouping: grouping,
+		}).format(value);
+	} catch {
+		// An unusable locale must not stop a reading from rendering.
+		return value.toFixed(fractionDigits);
+	}
+}
+
+/**
+ * The units written as words rather than symbols. `kg` or `ml` read the same
+ * everywhere, but these do not, so a caller can supply its own wording; the
+ * English below is the default.
+ */
+export type UnitWords = { one: string; other: string };
+
+export const DEFAULT_UNIT_WORDS = {
+	uk_unit: { one: "unit", other: "units" },
+	us_standard_drink: { one: "standard drink", other: "standard drinks" },
+	fl_oz_uk: { one: "fl oz", other: "fl oz" },
+	fl_oz_us: { one: "fl oz", other: "fl oz" },
+} as const satisfies Partial<Record<SimpleDisplayUnit, UnitWords>>;
+
+export type UnitWordOverrides = Partial<Record<SimpleDisplayUnit, UnitWords>>;
+
+function formatRounded(
+	value: number,
+	unit: SimpleDisplayUnit,
+	locale: string | undefined,
+	unitWords: UnitWordOverrides | undefined,
+): string {
 	const resolution = DISPLAY_RESOLUTIONS[unit];
 	const rounded = roundToResolution(value, resolution);
-	const formatted = rounded.toFixed(decimalPlaces(resolution));
-	const suffix = {
-		"%": "%",
-		uk_unit: rounded === 1 ? " unit" : " units",
-		us_standard_drink: rounded === 1 ? " standard drink" : " standard drinks",
-		fl_oz_uk: " fl oz",
-		fl_oz_us: " fl oz",
-	} as const;
-	const resolvedSuffix = suffix[unit as keyof typeof suffix];
-	return resolvedSuffix === "%"
-		? `${formatted}%`
-		: `${formatted}${resolvedSuffix ?? ` ${unit}`}`;
+	const formatted = formatNumber(
+		rounded,
+		decimalPlaces(resolution),
+		locale,
+		true,
+	);
+	if (unit === "%") {
+		return `${formatted}%`;
+	}
+	const words =
+		unitWords?.[unit] ??
+		DEFAULT_UNIT_WORDS[unit as keyof typeof DEFAULT_UNIT_WORDS];
+	if (!words) {
+		return `${formatted} ${unit}`;
+	}
+	return `${formatted} ${rounded === 1 ? words.one : words.other}`;
 }
 
 export function formatMeasurement<D extends Dimension>(
 	canonicalValue: number,
 	dimension: D,
 	unit: DisplayUnitForDimension<D>,
+	locale?: string,
+	unitWords?: UnitWordOverrides,
 ): string {
 	if (!isDisplayUnitForDimension(dimension, unit as DisplayUnit)) {
 		throw new TypeError(`Unit ${unit} does not measure ${dimension}.`);
 	}
 	if (isCompoundDisplayUnit(unit)) {
 		const { major, minor } = toCompoundParts(canonicalValue, dimension, unit);
-		return `${major} ${unit} ${minor} ${COMPOUND_UNIT_PARTS[unit].minor}`;
+		return `${formatNumber(major, 0, locale, true)} ${unit} ${formatNumber(
+			minor,
+			0,
+			locale,
+			true,
+		)} ${COMPOUND_UNIT_PARTS[unit].minor}`;
 	}
 
 	return formatRounded(
@@ -68,6 +125,8 @@ export function formatMeasurement<D extends Dimension>(
 			unit as DisplayUnitForDimension<D>,
 		),
 		unit as SimpleDisplayUnit,
+		locale,
+		unitWords,
 	);
 }
 
@@ -83,6 +142,8 @@ export function formatMeasurementDelta<D extends Dimension>(
 	magnitude: number,
 	dimension: D,
 	unit: DisplayUnitForDimension<D>,
+	locale?: string,
+	unitWords?: UnitWordOverrides,
 ): string | null {
 	if (!isDisplayUnitForDimension(dimension, unit as DisplayUnit)) {
 		throw new TypeError(`Unit ${unit} does not measure ${dimension}.`);
@@ -96,7 +157,9 @@ export function formatMeasurementDelta<D extends Dimension>(
 		const minors = Math.round(
 			fromCanonical(magnitude, dimension, minor as DisplayUnitForDimension<D>),
 		);
-		return minors === 0 ? null : `${minors} ${minor}`;
+		return minors === 0
+			? null
+			: `${formatNumber(minors, 0, locale, true)} ${minor}`;
 	}
 
 	const simple = unit as SimpleDisplayUnit;
@@ -104,7 +167,7 @@ export function formatMeasurementDelta<D extends Dimension>(
 	if (roundToResolution(converted, DISPLAY_RESOLUTIONS[simple]) === 0) {
 		return null;
 	}
-	return formatRounded(converted, simple);
+	return formatRounded(converted, simple, locale, unitWords);
 }
 
 /**
@@ -115,6 +178,7 @@ export function measurementEntryOf<D extends Dimension>(
 	canonicalValue: number,
 	dimension: D,
 	unit: DisplayUnitForDimension<D>,
+	locale?: string,
 ): MeasurementEntry {
 	if (!isDisplayUnitForDimension(dimension, unit as DisplayUnit)) {
 		throw new TypeError(`Unit ${unit} does not measure ${dimension}.`);
@@ -135,7 +199,7 @@ export function measurementEntryOf<D extends Dimension>(
 		resolution,
 	);
 	return {
-		major: rounded.toFixed(decimalPlaces(resolution)),
+		major: formatNumber(rounded, decimalPlaces(resolution), locale, false),
 		minor: "",
 	};
 }
@@ -144,6 +208,7 @@ export function measurementEntryOf<D extends Dimension>(
 export function formatIntrinsicMeasurement(
 	canonicalValue: number,
 	dimension: IntrinsicDimension,
+	locale?: string,
 ): string {
 	assertCanonicalValue(canonicalValue);
 
@@ -151,14 +216,22 @@ export function formatIntrinsicMeasurement(
 		const totalMinutes = Math.round(canonicalValue / 60);
 		const hours = Math.floor(totalMinutes / 60);
 		const minutes = totalMinutes % 60;
-		return hours > 0 ? `${hours} h ${minutes} m` : `${minutes} m`;
+		const shownMinutes = formatNumber(minutes, 0, locale, true);
+		return hours > 0
+			? `${formatNumber(hours, 0, locale, true)} h ${shownMinutes} m`
+			: `${shownMinutes} m`;
 	}
 	if (dimension === "count") {
-		return String(Math.round(canonicalValue));
+		return formatNumber(Math.round(canonicalValue), 0, locale, true);
 	}
 
 	const rounded = Math.round((canonicalValue + Number.EPSILON) * 10) / 10;
-	return `${rounded.toFixed(Number.isInteger(rounded) ? 0 : 1)} bpm`;
+	return `${formatNumber(
+		rounded,
+		Number.isInteger(rounded) ? 0 : 1,
+		locale,
+		true,
+	)} bpm`;
 }
 
 /**
@@ -169,22 +242,25 @@ export function formatIntrinsicMeasurement(
 export function formatIntrinsicDelta(
 	magnitude: number,
 	dimension: IntrinsicDimension,
+	locale?: string,
 ): string | null {
 	assertCanonicalValue(magnitude);
 
 	if (dimension === "time") {
 		if (magnitude < 60) {
 			const seconds = Math.round(magnitude);
-			return seconds === 0 ? null : `${seconds} s`;
+			return seconds === 0
+				? null
+				: `${formatNumber(seconds, 0, locale, true)} s`;
 		}
-		return formatIntrinsicMeasurement(magnitude, dimension);
+		return formatIntrinsicMeasurement(magnitude, dimension, locale);
 	}
 	if (dimension === "count") {
 		return Math.round(magnitude) === 0
 			? null
-			: formatIntrinsicMeasurement(magnitude, dimension);
+			: formatIntrinsicMeasurement(magnitude, dimension, locale);
 	}
 	return Math.round((magnitude + Number.EPSILON) * 10) === 0
 		? null
-		: formatIntrinsicMeasurement(magnitude, dimension);
+		: formatIntrinsicMeasurement(magnitude, dimension, locale);
 }

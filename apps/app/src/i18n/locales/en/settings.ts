@@ -118,6 +118,51 @@ export const settings = {
 		unitsBody:
 			"Energy is shown in kcal. Protein, carbohydrate, and fat are shown in grams.",
 	},
+	/** Display names for the units a person can choose between. */
+	unitNames: {
+		kg: "Kilograms",
+		lb: "Pounds",
+		st: "Stones & pounds",
+		cm: "Centimetres",
+		in: "Inches",
+		ft: "Feet & inches",
+		percent: "Percent",
+		g: "Grams",
+		mg: "Milligrams",
+		uk_unit: "UK units",
+		us_standard_drink: "US standard drinks",
+		ml: "Millilitres",
+		l: "Litres",
+		fl_oz_uk: "UK fluid ounces",
+		fl_oz_us: "US fluid ounces",
+		kcal: "Kilocalories",
+		kJ: "Kilojoules",
+	},
+	/**
+	 * Units written as words inside a reading, e.g. "2.6 units". Symbols like
+	 * kg or ml read the same everywhere and are not listed.
+	 */
+	unitWords: {
+		uk_unit_one: "unit",
+		uk_unit_other: "units",
+		us_standard_drink_one: "standard drink",
+		us_standard_drink_other: "standard drinks",
+		fl_oz_one: "fl oz",
+		fl_oz_other: "fl oz",
+	},
+	/** Titles and explanations for each measurement a unit applies to. */
+	dimensions: {
+		massTitle: "Weight",
+		massDescription: "Used for weight entries, history, trends, and goals.",
+		heightTitle: "Height",
+		heightDescription: "Used for height measurements.",
+		lengthTitle: "Other body measurements",
+		lengthDescription: "Used for waist and other circumference measurements.",
+		fractionTitle: "Body fat",
+		fractionDescription: "Body fat is always displayed as a percentage.",
+		alcoholTitle: "Alcohol",
+		volumeTitle: "Fluid",
+	},
 	units: {
 		intro:
 			"Choose how dates and measurements appear. Stored values stay unchanged, so format choices never change your history or goals.",
@@ -191,6 +236,15 @@ export const settings = {
 		includeSensitiveDetail:
 			"Includes sensitive metrics, custom habits, and sensitive life areas.",
 		share: "Share or save export",
+		savingClosed: "Saving closed. Your data stayed on this device.",
+		saved: "Export saved to the folder you chose.",
+		/** Subject and title on the iOS share sheet; "bro" is the product name. */
+		shareTitle: "bro data export",
+		sharingClosed: "Sharing closed. Your data stayed on this device.",
+		/** {{app}} is whichever app the share sheet handed the file to. */
+		sharedWith: "Export shared with {{app}}.",
+		handedOver: "Export handed to the app you chose.",
+		unsupportedPlatform: "Data export is available on iOS and Android.",
 	},
 	licences: {
 		/** Open Food Facts and ODbL are proper names and stay untranslated. */

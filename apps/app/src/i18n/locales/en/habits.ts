@@ -39,6 +39,7 @@ export const habits = {
 		add: "Add",
 		addA11y: "Add {{name}}",
 	},
+	challengeStepUnavailable: "Open the challenge to review this step.",
 	detail: {
 		loadFailed: "Habit record could not be loaded",
 		notFound: "Habit not found",
