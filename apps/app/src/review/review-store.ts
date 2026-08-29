@@ -31,6 +31,7 @@ import {
 	resolveMetric,
 } from "../content";
 import { i18n } from "../i18n";
+import { unitWords } from "../units/unit-words";
 
 export type ReviewDraft = {
 	startedAt: number;
@@ -285,7 +286,13 @@ export class ReviewStore {
 					inputLocale,
 				);
 				const format = (value: number) =>
-					formatMetricValue(metric, value, displayUnit, inputLocale);
+					formatMetricValue(
+						metric,
+						value,
+						displayUnit,
+						inputLocale,
+						unitWords(),
+					);
 				const slug = metric.slug;
 				if (isConsumptionDerivedMeasurementSlug(slug)) {
 					const series = resolveMetricObservations(

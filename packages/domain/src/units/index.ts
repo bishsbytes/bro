@@ -57,8 +57,8 @@ export {
 	formatMeasurement,
 	formatMeasurementDelta,
 	measurementEntryOf,
+	type UnitWordFormatter,
 	type UnitWordOverrides,
-	type UnitWords,
 } from "./formatting";
 export {
 	defaultUnitPreference,

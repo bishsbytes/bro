@@ -61,4 +61,16 @@ describe("Button", () => {
 			NativeStyleSheet.flatten(screen.getByText("Text").props.style).color,
 		).toBe("accent-colour");
 	});
+
+	it("lets translated labels shrink and wrap within the control", async () => {
+		const screen = await render(
+			<Button label="A deliberately long translated action label" />,
+		);
+		const style = NativeStyleSheet.flatten(
+			screen.getByText("A deliberately long translated action label").props
+				.style,
+		);
+
+		expect(style).toMatchObject({ flexShrink: 1, textAlign: "center" });
+	});
 });

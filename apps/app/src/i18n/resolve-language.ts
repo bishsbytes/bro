@@ -22,12 +22,3 @@ export function resolveLanguage(
 
 	return FALLBACK_LANGUAGE;
 }
-
-/**
- * Replaces the spaces in a short label with non-breaking ones. Buttons that
- * wrap mid-phrase read as two separate controls, and the catalogues keep
- * ordinary spaces so no translator has to type an invisible character.
- */
-export function nonBreaking(text: string): string {
-	return text.replaceAll(" ", "\u00a0");
-}

@@ -11,6 +11,7 @@ let databaseApp: typeof DatabaseApp;
 let db: SQLiteDatabase;
 let now: Date;
 let store: HabitsStore;
+let HabitsStoreImpl: typeof import("./habits/habits-store").HabitsStore;
 
 jest.mock("expo-sqlite", () => ({
 	openDatabaseSync: mockSqlite.openDatabaseSync,
@@ -37,9 +38,9 @@ describe("habits store", () => {
 		mockSqlite.reset();
 		jest.resetModules();
 		databaseApp = jest.requireActual("@bro/database-app");
-		const { HabitsStore: HabitsStoreImpl } = jest.requireActual(
+		({ HabitsStore: HabitsStoreImpl } = jest.requireActual(
 			"./habits/habits-store",
-		) as typeof import("./habits/habits-store");
+		) as typeof import("./habits/habits-store"));
 		db = await databaseApp.initDb("habits-store.db");
 		await databaseApp.runMigrations(db);
 		now = new Date("2026-08-17T12:00:00.000Z");
@@ -94,6 +95,57 @@ describe("habits store", () => {
 		now = new Date("2026-08-18T12:00:00.000Z");
 		today = await store.loadToday();
 		expect(today.habits.map(({ streak }) => streak)).toEqual([1, 1]);
+	});
+
+	it("localises habit progress and formats counts in the injected locale", async () => {
+		const { i18n } = jest.requireActual("./i18n") as typeof import("./i18n");
+		i18n.addResourceBundle(
+			"en",
+			"habits",
+			{
+				progress: {
+					steps_other: "translated {{current}} of {{target}}",
+				},
+			},
+			true,
+			true,
+		);
+		try {
+			const localisedStore = new HabitsStoreImpl(
+				db,
+				() => now,
+				() => "UTC",
+				() => "de-DE",
+			);
+			await localisedStore.addTemplate(habit("habit:steps-10k"), {
+				label: "Daily steps",
+				daysOfWeek: 0b111_1111,
+				targetValue: 10_000,
+				areaSlug: null,
+			});
+			await new databaseApp.DailyMetricRepository(db).upsert({
+				metricSlug: "steps",
+				localDay: "2026-08-17",
+				value: 10_012,
+				source: "health_connect",
+			});
+
+			expect((await localisedStore.loadToday()).habits[0]?.progressLabel).toBe(
+				"translated 10.012 of 10.000",
+			);
+		} finally {
+			i18n.addResourceBundle(
+				"en",
+				"habits",
+				{
+					progress: {
+						steps_other: "{{current}} / {{target}} steps",
+					},
+				},
+				true,
+				true,
+			);
+		}
 	});
 
 	it("records and releases the tag a manual habit stands in for", async () => {

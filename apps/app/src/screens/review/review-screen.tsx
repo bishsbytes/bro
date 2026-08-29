@@ -11,7 +11,6 @@ import { ListRow } from "../../components/list-row";
 import { LoadingIndicator } from "../../components/loading-indicator";
 import { StackScreen as Screen } from "../../components/screen";
 import { SectionHeader } from "../../components/section-header";
-import { nonBreaking } from "../../i18n";
 import {
 	createReviewStore,
 	type ReviewOverview,
@@ -168,7 +167,7 @@ export function ReviewScreen({ store }: ReviewScreenProps) {
 				eyebrow={t("history.eyebrow")}
 				action={
 					<Button
-						label={nonBreaking(t("history.takeStock"))}
+						label={t("history.takeStock")}
 						accessibilityLabel={t("history.takeStock")}
 						variant="text"
 						onPress={() => router.push("/review/new")}

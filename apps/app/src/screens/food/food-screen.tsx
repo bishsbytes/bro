@@ -24,6 +24,7 @@ import {
 	type FoodDaySnapshot,
 	type FoodStore,
 } from "../../food/food-store";
+import { upperCaseForLanguage } from "../../i18n";
 import { StyleSheet } from "../../theme/unistyles";
 
 type FoodScreenProps = {
@@ -524,7 +525,7 @@ export function FoodScreen({ store, searchStore }: FoodScreenProps) {
 					{snapshot.metrics.map((metric) => (
 						<View key={metric.metric.slug} style={styles.total}>
 							<AppText variant="micro" color="subtle">
-								{metric.metric.label.toUpperCase()}
+								{upperCaseForLanguage(metric.metric.label)}
 							</AppText>
 							<AppText variant="section">
 								{metric.dayFormatted ?? t("common:emDash")}

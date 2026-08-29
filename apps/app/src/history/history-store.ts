@@ -27,6 +27,7 @@ import {
 } from "@bro/logic";
 import type { SQLiteDatabase } from "expo-sqlite";
 import { resolveChallenge, resolveHabit, resolveMetric } from "../content";
+import { unitWords } from "../units/unit-words";
 
 export type HistoryMeasurement = {
 	id: string;
@@ -206,6 +207,7 @@ function assembleMeasurements(
 					observation.value,
 					displayUnit,
 					locale,
+					unitWords(),
 				),
 				source: observation.source,
 				selected: selectedIds.has(observation.id),
@@ -222,6 +224,7 @@ function assembleMeasurements(
 					row.value,
 					displayUnit,
 					locale,
+					unitWords(),
 				),
 				source: row.source,
 				selected: selectedIds.has(row.id),
@@ -351,6 +354,8 @@ export function addPreviousDayMeasurementChanges(
 				resolved.metric,
 				Math.abs(delta),
 				displayUnit,
+				locale,
+				unitWords(),
 			);
 
 			// A change too small to format is one the two readings do not show

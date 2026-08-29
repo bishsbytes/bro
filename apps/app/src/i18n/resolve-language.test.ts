@@ -1,6 +1,7 @@
 import { LIFE_AREA_CATALOGUE } from "@bro/domain/life-area-catalogue";
 import { resolveMetric } from "../content";
-import { i18n, nonBreaking, resolveLanguage } from ".";
+import { unitWords } from "../units/unit-words";
+import { i18n, resolveLanguage, upperCaseForLanguage } from ".";
 import { pseudoLocaliseString } from "./pseudo";
 
 function resolveLifeAreaLabel(slug: string): string {
@@ -25,9 +26,9 @@ describe("resolveLanguage", () => {
 	});
 });
 
-describe("nonBreaking", () => {
-	it("keeps a short label on one line without putting the character in a catalogue", () => {
-		expect(nonBreaking("Take stock")).toBe("Take\u00a0stock");
+describe("language-aware presentation", () => {
+	it("uses the copy language's casing rules", () => {
+		expect(upperCaseForLanguage("insight", "tr")).toBe("İNSİGHT");
 	});
 });
 
@@ -51,6 +52,8 @@ describe("catalogues", () => {
 		expect(i18n.t("review:history.lifeAreas", { count: 8 })).toBe(
 			"8 life areas",
 		);
+		expect(unitWords().uk_unit?.(1)).toBe("unit");
+		expect(unitWords().uk_unit?.(2)).toBe("units");
 	});
 });
 

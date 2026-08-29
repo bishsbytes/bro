@@ -5,11 +5,24 @@ import {
 	parseMeasurementEntry,
 } from "@bro/domain";
 import type { MeasurementPresentation } from "@bro/logic";
+import { i18n } from "../i18n";
 
 export const EMPTY_ENTRY: MeasurementEntry = { major: "", minor: "" };
 
 export function isBlankEntry(entry: MeasurementEntry): boolean {
 	return !entry.major.trim() && !entry.minor.trim();
+}
+
+export type ParsedMeasurementInput =
+	| { ok: true; canonicalValue: number }
+	| { ok: false; error: string };
+
+function localiseParseResult(
+	result: ParsedMeasurement,
+): ParsedMeasurementInput {
+	return result.ok
+		? result
+		: { ok: false, error: i18n.t("validation:measurement.invalid") };
 }
 
 /**
@@ -21,28 +34,34 @@ export function parseMeasurementInput(
 	entry: MeasurementEntry,
 	presentation: MeasurementPresentation,
 	locale: string | undefined,
-): ParsedMeasurement {
+): ParsedMeasurementInput {
 	if (presentation.dimension === "mass") {
-		return parseMeasurementEntry(
-			entry,
-			presentation.dimension,
-			presentation.displayUnit,
-			locale,
+		return localiseParseResult(
+			parseMeasurementEntry(
+				entry,
+				presentation.dimension,
+				presentation.displayUnit,
+				locale,
+			),
 		);
 	}
 	if (presentation.dimension === "length") {
-		return parseMeasurementEntry(
+		return localiseParseResult(
+			parseMeasurementEntry(
+				entry,
+				presentation.dimension,
+				presentation.displayUnit,
+				locale,
+			),
+		);
+	}
+	return localiseParseResult(
+		parseMeasurementEntry(
 			entry,
 			presentation.dimension,
 			presentation.displayUnit,
 			locale,
-		);
-	}
-	return parseMeasurementEntry(
-		entry,
-		presentation.dimension,
-		presentation.displayUnit,
-		locale,
+		),
 	);
 }
 

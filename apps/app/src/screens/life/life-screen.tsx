@@ -17,7 +17,6 @@ import {
 	type HabitsStore,
 	type TodayHabitsSnapshot,
 } from "../../habits/habits-store";
-import { nonBreaking } from "../../i18n";
 import {
 	createReviewStore,
 	type ReviewOverview,
@@ -129,7 +128,7 @@ export function LifeScreen({ reviewStore, habitsStore, now }: LifeScreenProps) {
 					<SectionHeader
 						title={t("wheel.title")}
 						eyebrow={t("wheel.reviewedEyebrow", {
-							date: completedLabel(completedAt).toUpperCase(),
+							date: completedLabel(completedAt).toLocaleUpperCase(),
 						})}
 					/>
 					{latest.scores.length >= 3 ? (
@@ -164,7 +163,7 @@ export function LifeScreen({ reviewStore, habitsStore, now }: LifeScreenProps) {
 					/>
 					<AppText color="muted">{t("wheel.emptyBody")}</AppText>
 					<Button
-						label={nonBreaking(t("wheel.takeStock"))}
+						label={t("wheel.takeStock")}
 						accessibilityLabel={t("wheel.takeStock")}
 						onPress={() => router.push("/review/new")}
 					/>
@@ -260,7 +259,7 @@ export function LifeScreen({ reviewStore, habitsStore, now }: LifeScreenProps) {
 					/>
 					<AppText color="muted">{t("wheel.dueBody")}</AppText>
 					<Button
-						label={nonBreaking(t("wheel.takeStock"))}
+						label={t("wheel.takeStock")}
 						accessibilityLabel={t("wheel.takeStock")}
 						onPress={() => router.push("/review/new")}
 					/>

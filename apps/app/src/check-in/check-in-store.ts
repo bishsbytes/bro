@@ -33,6 +33,7 @@ import {
 	refreshReminderNotifications,
 	reportReminderRefreshFailure,
 } from "../reminders/reminder-materialiser";
+import { unitWords } from "../units/unit-words";
 
 export type CheckInEntry = {
 	id: string;
@@ -242,6 +243,7 @@ export class CheckInStore {
 									measurement.dimension,
 									measurement.displayUnit,
 									inputLocale,
+									unitWords(),
 								),
 							},
 						]

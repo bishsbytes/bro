@@ -112,6 +112,24 @@ describe("measurement units", () => {
 		expect(formatIntrinsicMeasurement(10_432, "count", "de-DE")).toBe("10.432");
 	});
 
+	it("delegates word-unit plural selection with the rounded display count", () => {
+		const words = {
+			uk_unit: (count: number) => (count === 0 ? "zero-form" : "other-form"),
+		};
+		expect(formatMeasurement(0, "mass", "uk_unit", "en-GB", words)).toBe(
+			"0.0 zero-form",
+		);
+		expect(
+			formatMeasurement(
+				KILOGRAMS_ETHANOL_PER_UK_UNIT,
+				"mass",
+				"uk_unit",
+				"en-GB",
+				words,
+			),
+		).toBe("1.0 other-form");
+	});
+
 	it("seeds editable fields without a group separator", () => {
 		// The field feeds a numeric keyboard and `parseMeasurement`, neither of
 		// which accepts a thousands separator; the decimal separator still

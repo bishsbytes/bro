@@ -57,20 +57,24 @@ function formatNumber(
 }
 
 /**
- * The units written as words rather than symbols. `kg` or `ml` read the same
- * everywhere, but these do not, so a caller can supply its own wording; the
- * English below is the default.
+ * Selects the wording for a unit after display rounding. A callback rather
+ * than a `{ one, other }` pair lets the app use the active language's complete
+ * plural rules (`zero`, `few`, `many`, and so on), while the dependency-free
+ * domain package supplies the English fallback below.
  */
-export type UnitWords = { one: string; other: string };
+export type UnitWordFormatter = (count: number) => string;
 
 export const DEFAULT_UNIT_WORDS = {
-	uk_unit: { one: "unit", other: "units" },
-	us_standard_drink: { one: "standard drink", other: "standard drinks" },
-	fl_oz_uk: { one: "fl oz", other: "fl oz" },
-	fl_oz_us: { one: "fl oz", other: "fl oz" },
-} as const satisfies Partial<Record<SimpleDisplayUnit, UnitWords>>;
+	uk_unit: (count: number) => (count === 1 ? "unit" : "units"),
+	us_standard_drink: (count: number) =>
+		count === 1 ? "standard drink" : "standard drinks",
+	fl_oz_uk: () => "fl oz",
+	fl_oz_us: () => "fl oz",
+} as const satisfies Partial<Record<SimpleDisplayUnit, UnitWordFormatter>>;
 
-export type UnitWordOverrides = Partial<Record<SimpleDisplayUnit, UnitWords>>;
+export type UnitWordOverrides = Partial<
+	Record<SimpleDisplayUnit, UnitWordFormatter>
+>;
 
 function formatRounded(
 	value: number,
@@ -89,13 +93,13 @@ function formatRounded(
 	if (unit === "%") {
 		return `${formatted}%`;
 	}
-	const words =
+	const wordFor =
 		unitWords?.[unit] ??
 		DEFAULT_UNIT_WORDS[unit as keyof typeof DEFAULT_UNIT_WORDS];
-	if (!words) {
+	if (!wordFor) {
 		return `${formatted} ${unit}`;
 	}
-	return `${formatted} ${rounded === 1 ? words.one : words.other}`;
+	return `${formatted} ${wordFor(rounded)}`;
 }
 
 export function formatMeasurement<D extends Dimension>(

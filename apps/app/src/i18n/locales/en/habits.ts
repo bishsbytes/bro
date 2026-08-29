@@ -3,6 +3,19 @@ export const habits = {
 	loadFailedBody: "Try again.",
 	intro:
 		"Choose the days that matter. Unscheduled days never count against a streak.",
+	progress: {
+		/** Current and target for a metric whose unit is already in each value. */
+		ratio: "{{current}} / {{target}}",
+		steps_one: "{{current}} / {{target}} step",
+		steps_other: "{{current}} / {{target}} steps",
+		logged: "{{value}} logged",
+		hours_one: "{{value}} h",
+		hours_other: "{{value}} h",
+		minutes_one: "{{value}} m",
+		minutes_other: "{{value}} m",
+		durationParts: "{{hours}} {{minutes}}",
+		day: "Day {{day}}",
+	},
 	editor: {
 		addTitle: "Add habit",
 		addCustomTitle: "Add your own",

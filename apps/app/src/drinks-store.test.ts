@@ -2,6 +2,7 @@ import type * as DatabaseApp from "@bro/database-app";
 import { KILOGRAMS_ETHANOL_PER_UK_UNIT } from "@bro/domain";
 import { UK_PINT_L } from "@bro/domain/drink-catalogue";
 import type { SQLiteDatabase } from "expo-sqlite";
+import { i18n } from "./i18n";
 import { createNodeSqliteMock } from "./test-support/node-sqlite";
 
 const mockSqlite = createNodeSqliteMock();
@@ -167,6 +168,56 @@ describe("drinks store", () => {
 				time: "20:00",
 			}),
 		).rejects.toThrow("Choose a real date");
+	});
+
+	it("localises and locale-formats the entry detail as one message", async () => {
+		i18n.addResourceBundle(
+			"en",
+			"common",
+			{
+				consumption: {
+					defaultServing_drink: "translated serving",
+					entryDetail_drink: "At {{time}}: {{quantity}} × {{serving}}",
+				},
+			},
+			true,
+			true,
+		);
+		try {
+			const store = new DrinksStore(
+				db,
+				() => now,
+				() => "de-DE",
+			);
+			await store.logFree({
+				label: "Water",
+				servingLabel: null,
+				quantity: 1.5,
+				volumeMl: 250,
+				abvPercent: null,
+				caffeineMg: null,
+				energyKcal: null,
+				localDay: "2026-08-19",
+				time: "12:00",
+			});
+
+			expect((await store.loadToday()).entries[0]?.detail).toBe(
+				"At 12:00: 1,5 × translated serving",
+			);
+		} finally {
+			i18n.addResourceBundle(
+				"en",
+				"common",
+				{
+					consumption: {
+						defaultServing_drink: "serving",
+						entryDetail_drink: "{{quantity}} × {{serving}} · {{time}}",
+					},
+				},
+				true,
+				true,
+			);
+		}
 	});
 
 	it("keeps tracking default-off and stores goals canonically across unit changes", async () => {

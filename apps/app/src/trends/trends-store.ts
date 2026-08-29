@@ -23,6 +23,7 @@ import {
 } from "@bro/logic";
 import type { SQLiteDatabase } from "expo-sqlite";
 import { listMeasurements, listScoredMetrics } from "../content";
+import { unitWords } from "../units/unit-words";
 
 export type MetricTrend = {
 	metric: ScoredMetricDefinition | MeasurementMetricDefinition;
@@ -161,6 +162,7 @@ export class TrendsStore {
 						latestValue,
 						displayUnit,
 						locale,
+						unitWords(),
 					);
 				}
 				return { metric, label, series, displayUnit, latestFormatted };

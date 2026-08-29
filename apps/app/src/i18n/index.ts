@@ -56,9 +56,20 @@ if (!i18n.isInitialized) {
 
 export {
 	FALLBACK_LANGUAGE,
-	nonBreaking,
 	resolveLanguage,
 	SUPPORTED_LANGUAGES,
 	type SupportedLanguage,
 } from "./resolve-language";
 export { i18n };
+
+/** Applies casing with the copy language's rules, not the JavaScript default. */
+export function upperCaseForLanguage(
+	text: string,
+	language = i18n.resolvedLanguage ?? i18n.language ?? FALLBACK_LANGUAGE,
+): string {
+	try {
+		return text.toLocaleUpperCase(language);
+	} catch {
+		return text.toUpperCase();
+	}
+}

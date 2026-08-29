@@ -43,7 +43,6 @@ import {
 	type HistoryMeasurementChange,
 	type HistoryStore,
 } from "../../history/history-store";
-import { nonBreaking } from "../../i18n";
 import {
 	createReviewStore,
 	type ReviewResult,
@@ -1119,7 +1118,7 @@ export function HomeScreen({
 								<AppText variant="section">{t("wheel.title")}</AppText>
 								<AppText color="muted">{t("wheel.body")}</AppText>
 								<Button
-									label={nonBreaking(t("wheel.takeStock"))}
+									label={t("wheel.takeStock")}
 									accessibilityLabel={t("wheel.takeStock")}
 									variant="secondary"
 									onPress={() => router.push("/review/new")}

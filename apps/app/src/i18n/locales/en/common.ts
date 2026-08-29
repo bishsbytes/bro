@@ -43,4 +43,12 @@ export const common = {
 		unitFt: "feet",
 		unitPercent: "percent",
 	},
+	consumption: {
+		/** Context keeps room for languages whose generic serving word differs. */
+		defaultServing_drink: "serving",
+		defaultServing_food: "serving",
+		/** One logged entry's quantity, serving, and local time. */
+		entryDetail_drink: "{{quantity}} × {{serving}} · {{time}}",
+		entryDetail_food: "{{quantity}} × {{serving}} · {{time}}",
+	},
 } as const;

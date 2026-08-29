@@ -81,10 +81,10 @@ export default [
 		},
 	},
 	{
-		// User-facing copy in these paths has to come from a catalogue in
-		// `apps/app/src/i18n`. The list is a ratchet rather than a blanket rule:
-		// add each feature's directory as it is migrated, so the rule stays an
-		// error everywhere it applies instead of a warning nobody reads.
+		// User-facing JSX text and copy-bearing props in these paths have to come
+		// from a catalogue in `apps/app/src/i18n`. The list is a ratchet rather
+		// than a blanket rule: add each feature's directory as it is migrated, so
+		// the rule stays an error everywhere it applies.
 		files: [
 			"apps/app/src/app/**/*.tsx",
 			"apps/app/src/components/**/*.tsx",
@@ -110,10 +110,53 @@ export default [
 			"i18next/no-literal-string": [
 				"error",
 				{
-					mode: "jsx-text-only",
+					mode: "jsx-only",
+					"jsx-attributes": {
+						include: [
+							"accessibilityHint",
+							"accessibilityLabel",
+							"actionLabel",
+							"body",
+							"cancelText",
+							"confirmText",
+							"description",
+							"detail",
+							"eyebrow",
+							"headerTitle",
+							"label",
+							"message",
+							"placeholder",
+							"title",
+						],
+					},
+					"object-properties": {
+						exclude: ["[A-Z_-]+", "hour", "minute"],
+					},
 					"should-validate-template": true,
 					message:
 						"Move this copy into apps/app/src/i18n/locales/en and read it with useTranslation().",
+				},
+			],
+		},
+	},
+	{
+		// Stores may still own presentation models. Guard the known copy-bearing
+		// fields without treating invariant diagnostics, slugs, or SQL as copy.
+		files: ["apps/app/src/consumption/**/*.ts", "apps/app/src/habits/**/*.ts"],
+		ignores: ["**/*.test.ts"],
+		plugins: { i18next },
+		rules: {
+			"i18next/no-literal-string": [
+				"error",
+				{
+					mode: "all",
+					"object-properties": {
+						include: ["action", "dayTitle", "detail", "progressLabel"],
+					},
+					callees: { exclude: [".*"] },
+					"should-validate-template": true,
+					message:
+						"Move presentation copy into apps/app/src/i18n/locales/en and resolve it before returning the model.",
 				},
 			],
 		},

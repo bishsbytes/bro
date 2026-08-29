@@ -144,6 +144,14 @@ export function scaleNullable(
 	return value == null ? null : value * factor;
 }
 
+function formatNumber(value: number, locale: string | undefined): string {
+	try {
+		return new Intl.NumberFormat(locale).format(value);
+	} catch {
+		return String(value);
+	}
+}
+
 /**
  * Identity of a logged entry for "recent" de-duplication: everything a repeat
  * would reproduce. Two entries that differ in any canonical quantity are
@@ -728,9 +736,16 @@ export abstract class ConsumptionStore<
 		});
 		return {
 			entry,
-			detail: `${entry.quantity} × ${entry.servingLabel ?? "serving"} · ${localTimeOf(
-				entry.occurredAt,
-			)}`,
+			detail: i18n.t("common:consumption.entryDetail", {
+				context: this.kind,
+				quantity: formatNumber(entry.quantity, this.locale()),
+				serving:
+					entry.servingLabel ??
+					i18n.t("common:consumption.defaultServing", {
+						context: this.kind,
+					}),
+				time: localTimeOf(entry.occurredAt),
+			}),
 			contributions: contributions.join(" · "),
 		};
 	}

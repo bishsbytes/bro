@@ -32,6 +32,7 @@ import {
 	type FoodDaySnapshot,
 	type FoodStore,
 } from "../../food/food-store";
+import { upperCaseForLanguage } from "../../i18n";
 import {
 	EMPTY_ENTRY,
 	isBlankEntry,
@@ -110,7 +111,7 @@ function DailySummary({
 				{metrics.map((metric) => (
 					<View key={metric.metric.slug} style={styles.summaryMetric}>
 						<AppText variant="micro" color="subtle">
-							{metric.metric.label.toUpperCase()}
+							{upperCaseForLanguage(metric.metric.label)}
 						</AppText>
 						<AppText variant="label">
 							{metric.dayFormatted ?? t("common:emDash")}

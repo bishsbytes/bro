@@ -12,7 +12,6 @@ import { StackScreen as Screen } from "../../components/screen";
 import { SectionHeader } from "../../components/section-header";
 import { WheelChart } from "../../components/wheel-chart";
 import { challengeForArea, habitsForArea } from "../../content";
-import { nonBreaking } from "../../i18n";
 import {
 	createReviewStore,
 	type ReviewResult,
@@ -216,7 +215,7 @@ export function ReviewResultScreen({
 			) : null}
 
 			<Button
-				label={nonBreaking(t("result.takeStockAgain"))}
+				label={t("result.takeStockAgain")}
 				accessibilityLabel={t("result.takeStockAgain")}
 				onPress={() => router.push("/review/new")}
 			/>

@@ -3,6 +3,7 @@ import { fireEvent, render } from "@testing-library/react-native";
 import type { BodyOverview } from "./body/body-store";
 import type { DrinkDaySnapshot } from "./drinks/drinks-store";
 import type { FoodDaySnapshot } from "./food/food-store";
+import { i18n } from "./i18n";
 import { LogScreen } from "./screens/log/log-screen";
 
 const mockPush = jest.fn();
@@ -154,27 +155,46 @@ describe("Log screen", () => {
 	});
 
 	it("shows a field error and writes nothing for unparseable input", async () => {
+		i18n.addResourceBundle(
+			"en",
+			"validation",
+			{ measurement: { invalid: "Use a translated measurement value." } },
+			true,
+			true,
+		);
 		const recordMeasurement = jest.fn(async () => weightOverview(true));
-		const screen = await render(
-			<LogScreen
-				bodyStore={{
-					loadOverview: jest.fn(async () => weightOverview(true)),
-					setTracked: jest.fn(),
-					recordMeasurement,
-				}}
-				drinksStore={drinksStore}
-				foodStore={foodStore}
-			/>,
-		);
+		try {
+			const screen = await render(
+				<LogScreen
+					bodyStore={{
+						loadOverview: jest.fn(async () => weightOverview(true)),
+						setTracked: jest.fn(),
+						recordMeasurement,
+					}}
+					drinksStore={drinksStore}
+					foodStore={foodStore}
+				/>,
+			);
 
-		await fireEvent.changeText(
-			await screen.findByLabelText("Weight (stones)"),
-			"heavy",
-		);
-		await fireEvent.press(screen.getByLabelText("Log Weight"));
+			await fireEvent.changeText(
+				await screen.findByLabelText("Weight (stones)"),
+				"heavy",
+			);
+			await fireEvent.press(screen.getByLabelText("Log Weight"));
 
-		expect(recordMeasurement).not.toHaveBeenCalled();
-		expect(screen.getByText("Enter a valid measurement.")).toBeTruthy();
+			expect(recordMeasurement).not.toHaveBeenCalled();
+			expect(
+				screen.getByText("Use a translated measurement value."),
+			).toBeTruthy();
+		} finally {
+			i18n.addResourceBundle(
+				"en",
+				"validation",
+				{ measurement: { invalid: "Enter a valid measurement." } },
+				true,
+				true,
+			);
+		}
 	});
 
 	it("offers entry only once a measurement is tracked", async () => {

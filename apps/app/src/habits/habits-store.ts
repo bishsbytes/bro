@@ -49,6 +49,7 @@ import {
 	resolveMetric,
 } from "../content";
 import { i18n } from "../i18n";
+import { unitWords } from "../units/unit-words";
 
 export type TodayHabit = {
 	habit: Habit;
@@ -150,35 +151,73 @@ function displayLabel(habit: Habit): string {
 	);
 }
 
-function formatDuration(seconds: number): string {
+function formatNumber(value: number, locale: string | undefined): string {
+	try {
+		return new Intl.NumberFormat(locale).format(value);
+	} catch {
+		return String(value);
+	}
+}
+
+function formatDuration(seconds: number, locale: string | undefined): string {
 	const hours = Math.floor(seconds / 3_600);
 	const minutes = Math.round((seconds - hours * 3_600) / 60);
-	return minutes === 0 ? `${hours}h` : `${hours}h ${minutes}m`;
+	const shownHours = i18n.t("habits:progress.hours", {
+		count: hours,
+		value: formatNumber(hours, locale),
+	});
+	if (minutes === 0) return shownHours;
+	const shownMinutes = i18n.t("habits:progress.minutes", {
+		count: minutes,
+		value: formatNumber(minutes, locale),
+	});
+	return hours === 0
+		? shownMinutes
+		: i18n.t("habits:progress.durationParts", {
+				hours: shownHours,
+				minutes: shownMinutes,
+			});
 }
 
 function formatProgress(
 	habit: Habit,
 	value: number | null,
+	locale: string | undefined,
 	formatValue: ((value: number) => string) | null = null,
 ): string | null {
 	if (habit.kind !== "metric" || habit.targetValue === null) return null;
 	if (habit.metricSlug === "steps") {
-		return `${Math.round(value ?? 0).toLocaleString("en-GB")} / ${Math.round(
-			habit.targetValue,
-		).toLocaleString("en-GB")} steps`;
+		return i18n.t("habits:progress.steps", {
+			count: Math.round(habit.targetValue),
+			current: formatNumber(Math.round(value ?? 0), locale),
+			target: formatNumber(Math.round(habit.targetValue), locale),
+		});
 	}
 	if (habit.metricSlug === "sleep_duration") {
-		return `${formatDuration(value ?? 0)} / ${formatDuration(habit.targetValue)}`;
+		return i18n.t("habits:progress.ratio", {
+			current: formatDuration(value ?? 0, locale),
+			target: formatDuration(habit.targetValue, locale),
+		});
 	}
 	if (formatValue) {
 		// A zero-target ceiling habit needs no counter on a clean day; the card's
 		// completion state already says it. A slip shows what was logged.
 		if (habit.direction === "at_most" && habit.targetValue === 0) {
-			return (value ?? 0) === 0 ? null : `${formatValue(value ?? 0)} logged`;
+			return (value ?? 0) === 0
+				? null
+				: i18n.t("habits:progress.logged", {
+						value: formatValue(value ?? 0),
+					});
 		}
-		return `${formatValue(value ?? 0)} / ${formatValue(habit.targetValue)}`;
+		return i18n.t("habits:progress.ratio", {
+			current: formatValue(value ?? 0),
+			target: formatValue(habit.targetValue),
+		});
 	}
-	return `${value ?? 0} / ${habit.targetValue}`;
+	return i18n.t("habits:progress.ratio", {
+		current: formatNumber(value ?? 0, locale),
+		target: formatNumber(habit.targetValue, locale),
+	});
 }
 
 function habitUpdateInput(habit: Habit) {
@@ -315,6 +354,7 @@ export class HabitsStore {
 	/** Display-unit formatter for a consumption-derived habit metric, else null. */
 	private async metricValueFormatter(
 		metricSlug: string,
+		locale: string | undefined,
 	): Promise<((value: number) => string) | null> {
 		const resolved = resolveMetric(metricSlug);
 		if (
@@ -325,7 +365,6 @@ export class HabitsStore {
 			return null;
 		}
 		const metric = resolved.metric;
-		const locale = this.locale();
 		const preferences = await this.unitPreferences.resolveLatestPerDimension();
 		const displayUnit = metricDisplayUnit(
 			metric,
@@ -337,10 +376,12 @@ export class HabitsStore {
 			),
 			locale,
 		);
-		return (value) => formatMetricValue(metric, value, displayUnit, locale);
+		return (value) =>
+			formatMetricValue(metric, value, displayUnit, locale, unitWords());
 	}
 
 	async loadToday(localDay = this.today()): Promise<TodayHabitsSnapshot> {
+		const locale = this.locale();
 		const [activeHabits, activeEnrolments] = await Promise.all([
 			this.habits.listActive(),
 			this.enrolments.listActive(),
@@ -399,7 +440,8 @@ export class HabitsStore {
 					progressLabel: formatProgress(
 						habit,
 						metricValue(localDay),
-						await this.metricValueFormatter(metricSlug),
+						locale,
+						await this.metricValueFormatter(metricSlug, locale),
 					),
 				};
 			}),
@@ -422,7 +464,8 @@ export class HabitsStore {
 					title: enrolment.title,
 					dayIndex,
 					durationDays: enrolment.durationDays,
-					dayTitle: day?.title ?? `Day ${dayIndex}`,
+					dayTitle:
+						day?.title ?? i18n.t("habits:progress.day", { day: dayIndex }),
 					action: day?.action ?? i18n.t("habits:challengeStepUnavailable"),
 				};
 			}),

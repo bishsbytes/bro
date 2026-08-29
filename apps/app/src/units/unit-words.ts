@@ -8,21 +8,10 @@ import { i18n } from "../i18n";
  */
 export function unitWords(): UnitWordOverrides {
 	return {
-		uk_unit: {
-			one: i18n.t("settings:unitWords.uk_unit_one"),
-			other: i18n.t("settings:unitWords.uk_unit_other"),
-		},
-		us_standard_drink: {
-			one: i18n.t("settings:unitWords.us_standard_drink_one"),
-			other: i18n.t("settings:unitWords.us_standard_drink_other"),
-		},
-		fl_oz_uk: {
-			one: i18n.t("settings:unitWords.fl_oz_one"),
-			other: i18n.t("settings:unitWords.fl_oz_other"),
-		},
-		fl_oz_us: {
-			one: i18n.t("settings:unitWords.fl_oz_one"),
-			other: i18n.t("settings:unitWords.fl_oz_other"),
-		},
+		uk_unit: (count) => i18n.t("settings:unitWords.uk_unit", { count }),
+		us_standard_drink: (count) =>
+			i18n.t("settings:unitWords.us_standard_drink", { count }),
+		fl_oz_uk: (count) => i18n.t("settings:unitWords.fl_oz", { count }),
+		fl_oz_us: (count) => i18n.t("settings:unitWords.fl_oz", { count }),
 	};
 }

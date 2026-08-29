@@ -85,5 +85,5 @@ const styles = StyleSheet.create((theme) => ({
 	danger: { backgroundColor: theme.colors.danger },
 	dangerOutline: { borderColor: theme.colors.danger },
 	disabled: { opacity: theme.opacity.disabled },
-	label: { fontWeight: "700" },
+	label: { flexShrink: 1, textAlign: "center", fontWeight: "700" },
 }));

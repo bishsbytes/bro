@@ -110,7 +110,7 @@ describe("Life screen", () => {
 			await screen.findByText("Take stock of the bigger picture"),
 		).toBeTruthy();
 		expect(screen.getByText("WHEEL OF LIFE")).toBeTruthy();
-		expect(screen.getByText("Take\u00a0stock")).toBeTruthy();
+		expect(screen.getByText("Take stock")).toBeTruthy();
 	});
 
 	it("shows current state without prompting after a recent review", async () => {
@@ -135,7 +135,7 @@ describe("Life screen", () => {
 		);
 
 		expect(await screen.findByText("Time to take stock")).toBeTruthy();
-		expect(screen.getByText("Take\u00a0stock")).toBeTruthy();
+		expect(screen.getByText("Take stock")).toBeTruthy();
 	});
 
 	it("summarises how many of today's habits are complete", async () => {

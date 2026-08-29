@@ -145,7 +145,7 @@ All user-facing copy in the app comes from typed catalogues in [`apps/app/src/i1
 
 - **Adding copy.** Put it in the namespace file for the feature (`locales/en/<feature>.ts`), or `common.ts` when two or more screens share it. New namespaces need one line in `locales/index.ts`; the key types follow automatically.
 - **Interpolate, never concatenate.** Word order differs across languages, so build one string with `{{placeholders}}` rather than joining fragments in JSX.
-- **`eslint-plugin-i18next` enforces this** for `apps/app/src/{app,components,screens}`, at error level. Tests are exempt: they assert on rendered English on purpose.
+- **`eslint-plugin-i18next` enforces this** for JSX text and copy-bearing props in `apps/app/src/{app,components,screens}`, at error level. It also guards the presentation fields returned by the consumption and habit stores. Tests are exempt: they assert on rendered English on purpose.
 - **Pseudo-locale.** Run with `EXPO_PUBLIC_PSEUDO_LOCALE=1` to render every string accented, padded ~35%, and bracketed. Plain ASCII means copy that never reached a catalogue; clipped text means a layout that will not survive a longer language; a bracket mid-sentence means fragments that will not reorder. It is a tool for running the app — the test suite asserts English and will fail under it.
 - **Outside the catalogues.** iOS permission prompts are read by the system before any JavaScript runs, so they live in [`apps/app/locales/en.json`](apps/app/locales/en.json), wired through the `locales` key in `app.json`.
 
@@ -159,7 +159,7 @@ The English half of the `content` namespace is therefore *derived* from those ca
 
 Language follows the device and falls back to English. Dates, numbers, and units are formatted from the *device* locale via `Intl`, deliberately separate from the copy language, so a fallback to English copy does not also change number and date formats.
 
-`formatMeasurement` and friends take that locale and render through `Intl.NumberFormat`, so the decimal separator matches what `parseMeasurementInput` accepts back. Two details are deliberate: values that seed an editable field are formatted without a group separator, because a numeric keyboard cannot type one and the parser rejects it; and units written as words rather than symbols (`units`, `standard drinks`, `fl oz`) are passed in from the app through `UnitWordOverrides`, since `kg` and `ml` read the same everywhere but those do not.
+`formatMeasurement` and friends take that locale and render through `Intl.NumberFormat`, so the decimal separator matches what `parseMeasurementInput` accepts back. Two details are deliberate: values that seed an editable field are formatted without a group separator, because a numeric keyboard cannot type one and the parser rejects it; and units written as words rather than symbols (`units`, `standard drinks`, `fl oz`) are passed in from the app through count-aware `UnitWordOverrides` callbacks. Those callbacks resolve through i18next with `count`, so every plural category supported by the active language remains available; symbols such as `kg` and `ml` stay in the dependency-free domain formatter.
 
 ### Thrown messages
 

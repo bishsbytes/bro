@@ -19,6 +19,9 @@ export const validation = {
 		foodCarbs: "Food carbohydrate",
 		foodFat: "Food fat",
 	},
+	measurement: {
+		invalid: "Enter a valid measurement.",
+	},
 	consumption: {
 		quantityPositive_drink: "Drink quantity must be a positive number.",
 		quantityPositive_food: "Food quantity must be a positive number.",

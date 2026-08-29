@@ -32,6 +32,7 @@ import {
 import type { SQLiteDatabase } from "expo-sqlite";
 import { resolveMetric } from "../content";
 import { i18n } from "../i18n";
+import { unitWords } from "../units/unit-words";
 
 export type { MeasurementPresentation };
 
@@ -99,6 +100,7 @@ function formatPresentedMeasurement(
 		value,
 		presentation.displayUnit,
 		locale,
+		unitWords(),
 	);
 }
 
