@@ -1,3 +1,4 @@
+import { useTranslation } from "react-i18next";
 import { TouchableOpacity, View } from "react-native";
 import { StyleSheet } from "../theme/unistyles";
 import { AppText } from "./app-text";
@@ -21,6 +22,7 @@ export function ScoreRow({
 	faces,
 	disabled = false,
 }: ScoreRowProps) {
+	const { t } = useTranslation("common");
 	return (
 		<View style={styles.row}>
 			{SCORES.map((score, index) => {
@@ -30,7 +32,10 @@ export function ScoreRow({
 					<TouchableOpacity
 						key={score}
 						accessibilityRole="button"
-						accessibilityLabel={`${accessibilityPrefix} ${score}`}
+						accessibilityLabel={t("a11y.score", {
+							prefix: accessibilityPrefix,
+							score,
+						})}
 						accessibilityState={{ selected: isSelected, disabled }}
 						disabled={disabled}
 						style={[

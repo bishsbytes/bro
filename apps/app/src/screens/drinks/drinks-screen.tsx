@@ -2,6 +2,7 @@ import { previousLocalDay } from "@bro/domain";
 import { ethanolKgFromVolumeAndAbv } from "@bro/domain/drink-catalogue";
 import { type Href, router, useFocusEffect } from "expo-router";
 import { useCallback, useMemo, useState } from "react";
+import { useTranslation } from "react-i18next";
 import { TouchableOpacity, View } from "react-native";
 import { AppText } from "../../components/app-text";
 import { Button } from "../../components/button";
@@ -41,6 +42,7 @@ function optionalNumber(value: string): number | null {
 }
 
 export function DrinksScreen({ store }: DrinksScreenProps) {
+	const { t } = useTranslation(["drinks", "common"]);
 	const drinks = useMemo(() => store ?? createDrinksStore(), [store]);
 	const [snapshot, setSnapshot] = useState<DrinkDaySnapshot | null>(null);
 	const [error, setError] = useState<string | null>(null);
@@ -136,7 +138,7 @@ export function DrinksScreen({ store }: DrinksScreenProps) {
 		const serving = drink?.servings[0];
 		setEditingCustomId(id ?? "new");
 		setLabel(drink?.label ?? "");
-		setServingLabel(serving?.label ?? "serving");
+		setServingLabel(serving?.label ?? t("defaultServing"));
 		setVolumeMl(
 			serving?.volumeL == null ? "" : String(serving.volumeL * 1_000),
 		);
@@ -172,7 +174,7 @@ export function DrinksScreen({ store }: DrinksScreenProps) {
 						id:
 							snapshot?.customDrinks.find(({ id }) => id === editingCustomId)
 								?.servings[0]?.id ?? "default",
-						label: servingLabel.trim() || "serving",
+						label: servingLabel.trim() || t("defaultServing"),
 						volumeL,
 						ethanolKg:
 							volumeL === null || abvPercent === null
@@ -269,9 +271,9 @@ export function DrinksScreen({ store }: DrinksScreenProps) {
 		return (
 			<Screen centered padded>
 				<EmptyState
-					title="Drinks could not be loaded"
-					body={error ?? "Try again."}
-					actionLabel="Try again"
+					title={t("loadFailed")}
+					body={error ?? t("loadFailedBody")}
+					actionLabel={t("common:actions.tryAgain")}
 					onAction={() => void load()}
 					tone="danger"
 				/>
@@ -291,7 +293,7 @@ export function DrinksScreen({ store }: DrinksScreenProps) {
 		<Screen scroll padded gap="lg" keyboardShouldPersistTaps="handled">
 			<Card style={styles.section}>
 				<SectionHeader
-					title="Today"
+					title={t("today.title")}
 					eyebrow={snapshot.localDay}
 					action={
 						<TouchableOpacity
@@ -299,7 +301,7 @@ export function DrinksScreen({ store }: DrinksScreenProps) {
 							onPress={() => router.push("/settings/drinks" as Href)}
 						>
 							<AppText variant="label" color="brand">
-								Drink settings
+								{t("today.settings")}
 							</AppText>
 						</TouchableOpacity>
 					}
@@ -310,32 +312,40 @@ export function DrinksScreen({ store }: DrinksScreenProps) {
 							<AppText variant="micro" color="subtle">
 								{metric.metric.label.toUpperCase()}
 							</AppText>
-							<AppText variant="section">{metric.dayFormatted ?? "—"}</AppText>
+							<AppText variant="section">
+								{metric.dayFormatted ?? t("common:emDash")}
+							</AppText>
 							<AppText variant="micro" color="muted">
-								7 days {metric.weekFormatted ?? "—"}
+								{t("today.weekTotal", {
+									value: metric.weekFormatted ?? t("common:emDash"),
+								})}
 							</AppText>
 						</View>
 					))}
 				</View>
 				<AppText variant="caption" color="subtle">
-					Quantities are totals, not ratings or guideline comparisons.
+					{t("today.disclaimer")}
 				</AppText>
 			</Card>
 
 			{error ? <AppText color="danger">{error}</AppText> : null}
 
 			<View style={styles.section}>
-				<SectionHeader title="Quick add" eyebrow="RECENT DRINKS" />
+				<SectionHeader
+					title={t("quickAdd.title")}
+					eyebrow={t("quickAdd.eyebrow")}
+				/>
 				{snapshot.recents.length === 0 ? (
-					<AppText color="muted">
-						Your usual drinks will appear here after the first log.
-					</AppText>
+					<AppText color="muted">{t("quickAdd.empty")}</AppText>
 				) : (
 					<View style={styles.wrap}>
 						{snapshot.recents.map(({ entry }) => (
 							<Button
 								key={entry.id}
-								label={`${entry.label} · ${entry.servingLabel ?? "serving"}`}
+								label={t("quickAdd.option", {
+									drink: entry.label,
+									serving: entry.servingLabel ?? t("defaultServing"),
+								})}
 								variant="secondary"
 								disabled={busy}
 								onPress={() => void mutate(() => drinks.repeatEntry(entry.id))}
@@ -347,19 +357,17 @@ export function DrinksScreen({ store }: DrinksScreenProps) {
 
 			<View style={styles.section}>
 				<SectionHeader
-					title="Custom drinks"
+					title={t("custom.title")}
 					action={
 						<Button
-							label="Create"
+							label={t("custom.create")}
 							variant="text"
 							onPress={() => editCustom(null)}
 						/>
 					}
 				/>
 				{snapshot.customDrinks.length === 0 ? (
-					<AppText color="muted">
-						Save a drink you use often. It stays available offline.
-					</AppText>
+					<AppText color="muted">{t("custom.empty")}</AppText>
 				) : (
 					snapshot.customDrinks.map((drink) => (
 						<Card key={drink.id} style={styles.actions}>
@@ -370,12 +378,12 @@ export function DrinksScreen({ store }: DrinksScreenProps) {
 								</AppText>
 							</View>
 							<Button
-								label="Edit"
+								label={t("custom.edit")}
 								variant="text"
 								onPress={() => editCustom(drink.id)}
 							/>
 							<Button
-								label="Delete"
+								label={t("custom.delete")}
 								variant="text"
 								tone="danger"
 								disabled={busy}
@@ -387,25 +395,25 @@ export function DrinksScreen({ store }: DrinksScreenProps) {
 				{editingCustomId !== null ? (
 					<Card style={styles.section}>
 						<FormField
-							label="Custom drink name"
+							label={t("custom.nameField")}
 							value={label}
 							onChangeText={setLabel}
 						/>
 						<FormField
-							label="Serving"
+							label={t("custom.servingField")}
 							value={servingLabel}
 							onChangeText={setServingLabel}
 						/>
 						<View style={styles.actions}>
 							<FormField
-								label="Volume (ml)"
+								label={t("custom.volumeField")}
 								value={volumeMl}
 								onChangeText={setVolumeMl}
 								keyboardType="decimal-pad"
 								containerStyle={styles.grow}
 							/>
 							<FormField
-								label="ABV %"
+								label={t("custom.abvField")}
 								value={abv}
 								onChangeText={setAbv}
 								keyboardType="decimal-pad"
@@ -414,14 +422,14 @@ export function DrinksScreen({ store }: DrinksScreenProps) {
 						</View>
 						<View style={styles.actions}>
 							<FormField
-								label="Caffeine (mg)"
+								label={t("custom.caffeineField")}
 								value={caffeineMg}
 								onChangeText={setCaffeineMg}
 								keyboardType="decimal-pad"
 								containerStyle={styles.grow}
 							/>
 							<FormField
-								label="Energy (kcal)"
+								label={t("custom.energyField")}
 								value={energyKcal}
 								onChangeText={setEnergyKcal}
 								keyboardType="decimal-pad"
@@ -430,7 +438,7 @@ export function DrinksScreen({ store }: DrinksScreenProps) {
 						</View>
 						<View style={styles.actions}>
 							<Button
-								label="Cancel"
+								label={t("custom.cancel")}
 								variant="text"
 								style={styles.grow}
 								onPress={() => {
@@ -439,7 +447,7 @@ export function DrinksScreen({ store }: DrinksScreenProps) {
 								}}
 							/>
 							<Button
-								label="Save custom drink"
+								label={t("custom.save")}
 								loading={busy}
 								disabled={!label.trim()}
 								style={styles.grow}
@@ -451,23 +459,23 @@ export function DrinksScreen({ store }: DrinksScreenProps) {
 			</View>
 
 			<Card style={styles.section}>
-				<SectionHeader title="Log a drink" />
+				<SectionHeader title={t("add.title")} />
 				{mode === null ? (
 					<View style={styles.actions}>
 						<Button
-							label="Choose a drink"
+							label={t("add.chooseCatalogue")}
 							style={styles.grow}
 							onPress={() => setMode("catalogue")}
 						/>
 						<Button
-							label="Choose custom drink"
+							label={t("add.chooseCustom")}
 							variant="secondary"
 							style={styles.grow}
 							disabled={snapshot.customDrinks.length === 0}
 							onPress={() => setMode("custom")}
 						/>
 						<Button
-							label="Something else"
+							label={t("add.chooseFree")}
 							variant="secondary"
 							style={styles.grow}
 							onPress={() => setMode("free")}
@@ -477,7 +485,7 @@ export function DrinksScreen({ store }: DrinksScreenProps) {
 
 				{mode === "catalogue" ? (
 					<View style={styles.section}>
-						<AppText variant="label">Drink</AppText>
+						<AppText variant="label">{t("add.drinkLabel")}</AppText>
 						<View style={styles.wrap}>
 							{snapshot.catalogue.map((drink) => (
 								<Button
@@ -490,7 +498,7 @@ export function DrinksScreen({ store }: DrinksScreenProps) {
 						</View>
 						{selectedDrink ? (
 							<>
-								<AppText variant="label">Serving</AppText>
+								<AppText variant="label">{t("add.servingLabel")}</AppText>
 								<View style={styles.wrap}>
 									{selectedDrink.servings.map((serving) => (
 										<Button
@@ -510,7 +518,7 @@ export function DrinksScreen({ store }: DrinksScreenProps) {
 
 				{mode === "custom" ? (
 					<View style={styles.section}>
-						<AppText variant="label">Custom drink</AppText>
+						<AppText variant="label">{t("add.customLabel")}</AppText>
 						<View style={styles.wrap}>
 							{snapshot.customDrinks.map((drink) => (
 								<Button
@@ -523,7 +531,7 @@ export function DrinksScreen({ store }: DrinksScreenProps) {
 						</View>
 						{selectedCustom ? (
 							<>
-								<AppText variant="label">Serving</AppText>
+								<AppText variant="label">{t("add.servingLabel")}</AppText>
 								<View style={styles.wrap}>
 									{selectedCustom.servings.map((serving) => (
 										<Button
@@ -544,26 +552,26 @@ export function DrinksScreen({ store }: DrinksScreenProps) {
 				{mode === "free" ? (
 					<View style={styles.section}>
 						<FormField
-							label="Drink name"
+							label={t("add.nameField")}
 							value={label}
 							onChangeText={setLabel}
 						/>
 						<FormField
-							label="Serving label (optional)"
+							label={t("add.servingNameField")}
 							value={servingLabel}
 							onChangeText={setServingLabel}
-							placeholder="glass, mug, can"
+							placeholder={t("add.servingNamePlaceholder")}
 						/>
 						<View style={styles.actions}>
 							<FormField
-								label="Volume per serving (ml)"
+								label={t("add.volumeField")}
 								value={volumeMl}
 								onChangeText={setVolumeMl}
 								keyboardType="decimal-pad"
 								containerStyle={styles.grow}
 							/>
 							<FormField
-								label="ABV % (optional)"
+								label={t("add.abvField")}
 								value={abv}
 								onChangeText={setAbv}
 								keyboardType="decimal-pad"
@@ -572,14 +580,14 @@ export function DrinksScreen({ store }: DrinksScreenProps) {
 						</View>
 						<View style={styles.actions}>
 							<FormField
-								label="Caffeine per serving (mg)"
+								label={t("add.caffeineField")}
 								value={caffeineMg}
 								onChangeText={setCaffeineMg}
 								keyboardType="decimal-pad"
 								containerStyle={styles.grow}
 							/>
 							<FormField
-								label="Energy per serving (kcal)"
+								label={t("add.energyField")}
 								value={energyKcal}
 								onChangeText={setEnergyKcal}
 								keyboardType="decimal-pad"
@@ -592,29 +600,29 @@ export function DrinksScreen({ store }: DrinksScreenProps) {
 				{mode ? (
 					<>
 						<FormField
-							label="Number of servings"
+							label={t("add.quantityField")}
 							value={quantity}
 							onChangeText={setQuantity}
 							keyboardType="decimal-pad"
 						/>
 						<View style={styles.actions}>
 							<FormField
-								label="Date"
+								label={t("add.dateField")}
 								value={localDay}
 								onChangeText={setLocalDay}
-								placeholder="YYYY-MM-DD"
+								placeholder={t("add.datePlaceholder")}
 								containerStyle={styles.grow}
 							/>
 							<FormField
-								label="Time"
+								label={t("add.timeField")}
 								value={time}
 								onChangeText={setTime}
-								placeholder="HH:mm"
+								placeholder={t("add.timePlaceholder")}
 								containerStyle={styles.grow}
 							/>
 						</View>
 						<Button
-							label="Last night"
+							label={t("add.lastNight")}
 							variant="text"
 							onPress={() => {
 								setLocalDay(previousLocalDay(snapshot.localDay));
@@ -623,14 +631,14 @@ export function DrinksScreen({ store }: DrinksScreenProps) {
 						/>
 						<View style={styles.actions}>
 							<Button
-								label="Cancel"
+								label={t("add.cancel")}
 								variant="text"
 								disabled={busy}
 								style={styles.grow}
 								onPress={resetAddForm}
 							/>
 							<Button
-								label="Save drink"
+								label={t("add.save")}
 								loading={busy}
 								disabled={
 									(mode === "catalogue" && (!catalogueId || !servingId)) ||
@@ -651,18 +659,18 @@ export function DrinksScreen({ store }: DrinksScreenProps) {
 			</Card>
 
 			<View style={styles.section}>
-				<SectionHeader title="Today's entries" />
+				<SectionHeader title={t("entries.title")} />
 				{snapshot.entries.length === 0 ? (
 					<EmptyState
-						title="Nothing logged"
-						body="Log only when it is useful. An empty day stays empty."
+						title={t("entries.emptyTitle")}
+						body={t("entries.emptyBody")}
 					/>
 				) : (
 					snapshot.entries.map(({ entry, detail, contributions }) => (
 						<TouchableOpacity
 							key={entry.id}
 							accessibilityRole="button"
-							accessibilityLabel={`Edit ${entry.label}`}
+							accessibilityLabel={t("entries.edit", { name: entry.label })}
 							onPress={() =>
 								router.push(`/drinks/${snapshot.localDay}` as Href)
 							}
@@ -685,7 +693,7 @@ export function DrinksScreen({ store }: DrinksScreenProps) {
 
 			{snapshot.recentLocalDays.length > 0 ? (
 				<View style={styles.section}>
-					<SectionHeader title="Recent days" />
+					<SectionHeader title={t("entries.recentDays")} />
 					<View style={styles.wrap}>
 						{snapshot.recentLocalDays.map((day) => (
 							<Button
@@ -700,12 +708,9 @@ export function DrinksScreen({ store }: DrinksScreenProps) {
 			) : null}
 
 			<View style={styles.section}>
-				<SectionHeader title="Daily goals" />
+				<SectionHeader title={t("goals.title")} />
 				{trackedMetrics.length === 0 ? (
-					<AppText color="muted">
-						Turn on drink metrics in settings to add them to Trends and set
-						daily goals.
-					</AppText>
+					<AppText color="muted">{t("goals.needMetrics")}</AppText>
 				) : null}
 				{trackedMetrics.map((metric) => {
 					const activeGoal = metric.goals.find(
@@ -717,21 +722,26 @@ export function DrinksScreen({ store }: DrinksScreenProps) {
 							{activeGoal ? (
 								<>
 									<AppText>
-										Target {activeGoal.targetFormatted} · Latest{" "}
-										{activeGoal.currentFormatted ?? "—"}
+										{t("goals.summary", {
+											target: activeGoal.targetFormatted,
+											current:
+												activeGoal.currentFormatted ?? t("common:emDash"),
+										})}
 									</AppText>
 									{activeGoal.targetReached ? (
 										<AppText variant="caption" color="brand">
-											Target reached — mark it achieved?
+											{t("goals.targetReached")}
 										</AppText>
 									) : activeGoal.progressPercent !== null ? (
 										<AppText variant="caption" color="brand">
-											{activeGoal.progressPercent}% of the way
+											{t("goals.percentComplete", {
+												percent: activeGoal.progressPercent,
+											})}
 										</AppText>
 									) : null}
 									<View style={styles.actions}>
 										<Button
-											label="Mark achieved"
+											label={t("goals.achieve")}
 											variant="secondary"
 											disabled={busy}
 											style={styles.grow}
@@ -742,7 +752,7 @@ export function DrinksScreen({ store }: DrinksScreenProps) {
 											}
 										/>
 										<Button
-											label="Stop goal"
+											label={t("goals.abandon")}
 											variant="text"
 											disabled={busy}
 											style={styles.grow}
@@ -757,33 +767,33 @@ export function DrinksScreen({ store }: DrinksScreenProps) {
 							) : goalSlug === metric.metric.slug ? (
 								<>
 									<FormField
-										label={`Target (${metric.displayUnit})`}
+										label={t("goals.targetField", {
+											unit: metric.displayUnit,
+										})}
 										value={goalTarget}
 										onChangeText={setGoalTarget}
 										keyboardType="decimal-pad"
 									/>
 									<FormField
-										label="Target date (optional)"
+										label={t("goals.targetDateField")}
 										value={goalDate}
 										onChangeText={setGoalDate}
-										placeholder="YYYY-MM-DD"
+										placeholder={t("add.datePlaceholder")}
 									/>
 									<Button
-										label="Save goal"
+										label={t("goals.save")}
 										loading={busy}
 										onPress={() => void saveGoal()}
 									/>
 								</>
 							) : metric.dayValue !== null ? (
 								<Button
-									label={`Set goal for ${metric.metric.label}`}
+									label={t("goals.setFor", { name: metric.metric.label })}
 									variant="secondary"
 									onPress={() => setGoalSlug(metric.metric.slug)}
 								/>
 							) : (
-								<AppText color="muted">
-									Log a value before setting a goal.
-								</AppText>
+								<AppText color="muted">{t("goals.needValue")}</AppText>
 							)}
 						</Card>
 					);

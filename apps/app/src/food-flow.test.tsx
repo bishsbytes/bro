@@ -152,7 +152,7 @@ describe("food logging flow", () => {
 		await fireEvent.changeText(view.getByLabelText("Protein (g)"), "52");
 		await fireEvent.press(view.getByText("Add component"));
 		await fireEvent.press(view.getByText("Save custom food"));
-		expect(await view.findByText("1 recipe components")).toBeTruthy();
+		expect(await view.findByText("1 recipe component")).toBeTruthy();
 
 		await fireEvent.press(view.getByText("Choose custom food"));
 		const chickenBowlMatches = view.getAllByText("Chicken bowl");

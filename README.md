@@ -139,6 +139,18 @@ alias to the development machine. The iOS simulator and web can use
 - **TypeScript project references** are managed by `nx sync`; run it after adding a cross-package import.
 - Dependencies shared with Expo must match the SDK. Check `node_modules/expo/bundledNativeModules.json` for the correct version rather than taking `latest`.
 
+## Localisation
+
+All user-facing copy in the app comes from typed catalogues in [`apps/app/src/i18n`](apps/app/src/i18n), read through i18next. The catalogues are TypeScript rather than JSON so that each entry can carry a translator note and so key types flow into `t()` without extra tsconfig setup — a typo or a deleted key fails `nx typecheck`.
+
+- **Adding copy.** Put it in the namespace file for the feature (`locales/en/<feature>.ts`), or `common.ts` when two or more screens share it. New namespaces need one line in `locales/index.ts`; the key types follow automatically.
+- **Interpolate, never concatenate.** Word order differs across languages, so build one string with `{{placeholders}}` rather than joining fragments in JSX.
+- **`eslint-plugin-i18next` enforces this** for `apps/app/src/{app,components,screens}`, at error level. Tests are exempt: they assert on rendered English on purpose.
+- **Pseudo-locale.** Run with `EXPO_PUBLIC_PSEUDO_LOCALE=1` to render every string accented, padded ~35%, and bracketed. Plain ASCII means copy that never reached a catalogue; clipped text means a layout that will not survive a longer language; a bracket mid-sentence means fragments that will not reorder. It is a tool for running the app — the test suite asserts English and will fail under it.
+- **Outside the catalogues.** iOS permission prompts are read by the system before any JavaScript runs, so they live in [`apps/app/locales/en.json`](apps/app/locales/en.json), wired through the `locales` key in `app.json`.
+
+Language follows the device and falls back to English. Dates, numbers, and units are formatted from the *device* locale via `Intl`, deliberately separate from the copy language, so a fallback to English copy does not also change number and date formats.
+
 ## Known rough edges
 
 - [`auth/app/src/client.ts`](packages/auth/app/src/client.ts) carries a `@ts-expect-error` on the Expo plugin: `@better-auth/expo@1.6.27` types `getActions` incompatibly with `BetterAuthClientPlugin` even on matched dependency versions. It is suppressed rather than cast, because casting collapses session type inference. Remove it once upstream fixes the declaration.
@@ -146,3 +158,5 @@ alias to the development machine. The iOS simulator and web can use
 - Turso sync is not wired into the app lifecycle yet. Phase 5 will add short-lived, database-scoped tokens minted by the API and a supported connection-reopen path.
 - Expo Router now keeps onboarding and the local app independent of remote authentication; sign-in and sign-up are optional account routes.
 - Only local embedded storage is currently supported. Replica connection and synchronization return in Phase 5 with API-minted credentials.
+- Reminder notifications bake their copy in at schedule time, and the materialiser reconciles by identifier alone. Adding an in-app language picker will need every scheduled reminder cancelled and rescheduled on the switch; see the note in [`reminders/notification-gateway.ts`](apps/app/src/reminders/notification-gateway.ts).
+- The map from a health source to its display name (`"healthkit"` → Apple Health) is duplicated in the log, body, and history screens, with the history copy differing on unknown sources. Worth consolidating when one of them next changes.

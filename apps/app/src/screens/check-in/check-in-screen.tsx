@@ -1,5 +1,6 @@
 import { router } from "expo-router";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useTranslation } from "react-i18next";
 import { TouchableOpacity, View } from "react-native";
 import {
 	checkInScoreSummary,
@@ -36,20 +37,14 @@ type CheckInStep = {
 	hint: string;
 };
 
-const MOOD_STEP: CheckInStep = {
-	slug: "mood",
-	label: "Mood",
-	faces: MOOD_FACES,
-	hint: "How you feel right now, not how the day should have gone.",
-};
-
-const OPTIONAL_STEP_HINT = "1 is as low as it gets, 5 is as good as it gets.";
+const MOOD_SLUG = "mood";
 
 export function CheckInScreen({
 	store,
 	initialMood,
 	entryId,
 }: CheckInScreenProps) {
+	const { t } = useTranslation(["checkIn", "common"]);
 	const checkIns = useMemo(() => store ?? createCheckInStore(), [store]);
 	const [today, setToday] = useState<TodayCheckIn | null>(null);
 	const [loadError, setLoadError] = useState<string | null>(null);
@@ -72,15 +67,20 @@ export function CheckInScreen({
 		() =>
 			today
 				? [
-						MOOD_STEP,
+						{
+							slug: MOOD_SLUG,
+							label: t("steps.moodLabel"),
+							faces: MOOD_FACES,
+							hint: t("steps.moodHint"),
+						},
 						...today.availableOptionalScores.map((metric) => ({
 							slug: metric.slug,
 							label: metric.label,
-							hint: OPTIONAL_STEP_HINT,
+							hint: t("steps.optionalHint"),
 						})),
 					]
 				: [],
-		[today],
+		[today, t],
 	);
 
 	// The commit runs from an effect and from unmount, both of which see the
@@ -153,7 +153,7 @@ export function CheckInScreen({
 		try {
 			const optional = Object.fromEntries(
 				activeSlugs.flatMap((slug) =>
-					slug === "mood" || answered[slug] === undefined
+					slug === MOOD_SLUG || answered[slug] === undefined
 						? []
 						: [[slug, answered[slug]]],
 				),
@@ -230,12 +230,9 @@ export function CheckInScreen({
 	if (!today) {
 		return (
 			<Screen padded centered>
-				<EmptyState
-					title="The check-in could not be opened"
-					body={loadError ?? ""}
-				/>
+				<EmptyState title={t("loadFailed")} body={loadError ?? ""} />
 				<Button
-					label="Back"
+					label={t("nav.back")}
 					variant="secondary"
 					onPress={() => router.back()}
 				/>
@@ -246,7 +243,7 @@ export function CheckInScreen({
 	const summary = checkInScoreSummary({
 		mood: { value: values.mood ?? 0 },
 		optionalScores: steps.flatMap((step) =>
-			step.slug === "mood" || values[step.slug] === undefined
+			step.slug === MOOD_SLUG || values[step.slug] === undefined
 				? []
 				: [{ metricSlug: step.slug, value: values[step.slug] }],
 		),
@@ -257,7 +254,9 @@ export function CheckInScreen({
 			<Screen padded centered gap="lg">
 				<View style={styles.prompt}>
 					<AppText variant="display" style={styles.centredText}>
-						{openedOnEntry ? "Check-in updated" : "Checked in"}
+						{openedOnEntry
+							? t("confirmation.updated")
+							: t("confirmation.saved")}
 					</AppText>
 					<AppText color="muted" style={styles.centredText}>
 						{summary}
@@ -271,15 +270,19 @@ export function CheckInScreen({
 				) : null}
 				{saveError ? (
 					<Button
-						label="Try again"
+						label={t("common:actions.tryAgain")}
 						loading={saving}
 						onPress={() => void commit()}
 					/>
 				) : (
-					<Button label="Done" loading={saving} onPress={() => router.back()} />
+					<Button
+						label={t("confirmation.done")}
+						loading={saving}
+						onPress={() => router.back()}
+					/>
 				)}
 				<Button
-					label="Change an answer"
+					label={t("confirmation.changeAnswer")}
 					variant="text"
 					disabled={saving}
 					onPress={() => {
@@ -299,23 +302,25 @@ export function CheckInScreen({
 			<View style={styles.topBar}>
 				<TouchableOpacity
 					accessibilityRole="button"
-					accessibilityLabel={index === 0 ? "Close check-in" : "Previous score"}
+					accessibilityLabel={
+						index === 0 ? t("nav.closeA11y") : t("nav.previousA11y")
+					}
 					onPress={goBack}
 				>
 					<AppText variant="label" color="brand">
-						{index === 0 ? "Close" : "Back"}
+						{index === 0 ? t("nav.close") : t("nav.back")}
 					</AppText>
 				</TouchableOpacity>
 				<AppText variant="caption" color="subtle">
-					{index + 1} of {steps.length}
+					{t("nav.position", { current: index + 1, total: steps.length })}
 				</AppText>
 				<TouchableOpacity
 					accessibilityRole="button"
-					accessibilityLabel="Finish check-in"
+					accessibilityLabel={t("nav.finishA11y")}
 					onPress={() => setIndex(steps.length)}
 				>
 					<AppText variant="label" color="brand">
-						{openedOnEntry ? "Save" : "Finish"}
+						{openedOnEntry ? t("nav.save") : t("nav.finish")}
 					</AppText>
 				</TouchableOpacity>
 			</View>
@@ -347,9 +352,9 @@ export function CheckInScreen({
 			</View>
 
 			{saveError ? <AppText color="danger">{saveError}</AppText> : null}
-			{step.slug === "mood" ? null : (
+			{step.slug === MOOD_SLUG ? null : (
 				<Button
-					label={isLast ? "Skip and finish" : "Skip"}
+					label={isLast ? t("skipAndFinish") : t("skip")}
 					variant="text"
 					onPress={() => setIndex((current) => current + 1)}
 				/>

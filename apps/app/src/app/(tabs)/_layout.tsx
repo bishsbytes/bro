@@ -2,6 +2,7 @@ import { useAuth } from "@bro/auth-app";
 import MaterialIcons from "@expo/vector-icons/MaterialIcons";
 import { router, Tabs, usePathname, useSegments } from "expo-router";
 import { useLayoutEffect, useRef } from "react";
+import { useTranslation } from "react-i18next";
 import { TouchableOpacity, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { AppHeader } from "../../components/app-header";
@@ -13,23 +14,26 @@ import {
 import { playSelectionHaptic } from "../../feedback/selection-haptic";
 import { StyleSheet, useUnistyles } from "../../theme/unistyles";
 
-const TAB_TITLES = {
-	"/": "Today",
-	"/log": "Log",
-	"/insights": "Insights",
-	"/life": "Life",
+/** Values are keys in the `navigation` catalogue, not copy. */
+const TAB_TITLE_KEYS = {
+	"/": "tabs.today",
+	"/log": "tabs.log",
+	"/insights": "tabs.insights",
+	"/life": "tabs.life",
 } as const;
 
 const TAB_BAR_CONTENT_HEIGHT = 56;
 
 function TabShell() {
+	const { t } = useTranslation("navigation");
 	const { theme } = useUnistyles();
 	const insets = useSafeAreaInsets();
 	const { user } = useAuth();
 	const pathname = usePathname();
 	const segments = useSegments() as string[];
 	const todayHeaderMonth = useTodayHeaderMonth();
-	const activeTabTitle = TAB_TITLES[pathname as keyof typeof TAB_TITLES];
+	const activeTabKey = TAB_TITLE_KEYS[pathname as keyof typeof TAB_TITLE_KEYS];
+	const activeTabTitle = activeTabKey ? t(activeTabKey) : undefined;
 	const activeHeaderTitle =
 		pathname === "/" ? todayHeaderMonth : activeTabTitle;
 	const lastTabTitle = useRef(activeHeaderTitle ?? todayHeaderMonth);
@@ -55,7 +59,7 @@ function TabShell() {
 							pathname === "/" ? (
 								<TouchableOpacity
 									accessibilityRole="button"
-									accessibilityLabel="Open history"
+									accessibilityLabel={t("tabs.openHistory")}
 									hitSlop={theme.spacing.sm}
 									style={styles.headerAction}
 									onPress={() => router.push("/history")}
@@ -102,7 +106,7 @@ function TabShell() {
 					<Tabs.Screen
 						name="index"
 						options={{
-							title: "Today",
+							title: t("tabs.today"),
 							tabBarIcon: ({ color, size }) => (
 								<MaterialIcons name="wb-sunny" color={color} size={size} />
 							),
@@ -111,7 +115,7 @@ function TabShell() {
 					<Tabs.Screen
 						name="log"
 						options={{
-							title: "Log",
+							title: t("tabs.log"),
 							tabBarIcon: ({ color, size }) => (
 								<MaterialIcons name="edit-note" color={color} size={size} />
 							),
@@ -120,7 +124,7 @@ function TabShell() {
 					<Tabs.Screen
 						name="insights"
 						options={{
-							title: "Insights",
+							title: t("tabs.insights"),
 							tabBarIcon: ({ color, size }) => (
 								<MaterialIcons name="insights" color={color} size={size} />
 							),
@@ -129,7 +133,7 @@ function TabShell() {
 					<Tabs.Screen
 						name="life"
 						options={{
-							title: "Life",
+							title: t("tabs.life"),
 							tabBarIcon: ({ color, size }) => (
 								<MaterialIcons name="explore" color={color} size={size} />
 							),

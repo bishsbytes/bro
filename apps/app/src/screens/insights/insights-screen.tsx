@@ -6,6 +6,7 @@ import {
 } from "@bro/logic";
 import { type Href, router, useFocusEffect } from "expo-router";
 import { useCallback, useMemo, useState } from "react";
+import { useTranslation } from "react-i18next";
 import { TouchableOpacity, View } from "react-native";
 import { AppText } from "../../components/app-text";
 import { Card } from "../../components/card";
@@ -33,6 +34,7 @@ type InsightsScreenProps = {
 };
 
 export function InsightsScreen({ store, insightStore }: InsightsScreenProps) {
+	const { t } = useTranslation(["insights", "common"]);
 	const trends = useMemo(() => store ?? createTrendsStore(), [store]);
 	const insights = useMemo(
 		() => insightStore ?? createInsightStore(),
@@ -80,40 +82,37 @@ export function InsightsScreen({ store, insightStore }: InsightsScreenProps) {
 
 	return (
 		<Screen scroll padded contentContainerStyle={styles.content}>
-			<AppText color="muted">
-				See the patterns in your record and how every tracked measure changes
-				over time.
-			</AppText>
+			<AppText color="muted">{t("intro")}</AppText>
 
 			<View style={styles.section}>
-				<SectionHeader title="Insights" eyebrow="LAST 90 DAYS" />
+				<SectionHeader
+					title={t("patterns.title")}
+					eyebrow={t("patterns.eyebrow")}
+				/>
 				{!insightSnapshot && !insightError ? (
 					<LoadingIndicator size="large" />
 				) : null}
 				{insightError ? (
 					<EmptyState
-						title="Insights could not be loaded"
+						title={t("patterns.loadFailed")}
 						body={insightError}
-						actionLabel="Try again"
+						actionLabel={t("common:actions.tryAgain")}
 						onAction={() => void loadInsights()}
 						tone="danger"
 					/>
 				) : null}
 				{insightSnapshot?.state === "empty" ? (
 					<Card style={styles.card}>
-						<AppText variant="section">
-							Your patterns start with check-ins
-						</AppText>
-						<AppText color="muted">
-							As your record grows, this space compares days to show
-							associations that you did not have to type in yourself.
-						</AppText>
+						<AppText variant="section">{t("patterns.emptyTitle")}</AppText>
+						<AppText color="muted">{t("patterns.emptyBody")}</AppText>
 					</Card>
 				) : null}
 				{insightSnapshot?.state === "not-yet" ? (
 					<Card style={styles.card}>
 						<AppText variant="section">
-							Watching {insightSnapshot.teaser.watchedCount} patterns
+							{t("patterns.watchingTitle", {
+								count: insightSnapshot.teaser.watchedCount,
+							})}
 						</AppText>
 						<AppText color="muted">
 							{renderInsightTeaserProgress(insightSnapshot.teaser)}
@@ -123,9 +122,11 @@ export function InsightsScreen({ store, insightStore }: InsightsScreenProps) {
 				{insightSnapshot?.shown.map((insight) => (
 					<ListRow
 						key={insight.pair.id}
-						title="Pattern in your record"
+						title={t("patterns.rowTitle")}
 						detail={renderInsightSummary(insight)}
-						accessibilityLabel={`Open insight: ${renderInsightSummary(insight)}`}
+						accessibilityLabel={t("patterns.open", {
+							summary: renderInsightSummary(insight),
+						})}
 						onPress={() =>
 							router.push(
 								`/insights/${encodeURIComponent(insight.pair.id)}` as Href,
@@ -136,11 +137,11 @@ export function InsightsScreen({ store, insightStore }: InsightsScreenProps) {
 			</View>
 
 			<View style={styles.section}>
-				<SectionHeader title="Trends" eyebrow="YOUR TRACKED DATA" />
-				<AppText color="muted">
-					Scored metrics use daily averages, body metrics use the last reading,
-					and consumption totals are summed. Missing days stay as gaps.
-				</AppText>
+				<SectionHeader
+					title={t("trends.title")}
+					eyebrow={t("trends.eyebrow")}
+				/>
+				<AppText color="muted">{t("trends.intro")}</AppText>
 				<View style={styles.periodRow}>
 					{TREND_PERIODS.map((option) => (
 						<TouchableOpacity
@@ -153,7 +154,9 @@ export function InsightsScreen({ store, insightStore }: InsightsScreenProps) {
 							]}
 							onPress={() => setPeriod(option)}
 						>
-							<AppText variant="label">{option} days</AppText>
+							<AppText variant="label">
+								{t("trends.period", { count: option })}
+							</AppText>
 						</TouchableOpacity>
 					))}
 				</View>
@@ -161,14 +164,17 @@ export function InsightsScreen({ store, insightStore }: InsightsScreenProps) {
 				{!snapshot && !error ? <LoadingIndicator size="large" /> : null}
 				{error ? (
 					<EmptyState
-						title="Trends could not be loaded"
+						title={t("trends.loadFailed")}
 						body={error}
 						tone="danger"
 					/>
 				) : null}
 				{snapshot ? (
 					<AppText variant="caption" color="subtle">
-						{snapshot.fromLocalDay} to {snapshot.throughLocalDay}
+						{t("trends.range", {
+							from: snapshot.fromLocalDay,
+							through: snapshot.throughLocalDay,
+						})}
 					</AppText>
 				) : null}
 				{snapshot?.metrics.map(({ metric, label, series, latestFormatted }) => (
@@ -177,31 +183,33 @@ export function InsightsScreen({ store, insightStore }: InsightsScreenProps) {
 							title={label}
 							action={
 								<AppText variant="caption" color="muted">
-									{series.observedDayCount} logged days
+									{t("trends.loggedDays", { count: series.observedDayCount })}
 								</AppText>
 							}
 						/>
 						{latestFormatted ? (
-							<AppText color="muted">Latest {latestFormatted}</AppText>
+							<AppText color="muted">
+								{t("trends.latest", { value: latestFormatted })}
+							</AppText>
 						) : null}
 						<TrendChart series={series} />
 						{series.daysUntilMeaningful > 0 ? (
 							<AppText color="muted">
-								Not enough data yet. Log {series.daysUntilMeaningful} more day
-								{series.daysUntilMeaningful === 1 ? "" : "s"} to make this trend
-								useful.
+								{t("trends.notEnoughData", {
+									count: series.daysUntilMeaningful,
+								})}
 							</AppText>
 						) : (
-							<AppText>Enough data for a first trend.</AppText>
+							<AppText>{t("trends.enoughData")}</AppText>
 						)}
 					</Card>
 				))}
 			</View>
 
 			<ListRow
-				title="History"
-				detail="Browse check-ins and reviews by day."
-				accessibilityLabel="Open history"
+				title={t("history.title")}
+				detail={t("history.detail")}
+				accessibilityLabel={t("history.open")}
 				onPress={() => router.push("/history")}
 			/>
 		</Screen>

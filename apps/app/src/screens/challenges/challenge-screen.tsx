@@ -1,6 +1,7 @@
 import { resolveChallenge } from "@bro/domain/challenge-catalogue";
 import { router } from "expo-router";
 import { useMemo, useState } from "react";
+import { useTranslation } from "react-i18next";
 import { AppText } from "../../components/app-text";
 import { Button } from "../../components/button";
 import { Card } from "../../components/card";
@@ -16,6 +17,7 @@ export function ChallengeScreen({
 	challengeSlug: string;
 	store?: Pick<HabitsStore, "startChallenge">;
 }) {
+	const { t } = useTranslation("challenges");
 	const challenge = resolveChallenge(challengeSlug);
 	const challenges = useMemo(() => store ?? createHabitsStore(), [store]);
 	const [starting, setStarting] = useState(false);
@@ -39,9 +41,9 @@ export function ChallengeScreen({
 		return (
 			<Screen padded centered>
 				<EmptyState
-					title="Challenge not found"
-					body="This starter challenge is not available in this version of the app."
-					actionLabel="Back to reviews"
+					title={t("overview.notFound")}
+					body={t("overview.notFoundBody")}
+					actionLabel={t("overview.backToReviews")}
 					onAction={() => router.replace("/review")}
 				/>
 			</Screen>
@@ -53,12 +55,11 @@ export function ChallengeScreen({
 			<AppText variant="display">{challenge.title}</AppText>
 			<AppText color="muted">{challenge.intro}</AppText>
 			<AppText variant="caption" color="brand">
-				{challenge.durationDays}-day challenge · Advance one completed step at a
-				time
+				{t("overview.summary", { total: challenge.durationDays })}
 			</AppText>
 			{error ? <AppText color="danger">{error}</AppText> : null}
 			<Button
-				label="Start this challenge"
+				label={t("overview.start")}
 				loading={starting}
 				onPress={() => void start()}
 			/>
@@ -66,7 +67,7 @@ export function ChallengeScreen({
 			{challenge.days.map((day) => (
 				<Card key={day.day} style={styles.dayCard}>
 					<AppText variant="caption" color="brand">
-						DAY {day.day}
+						{t("overview.day", { day: day.day })}
 					</AppText>
 					<AppText variant="section">{day.title}</AppText>
 					<AppText color="muted">{day.action}</AppText>
@@ -74,7 +75,7 @@ export function ChallengeScreen({
 			))}
 
 			<Button
-				label="Back to my wheel"
+				label={t("overview.backToWheel")}
 				variant="secondary"
 				onPress={() => router.back()}
 			/>

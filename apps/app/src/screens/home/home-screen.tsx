@@ -2,7 +2,9 @@ import { localDayOf, shiftLocalDay, type WeekStartDay } from "@bro/domain";
 import type { TagCategory } from "@bro/domain/metric-registry";
 import { formatLocalDayLabel, isWheelReviewDue } from "@bro/logic";
 import { type Href, router, useFocusEffect, useScrollToTop } from "expo-router";
+import type { TFunction } from "i18next";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useTranslation } from "react-i18next";
 import { TouchableOpacity, View } from "react-native";
 import {
 	checkInScoreSummary,
@@ -14,7 +16,7 @@ import {
 	createCheckInStore,
 	type TodayCheckIn,
 } from "../../check-in/check-in-store";
-import { TAG_CATEGORY_LABELS } from "../../check-in/tag-categories";
+import { TAG_CATEGORY_KEYS } from "../../check-in/tag-categories";
 import { AppText } from "../../components/app-text";
 import { Button } from "../../components/button";
 import { Card } from "../../components/card";
@@ -41,6 +43,7 @@ import {
 	type HistoryMeasurementChange,
 	type HistoryStore,
 } from "../../history/history-store";
+import { nonBreaking } from "../../i18n";
 import {
 	createReviewStore,
 	type ReviewResult,
@@ -85,8 +88,13 @@ function localDaysBetween(fromLocalDay: string, throughLocalDay: string) {
 	return days;
 }
 
-function measurementChangeBadgeLabel(change: HistoryMeasurementChange): string {
-	if (change.direction === "unchanged") return "— 0%";
+function measurementChangeBadgeLabel(
+	t: TFunction<"home">,
+	change: HistoryMeasurementChange,
+): string {
+	if (change.direction === "unchanged") {
+		return t("measurements.unchangedBadge");
+	}
 	const arrow = change.direction === "increase" ? "↑" : "↓";
 	const amount =
 		change.absolutePercentage === null
@@ -94,16 +102,29 @@ function measurementChangeBadgeLabel(change: HistoryMeasurementChange): string {
 			: `${new Intl.NumberFormat(undefined, {
 					maximumFractionDigits: 1,
 				}).format(change.absolutePercentage)}%`;
-	return `${arrow} ${amount}`;
+	return t("measurements.changeBadge", { arrow, amount });
 }
 
 function measurementChangeDetailLabel(
+	t: TFunction<"home">,
 	change: HistoryMeasurementChange,
 ): string {
-	if (change.direction === "unchanged") return "Same as previous day";
-	return `${change.formattedDelta} ${
-		change.direction === "increase" ? "higher" : "lower"
-	} than previous day`;
+	if (change.direction === "unchanged") {
+		return t("measurements.unchanged");
+	}
+	return change.direction === "increase"
+		? t("measurements.higher", { delta: change.formattedDelta })
+		: t("measurements.lower", { delta: change.formattedDelta });
+}
+
+function habitStatus(
+	t: TFunction<"home">,
+	item: TodayHabitsSnapshot["habits"][number],
+): string {
+	const status = item.completed ? t("habits.doneToday") : t("habits.stillToDo");
+	return item.streak > 0
+		? t("habits.withStreak", { status, days: item.streak })
+		: status;
 }
 
 type PastDaySectionProps = {
@@ -146,6 +167,8 @@ function PastDaySection({
 	onToggleHabit,
 	onEdit,
 }: PastDaySectionProps) {
+	const { t } = useTranslation("home");
+
 	return (
 		<>
 			<AppText variant="section" style={styles.pageTitle}>
@@ -156,10 +179,10 @@ function PastDaySection({
 			{day ? (
 				<>
 					<View style={styles.section}>
-						<SectionHeader title="Check-ins" />
+						<SectionHeader title={t("checkIns.title")} />
 						{day.checkIns.length === 0 ? (
 							<Card>
-								<AppText color="muted">No check-in was logged.</AppText>
+								<AppText color="muted">{t("checkIns.none")}</AppText>
 							</Card>
 						) : (
 							day.checkIns.map((checkIn) => (
@@ -179,7 +202,7 @@ function PastDaySection({
 					</View>
 					{day.tags.length > 0 ? (
 						<View style={styles.section}>
-							<SectionHeader title="What happened" />
+							<SectionHeader title={t("tags.title")} />
 							<Card>
 								<AppText color="muted">
 									{day.tags
@@ -191,7 +214,7 @@ function PastDaySection({
 					) : null}
 					{day.measurements.length > 0 ? (
 						<View style={styles.section}>
-							<SectionHeader title="Measurements" />
+							<SectionHeader title={t("measurements.title")} />
 							{day.measurements.map((measurement) => (
 								<Card
 									key={measurement.id}
@@ -213,6 +236,7 @@ function PastDaySection({
 													style={styles.measurementDeltaText}
 												>
 													{measurementChangeBadgeLabel(
+														t,
 														measurement.changeFromPreviousDay,
 													)}
 												</AppText>
@@ -225,6 +249,7 @@ function PastDaySection({
 									{measurement.changeFromPreviousDay ? (
 										<AppText variant="micro" color="subtle">
 											{measurementChangeDetailLabel(
+												t,
 												measurement.changeFromPreviousDay,
 											)}
 										</AppText>
@@ -235,7 +260,7 @@ function PastDaySection({
 					) : null}
 					{day.notes.length > 0 ? (
 						<View style={styles.section}>
-							<SectionHeader title="Notes" />
+							<SectionHeader title={t("notes.title")} />
 							{day.notes.map((note) => (
 								<Card key={note.id}>
 									<AppText color="muted">{note.body}</AppText>
@@ -247,7 +272,7 @@ function PastDaySection({
 			) : null}
 			{habits && habits.habits.length > 0 ? (
 				<View style={styles.section}>
-					<SectionHeader title="Habits" />
+					<SectionHeader title={t("habits.title")} />
 					{habits.habits.map((item) => (
 						<Card key={item.habit.id} style={styles.habitCard}>
 							<View style={styles.routineCopy}>
@@ -256,12 +281,14 @@ function PastDaySection({
 									<AppText color="muted">{item.progressLabel}</AppText>
 								) : null}
 								<AppText variant="caption" color="subtle">
-									{item.completed ? "Done on this day" : "Not done"}
+									{item.completed ? t("habits.doneOnDay") : t("habits.notDone")}
 								</AppText>
 							</View>
 							{item.habit.kind === "manual" ? (
 								<Button
-									label={item.completed ? "Undo" : "Mark done"}
+									label={
+										item.completed ? t("habits.undo") : t("habits.markDone")
+									}
 									variant={item.completed ? "text" : "secondary"}
 									loading={routineBusy === item.habit.id}
 									onPress={() => onToggleHabit(item.habit.id)}
@@ -273,7 +300,11 @@ function PastDaySection({
 			) : null}
 			{routineError ? <AppText color="danger">{routineError}</AppText> : null}
 			{day && habits ? (
-				<Button label="Edit this day" variant="secondary" onPress={onEdit} />
+				<Button
+					label={t("pastDay.edit")}
+					variant="secondary"
+					onPress={onEdit}
+				/>
 			) : null}
 		</>
 	);
@@ -287,6 +318,7 @@ export function HomeScreen({
 	unitSettingsStore,
 	now,
 }: HomeScreenProps) {
+	const { t } = useTranslation(["home", "checkIn", "common"]);
 	const clockSource = useRef(now ?? systemNow);
 	clockSource.current = now ?? systemNow;
 	const clock = useCallback(() => clockSource.current(), []);
@@ -769,10 +801,10 @@ export function HomeScreen({
 	if (!today) {
 		return (
 			<Screen padded centered contentContainerStyle={styles.loading}>
-				<AppText variant="section">Today could not be loaded</AppText>
+				<AppText variant="section">{t("loadFailed")}</AppText>
 				<AppText color="danger">{error}</AppText>
 				<Button
-					label="Try again"
+					label={t("common:actions.tryAgain")}
 					variant="secondary"
 					onPress={() => void load()}
 				/>
@@ -787,10 +819,10 @@ export function HomeScreen({
 			</Screen>
 		);
 	}
-	const groupedTags = Object.entries(TAG_CATEGORY_LABELS).map(
-		([category, label]) => ({
+	const groupedTags = Object.entries(TAG_CATEGORY_KEYS).map(
+		([category, key]) => ({
 			category: category as TagCategory,
-			label,
+			label: t(`checkIn:${key}` as const),
 			tags: today.availableTags.filter((tag) => tag.category === category),
 		}),
 	);
@@ -799,19 +831,19 @@ export function HomeScreen({
 	const checkInsSection = (
 		<View style={styles.section}>
 			<SectionHeader
-				title="Check-ins"
+				title={t("checkIns.title")}
 				action={
 					checkInCount > 0 ? (
 						<TouchableOpacity
 							accessibilityRole="button"
 							accessibilityLabel={
-								reviewingCheckIns ? "Hide check-ins" : "Review check-ins"
+								reviewingCheckIns ? t("checkIns.hide") : t("checkIns.review")
 							}
 							accessibilityState={{ expanded: reviewingCheckIns }}
 							onPress={() => setReviewingCheckIns((open) => !open)}
 						>
 							<AppText variant="label" color="brand">
-								{checkInCount} check-in{checkInCount === 1 ? "" : "s"}
+								{t("checkIns.count", { count: checkInCount })}
 							</AppText>
 						</TouchableOpacity>
 					) : null
@@ -822,20 +854,24 @@ export function HomeScreen({
 			    check-in flow, so nothing here grows under the user's thumb. */}
 			<Card>
 				<AppText variant="label" style={styles.prompt}>
-					{checkInCount === 0 ? "How's today?" : "Check in again"}
+					{checkInCount === 0
+						? t("checkIns.promptFirst")
+						: t("checkIns.promptAgain")}
 				</AppText>
 				<ScoreRow
-					accessibilityPrefix="Mood"
+					accessibilityPrefix={t("checkIns.moodPrefix")}
 					selected={null}
 					onSelect={startCheckIn}
 					faces={MOOD_FACES}
 				/>
 				<AppText variant="caption" color="subtle" style={styles.hint}>
 					{latestCheckIn
-						? `Last check-in ${checkInScoreSummary(latestCheckIn)}`
+						? t("checkIns.last", {
+								summary: checkInScoreSummary(latestCheckIn),
+							})
 						: today.availableOptionalScores.length > 0
-							? "Tap a face to start — the rest takes seconds."
-							: "Tap a face to check in."}
+							? t("checkIns.hintWithOptional")
+							: t("checkIns.hint")}
 				</AppText>
 				{error ? <AppText color="danger">{error}</AppText> : null}
 			</Card>
@@ -854,13 +890,15 @@ export function HomeScreen({
 							</View>
 							<TouchableOpacity
 								accessibilityRole="button"
-								accessibilityLabel={`Edit check-in ${checkInScoreSummary(entry)}`}
+								accessibilityLabel={t("checkIns.editA11y", {
+									summary: checkInScoreSummary(entry),
+								})}
 								onPress={() =>
 									router.push(`/check-in?entry=${entry.id}` as Href)
 								}
 							>
 								<AppText variant="label" color="brand">
-									Edit
+									{t("checkIns.edit")}
 								</AppText>
 							</TouchableOpacity>
 						</Card>
@@ -872,9 +910,9 @@ export function HomeScreen({
 	const tagsSection =
 		today.availableTags.length > 0 ? (
 			<View style={styles.section}>
-				<SectionHeader title="What happened" />
+				<SectionHeader title={t("tags.title")} />
 				<AppText variant="caption" color="subtle">
-					Tap anything that applied today.
+					{t("tags.hint")}
 				</AppText>
 				{groupedTags.map(({ category, label, tags }) =>
 					tags.length > 0 ? (
@@ -920,17 +958,17 @@ export function HomeScreen({
 
 	const noteSection = (
 		<View style={styles.section}>
-			<SectionHeader title="Note" />
+			<SectionHeader title={t("note.title")} />
 			<FormField
-				label="Note (optional)"
+				label={t("note.field")}
 				value={note}
 				onChangeText={setNote}
-				placeholder="Anything worth remembering?"
+				placeholder={t("note.placeholder")}
 				multiline
 			/>
 			{noteDirty ? (
 				<Button
-					label="Save note"
+					label={t("note.save")}
 					variant="secondary"
 					loading={savingNote}
 					onPress={() => void saveNote()}
@@ -969,12 +1007,14 @@ export function HomeScreen({
 						{checkInsSection}
 						{finishedChallenge ? (
 							<Card style={styles.routineCard}>
-								<AppText variant="section">Challenge complete</AppText>
+								<AppText variant="section">
+									{t("challenges.completeTitle")}
+								</AppText>
 								<AppText color="muted">
-									You finished {finishedChallenge}.
+									{t("challenges.completeBody", { name: finishedChallenge })}
 								</AppText>
 								<Button
-									label="Dismiss"
+									label={t("challenges.dismiss")}
 									variant="text"
 									onPress={() => setFinishedChallenge(null)}
 								/>
@@ -985,12 +1025,10 @@ export function HomeScreen({
 						habitsToday.challenges.length === 0 &&
 						!habitsToday.hasHabits ? (
 							<Card style={styles.routineCard}>
-								<AppText variant="section">Build a routine</AppText>
-								<AppText color="muted">
-									Add a habit and Today will keep the next small action in view.
-								</AppText>
+								<AppText variant="section">{t("habits.emptyTitle")}</AppText>
+								<AppText color="muted">{t("habits.emptyBody")}</AppText>
 								<Button
-									label="Choose a habit"
+									label={t("habits.choose")}
 									variant="secondary"
 									onPress={() => router.push("/habits")}
 								/>
@@ -999,11 +1037,11 @@ export function HomeScreen({
 						{habitsToday && habitsToday.habits.length > 0 ? (
 							<View style={styles.section}>
 								<SectionHeader
-									title="Habits"
+									title={t("habits.title")}
 									action={
 										<TouchableOpacity onPress={() => router.push("/habits")}>
 											<AppText variant="label" color="brand">
-												Manage
+												{t("habits.manage")}
 											</AppText>
 										</TouchableOpacity>
 									}
@@ -1016,13 +1054,16 @@ export function HomeScreen({
 												<AppText color="muted">{item.progressLabel}</AppText>
 											) : null}
 											<AppText variant="caption" color="subtle">
-												{item.completed ? "Done today" : "Still to do"}
-												{item.streak > 0 ? ` · ${item.streak} day streak` : ""}
+												{habitStatus(t, item)}
 											</AppText>
 										</View>
 										{item.habit.kind === "manual" ? (
 											<Button
-												label={item.completed ? "Undo" : "Mark done"}
+												label={
+													item.completed
+														? t("habits.undo")
+														: t("habits.markDone")
+												}
 												variant={item.completed ? "text" : "secondary"}
 												loading={routineBusy === item.habit.id}
 												onPress={() => void toggleHabit(item.habit.id)}
@@ -1034,16 +1075,19 @@ export function HomeScreen({
 						) : null}
 						{habitsToday && habitsToday.challenges.length > 0 ? (
 							<View style={styles.section}>
-								<SectionHeader title="Challenges" />
+								<SectionHeader title={t("challenges.title")} />
 								{habitsToday.challenges.map((challenge) => (
 									<Card key={challenge.enrolmentId} style={styles.routineCard}>
 										<AppText variant="caption" color="brand">
-											DAY {challenge.dayIndex} OF {challenge.durationDays}
+											{t("challenges.dayOf", {
+												day: challenge.dayIndex,
+												total: challenge.durationDays,
+											})}
 										</AppText>
 										<AppText variant="section">{challenge.dayTitle}</AppText>
 										<AppText color="muted">{challenge.action}</AppText>
 										<Button
-											label="Mark step done"
+											label={t("challenges.markStepDone")}
 											loading={routineBusy === challenge.enrolmentId}
 											onPress={() =>
 												void completeChallenge(
@@ -1053,7 +1097,7 @@ export function HomeScreen({
 											}
 										/>
 										<Button
-											label="View challenge"
+											label={t("challenges.view")}
 											variant="text"
 											onPress={() =>
 												router.push(`/challenges/${challenge.enrolmentId}`)
@@ -1072,15 +1116,11 @@ export function HomeScreen({
 							clock().getTime(),
 						) ? (
 							<Card style={styles.stockCard}>
-								<AppText variant="section">
-									Take stock of the bigger picture
-								</AppText>
-								<AppText color="muted">
-									Rate the areas of your life and choose where to focus next.
-								</AppText>
+								<AppText variant="section">{t("wheel.title")}</AppText>
+								<AppText color="muted">{t("wheel.body")}</AppText>
 								<Button
-									label={"Take\u00a0stock"}
-									accessibilityLabel="Take stock"
+									label={nonBreaking(t("wheel.takeStock"))}
+									accessibilityLabel={t("wheel.takeStock")}
 									variant="secondary"
 									onPress={() => router.push("/review/new")}
 								/>
@@ -1088,7 +1128,7 @@ export function HomeScreen({
 						) : null}
 						{wheelError ? (
 							<AppText color="danger">
-								Wheel review status could not be loaded: {wheelError}
+								{t("wheel.statusFailed", { error: wheelError })}
 							</AppText>
 						) : null}
 						{tagsSection}

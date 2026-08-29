@@ -12,6 +12,9 @@
 			"supportsTablet": true,
 			"bundleIdentifier": "com.anonymous.app"
 		},
+		"locales": {
+			"en": "./locales/en.json"
+		},
 		"android": {
 			"adaptiveIcon": {
 				"foregroundImage": "./assets/images/adaptive-icon.png",

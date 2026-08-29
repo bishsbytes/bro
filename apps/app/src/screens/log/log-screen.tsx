@@ -1,8 +1,11 @@
 import type { MeasurementEntry } from "@bro/domain";
 import { router, useFocusEffect } from "expo-router";
+import type { TFunction } from "i18next";
 import { useCallback, useMemo, useState } from "react";
+import { useTranslation } from "react-i18next";
 import { View } from "react-native";
 import {
+	type BodyGoalProgress,
 	type BodyOverview,
 	type BodyStore,
 	createBodyStore,
@@ -59,10 +62,25 @@ function observedLabel(observedAt: number): string {
 	});
 }
 
-function sourceLabel(source: string): string {
+/** Apple Health and Health Connect are product names and stay untranslated. */
+function sourceLabel(t: TFunction<"log">, source: string): string {
 	if (source === "healthkit") return "Apple Health";
 	if (source === "health_connect") return "Health Connect";
-	return "You";
+	return t("measurements.sourceYou");
+}
+
+function goalLine(t: TFunction<"log">, goal: BodyGoalProgress): string {
+	const target = t("goal.target", { value: goal.targetFormatted });
+	if (goal.targetReached) {
+		return t("goal.targetWithNote", { target, note: t("goal.reached") });
+	}
+	if (goal.progressPercent === null) {
+		return target;
+	}
+	return t("goal.targetWithNote", {
+		target,
+		note: t("goal.percentComplete", { percent: goal.progressPercent }),
+	});
 }
 
 function DailySummary({
@@ -79,11 +97,13 @@ function DailySummary({
 	}[];
 	onPress: () => void;
 }) {
+	const { t } = useTranslation(["log", "common"]);
+
 	return (
 		<ListRow
 			title={title}
-			value={`${entryCount} entr${entryCount === 1 ? "y" : "ies"}`}
-			accessibilityLabel={`Open ${title}`}
+			value={t("entries", { count: entryCount })}
+			accessibilityLabel={t("open", { name: title })}
 			onPress={onPress}
 		>
 			<View style={styles.summaryMetrics}>
@@ -92,7 +112,9 @@ function DailySummary({
 						<AppText variant="micro" color="subtle">
 							{metric.metric.label.toUpperCase()}
 						</AppText>
-						<AppText variant="label">{metric.dayFormatted ?? "—"}</AppText>
+						<AppText variant="label">
+							{metric.dayFormatted ?? t("common:emDash")}
+						</AppText>
 					</View>
 				))}
 			</View>
@@ -105,6 +127,7 @@ export function LogScreen({
 	drinksStore,
 	foodStore,
 }: LogScreenProps) {
+	const { t } = useTranslation(["log", "common"]);
 	const body = useMemo(() => bodyStore ?? createBodyStore(), [bodyStore]);
 	const drinks = useMemo(
 		() => drinksStore ?? createDrinksStore(),
@@ -211,9 +234,9 @@ export function LogScreen({
 		return (
 			<Screen centered padded>
 				<EmptyState
-					title="Today's log could not be loaded"
-					body={error ?? "Try again."}
-					actionLabel="Try again"
+					title={t("loadFailed")}
+					body={error ?? t("loadFailedBody")}
+					actionLabel={t("common:actions.tryAgain")}
 					onAction={() => void load()}
 					tone="danger"
 				/>
@@ -226,15 +249,12 @@ export function LogScreen({
 
 	return (
 		<Screen scroll padded gap="lg">
-			<AppText color="muted">
-				Record what happened today and keep the measurements that matter in
-				view.
-			</AppText>
+			<AppText color="muted">{t("intro")}</AppText>
 
 			<View style={styles.section}>
-				<SectionHeader title="Drinks" eyebrow="TODAY" />
+				<SectionHeader title={t("drinks")} eyebrow={t("todayEyebrow")} />
 				<DailySummary
-					title="Drinks"
+					title={t("drinks")}
 					entryCount={snapshot.drinks.entries.length}
 					metrics={snapshot.drinks.metrics}
 					onPress={() => router.push("/drinks")}
@@ -242,9 +262,9 @@ export function LogScreen({
 			</View>
 
 			<View style={styles.section}>
-				<SectionHeader title="Food" eyebrow="TODAY" />
+				<SectionHeader title={t("food")} eyebrow={t("todayEyebrow")} />
 				<DailySummary
-					title="Food"
+					title={t("food")}
 					entryCount={snapshot.food.entries.length}
 					metrics={snapshot.food.metrics}
 					onPress={() => router.push("/food")}
@@ -254,11 +274,14 @@ export function LogScreen({
 			{error ? <AppText color="danger">{error}</AppText> : null}
 
 			<View style={styles.section}>
-				<SectionHeader title="Measurements" eyebrow="YOUR BODY" />
+				<SectionHeader
+					title={t("measurements.title")}
+					eyebrow={t("bodyEyebrow")}
+				/>
 				{visible.length === 0 ? (
 					<EmptyState
-						title="No body metrics tracked"
-						body="Turn on a measurement below to log it here and see its trend."
+						title={t("measurements.emptyTitle")}
+						body={t("measurements.emptyBody")}
 					/>
 				) : null}
 
@@ -270,24 +293,35 @@ export function LogScreen({
 								{metric.latest ? (
 									<>
 										<AppText color="muted">
-											Latest {metric.latestFormatted} ·{" "}
-											{metric.latest.source === "user"
-												? observedLabel(metric.latest.observedAt)
-												: metric.latest.localDay}
+											{t("measurements.latest", {
+												value: metric.latestFormatted ?? t("common:emDash"),
+												when:
+													metric.latest.source === "user"
+														? observedLabel(metric.latest.observedAt)
+														: metric.latest.localDay,
+											})}
 										</AppText>
 										{metric.hasImportedData ? (
 											<AppText variant="micro" color="subtle">
-												Source: {sourceLabel(metric.latest.source)}
+												{t("measurements.source", {
+													name: sourceLabel(t, metric.latest.source),
+												})}
 											</AppText>
 										) : null}
 									</>
 								) : (
-									<AppText color="muted">Nothing logged yet</AppText>
+									<AppText color="muted">
+										{t("measurements.nothingLogged")}
+									</AppText>
 								)}
 							</View>
 							{metric.userEnterable ? (
 								<ThemedSwitch
-									accessibilityLabel={`${metric.tracked ? "Stop tracking" : "Track"} ${metric.label}`}
+									accessibilityLabel={
+										metric.tracked
+											? t("measurements.stopTracking", { name: metric.label })
+											: t("measurements.track", { name: metric.label })
+									}
 									value={metric.tracked}
 									disabled={busySlug !== null}
 									onValueChange={(enabled) =>
@@ -306,11 +340,13 @@ export function LogScreen({
 									onChangeEntry={(entry) =>
 										updateEntry(metric.metricSlug, entry)
 									}
-									placeholder={`Enter ${metric.editablePresentation.displayUnit}`}
+									placeholder={t("measurements.enterPlaceholder", {
+										unit: metric.editablePresentation.displayUnit,
+									})}
 									error={entryErrors[metric.metricSlug]}
 								/>
 								<Button
-									label={`Log ${metric.label}`}
+									label={t("measurements.logMetric", { name: metric.label })}
 									loading={busySlug === metric.metricSlug}
 									disabled={busySlug !== null}
 									onPress={() => {
@@ -329,17 +365,12 @@ export function LogScreen({
 
 						{metric.activeGoal ? (
 							<AppText variant="caption" color="brand">
-								Target {metric.activeGoal.targetFormatted}
-								{metric.activeGoal.targetReached
-									? " · Target reached — mark it achieved?"
-									: metric.activeGoal.progressPercent === null
-										? ""
-										: ` · ${metric.activeGoal.progressPercent}% of the way`}
+								{goalLine(t, metric.activeGoal)}
 							</AppText>
 						) : null}
 
 						<Button
-							label={`Open ${metric.label}`}
+							label={t("open", { name: metric.label })}
 							variant="secondary"
 							onPress={() =>
 								router.push({
@@ -354,17 +385,24 @@ export function LogScreen({
 
 			{untracked.length > 0 ? (
 				<View style={styles.section}>
-					<SectionHeader title="More measurements" eyebrow="YOUR BODY" />
+					<SectionHeader
+						title={t("measurements.more")}
+						eyebrow={t("bodyEyebrow")}
+					/>
 					{untracked.map((metric) => (
 						<Card key={metric.metricSlug} style={styles.heading}>
 							<View style={styles.grow}>
 								<AppText variant="label">{metric.label}</AppText>
-								<AppText variant="caption" color="muted">
-									Enter in {metric.displayUnit}
-								</AppText>
+								{metric.displayUnit ? (
+									<AppText variant="caption" color="muted">
+										{t("measurements.enterIn", { unit: metric.displayUnit })}
+									</AppText>
+								) : null}
 							</View>
 							<ThemedSwitch
-								accessibilityLabel={`Track ${metric.label}`}
+								accessibilityLabel={t("measurements.track", {
+									name: metric.label,
+								})}
 								value={false}
 								disabled={busySlug !== null}
 								onValueChange={(enabled) =>

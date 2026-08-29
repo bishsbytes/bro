@@ -1,4 +1,5 @@
 import type { TrendSeries } from "@bro/logic";
+import { useTranslation } from "react-i18next";
 import Svg, { Circle, Line, Polyline } from "react-native-svg";
 import { useUnistyles } from "../theme/unistyles";
 
@@ -10,9 +11,10 @@ export function TrendChart({
 	height?: number;
 }) {
 	const { theme } = useUnistyles();
+	const { t } = useTranslation("common");
 	return (
 		<Svg
-			accessibilityLabel={`${series.metricSlug} trend chart`}
+			accessibilityLabel={t("a11y.trendChart", { metric: series.metricSlug })}
 			viewBox="0 0 300 120"
 			height={height}
 			width="100%"

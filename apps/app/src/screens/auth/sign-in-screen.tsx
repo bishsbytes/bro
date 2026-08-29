@@ -1,5 +1,6 @@
 import { useAuth } from "@bro/auth-app";
 import { useState } from "react";
+import { useTranslation } from "react-i18next";
 import { AppText } from "../../components/app-text";
 import { Button } from "../../components/button";
 import { FormField } from "../../components/form-field";
@@ -12,6 +13,7 @@ export type SignInScreenProps = {
 };
 
 export function SignInScreen({ onShowSignUp, onSuccess }: SignInScreenProps) {
+	const { t } = useTranslation("auth");
 	const { signIn } = useAuth();
 	const [email, setEmail] = useState("");
 	const [password, setPassword] = useState("");
@@ -26,7 +28,7 @@ export function SignInScreen({ onShowSignUp, onSuccess }: SignInScreenProps) {
 			await signIn(email.trim(), password);
 			await onSuccess?.();
 		} catch (caught) {
-			setError(caught instanceof Error ? caught.message : "Could not sign in.");
+			setError(caught instanceof Error ? caught.message : t("signIn.failed"));
 		} finally {
 			setSubmitting(false);
 		}
@@ -34,17 +36,17 @@ export function SignInScreen({ onShowSignUp, onSuccess }: SignInScreenProps) {
 
 	return (
 		<Screen padded centered contentContainerStyle={authStyles.container}>
-			<AppText variant="title">Welcome back</AppText>
+			<AppText variant="title">{t("signIn.title")}</AppText>
 			<AppText color="subtle" style={authStyles.subtitle}>
-				Sign in to continue.
+				{t("signIn.subtitle")}
 			</AppText>
 
 			{error ? <AppText color="danger">{error}</AppText> : null}
 
 			<FormField
-				label="Email"
+				label={t("fields.email")}
 				showLabel={false}
-				placeholder="Email"
+				placeholder={t("fields.email")}
 				value={email}
 				onChangeText={setEmail}
 				autoCapitalize="none"
@@ -53,9 +55,9 @@ export function SignInScreen({ onShowSignUp, onSuccess }: SignInScreenProps) {
 				editable={!submitting}
 			/>
 			<FormField
-				label="Password"
+				label={t("fields.password")}
 				showLabel={false}
-				placeholder="Password"
+				placeholder={t("fields.password")}
 				value={password}
 				onChangeText={setPassword}
 				autoCapitalize="none"
@@ -65,7 +67,7 @@ export function SignInScreen({ onShowSignUp, onSuccess }: SignInScreenProps) {
 			/>
 
 			<Button
-				label="Sign in"
+				label={t("signIn.submit")}
 				loading={submitting}
 				style={authStyles.submit}
 				onPress={() => void onSubmit()}
@@ -73,7 +75,7 @@ export function SignInScreen({ onShowSignUp, onSuccess }: SignInScreenProps) {
 
 			{onShowSignUp ? (
 				<Button
-					label="Need an account? Sign up"
+					label={t("signIn.needAccount")}
 					variant="text"
 					style={authStyles.link}
 					onPress={onShowSignUp}

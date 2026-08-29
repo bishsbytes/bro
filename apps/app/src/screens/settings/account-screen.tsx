@@ -1,6 +1,7 @@
 import { useAuth } from "@bro/auth-app";
 import { router } from "expo-router";
 import { useState } from "react";
+import { useTranslation } from "react-i18next";
 import { View } from "react-native";
 import { AppText } from "../../components/app-text";
 import { Button } from "../../components/button";
@@ -16,6 +17,7 @@ import { StyleSheet } from "../../theme/unistyles";
 type Confirmation = "sign-out" | "delete-account" | null;
 
 export function AccountScreen() {
+	const { t } = useTranslation(["settings", "common"]);
 	const {
 		remoteIdentity,
 		user,
@@ -47,14 +49,14 @@ export function AccountScreen() {
 			resetAction();
 			setNotice(
 				result.remoteRevocationPending
-					? "Signed out on this device. The server could not be reached."
-					: "Signed out on this device.",
+					? t("account.signedOutPending")
+					: t("account.signedOut"),
 			);
 		} catch (caught) {
 			// Sign-out is local-first and reports revocation failure in its result,
 			// so reaching here means the device-local clearing itself broke.
 			setActionError(
-				caught instanceof Error ? caught.message : "Could not sign out.",
+				caught instanceof Error ? caught.message : t("account.signOutFailed"),
 			);
 		} finally {
 			setSubmitting(false);
@@ -68,12 +70,10 @@ export function AccountScreen() {
 		try {
 			await deleteAccount(password);
 			resetAction();
-			setNotice("Your account was deleted. Data on this device is still here.");
+			setNotice(t("account.deleted"));
 		} catch (caught) {
 			setActionError(
-				caught instanceof Error
-					? caught.message
-					: "Could not delete the account.",
+				caught instanceof Error ? caught.message : t("account.deleteFailed"),
 			);
 		} finally {
 			setSubmitting(false);
@@ -94,9 +94,9 @@ export function AccountScreen() {
 			keyboardShouldPersistTaps="handled"
 		>
 			<ListRow
-				title="Settings"
-				detail="Reminders, health data, units, and local data."
-				accessibilityLabel="Open settings"
+				title={t("account.row")}
+				detail={t("account.rowDetail")}
+				accessibilityLabel={t("account.rowA11y")}
 				onPress={() => router.push("/settings")}
 			/>
 
@@ -109,14 +109,13 @@ export function AccountScreen() {
 			{!hasStoredSession && confirmation === null ? (
 				<View>
 					<AppText variant="body" style={styles.stateTitle}>
-						Using bro without an account
+						{t("account.anonymousTitle")}
 					</AppText>
 					<AppText variant="label" color="subtle">
-						Creating or signing into an account does not move or back up data on
-						this device.
+						{t("account.anonymousBody")}
 					</AppText>
 					<Button
-						label="Sign in"
+						label={t("account.signIn")}
 						style={styles.primaryAction}
 						onPress={() =>
 							router.push({
@@ -126,7 +125,7 @@ export function AccountScreen() {
 						}
 					/>
 					<Button
-						label="Create an account"
+						label={t("account.createAccount")}
 						variant="secondary"
 						style={styles.secondaryAction}
 						onPress={() =>
@@ -143,7 +142,7 @@ export function AccountScreen() {
 				<View style={styles.centeredState}>
 					<LoadingIndicator />
 					<AppText variant="label" color="subtle">
-						Checking your account…
+						{t("account.checking")}
 					</AppText>
 				</View>
 			) : null}
@@ -151,19 +150,18 @@ export function AccountScreen() {
 			{isUnavailable && confirmation === null ? (
 				<View>
 					<AppText style={styles.stateTitle}>
-						Account temporarily unavailable
+						{t("account.unavailableTitle")}
 					</AppText>
 					<AppText variant="label" color="subtle">
-						Your account could not be refreshed. You can keep using your data on
-						this device.
+						{t("account.unavailableBody")}
 					</AppText>
 					<Button
-						label="Try again"
+						label={t("common:actions.tryAgain")}
 						style={styles.primaryAction}
 						onPress={() => void refreshRemoteIdentity()}
 					/>
 					<Button
-						label="Sign out"
+						label={t("account.signOut")}
 						variant="secondary"
 						style={styles.secondaryAction}
 						onPress={() => {
@@ -181,11 +179,11 @@ export function AccountScreen() {
 						{user?.email}
 					</AppText>
 					<AppText variant="caption" color="muted" style={styles.localDataNote}>
-						Your account does not own or back up data on this device.
+						{t("account.ownershipNote")}
 					</AppText>
 
 					<Button
-						label="Sign out"
+						label={t("account.signOut")}
 						variant="secondary"
 						style={styles.secondaryAction}
 						onPress={() => {
@@ -195,9 +193,9 @@ export function AccountScreen() {
 					/>
 
 					<View style={styles.dangerSection}>
-						<SectionHeader title="Danger zone" tone="danger" />
+						<SectionHeader title={t("account.dangerZone")} tone="danger" />
 						<Button
-							label="Delete account"
+							label={t("account.deleteAccount")}
 							variant="secondary"
 							tone="danger"
 							style={styles.secondaryAction}
@@ -213,11 +211,10 @@ export function AccountScreen() {
 			{confirmation === "sign-out" ? (
 				<Card style={styles.confirmation}>
 					<AppText style={styles.confirmationTitle}>
-						Sign out on this device?
+						{t("account.signOutTitle")}
 					</AppText>
 					<AppText variant="label" color="subtle">
-						Your data on this device will stay here and remain available. This
-						does not delete your account.
+						{t("account.signOutBody")}
 					</AppText>
 					{actionError ? (
 						<AppText variant="caption" color="danger">
@@ -225,13 +222,13 @@ export function AccountScreen() {
 						</AppText>
 					) : null}
 					<Button
-						label="Sign out"
+						label={t("account.signOut")}
 						loading={submitting}
 						style={styles.primaryAction}
 						onPress={() => void onSignOut()}
 					/>
 					<Button
-						label="Cancel"
+						label={t("account.cancel")}
 						variant="secondary"
 						style={styles.secondaryAction}
 						onPress={resetAction}
@@ -243,11 +240,10 @@ export function AccountScreen() {
 			{confirmation === "delete-account" ? (
 				<Card style={styles.confirmation}>
 					<AppText style={styles.confirmationTitle}>
-						Delete your account?
+						{t("account.deleteTitle")}
 					</AppText>
 					<AppText variant="label" color="subtle">
-						This permanently deletes your account and everything we hold for it.
-						Your data on this device will stay here.
+						{t("account.deleteBody")}
 					</AppText>
 					{actionError ? (
 						<AppText variant="caption" color="danger">
@@ -255,10 +251,10 @@ export function AccountScreen() {
 						</AppText>
 					) : null}
 					<FormField
-						label="Current password"
+						label={t("account.passwordField")}
 						showLabel={false}
 						containerStyle={styles.passwordField}
-						placeholder="Current password"
+						placeholder={t("account.passwordField")}
 						value={password}
 						onChangeText={setPassword}
 						autoCapitalize="none"
@@ -267,7 +263,7 @@ export function AccountScreen() {
 						editable={!submitting}
 					/>
 					<Button
-						label="Delete account"
+						label={t("account.deleteAccount")}
 						variant="danger"
 						loading={submitting}
 						style={styles.secondaryAction}
@@ -275,7 +271,7 @@ export function AccountScreen() {
 						disabled={submitting || password.length === 0}
 					/>
 					<Button
-						label="Cancel"
+						label={t("account.cancel")}
 						variant="secondary"
 						style={styles.secondaryAction}
 						onPress={resetAction}

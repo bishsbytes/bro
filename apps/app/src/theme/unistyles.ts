@@ -10,17 +10,15 @@ import {
 // finish configuring the theme before a route creates a themed stylesheet.
 export { StyleSheet, useUnistyles };
 
-export const ACCENT_OPTIONS: readonly {
-	value: AccentColor;
-	label: string;
-}[] = [
-	{ value: "neutral", label: "Neutral" },
-	{ value: "emerald", label: "Emerald" },
-	{ value: "sky", label: "Sky" },
-	{ value: "rose", label: "Rose" },
-	{ value: "amber", label: "Amber" },
-	{ value: "amethyst", label: "Amethyst" },
-];
+/** `labelKey` is a key in the `settings` catalogue, not copy. */
+export const ACCENT_OPTIONS = [
+	{ value: "neutral", labelKey: "appearance.accentNeutral" },
+	{ value: "emerald", labelKey: "appearance.accentEmerald" },
+	{ value: "sky", labelKey: "appearance.accentSky" },
+	{ value: "rose", labelKey: "appearance.accentRose" },
+	{ value: "amber", labelKey: "appearance.accentAmber" },
+	{ value: "amethyst", labelKey: "appearance.accentAmethyst" },
+] as const satisfies readonly { value: AccentColor; labelKey: string }[];
 
 /**
  * The product's visual system. Most of the palette deliberately stays neutral:

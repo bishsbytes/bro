@@ -1,6 +1,8 @@
 import { shiftLocalDay, type WeekStartDay, weekStartOf } from "@bro/domain";
 import { formatLocalDayLabel } from "@bro/logic";
+import type { TFunction } from "i18next";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useTranslation } from "react-i18next";
 import {
 	FlatList,
 	type NativeScrollEvent,
@@ -78,22 +80,33 @@ function dayNumber(localDay: string): string {
 	return DAY_NUMBER_FORMATTER.format(dateOf(localDay));
 }
 
-function weekAccessibilityLabel(localDay: string): string {
-	return `Week of ${WEEK_LABEL_FORMATTER.format(dateOf(localDay))}`;
+function weekAccessibilityLabel(
+	t: TFunction<"common">,
+	localDay: string,
+): string {
+	return t("a11y.weekOf", {
+		date: WEEK_LABEL_FORMATTER.format(dateOf(localDay)),
+	});
 }
 
 function dayAccessibilityLabel(
+	t: TFunction<"common">,
 	localDay: string,
 	todayLocalDay: string,
 	indicator: WeekStripDayIndicator,
 	formattedDay = formatLocalDayLabel(localDay, todayLocalDay),
 ): string {
-	const checkIn = indicator.hasCheckIn ? "check-in logged" : "no check-in";
+	const checkIn = indicator.hasCheckIn
+		? t("a11y.checkInLogged")
+		: t("a11y.noCheckIn");
 	const habits =
 		indicator.habitsScheduled === 0
-			? "no habits scheduled"
-			: `${indicator.habitsCompleted} of ${indicator.habitsScheduled} habits done`;
-	return `${formattedDay}, ${checkIn}, ${habits}`;
+			? t("a11y.noHabitsScheduled")
+			: t("a11y.habitsDone", {
+					done: indicator.habitsCompleted,
+					scheduled: indicator.habitsScheduled,
+				});
+	return t("a11y.daySummary", { day: formattedDay, checkIn, habits });
 }
 
 export function WeekStrip({
@@ -105,6 +118,7 @@ export function WeekStrip({
 	onSelectDay,
 	onVisibleRangeChange,
 }: WeekStripProps) {
+	const { t } = useTranslation("common");
 	const { width } = useWindowDimensions();
 	const { theme } = useUnistyles();
 	const pageWidth = Math.max(width, 1);
@@ -192,6 +206,7 @@ export function WeekStrip({
 			key={`${currentWeekStart}:${resetToTodayCount}`}
 			testID="week-strip"
 			accessibilityLabel={weekAccessibilityLabel(
+				t,
 				weeks[visibleWeekIndex]?.start ?? currentWeekStart,
 			)}
 			horizontal
@@ -234,6 +249,7 @@ export function WeekStrip({
 								testID={`week-strip-day-${localDay}`}
 								accessibilityRole="button"
 								accessibilityLabel={dayAccessibilityLabel(
+									t,
 									localDay,
 									todayLocalDay,
 									indicator,

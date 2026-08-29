@@ -13,6 +13,7 @@ import {
 } from "@bro/domain/life-area-catalogue";
 import { useFocusEffect } from "expo-router";
 import { useCallback, useMemo, useState } from "react";
+import { useTranslation } from "react-i18next";
 import { View } from "react-native";
 import { AppText } from "../../components/app-text";
 import { Button } from "../../components/button";
@@ -38,6 +39,7 @@ function createRepository(): LifeAreaRepository {
 }
 
 export function LifeAreasScreen({ repository }: LifeAreasScreenProps) {
+	const { t } = useTranslation(["life", "common"]);
 	const areasRepository = useMemo(
 		() => repository ?? createRepository(),
 		[repository],
@@ -122,9 +124,9 @@ export function LifeAreasScreen({ repository }: LifeAreasScreenProps) {
 		return (
 			<Screen centered padded>
 				<EmptyState
-					title="Life areas could not be loaded"
-					body={error ?? "Try again."}
-					actionLabel="Try again"
+					title={t("areas.loadFailed")}
+					body={error ?? t("loadFailedBody")}
+					actionLabel={t("common:actions.tryAgain")}
 					onAction={() => void load()}
 					tone="danger"
 				/>
@@ -134,10 +136,7 @@ export function LifeAreasScreen({ repository }: LifeAreasScreenProps) {
 
 	return (
 		<Screen scroll padded gap="lg">
-			<AppText color="muted">
-				Choose which areas appear in a new wheel. Changes affect future reviews
-				only; saved reviews keep their original labels and order.
-			</AppText>
+			<AppText color="muted">{t("areas.intro")}</AppText>
 
 			{error ? <AppText color="danger">{error}</AppText> : null}
 
@@ -148,12 +147,16 @@ export function LifeAreasScreen({ repository }: LifeAreasScreenProps) {
 							<AppText variant="section">{area.label}</AppText>
 							{area.customLabel ? (
 								<AppText variant="caption" color="muted">
-									Default: {area.defaultLabel}
+									{t("areas.defaultLabel", { name: area.defaultLabel })}
 								</AppText>
 							) : null}
 						</View>
 						<ThemedSwitch
-							accessibilityLabel={`${area.enabled ? "Disable" : "Enable"} ${area.label}`}
+							accessibilityLabel={
+								area.enabled
+									? t("areas.disable", { name: area.label })
+									: t("areas.enable", { name: area.label })
+							}
 							value={area.enabled}
 							disabled={busy}
 							onValueChange={(enabled) => {
@@ -162,9 +165,7 @@ export function LifeAreasScreen({ repository }: LifeAreasScreenProps) {
 									areas.filter((candidate) => candidate.enabled).length >=
 										MAX_ACTIVE_LIFE_AREAS
 								) {
-									setError(
-										`Choose up to ${MAX_ACTIVE_LIFE_AREAS} active life areas — disable one first.`,
-									);
+									setError(t("areas.limit", { max: MAX_ACTIVE_LIFE_AREAS }));
 									return;
 								}
 								void mutate(() =>
@@ -176,16 +177,16 @@ export function LifeAreasScreen({ repository }: LifeAreasScreenProps) {
 
 					<View style={styles.actions}>
 						<Button
-							label="Move up"
-							accessibilityLabel={`Move ${area.label} up`}
+							label={t("areas.moveUp")}
+							accessibilityLabel={t("areas.moveUpA11y", { name: area.label })}
 							variant="secondary"
 							disabled={busy || index === 0}
 							style={styles.actionButton}
 							onPress={() => void move(index, -1)}
 						/>
 						<Button
-							label="Move down"
-							accessibilityLabel={`Move ${area.label} down`}
+							label={t("areas.moveDown")}
+							accessibilityLabel={t("areas.moveDownA11y", { name: area.label })}
 							variant="secondary"
 							disabled={busy || index === areas.length - 1}
 							style={styles.actionButton}
@@ -196,7 +197,7 @@ export function LifeAreasScreen({ repository }: LifeAreasScreenProps) {
 					{editingSlug === area.slug ? (
 						<View style={styles.editor}>
 							<FormField
-								label={`Label for ${area.defaultLabel}`}
+								label={t("areas.labelField", { name: area.defaultLabel })}
 								value={labelDraft}
 								placeholder={area.defaultLabel}
 								autoCapitalize="sentences"
@@ -205,7 +206,7 @@ export function LifeAreasScreen({ repository }: LifeAreasScreenProps) {
 							/>
 							<View style={styles.actions}>
 								<Button
-									label="Save label"
+									label={t("areas.saveLabel")}
 									loading={busy}
 									style={styles.actionButton}
 									onPress={() =>
@@ -221,7 +222,7 @@ export function LifeAreasScreen({ repository }: LifeAreasScreenProps) {
 									}
 								/>
 								<Button
-									label="Cancel"
+									label={t("areas.cancel")}
 									variant="text"
 									disabled={busy}
 									style={styles.actionButton}
@@ -231,8 +232,10 @@ export function LifeAreasScreen({ repository }: LifeAreasScreenProps) {
 						</View>
 					) : (
 						<Button
-							label="Change label"
-							accessibilityLabel={`Change label for ${area.label}`}
+							label={t("areas.changeLabel")}
+							accessibilityLabel={t("areas.changeLabelA11y", {
+								name: area.label,
+							})}
 							variant="text"
 							disabled={busy}
 							onPress={() => startRelabel(area)}

@@ -2,6 +2,7 @@ import { localDayOf } from "@bro/domain";
 import { formatLocalDayLabel } from "@bro/logic";
 import { router, useFocusEffect } from "expo-router";
 import { useCallback, useMemo, useState } from "react";
+import { useTranslation } from "react-i18next";
 import { AppText } from "../../components/app-text";
 import { EmptyState } from "../../components/empty-state";
 import { ListRow } from "../../components/list-row";
@@ -18,6 +19,7 @@ type HistoryScreenProps = {
 };
 
 export function HistoryScreen({ store }: HistoryScreenProps) {
+	const { t } = useTranslation(["history", "common"]);
 	const history = useMemo(() => store ?? createHistoryStore(), [store]);
 	const [days, setDays] = useState<HistoryDaySummary[] | null>(null);
 	const [error, setError] = useState<string | null>(null);
@@ -50,19 +52,16 @@ export function HistoryScreen({ store }: HistoryScreenProps) {
 		<Screen scroll padded gap="lg">
 			{error ? (
 				<EmptyState
-					title="History could not be loaded"
+					title={t("loadFailed")}
 					body={error}
-					actionLabel="Try again"
+					actionLabel={t("common:actions.tryAgain")}
 					onAction={() => void load()}
 					tone="danger"
 				/>
 			) : null}
 
 			{days?.length === 0 ? (
-				<EmptyState
-					title="Nothing logged yet"
-					body="Your check-ins will appear here."
-				/>
+				<EmptyState title={t("emptyTitle")} body={t("emptyBody")} />
 			) : null}
 
 			{days?.map((day) => {
@@ -70,7 +69,7 @@ export function HistoryScreen({ store }: HistoryScreenProps) {
 				return (
 					<ListRow
 						key={day.localDay}
-						accessibilityLabel={`Open ${dayLabel}`}
+						accessibilityLabel={t("openDay", { day: dayLabel })}
 						title={dayLabel}
 						onPress={() =>
 							router.push({
@@ -81,35 +80,37 @@ export function HistoryScreen({ store }: HistoryScreenProps) {
 					>
 						{day.moodValues.length > 0 || day.energyValues.length > 0 ? (
 							<AppText variant="score">
-								Mood {day.moodValues.join(", ")} · Energy{" "}
-								{day.energyValues.join(", ")}
+								{t("summary.scores", {
+									mood: day.moodValues.join(", "),
+									energy: day.energyValues.join(", "),
+								})}
 							</AppText>
 						) : null}
 						{day.tagLabels.length > 0 ? (
 							<AppText color="muted">
-								What happened: {day.tagLabels.join(", ")}
+								{t("summary.tags", { list: day.tagLabels.join(", ") })}
 							</AppText>
 						) : null}
 						{day.assessmentCount > 0 ? (
 							<AppText color="muted">
-								{day.assessmentCount === 1
-									? "Wheel of life review"
-									: `${day.assessmentCount} wheel of life reviews`}
+								{t("summary.reviews", { count: day.assessmentCount })}
 							</AppText>
 						) : null}
 						{day.healthLabels && day.healthLabels.length > 0 ? (
 							<AppText color="muted">
-								Health: {day.healthLabels.join(", ")}
+								{t("summary.health", { list: day.healthLabels.join(", ") })}
 							</AppText>
 						) : null}
 						{day.habitLabels && day.habitLabels.length > 0 ? (
 							<AppText color="muted">
-								Habits: {day.habitLabels.join(", ")}
+								{t("summary.habits", { list: day.habitLabels.join(", ") })}
 							</AppText>
 						) : null}
 						{day.challengeLabels && day.challengeLabels.length > 0 ? (
 							<AppText color="muted">
-								Challenges: {day.challengeLabels.join(", ")}
+								{t("summary.challenges", {
+									list: day.challengeLabels.join(", "),
+								})}
 							</AppText>
 						) : null}
 						{day.noteBodies.map((body, index) => (

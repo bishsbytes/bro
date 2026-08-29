@@ -1,6 +1,8 @@
+import type { AccentColor, ThemeMode } from "@bro/database-app";
 import { deleteLocalProductData } from "@bro/database-app";
 import { type Href, router } from "expo-router";
 import { useEffect, useState } from "react";
+import { useTranslation } from "react-i18next";
 import { View } from "react-native";
 import { AppText } from "../../components/app-text";
 import { Button } from "../../components/button";
@@ -14,8 +16,18 @@ import { useDeviceSettings } from "../../providers/device-settings-provider";
 import { cancelAllReminderNotifications } from "../../reminders/reminder-materialiser";
 import { ACCENT_OPTIONS, StyleSheet } from "../../theme/unistyles";
 
-const DELETE_LOCAL_DATA_COPY =
-	"This permanently deletes data stored by bro on this device. It does not delete your account or data stored elsewhere.";
+function themeSuffix(themeMode: ThemeMode): "System" | "Light" | "Dark" {
+	return themeMode === "system"
+		? "System"
+		: themeMode === "light"
+			? "Light"
+			: "Dark";
+}
+
+function accentLabelKey(accentColor: AccentColor) {
+	const option = ACCENT_OPTIONS.find(({ value }) => value === accentColor);
+	return option?.labelKey ?? "appearance.accentNeutral";
+}
 
 type SettingsScreenProps = {
 	deleteProductData?: () => Promise<void>;
@@ -32,6 +44,7 @@ function HealthSettingsEntry({
 }: {
 	availability?: () => Promise<HealthGatewayAvailability>;
 }) {
+	const { t } = useTranslation("settings");
 	const [health, setHealth] = useState<HealthGatewayAvailability | null>(null);
 
 	useEffect(() => {
@@ -47,13 +60,14 @@ function HealthSettingsEntry({
 	}, [availability]);
 
 	if (!health?.platform) return null;
-	const label =
+	// Apple Health and Health Connect are product names and stay untranslated.
+	const platform =
 		health.platform === "healthkit" ? "Apple Health" : "Health Connect";
 	return (
 		<ListRow
-			title="Health data"
-			detail={`Import from ${label}. Your data stays on this device.`}
-			accessibilityLabel="Manage health data"
+			title={t("index.health")}
+			detail={t("index.healthDetail", { platform })}
+			accessibilityLabel={t("index.healthA11y")}
 			onPress={() => router.push("/settings/health")}
 		/>
 	);
@@ -64,6 +78,7 @@ export function SettingsScreen({
 	cancelReminderNotifications = cancelAllReminderNotifications,
 	healthAvailability = defaultHealthAvailability,
 }: SettingsScreenProps) {
+	const { t } = useTranslation("settings");
 	const { settings } = useDeviceSettings();
 	const [deleteStep, setDeleteStep] = useState<DeleteStep>("idle");
 	const [deleting, setDeleting] = useState(false);
@@ -82,9 +97,7 @@ export function SettingsScreen({
 			setDeleteStep("complete");
 		} catch (caught) {
 			setError(
-				caught instanceof Error
-					? caught.message
-					: "Local data could not be deleted.",
+				caught instanceof Error ? caught.message : t("localData.failed"),
 			);
 		} finally {
 			setDeleting(false);
@@ -94,71 +107,71 @@ export function SettingsScreen({
 	return (
 		<Screen scroll padded gap="md">
 			<ListRow
-				title="Appearance"
-				detail="Choose a theme and a quiet accent for actions and selections."
-				value={`${settings.themeMode === "system" ? "System" : settings.themeMode === "light" ? "Light" : "Dark"} · ${ACCENT_OPTIONS.find(({ value }) => value === settings.accentColor)?.label ?? "Neutral"}`}
-				accessibilityLabel="Manage appearance"
+				title={t("index.appearance")}
+				detail={t("index.appearanceDetail")}
+				value={t("index.appearanceValue", {
+					theme: t(`appearance.theme${themeSuffix(settings.themeMode)}`),
+					accent: t(accentLabelKey(settings.accentColor)),
+				})}
+				accessibilityLabel={t("index.appearanceA11y")}
 				onPress={() => router.push("/settings/appearance" as Href)}
 			/>
 			<HealthSettingsEntry availability={healthAvailability} />
 			<ListRow
-				title="Check-ins"
-				detail="Choose which scores appear after Mood."
-				accessibilityLabel="Manage check-ins"
+				title={t("index.checkIns")}
+				detail={t("index.checkInsDetail")}
+				accessibilityLabel={t("index.checkInsA11y")}
 				onPress={() => router.push("/settings/check-ins" as Href)}
 			/>
 			<ListRow
-				title="Drinks"
-				detail="Choose drink totals and the units they use."
-				accessibilityLabel="Manage drink logging"
+				title={t("index.drinks")}
+				detail={t("index.drinksDetail")}
+				accessibilityLabel={t("index.drinksA11y")}
 				onPress={() => router.push("/settings/drinks" as Href)}
 			/>
 			<ListRow
-				title="Food"
-				detail="Choose nutrition totals for Trends and goals."
-				accessibilityLabel="Manage food logging"
+				title={t("index.food")}
+				detail={t("index.foodDetail")}
+				accessibilityLabel={t("index.foodA11y")}
 				onPress={() => router.push("/settings/food" as Href)}
 			/>
 			<ListRow
-				title="Units & format"
-				detail="Choose how weeks and body measurements appear."
-				accessibilityLabel="Manage units and format"
+				title={t("index.units")}
+				detail={t("index.unitsDetail")}
+				accessibilityLabel={t("index.unitsA11y")}
 				onPress={() => router.push("/settings/units")}
 			/>
 			<ListRow
-				title="Reminders"
-				detail="Choose when this device nudges you to check in."
-				accessibilityLabel="Manage reminders"
+				title={t("index.reminders")}
+				detail={t("index.remindersDetail")}
+				accessibilityLabel={t("index.remindersA11y")}
 				onPress={() => router.push("/settings/reminders")}
 			/>
 			<ListRow
-				title="Privacy"
-				detail="See what stays local and when data can leave this device."
-				accessibilityLabel="Privacy information"
+				title={t("index.privacy")}
+				detail={t("index.privacyDetail")}
+				accessibilityLabel={t("index.privacyA11y")}
 				onPress={() => router.push("/settings/privacy" as Href)}
 			/>
 			<ListRow
-				title="Data licences"
-				detail="Attribution for data used in bro."
-				accessibilityLabel="Data licences"
+				title={t("index.licences")}
+				detail={t("index.licencesDetail")}
+				accessibilityLabel={t("index.licencesA11y")}
 				onPress={() => router.push("/settings/licences" as Href)}
 			/>
 			<ListRow
-				title="Export your data"
-				detail="Share or save a copy of the record on this device."
-				accessibilityLabel="Export your data"
+				title={t("index.export")}
+				detail={t("index.exportDetail")}
+				accessibilityLabel={t("index.exportA11y")}
 				onPress={() => router.push("/settings/export" as Href)}
 			/>
 			<Card style={styles.section}>
-				<SectionHeader title="Data on this device" />
+				<SectionHeader title={t("localData.title")} />
 				{deleteStep === "idle" ? (
 					<>
-						<AppText color="muted">
-							Delete your check-ins, notes, and metric preferences from this
-							device.
-						</AppText>
+						<AppText color="muted">{t("localData.intro")}</AppText>
 						<Button
-							label="Delete local data"
+							label={t("localData.delete")}
 							variant="secondary"
 							tone="danger"
 							onPress={() => {
@@ -172,18 +185,18 @@ export function SettingsScreen({
 				{deleteStep === "confirm" ? (
 					<View style={styles.confirmation}>
 						<AppText variant="score" color="danger">
-							Delete local data?
+							{t("localData.confirmTitle")}
 						</AppText>
-						<AppText color="muted">{DELETE_LOCAL_DATA_COPY}</AppText>
+						<AppText color="muted">{t("localData.confirmBody")}</AppText>
 						{error ? <AppText color="danger">{error}</AppText> : null}
 						<Button
-							label="Permanently delete local data"
+							label={t("localData.confirmAction")}
 							variant="danger"
 							loading={deleting}
 							onPress={() => void confirmDelete()}
 						/>
 						<Button
-							label="Cancel"
+							label={t("localData.cancel")}
 							variant="text"
 							disabled={deleting}
 							onPress={() => {
@@ -196,12 +209,12 @@ export function SettingsScreen({
 
 				{deleteStep === "complete" ? (
 					<View style={styles.confirmation}>
-						<SectionHeader title="Local data deleted" />
-						<AppText color="muted">
-							Check-ins, notes, and metric preferences have been removed from
-							this device.
-						</AppText>
-						<Button label="Back to today" onPress={() => router.replace("/")} />
+						<SectionHeader title={t("localData.doneTitle")} />
+						<AppText color="muted">{t("localData.doneBody")}</AppText>
+						<Button
+							label={t("localData.backToToday")}
+							onPress={() => router.replace("/")}
+						/>
 					</View>
 				) : null}
 			</Card>

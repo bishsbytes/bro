@@ -1,0 +1,46 @@
+export const history = {
+	loadFailed: "History could not be loaded",
+	emptyTitle: "Nothing logged yet",
+	emptyBody: "Your check-ins will appear here.",
+	openDay: "Open {{day}}",
+	summary: {
+		/** Both are comma-separated lists of the day's scores. */
+		scores: "Mood {{mood}} · Energy {{energy}}",
+		tags: "What happened: {{list}}",
+		reviews_one: "Wheel of life review",
+		reviews_other: "{{count}} wheel of life reviews",
+		health: "Health: {{list}}",
+		habits: "Habits: {{list}}",
+		challenges: "Challenges: {{list}}",
+	},
+	day: {
+		habitsCompleted: "Habits completed",
+		challengeSteps: "Challenge steps",
+		/** {{title}} names the challenge, {{day}} is its step number. */
+		challengeStep: "{{title}} · Day {{day}}",
+		checkIns: "Check-ins",
+		noCheckIns: "No scored check-ins.",
+		unpaired: "Unpaired observations",
+		whatHappened: "What happened",
+		assessments: "Assessment scores",
+		measurements: "Measurements",
+		other: "Other observations",
+		notes: "Notes",
+		source: "Source: {{source}}",
+		sourceYou: "You",
+		usedForDay: "{{source}} · Used for daily value",
+		/** A measurement or score and its value, e.g. "Weight: 82 kg". */
+		labelledValue: "{{label}}: {{value}}",
+		remove: "Remove",
+		delete: "Delete",
+		mood: "Mood",
+		moodSource: "Mood source: {{source}}",
+		saveCheckIn: "Save changes",
+		deleteCheckIn: "Delete check-in",
+		note: "Note",
+		/** {{id}} disambiguates rows for screen readers; it is not shown. */
+		noteA11y: "Note {{id}}",
+		saveNote: "Save note",
+		deleteNote: "Delete note",
+	},
+} as const;

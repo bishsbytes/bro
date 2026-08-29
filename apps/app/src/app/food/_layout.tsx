@@ -1,8 +1,10 @@
 import { Stack } from "expo-router";
+import { useTranslation } from "react-i18next";
 import { stackScreenOptions, useUnistyles } from "../../theme/unistyles";
 
 export default function FoodLayout() {
 	const { theme } = useUnistyles();
+	const { t } = useTranslation("navigation");
 	return (
 		<Stack
 			screenOptions={{
@@ -10,8 +12,8 @@ export default function FoodLayout() {
 				animation: process.env.NODE_ENV === "test" ? "none" : "default",
 			}}
 		>
-			<Stack.Screen name="index" options={{ title: "Food" }} />
-			<Stack.Screen name="[localDay]" options={{ title: "Food record" }} />
+			<Stack.Screen name="index" options={{ title: t("food.index") }} />
+			<Stack.Screen name="[localDay]" options={{ title: t("food.day") }} />
 		</Stack>
 	);
 }

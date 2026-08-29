@@ -2,7 +2,9 @@ import type { WeekStartDay } from "@bro/domain";
 import { type HabitTemplate, resolveHabit } from "@bro/domain/habit-catalogue";
 import { orderedIsoWeekdays } from "@bro/logic";
 import { type Href, router, useFocusEffect } from "expo-router";
+import type { TFunction } from "i18next";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useTranslation } from "react-i18next";
 import { TouchableOpacity, View } from "react-native";
 import { AppText } from "../../components/app-text";
 import { Button } from "../../components/button";
@@ -35,6 +37,14 @@ type HabitsScreenStore = Pick<
 	| "moveHabit"
 >;
 
+function habitMeta(t: TFunction<"habits">, item: HabitSettingsItem): string {
+	const kind =
+		item.habit.kind === "metric"
+			? t("list.kindAutomatic")
+			: t("list.kindManual");
+	return item.areaLabel ? t("list.meta", { kind, area: item.areaLabel }) : kind;
+}
+
 type Editor =
 	| { kind: "template"; template: HabitTemplate }
 	| { kind: "custom" }
@@ -49,6 +59,7 @@ export function HabitsScreen({
 	unitSettingsStore?: Pick<UnitSettingsStore, "loadWeekStart">;
 	addTemplateSlug?: string | null;
 }) {
+	const { t } = useTranslation(["habits", "common"]);
 	const habits = useMemo(() => store ?? createHabitsStore(), [store]);
 	const unitSettings = useMemo(
 		() => unitSettingsStore ?? createUnitSettingsStore(),
@@ -154,11 +165,11 @@ export function HabitsScreen({
 	async function saveEditor() {
 		if (!editor) return;
 		if (!label.trim()) {
-			setError("Give this habit a name.");
+			setError(t("editor.needName"));
 			return;
 		}
 		if (daysOfWeek === 0) {
-			setError("Choose at least one day.");
+			setError(t("editor.needDay"));
 			return;
 		}
 		const metric =
@@ -182,7 +193,7 @@ export function HabitsScreen({
 				!Number.isFinite(targetValue) ||
 				(direction === "at_most" ? targetValue < 0 : targetValue <= 0))
 		) {
-			setError("Enter a valid target.");
+			setError(t("editor.needTarget"));
 			return;
 		}
 		const draft: HabitEditorDraft = {
@@ -213,9 +224,9 @@ export function HabitsScreen({
 		return (
 			<Screen centered padded>
 				<EmptyState
-					title="Habits could not be loaded"
-					body={error ?? "Try again."}
-					actionLabel="Try again"
+					title={t("loadFailed")}
+					body={error ?? t("loadFailedBody")}
+					actionLabel={t("common:actions.tryAgain")}
 					onAction={() => void load()}
 					tone="danger"
 				/>
@@ -225,10 +236,7 @@ export function HabitsScreen({
 
 	return (
 		<Screen scroll padded gap="lg">
-			<AppText color="muted">
-				Choose the days that matter. Unscheduled days never count against a
-				streak.
-			</AppText>
+			<AppText color="muted">{t("intro")}</AppText>
 			{error ? <AppText color="danger">{error}</AppText> : null}
 
 			{editor ? (
@@ -236,14 +244,14 @@ export function HabitsScreen({
 					<SectionHeader
 						title={
 							editor.kind === "existing"
-								? "Edit habit"
+								? t("editor.editTitle")
 								: editor.kind === "custom"
-									? "Add your own"
-									: "Add habit"
+									? t("editor.addCustomTitle")
+									: t("editor.addTitle")
 						}
 					/>
 					<FormField
-						label="Habit name"
+						label={t("editor.nameField")}
 						value={label}
 						editable={!busy}
 						onChangeText={setLabel}
@@ -255,7 +263,7 @@ export function HabitsScreen({
 								editor.item.habit.kind === "metric"
 					) ? (
 						<FormField
-							label="Daily target"
+							label={t("editor.targetField")}
 							value={target}
 							keyboardType="decimal-pad"
 							editable={!busy}
@@ -266,7 +274,7 @@ export function HabitsScreen({
 					(editor.kind === "existing" &&
 						editor.item.habit.slug.startsWith("habit:custom:")) ? (
 						<View style={styles.areaPicker}>
-							<AppText variant="label">Life area</AppText>
+							<AppText variant="label">{t("editor.areaField")}</AppText>
 							<View style={styles.areaChips}>
 								{snapshot.areas.map((area) => {
 									const selected = areaSlug === area.slug;
@@ -274,7 +282,9 @@ export function HabitsScreen({
 										<TouchableOpacity
 											key={area.slug}
 											accessibilityRole="button"
-											accessibilityLabel={`Life area ${area.label}`}
+											accessibilityLabel={t("editor.areaOption", {
+												name: area.label,
+											})}
 											accessibilityState={{ selected }}
 											style={[styles.areaChip, selected && styles.selected]}
 											disabled={busy}
@@ -287,7 +297,7 @@ export function HabitsScreen({
 							</View>
 						</View>
 					) : null}
-					<AppText variant="label">Scheduled days</AppText>
+					<AppText variant="label">{t("editor.scheduledDays")}</AppText>
 					<View style={styles.weekdays}>
 						{weekdays.map((day) => {
 							const selected = (daysOfWeek & (1 << day.index)) !== 0;
@@ -308,13 +318,13 @@ export function HabitsScreen({
 					</View>
 					<View style={styles.actions}>
 						<Button
-							label="Save habit"
+							label={t("editor.save")}
 							loading={busy}
 							style={styles.action}
 							onPress={() => void saveEditor()}
 						/>
 						<Button
-							label="Cancel"
+							label={t("editor.cancel")}
 							variant="text"
 							disabled={busy}
 							style={styles.action}
@@ -324,9 +334,9 @@ export function HabitsScreen({
 				</Card>
 			) : null}
 
-			<SectionHeader title="Your habits" />
+			<SectionHeader title={t("list.title")} />
 			{snapshot.active.length === 0 ? (
-				<AppText color="muted">No habits yet.</AppText>
+				<AppText color="muted">{t("list.empty")}</AppText>
 			) : null}
 			{snapshot.active.map((item, index) => (
 				<Card key={item.habit.id} style={styles.habitCard}>
@@ -334,18 +344,11 @@ export function HabitsScreen({
 						<View style={styles.copy}>
 							<AppText variant="section">{item.label}</AppText>
 							<AppText variant="caption" color="subtle">
-								{[
-									item.habit.kind === "metric"
-										? "Automatic"
-										: "Tap to complete",
-									item.areaLabel,
-								]
-									.filter(Boolean)
-									.join(" · ")}
+								{habitMeta(t, item)}
 							</AppText>
 						</View>
 						<Button
-							label="Edit"
+							label={t("list.edit")}
 							variant="text"
 							disabled={busy}
 							onPress={() => beginExisting(item)}
@@ -353,8 +356,8 @@ export function HabitsScreen({
 					</View>
 					<View style={styles.actions}>
 						<Button
-							label="Move up"
-							accessibilityLabel={`Move ${item.label} up`}
+							label={t("list.moveUp")}
+							accessibilityLabel={t("list.moveUpA11y", { name: item.label })}
 							variant="secondary"
 							disabled={busy || index === 0}
 							style={styles.action}
@@ -363,8 +366,8 @@ export function HabitsScreen({
 							}
 						/>
 						<Button
-							label="Move down"
-							accessibilityLabel={`Move ${item.label} down`}
+							label={t("list.moveDown")}
+							accessibilityLabel={t("list.moveDownA11y", { name: item.label })}
 							variant="secondary"
 							disabled={busy || index === snapshot.active.length - 1}
 							style={styles.action}
@@ -374,7 +377,7 @@ export function HabitsScreen({
 						/>
 					</View>
 					<Button
-						label="View 8-week record"
+						label={t("list.viewRecord")}
 						variant="secondary"
 						disabled={busy}
 						onPress={() =>
@@ -384,7 +387,7 @@ export function HabitsScreen({
 						}
 					/>
 					<Button
-						label="Remove habit"
+						label={t("list.remove")}
 						variant="text"
 						tone="danger"
 						disabled={busy}
@@ -394,7 +397,7 @@ export function HabitsScreen({
 			))}
 
 			<Button
-				label="Add your own"
+				label={t("list.addCustom")}
 				variant="secondary"
 				disabled={busy || editor !== null}
 				onPress={beginCustom}
@@ -403,7 +406,7 @@ export function HabitsScreen({
 			{snapshot.groups.map((group, index) => (
 				<View key={group.areaSlug} style={styles.catalogueGroup}>
 					{group.more && (index === 0 || !snapshot.groups[index - 1]?.more) ? (
-						<SectionHeader title="More" />
+						<SectionHeader title={t("catalogue.more")} />
 					) : null}
 					<AppText variant="section">{group.areaLabel}</AppText>
 					{group.habits.map((template) => (
@@ -413,8 +416,10 @@ export function HabitsScreen({
 								<AppText color="muted">{template.description}</AppText>
 							</View>
 							<Button
-								label="Add"
-								accessibilityLabel={`Add ${template.label}`}
+								label={t("catalogue.add")}
+								accessibilityLabel={t("catalogue.addA11y", {
+									name: template.label,
+								})}
 								variant="secondary"
 								disabled={busy || editor !== null}
 								onPress={() => beginTemplate(template)}

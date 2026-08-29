@@ -1,5 +1,6 @@
 import * as Notifications from "expo-notifications";
 import { Platform } from "react-native";
+import { i18n } from "../i18n";
 
 export const REMINDERS_CHANNEL_ID = "reminders";
 
@@ -42,7 +43,7 @@ export const notificationGateway: ReminderNotificationGateway = {
 			}),
 		});
 		await Notifications.setNotificationChannelAsync(REMINDERS_CHANNEL_ID, {
-			name: "Reminders",
+			name: i18n.t("notifications:channelName"),
 			importance: Notifications.AndroidImportance.DEFAULT,
 		});
 	},
@@ -75,11 +76,17 @@ export const notificationGateway: ReminderNotificationGateway = {
 	},
 
 	async schedule(identifier, fireAt) {
+		// Copy is fixed at schedule time, not delivery time, and the materialiser
+		// reconciles by identifier alone: a notification already queued is left
+		// as it is. Adding a language picker therefore needs every reminder
+		// cancelled and rescheduled on the switch, or the old wording keeps
+		// firing until its identifier drops out of the plan.
 		await Notifications.scheduleNotificationAsync({
 			identifier,
 			content: {
+				// The app's own name, so it reads the same in every language.
 				title: "bro",
-				body: "Take a moment to check in.",
+				body: i18n.t("notifications:reminder.body"),
 				data: { destination: "today" },
 			},
 			trigger: {

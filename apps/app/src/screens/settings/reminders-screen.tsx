@@ -8,7 +8,9 @@ import {
 	weekdaysFromMask,
 } from "@bro/logic";
 import { useFocusEffect } from "expo-router";
+import type { TFunction } from "i18next";
 import { useCallback, useMemo, useState } from "react";
+import { useTranslation } from "react-i18next";
 import { Linking, View } from "react-native";
 import { AppText } from "../../components/app-text";
 import { Button } from "../../components/button";
@@ -49,9 +51,9 @@ function parseTime(value: string): number | null {
 	return match ? Number(match[1]) * 60 + Number(match[2]) : null;
 }
 
-function formatDays(mask: number): string {
+function formatDays(t: TFunction<"settings">, mask: number): string {
 	if (mask === EVERY_DAY_MASK) {
-		return "Every day";
+		return t("reminders.everyDay");
 	}
 	return weekdaysFromMask(mask)
 		.map((index) => ISO_WEEKDAYS[index].shortLabel)
@@ -71,6 +73,7 @@ function ReminderEditor({
 	onCancel(): void;
 	onSave(schedule: ReminderSchedule): Promise<void>;
 }) {
+	const { t } = useTranslation("settings");
 	const [time, setTime] = useState(formatTime(initial.minuteOfDay));
 	const [daysOfWeek, setDaysOfWeek] = useState(initial.daysOfWeek);
 	const [error, setError] = useState<string | null>(null);
@@ -83,11 +86,11 @@ function ReminderEditor({
 	async function save() {
 		const minuteOfDay = parseTime(time);
 		if (minuteOfDay === null) {
-			setError("Enter a time from 00:00 through 23:59.");
+			setError(t("reminders.badTime"));
 			return;
 		}
 		if (daysOfWeek === 0) {
-			setError("Choose at least one day.");
+			setError(t("reminders.needDay"));
 			return;
 		}
 		setError(null);
@@ -96,12 +99,12 @@ function ReminderEditor({
 
 	return (
 		<Card style={styles.editor}>
-			<SectionHeader title="Reminder schedule" />
+			<SectionHeader title={t("reminders.editorTitle")} />
 			<FormField
-				label="Time (24-hour)"
+				label={t("reminders.timeField")}
 				value={time}
 				onChangeText={setTime}
-				placeholder="20:00"
+				placeholder={t("reminders.timePlaceholder")}
 				keyboardType="numbers-and-punctuation"
 				autoCapitalize="none"
 			/>
@@ -112,7 +115,11 @@ function ReminderEditor({
 						<Button
 							key={day.index}
 							label={day.shortLabel}
-							accessibilityLabel={`${selected ? "Remove" : "Add"} ${day.label}`}
+							accessibilityLabel={
+								selected
+									? t("reminders.removeDay", { day: day.label })
+									: t("reminders.addDay", { day: day.label })
+							}
 							accessibilityState={{ selected }}
 							variant={selected ? "primary" : "secondary"}
 							style={styles.dayButton}
@@ -123,12 +130,12 @@ function ReminderEditor({
 			</View>
 			{error ? <AppText color="danger">{error}</AppText> : null}
 			<Button
-				label="Save reminder"
+				label={t("reminders.save")}
 				loading={busy}
 				onPress={() => void save()}
 			/>
 			<Button
-				label="Cancel"
+				label={t("reminders.cancel")}
 				variant="text"
 				disabled={busy}
 				onPress={onCancel}
@@ -141,6 +148,7 @@ export function RemindersScreen({
 	store,
 	unitSettingsStore,
 }: RemindersScreenProps) {
+	const { t } = useTranslation(["settings", "common"]);
 	const remindersStore = useMemo(() => store ?? createReminderStore(), [store]);
 	const unitSettings = useMemo(
 		() => unitSettingsStore ?? createUnitSettingsStore(),
@@ -199,14 +207,11 @@ export function RemindersScreen({
 			{state?.permission === "denied" ? (
 				<Card style={styles.banner}>
 					<AppText variant="label" color="danger">
-						Notifications are off
+						{t("reminders.deniedTitle")}
 					</AppText>
-					<AppText color="muted">
-						Your schedules are saved, but reminders stay silent until you turn
-						notifications on in system settings.
-					</AppText>
+					<AppText color="muted">{t("reminders.deniedBody")}</AppText>
 					<Button
-						label="Open system settings"
+						label={t("reminders.openSystemSettings")}
 						variant="secondary"
 						onPress={() => void Linking.openSettings()}
 					/>
@@ -215,9 +220,9 @@ export function RemindersScreen({
 
 			{error ? (
 				<EmptyState
-					title="Reminders could not be updated"
+					title={t("reminders.updateFailed")}
 					body={error}
-					actionLabel="Try again"
+					actionLabel={t("common:actions.tryAgain")}
 					onAction={() => void load()}
 					tone="danger"
 				/>
@@ -225,9 +230,9 @@ export function RemindersScreen({
 
 			{state?.reminders.length === 0 && editing !== "new" ? (
 				<EmptyState
-					title="No reminders yet"
-					body="Add a schedule for the days and time you want this phone to nudge you."
-					actionLabel="Add reminder"
+					title={t("reminders.emptyTitle")}
+					body={t("reminders.emptyBody")}
+					actionLabel={t("reminders.add")}
 					onAction={() => setEditing("new")}
 				/>
 			) : null}
@@ -239,10 +244,20 @@ export function RemindersScreen({
 							<AppText variant="score">
 								{formatTime(reminder.minuteOfDay)}
 							</AppText>
-							<AppText color="muted">{formatDays(reminder.daysOfWeek)}</AppText>
+							<AppText color="muted">
+								{formatDays(t, reminder.daysOfWeek)}
+							</AppText>
 						</View>
 						<ThemedSwitch
-							accessibilityLabel={`${reminder.enabled ? "Disable" : "Enable"} ${formatTime(reminder.minuteOfDay)} reminder`}
+							accessibilityLabel={
+								reminder.enabled
+									? t("reminders.disable", {
+											time: formatTime(reminder.minuteOfDay),
+										})
+									: t("reminders.enable", {
+											time: formatTime(reminder.minuteOfDay),
+										})
+							}
 							value={reminder.enabled}
 							disabled={busy}
 							onValueChange={(enabled) =>
@@ -254,14 +269,14 @@ export function RemindersScreen({
 					</View>
 					<View style={styles.actions}>
 						<Button
-							label="Edit"
+							label={t("reminders.edit")}
 							variant="secondary"
 							disabled={busy}
 							style={styles.actionButton}
 							onPress={() => setEditing(reminder)}
 						/>
 						<Button
-							label="Delete"
+							label={t("reminders.delete")}
 							variant="secondary"
 							tone="danger"
 							disabled={busy}
@@ -294,7 +309,7 @@ export function RemindersScreen({
 					}
 				/>
 			) : state && state.reminders.length > 0 ? (
-				<Button label="Add reminder" onPress={() => setEditing("new")} />
+				<Button label={t("reminders.add")} onPress={() => setEditing("new")} />
 			) : null}
 		</Screen>
 	);

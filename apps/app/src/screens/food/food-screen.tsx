@@ -3,6 +3,7 @@ import { previousLocalDay } from "@bro/domain";
 import type { FoodSearchResult } from "@bro/domain/food-search";
 import { type Href, router, useFocusEffect } from "expo-router";
 import { useCallback, useMemo, useState } from "react";
+import { useTranslation } from "react-i18next";
 import { TouchableOpacity, View } from "react-native";
 import { AppText } from "../../components/app-text";
 import { Button } from "../../components/button";
@@ -59,13 +60,16 @@ function CustomFoodEditor({
 	onSave: (draft: Parameters<FoodStore["saveCustom"]>[0]) => void;
 	onCancel: () => void;
 }) {
+	const { t } = useTranslation("food");
 	const serving = initial?.consumable.servings[0];
 	const [label, setLabel] = useState(initial?.consumable.label ?? "");
 	const [brand, setBrand] = useState(initial?.consumable.brand ?? "");
 	const [isRecipe, setIsRecipe] = useState(
 		initial?.consumable.isRecipe ?? false,
 	);
-	const [servingLabel, setServingLabel] = useState(serving?.label ?? "serving");
+	const [servingLabel, setServingLabel] = useState(
+		serving?.label ?? t("defaultServing"),
+	);
 	const [energy, setEnergy] = useState(
 		serving?.energyKcal == null ? "" : String(serving.energyKcal),
 	);
@@ -150,43 +154,52 @@ function CustomFoodEditor({
 
 	return (
 		<Card style={styles.section}>
-			<SectionHeader title={initial ? "Edit custom food" : "New custom food"} />
+			<SectionHeader
+				title={initial ? t("custom.editorTitle") : t("custom.newTitle")}
+			/>
 			<View style={styles.wrap}>
 				<Button
-					label="Custom food"
+					label={t("custom.kindFood")}
 					variant={!isRecipe ? "primary" : "secondary"}
 					onPress={() => setIsRecipe(false)}
 				/>
 				<Button
-					label="Recipe"
+					label={t("custom.kindRecipe")}
 					variant={isRecipe ? "primary" : "secondary"}
 					onPress={() => setIsRecipe(true)}
 				/>
 			</View>
-			<FormField label="Name" value={label} onChangeText={setLabel} />
 			<FormField
-				label="Brand (optional)"
+				label={t("custom.nameField")}
+				value={label}
+				onChangeText={setLabel}
+			/>
+			<FormField
+				label={t("custom.brandField")}
 				value={brand}
 				onChangeText={setBrand}
 			/>
 			<FormField
-				label="Serving"
+				label={t("custom.servingField")}
 				value={servingLabel}
 				onChangeText={setServingLabel}
 			/>
 			{isRecipe ? (
 				<View style={styles.section}>
-					<AppText variant="label">Recipe components</AppText>
+					<AppText variant="label">{t("custom.componentsLabel")}</AppText>
 					{components.map((component, index) => (
 						<View
 							key={`${component.position}:${component.label}`}
 							style={styles.componentRow}
 						>
 							<AppText style={styles.grow}>
-								{component.quantity} × {component.label}
+								{t("custom.component", {
+									quantity: component.quantity,
+									name: component.label,
+								})}
 							</AppText>
 							<Button
-								label="Remove"
+								label={t("custom.removeComponent")}
 								variant="text"
 								tone="danger"
 								onPress={() =>
@@ -200,26 +213,26 @@ function CustomFoodEditor({
 						</View>
 					))}
 					<FormField
-						label="Component name"
+						label={t("custom.componentNameField")}
 						value={componentLabel}
 						onChangeText={setComponentLabel}
 					/>
 					<FormField
-						label="Component quantity"
+						label={t("custom.componentQuantityField")}
 						value={componentQuantity}
 						onChangeText={setComponentQuantity}
 						keyboardType="decimal-pad"
 					/>
 					<View style={styles.actions}>
 						<FormField
-							label="Component kcal"
+							label={t("custom.componentEnergyField")}
 							value={componentEnergy}
 							onChangeText={setComponentEnergy}
 							keyboardType="decimal-pad"
 							containerStyle={styles.grow}
 						/>
 						<FormField
-							label="Protein (g)"
+							label={t("custom.proteinField")}
 							value={componentProtein}
 							onChangeText={setComponentProtein}
 							keyboardType="decimal-pad"
@@ -228,14 +241,14 @@ function CustomFoodEditor({
 					</View>
 					<View style={styles.actions}>
 						<FormField
-							label="Carbs (g)"
+							label={t("custom.carbsField")}
 							value={componentCarbs}
 							onChangeText={setComponentCarbs}
 							keyboardType="decimal-pad"
 							containerStyle={styles.grow}
 						/>
 						<FormField
-							label="Fat (g)"
+							label={t("custom.fatField")}
 							value={componentFat}
 							onChangeText={setComponentFat}
 							keyboardType="decimal-pad"
@@ -243,7 +256,7 @@ function CustomFoodEditor({
 						/>
 					</View>
 					<Button
-						label="Add component"
+						label={t("custom.addComponent")}
 						variant="secondary"
 						disabled={!componentLabel.trim()}
 						onPress={addComponent}
@@ -253,14 +266,14 @@ function CustomFoodEditor({
 				<>
 					<View style={styles.actions}>
 						<FormField
-							label="Energy (kcal)"
+							label={t("custom.energyField")}
 							value={energy}
 							onChangeText={setEnergy}
 							keyboardType="decimal-pad"
 							containerStyle={styles.grow}
 						/>
 						<FormField
-							label="Protein (g)"
+							label={t("custom.proteinField")}
 							value={protein}
 							onChangeText={setProtein}
 							keyboardType="decimal-pad"
@@ -269,14 +282,14 @@ function CustomFoodEditor({
 					</View>
 					<View style={styles.actions}>
 						<FormField
-							label="Carbs (g)"
+							label={t("custom.carbsField")}
 							value={carbs}
 							onChangeText={setCarbs}
 							keyboardType="decimal-pad"
 							containerStyle={styles.grow}
 						/>
 						<FormField
-							label="Fat (g)"
+							label={t("custom.fatField")}
 							value={fat}
 							onChangeText={setFat}
 							keyboardType="decimal-pad"
@@ -287,14 +300,14 @@ function CustomFoodEditor({
 			)}
 			<View style={styles.actions}>
 				<Button
-					label="Cancel"
+					label={t("custom.cancel")}
 					variant="text"
 					disabled={busy}
 					style={styles.grow}
 					onPress={onCancel}
 				/>
 				<Button
-					label="Save custom food"
+					label={t("custom.save")}
 					loading={busy}
 					disabled={!label.trim() || (isRecipe && components.length === 0)}
 					style={styles.grow}
@@ -306,6 +319,7 @@ function CustomFoodEditor({
 }
 
 export function FoodScreen({ store, searchStore }: FoodScreenProps) {
+	const { t } = useTranslation(["food", "common"]);
 	const food = useMemo(() => store ?? createFoodStore(), [store]);
 	const foodSearch = useMemo(
 		() => searchStore ?? createFoodSearchStore(),
@@ -471,9 +485,9 @@ export function FoodScreen({ store, searchStore }: FoodScreenProps) {
 		return (
 			<Screen centered padded>
 				<EmptyState
-					title="Food could not be loaded"
-					body={error ?? "Try again."}
-					actionLabel="Try again"
+					title={t("loadFailed")}
+					body={error ?? t("loadFailedBody")}
+					actionLabel={t("common:actions.tryAgain")}
 					onAction={() => void load()}
 					tone="danger"
 				/>
@@ -493,7 +507,7 @@ export function FoodScreen({ store, searchStore }: FoodScreenProps) {
 		<Screen scroll padded gap="lg" keyboardShouldPersistTaps="handled">
 			<Card style={styles.section}>
 				<SectionHeader
-					title="Today"
+					title={t("today.title")}
 					eyebrow={snapshot.localDay}
 					action={
 						<TouchableOpacity
@@ -501,7 +515,7 @@ export function FoodScreen({ store, searchStore }: FoodScreenProps) {
 							onPress={() => router.push("/settings/food" as Href)}
 						>
 							<AppText variant="label" color="brand">
-								Food settings
+								{t("today.settings")}
 							</AppText>
 						</TouchableOpacity>
 					}
@@ -512,31 +526,39 @@ export function FoodScreen({ store, searchStore }: FoodScreenProps) {
 							<AppText variant="micro" color="subtle">
 								{metric.metric.label.toUpperCase()}
 							</AppText>
-							<AppText variant="section">{metric.dayFormatted ?? "—"}</AppText>
+							<AppText variant="section">
+								{metric.dayFormatted ?? t("common:emDash")}
+							</AppText>
 							<AppText variant="micro" color="muted">
-								7 days {metric.weekFormatted ?? "—"}
+								{t("today.weekTotal", {
+									value: metric.weekFormatted ?? t("common:emDash"),
+								})}
 							</AppText>
 						</View>
 					))}
 				</View>
 				<AppText variant="caption" color="subtle">
-					Totals are stated without targets, allowances, or ratings.
+					{t("today.disclaimer")}
 				</AppText>
 			</Card>
 			{error ? <AppText color="danger">{error}</AppText> : null}
 
 			<View style={styles.section}>
-				<SectionHeader title="Quick add" eyebrow="RECENT FOODS" />
+				<SectionHeader
+					title={t("quickAdd.title")}
+					eyebrow={t("quickAdd.eyebrow")}
+				/>
 				{snapshot.recents.length === 0 ? (
-					<AppText color="muted">
-						Your usual foods will appear here after the first log.
-					</AppText>
+					<AppText color="muted">{t("quickAdd.empty")}</AppText>
 				) : (
 					<View style={styles.wrap}>
 						{snapshot.recents.map(({ entry }) => (
 							<Button
 								key={entry.id}
-								label={`${entry.label} · ${entry.servingLabel ?? "serving"}`}
+								label={t("quickAdd.option", {
+									food: entry.label,
+									serving: entry.servingLabel ?? t("defaultServing"),
+								})}
 								variant="secondary"
 								disabled={busy}
 								onPress={() => void mutate(() => food.repeatEntry(entry.id))}
@@ -548,19 +570,17 @@ export function FoodScreen({ store, searchStore }: FoodScreenProps) {
 
 			<View style={styles.section}>
 				<SectionHeader
-					title="Custom foods and recipes"
+					title={t("custom.title")}
 					action={
 						<Button
-							label="Create"
+							label={t("custom.create")}
 							variant="text"
 							onPress={() => setCustomEditor("new")}
 						/>
 					}
 				/>
 				{snapshot.customFoods.length === 0 ? (
-					<AppText color="muted">
-						Save foods and recipes you use often. They stay available offline.
-					</AppText>
+					<AppText color="muted">{t("custom.empty")}</AppText>
 				) : (
 					snapshot.customFoods.map((custom) => (
 						<Card key={custom.consumable.id} style={styles.componentRow}>
@@ -568,17 +588,19 @@ export function FoodScreen({ store, searchStore }: FoodScreenProps) {
 								<AppText variant="label">{custom.consumable.label}</AppText>
 								<AppText variant="caption" color="muted">
 									{custom.consumable.isRecipe
-										? `${custom.components.length} recipe components`
+										? t("custom.components", {
+												count: custom.components.length,
+											})
 										: custom.consumable.servings[0]?.label}
 								</AppText>
 							</View>
 							<Button
-								label="Edit"
+								label={t("custom.edit")}
 								variant="text"
 								onPress={() => setCustomEditor(custom)}
 							/>
 							<Button
-								label="Delete"
+								label={t("custom.delete")}
 								variant="text"
 								tone="danger"
 								disabled={busy}
@@ -606,22 +628,22 @@ export function FoodScreen({ store, searchStore }: FoodScreenProps) {
 
 			<Card style={styles.section}>
 				<SectionHeader
-					title="Search foods"
+					title={t("search.title")}
 					eyebrow={
 						searchSnapshot?.fromCache && searchSnapshot.results.length > 0
-							? "SAVED FOR OFFLINE"
+							? t("search.cachedEyebrow")
 							: undefined
 					}
 				/>
 				<FormField
-					label="Food search"
+					label={t("search.field")}
 					value={searchQuery}
 					onChangeText={setSearchQuery}
-					placeholder="Chicken thighs"
+					placeholder={t("search.placeholder")}
 					onSubmitEditing={() => void runSearch()}
 				/>
 				<Button
-					label="Search"
+					label={t("search.submit")}
 					loading={searchBusy}
 					disabled={searchQuery.trim().length < 2}
 					onPress={() => void runSearch()}
@@ -641,20 +663,25 @@ export function FoodScreen({ store, searchStore }: FoodScreenProps) {
 								</AppText>
 							) : null}
 							<AppText variant="micro" color="subtle">
-								{result.source} · {result.licence}
+								{t("search.provenance", {
+									source: result.source,
+									licence: result.licence,
+								})}
 							</AppText>
 						</View>
 						<Button
-							label="Choose"
+							label={t("search.choose")}
 							variant="secondary"
-							accessibilityLabel={`Choose ${result.label}`}
+							accessibilityLabel={t("search.chooseA11y", {
+								name: result.label,
+							})}
 							onPress={() => selectSearchResult(result)}
 						/>
 					</Card>
 				))}
 				{selectedSearchResult ? (
 					<View style={styles.section}>
-						<AppText variant="label">Serving</AppText>
+						<AppText variant="label">{t("search.servingLabel")}</AppText>
 						<View style={styles.wrap}>
 							{selectedSearchResult.servings.map((serving) => (
 								<Button
@@ -668,36 +695,36 @@ export function FoodScreen({ store, searchStore }: FoodScreenProps) {
 							))}
 						</View>
 						<FormField
-							label="Number of servings"
+							label={t("search.quantityField")}
 							value={quantity}
 							onChangeText={setQuantity}
 							keyboardType="decimal-pad"
 						/>
 						<View style={styles.actions}>
 							<FormField
-								label="Date"
+								label={t("search.dateField")}
 								value={localDay}
 								onChangeText={setLocalDay}
-								placeholder="YYYY-MM-DD"
+								placeholder={t("search.datePlaceholder")}
 								containerStyle={styles.grow}
 							/>
 							<FormField
-								label="Time"
+								label={t("search.timeField")}
 								value={time}
 								onChangeText={setTime}
-								placeholder="HH:mm"
+								placeholder={t("search.timePlaceholder")}
 								containerStyle={styles.grow}
 							/>
 						</View>
 						<View style={styles.actions}>
 							<Button
-								label="Cancel"
+								label={t("search.cancel")}
 								variant="text"
 								style={styles.grow}
 								onPress={() => setSelectedSearchRef("")}
 							/>
 							<Button
-								label="Save searched food"
+								label={t("search.save")}
 								loading={busy}
 								disabled={!searchServingId}
 								style={styles.grow}
@@ -711,23 +738,23 @@ export function FoodScreen({ store, searchStore }: FoodScreenProps) {
 					onPress={() => router.push("/settings/licences" as Href)}
 				>
 					<AppText variant="caption" color="brand">
-						Food data from Open Food Facts under ODbL 1.0 · Licence details
+						{t("search.licenceNotice")}
 					</AppText>
 				</TouchableOpacity>
 			</Card>
 
 			<Card style={styles.section}>
-				<SectionHeader title="Log food" />
+				<SectionHeader title={t("add.title")} />
 				{mode === null ? (
 					<View style={styles.actions}>
 						<Button
-							label="Choose custom food"
+							label={t("add.chooseCustom")}
 							style={styles.grow}
 							disabled={snapshot.customFoods.length === 0}
 							onPress={() => setMode("custom")}
 						/>
 						<Button
-							label="Something else"
+							label={t("add.chooseFree")}
 							variant="secondary"
 							style={styles.grow}
 							onPress={() => setMode("free")}
@@ -736,7 +763,7 @@ export function FoodScreen({ store, searchStore }: FoodScreenProps) {
 				) : null}
 				{mode === "custom" ? (
 					<View style={styles.section}>
-						<AppText variant="label">Food or recipe</AppText>
+						<AppText variant="label">{t("add.customLabel")}</AppText>
 						<View style={styles.wrap}>
 							{snapshot.customFoods.map(({ consumable }) => (
 								<Button
@@ -749,7 +776,7 @@ export function FoodScreen({ store, searchStore }: FoodScreenProps) {
 						</View>
 						{selectedCustom ? (
 							<>
-								<AppText variant="label">Serving</AppText>
+								<AppText variant="label">{t("add.servingLabel")}</AppText>
 								<View style={styles.wrap}>
 									{selectedCustom.servings.map((serving) => (
 										<Button
@@ -769,26 +796,26 @@ export function FoodScreen({ store, searchStore }: FoodScreenProps) {
 				{mode === "free" ? (
 					<View style={styles.section}>
 						<FormField
-							label="Food name"
+							label={t("add.nameField")}
 							value={label}
 							onChangeText={setLabel}
 						/>
 						<FormField
-							label="Serving label (optional)"
+							label={t("add.servingNameField")}
 							value={servingLabel}
 							onChangeText={setServingLabel}
-							placeholder="portion, bowl, slice"
+							placeholder={t("add.servingNamePlaceholder")}
 						/>
 						<View style={styles.actions}>
 							<FormField
-								label="Energy per serving (kcal)"
+								label={t("add.energyField")}
 								value={energy}
 								onChangeText={setEnergy}
 								keyboardType="decimal-pad"
 								containerStyle={styles.grow}
 							/>
 							<FormField
-								label="Protein per serving (g)"
+								label={t("add.proteinField")}
 								value={protein}
 								onChangeText={setProtein}
 								keyboardType="decimal-pad"
@@ -797,14 +824,14 @@ export function FoodScreen({ store, searchStore }: FoodScreenProps) {
 						</View>
 						<View style={styles.actions}>
 							<FormField
-								label="Carbs per serving (g)"
+								label={t("add.carbsField")}
 								value={carbs}
 								onChangeText={setCarbs}
 								keyboardType="decimal-pad"
 								containerStyle={styles.grow}
 							/>
 							<FormField
-								label="Fat per serving (g)"
+								label={t("add.fatField")}
 								value={fat}
 								onChangeText={setFat}
 								keyboardType="decimal-pad"
@@ -816,29 +843,29 @@ export function FoodScreen({ store, searchStore }: FoodScreenProps) {
 				{mode ? (
 					<>
 						<FormField
-							label="Number of servings"
+							label={t("add.quantityField")}
 							value={quantity}
 							onChangeText={setQuantity}
 							keyboardType="decimal-pad"
 						/>
 						<View style={styles.actions}>
 							<FormField
-								label="Date"
+								label={t("add.dateField")}
 								value={localDay}
 								onChangeText={setLocalDay}
-								placeholder="YYYY-MM-DD"
+								placeholder={t("search.datePlaceholder")}
 								containerStyle={styles.grow}
 							/>
 							<FormField
-								label="Time"
+								label={t("add.timeField")}
 								value={time}
 								onChangeText={setTime}
-								placeholder="HH:mm"
+								placeholder={t("search.timePlaceholder")}
 								containerStyle={styles.grow}
 							/>
 						</View>
 						<Button
-							label="Yesterday"
+							label={t("add.yesterday")}
 							variant="text"
 							onPress={() => {
 								setLocalDay(previousLocalDay(snapshot.localDay));
@@ -847,14 +874,14 @@ export function FoodScreen({ store, searchStore }: FoodScreenProps) {
 						/>
 						<View style={styles.actions}>
 							<Button
-								label="Cancel"
+								label={t("add.cancel")}
 								variant="text"
 								disabled={busy}
 								style={styles.grow}
 								onPress={resetAdd}
 							/>
 							<Button
-								label="Save food"
+								label={t("add.save")}
 								loading={busy}
 								disabled={
 									mode === "custom" ? !customId || !servingId : !label.trim()
@@ -868,18 +895,18 @@ export function FoodScreen({ store, searchStore }: FoodScreenProps) {
 			</Card>
 
 			<View style={styles.section}>
-				<SectionHeader title="Today's entries" />
+				<SectionHeader title={t("entries.title")} />
 				{snapshot.entries.length === 0 ? (
 					<EmptyState
-						title="Nothing logged"
-						body="Log only when it is useful. An empty day stays empty."
+						title={t("entries.emptyTitle")}
+						body={t("entries.emptyBody")}
 					/>
 				) : (
 					snapshot.entries.map(({ entry, detail, contributions }) => (
 						<TouchableOpacity
 							key={entry.id}
 							accessibilityRole="button"
-							accessibilityLabel={`Edit ${entry.label}`}
+							accessibilityLabel={t("entries.edit", { name: entry.label })}
 							onPress={() => router.push(`/food/${snapshot.localDay}` as Href)}
 						>
 							<Card style={styles.entry}>
@@ -899,7 +926,7 @@ export function FoodScreen({ store, searchStore }: FoodScreenProps) {
 			</View>
 			{snapshot.recentLocalDays.length > 0 ? (
 				<View style={styles.section}>
-					<SectionHeader title="Recent days" />
+					<SectionHeader title={t("entries.recentDays")} />
 					<View style={styles.wrap}>
 						{snapshot.recentLocalDays.map((day) => (
 							<Button
@@ -914,12 +941,9 @@ export function FoodScreen({ store, searchStore }: FoodScreenProps) {
 			) : null}
 
 			<View style={styles.section}>
-				<SectionHeader title="Daily goals" />
+				<SectionHeader title={t("goals.title")} />
 				{trackedMetrics.length === 0 ? (
-					<AppText color="muted">
-						Turn on food metrics in settings to add them to Trends and set daily
-						goals.
-					</AppText>
+					<AppText color="muted">{t("goals.needMetrics")}</AppText>
 				) : null}
 				{trackedMetrics.map((metric) => {
 					const activeGoal = metric.goals.find(
@@ -931,21 +955,26 @@ export function FoodScreen({ store, searchStore }: FoodScreenProps) {
 							{activeGoal ? (
 								<>
 									<AppText>
-										Target {activeGoal.targetFormatted} · Latest{" "}
-										{activeGoal.currentFormatted ?? "—"}
+										{t("goals.summary", {
+											target: activeGoal.targetFormatted,
+											current:
+												activeGoal.currentFormatted ?? t("common:emDash"),
+										})}
 									</AppText>
 									{activeGoal.targetReached ? (
 										<AppText variant="caption" color="brand">
-											Target reached — mark it achieved?
+											{t("goals.targetReached")}
 										</AppText>
 									) : activeGoal.progressPercent !== null ? (
 										<AppText variant="caption" color="brand">
-											{activeGoal.progressPercent}% of the way
+											{t("goals.percentComplete", {
+												percent: activeGoal.progressPercent,
+											})}
 										</AppText>
 									) : null}
 									<View style={styles.actions}>
 										<Button
-											label="Mark achieved"
+											label={t("goals.achieve")}
 											variant="secondary"
 											disabled={busy}
 											style={styles.grow}
@@ -954,7 +983,7 @@ export function FoodScreen({ store, searchStore }: FoodScreenProps) {
 											}
 										/>
 										<Button
-											label="Stop goal"
+											label={t("goals.abandon")}
 											variant="text"
 											disabled={busy}
 											style={styles.grow}
@@ -967,19 +996,21 @@ export function FoodScreen({ store, searchStore }: FoodScreenProps) {
 							) : goalSlug === metric.metric.slug ? (
 								<>
 									<FormField
-										label={`Target (${metric.displayUnit})`}
+										label={t("goals.targetField", {
+											unit: metric.displayUnit,
+										})}
 										value={goalTarget}
 										onChangeText={setGoalTarget}
 										keyboardType="decimal-pad"
 									/>
 									<FormField
-										label="Target date (optional)"
+										label={t("goals.targetDateField")}
 										value={goalDate}
 										onChangeText={setGoalDate}
-										placeholder="YYYY-MM-DD"
+										placeholder={t("search.datePlaceholder")}
 									/>
 									<Button
-										label="Save goal"
+										label={t("goals.save")}
 										loading={busy}
 										onPress={() =>
 											void mutate(() =>
@@ -1000,14 +1031,12 @@ export function FoodScreen({ store, searchStore }: FoodScreenProps) {
 								</>
 							) : metric.dayValue !== null ? (
 								<Button
-									label={`Set goal for ${metric.metric.label}`}
+									label={t("goals.setFor", { name: metric.metric.label })}
 									variant="secondary"
 									onPress={() => setGoalSlug(metric.metric.slug)}
 								/>
 							) : (
-								<AppText color="muted">
-									Log a value before setting a goal.
-								</AppText>
+								<AppText color="muted">{t("goals.needValue")}</AppText>
 							)}
 						</Card>
 					);

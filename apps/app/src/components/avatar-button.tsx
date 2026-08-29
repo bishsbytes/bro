@@ -1,6 +1,7 @@
 import MaterialIcons from "@expo/vector-icons/MaterialIcons";
 import { router } from "expo-router";
 import { useContext } from "react";
+import { useTranslation } from "react-i18next";
 import { Text, TouchableOpacity } from "react-native";
 import { StyleSheet, useUnistyles } from "../theme/unistyles";
 import { AvatarIdentityContext } from "./avatar-identity-context";
@@ -13,6 +14,7 @@ export function AvatarButton({
 	onPress = () => router.push("/account"),
 }: AvatarButtonProps) {
 	const accountName = useContext(AvatarIdentityContext);
+	const { t } = useTranslation("common");
 	const { theme } = useUnistyles();
 	const name = accountName?.trim();
 	const initial = name ? Array.from(name)[0]?.toLocaleUpperCase() : null;
@@ -20,7 +22,9 @@ export function AvatarButton({
 	return (
 		<TouchableOpacity
 			accessibilityRole="button"
-			accessibilityLabel={name ? `Account for ${name}` : "Account"}
+			accessibilityLabel={
+				name ? t("a11y.accountFor", { name }) : t("a11y.account")
+			}
 			hitSlop={theme.spacing.sm}
 			style={styles.avatar}
 			onPress={onPress}

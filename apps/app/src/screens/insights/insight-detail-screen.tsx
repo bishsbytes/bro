@@ -2,6 +2,7 @@ import type { ShownInsight } from "@bro/logic";
 import { formatInsightValue, renderInsightSummary } from "@bro/logic";
 import { useFocusEffect } from "expo-router";
 import { useCallback, useMemo, useState } from "react";
+import { useTranslation } from "react-i18next";
 import { View } from "react-native";
 import { AppText } from "../../components/app-text";
 import { Card } from "../../components/card";
@@ -21,6 +22,7 @@ type InsightDetailScreenProps = {
 };
 
 export function InsightDetailScreen({ id, store }: InsightDetailScreenProps) {
+	const { t } = useTranslation(["insights", "common"]);
 	const insights = useMemo(() => store ?? createInsightStore(), [store]);
 	const [insight, setInsight] = useState<ShownInsight | null>(null);
 	const [loaded, setLoaded] = useState(false);
@@ -54,16 +56,9 @@ export function InsightDetailScreen({ id, store }: InsightDetailScreenProps) {
 		return (
 			<Screen centered padded>
 				<EmptyState
-					title={
-						error
-							? "Insight could not be loaded"
-							: "This pattern is no longer showing"
-					}
-					body={
-						error ??
-						"Insights change with your record and disappear when the evidence no longer supports them."
-					}
-					actionLabel={error ? "Try again" : undefined}
+					title={error ? t("detail.loadFailed") : t("detail.goneTitle")}
+					body={error ?? t("detail.goneBody")}
+					actionLabel={error ? t("common:actions.tryAgain") : undefined}
 					onAction={error ? () => void load() : undefined}
 					tone={error ? "danger" : "default"}
 				/>
@@ -73,7 +68,10 @@ export function InsightDetailScreen({ id, store }: InsightDetailScreenProps) {
 
 	return (
 		<Screen scroll padded gap="lg">
-			<SectionHeader title="What your record shows" eyebrow="LAST 90 DAYS" />
+			<SectionHeader
+				title={t("detail.title")}
+				eyebrow={t("patterns.eyebrow")}
+			/>
 			<AppText variant="score">{renderInsightSummary(insight)}</AppText>
 
 			<View style={styles.arms}>
@@ -85,7 +83,7 @@ export function InsightDetailScreen({ id, store }: InsightDetailScreenProps) {
 						{formatInsightValue(insight.pair, insight.trueArm.mean)}
 					</AppText>
 					<AppText variant="caption" color="subtle">
-						{insight.trueArm.count} days
+						{t("detail.days", { count: insight.trueArm.count })}
 					</AppText>
 				</Card>
 				<Card style={styles.arm}>
@@ -96,17 +94,14 @@ export function InsightDetailScreen({ id, store }: InsightDetailScreenProps) {
 						{formatInsightValue(insight.pair, insight.falseArm.mean)}
 					</AppText>
 					<AppText variant="caption" color="subtle">
-						{insight.falseArm.count} days
+						{t("detail.days", { count: insight.falseArm.count })}
 					</AppText>
 				</Card>
 			</View>
 
 			<Card style={styles.note}>
-				<SectionHeader title="A note on this pattern" />
-				<AppText color="muted">
-					This is an association in your own record. It does not show that one
-					thing caused the other, and it is not advice.
-				</AppText>
+				<SectionHeader title={t("detail.noteTitle")} />
+				<AppText color="muted">{t("detail.noteBody")}</AppText>
 			</Card>
 		</Screen>
 	);

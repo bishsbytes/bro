@@ -1,0 +1,61 @@
+/** Titles for navigation headers and tab bars, keyed by route. */
+export const navigation = {
+	tabs: {
+		today: "Today",
+		log: "Log",
+		insights: "Insights",
+		life: "Life",
+		openHistory: "Open history",
+	},
+	root: {
+		lifeAreas: "Life areas",
+		measurement: "Measurement",
+		insight: "Insight",
+		account: "Account",
+		signIn: "Sign in",
+		signUp: "Create account",
+	},
+	review: {
+		index: "Review",
+		new: "Take stock",
+		result: "Your wheel",
+		goal: "Set a goal",
+		challenge: "Starter challenge",
+	},
+	challenges: {
+		detail: "Challenge",
+	},
+	history: {
+		index: "History",
+		day: "Day",
+	},
+	habits: {
+		index: "Habits",
+		detail: "Habit record",
+	},
+	food: {
+		index: "Food",
+		day: "Food record",
+	},
+	drinks: {
+		index: "Drinks",
+		day: "Drink record",
+	},
+	settings: {
+		index: "Settings",
+		reminders: "Reminders",
+		units: "Units & format",
+		appearance: "Appearance",
+		checkIns: "Check-ins",
+		drinks: "Drink settings",
+		food: "Food settings",
+		health: "Health data",
+		privacy: "Privacy",
+		licences: "Data licences",
+		export: "Export your data",
+	},
+	onboarding: {
+		continue: "Continue",
+		start: "Start using the app",
+	},
+} as const;

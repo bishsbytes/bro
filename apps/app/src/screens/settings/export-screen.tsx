@@ -1,4 +1,5 @@
 import { useMemo, useState } from "react";
+import { useTranslation } from "react-i18next";
 import { View } from "react-native";
 import { AppText } from "../../components/app-text";
 import { Button } from "../../components/button";
@@ -23,6 +24,7 @@ export function ExportScreen({
 	store,
 	share = shareExport,
 }: ExportScreenProps) {
+	const { t } = useTranslation("settings");
 	const exporter = useMemo(() => store ?? createExportStore(), [store]);
 	const [includeSensitive, setIncludeSensitive] = useState(false);
 	const [busy, setBusy] = useState(false);
@@ -46,23 +48,19 @@ export function ExportScreen({
 
 	return (
 		<Screen scroll padded gap="lg">
-			<AppText color="muted">
-				This JSON file contains the record stored by bro on this device. It
-				leaves only when you choose where to share or save it.
-			</AppText>
+			<AppText color="muted">{t("export.intro")}</AppText>
 
 			<Card style={styles.card}>
-				<SectionHeader title="What to include" />
+				<SectionHeader title={t("export.title")} />
 				<View style={styles.toggleRow}>
 					<View style={styles.toggleCopy}>
-						<AppText variant="label">Include sensitive data</AppText>
+						<AppText variant="label">{t("export.includeSensitive")}</AppText>
 						<AppText variant="caption" color="muted">
-							Includes sensitive metrics, custom habits, and sensitive life
-							areas.
+							{t("export.includeSensitiveDetail")}
 						</AppText>
 					</View>
 					<ThemedSwitch
-						accessibilityLabel="Include sensitive data"
+						accessibilityLabel={t("export.includeSensitive")}
 						value={includeSensitive}
 						disabled={busy}
 						onValueChange={setIncludeSensitive}
@@ -73,7 +71,7 @@ export function ExportScreen({
 			{result ? <AppText>{result}</AppText> : null}
 			{error ? <AppText color="danger">{error}</AppText> : null}
 			<Button
-				label="Share or save export"
+				label={t("export.share")}
 				loading={busy}
 				onPress={() => void exportData()}
 			/>

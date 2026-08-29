@@ -1,5 +1,6 @@
 import { useAuth } from "@bro/auth-app";
 import { useState } from "react";
+import { useTranslation } from "react-i18next";
 import { AppText } from "../../components/app-text";
 import { Button } from "../../components/button";
 import { FormField } from "../../components/form-field";
@@ -12,6 +13,7 @@ export type SignUpScreenProps = {
 };
 
 export function SignUpScreen({ onShowSignIn, onSuccess }: SignUpScreenProps) {
+	const { t } = useTranslation("auth");
 	const { signUp } = useAuth();
 	const [name, setName] = useState("");
 	const [email, setEmail] = useState("");
@@ -27,7 +29,7 @@ export function SignUpScreen({ onShowSignIn, onSuccess }: SignUpScreenProps) {
 			await signUp(name.trim(), email.trim(), password);
 			await onSuccess?.();
 		} catch (caught) {
-			setError(caught instanceof Error ? caught.message : "Could not sign up.");
+			setError(caught instanceof Error ? caught.message : t("signUp.failed"));
 		} finally {
 			setSubmitting(false);
 		}
@@ -35,26 +37,26 @@ export function SignUpScreen({ onShowSignIn, onSuccess }: SignUpScreenProps) {
 
 	return (
 		<Screen padded centered contentContainerStyle={authStyles.container}>
-			<AppText variant="title">Create account</AppText>
+			<AppText variant="title">{t("signUp.title")}</AppText>
 			<AppText color="subtle" style={authStyles.subtitle}>
-				Start tracking your wellbeing.
+				{t("signUp.subtitle")}
 			</AppText>
 
 			{error ? <AppText color="danger">{error}</AppText> : null}
 
 			<FormField
-				label="Name"
+				label={t("fields.name")}
 				showLabel={false}
-				placeholder="Name"
+				placeholder={t("fields.name")}
 				value={name}
 				onChangeText={setName}
 				autoComplete="name"
 				editable={!submitting}
 			/>
 			<FormField
-				label="Email"
+				label={t("fields.email")}
 				showLabel={false}
-				placeholder="Email"
+				placeholder={t("fields.email")}
 				value={email}
 				onChangeText={setEmail}
 				autoCapitalize="none"
@@ -63,9 +65,9 @@ export function SignUpScreen({ onShowSignIn, onSuccess }: SignUpScreenProps) {
 				editable={!submitting}
 			/>
 			<FormField
-				label="Password"
+				label={t("fields.password")}
 				showLabel={false}
-				placeholder="Password"
+				placeholder={t("fields.password")}
 				value={password}
 				onChangeText={setPassword}
 				autoCapitalize="none"
@@ -75,14 +77,14 @@ export function SignUpScreen({ onShowSignIn, onSuccess }: SignUpScreenProps) {
 			/>
 
 			<Button
-				label="Sign up"
+				label={t("signUp.submit")}
 				loading={submitting}
 				style={authStyles.submit}
 				onPress={() => void onSubmit()}
 			/>
 
 			<Button
-				label="Already have an account? Sign in"
+				label={t("signUp.haveAccount")}
 				variant="text"
 				style={authStyles.link}
 				onPress={onShowSignIn}

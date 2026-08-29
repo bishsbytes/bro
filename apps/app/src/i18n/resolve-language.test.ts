@@ -1,4 +1,5 @@
 import { i18n, nonBreaking, resolveLanguage } from ".";
+import { pseudoLocaliseString } from "./pseudo";
 
 describe("resolveLanguage", () => {
 	it("takes the first tag whose base language we ship copy in", () => {
@@ -41,6 +42,27 @@ describe("catalogues", () => {
 		);
 		expect(i18n.t("review:history.lifeAreas", { count: 8 })).toBe(
 			"8 life areas",
+		);
+	});
+});
+
+describe("pseudoLocaliseString", () => {
+	it("accents the copy so untranslated ASCII stands out", () => {
+		expect(pseudoLocaliseString("Goals")).toBe("⟦Ǵóáĺś··⟧");
+	});
+
+	it("leaves placeholders alone so interpolation still resolves", () => {
+		const pseudo = pseudoLocaliseString("Started at {{value}}");
+		expect(pseudo).toContain("{{value}}");
+		expect(pseudo).toMatch(/^⟦/);
+		expect(pseudo).toMatch(/⟧$/);
+	});
+
+	it("pads from the visible text, not the placeholder", () => {
+		// "Target " is what a reader sees; the padding must not grow with the
+		// length of the token that gets substituted away.
+		expect(pseudoLocaliseString("Target {{value}}")).toBe(
+			"⟦Ťáŕǵéť {{value}}···⟧",
 		);
 	});
 });

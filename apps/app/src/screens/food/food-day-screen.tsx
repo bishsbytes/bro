@@ -1,6 +1,7 @@
 import { localTimeOf } from "@bro/domain";
 import { type Href, router, useFocusEffect } from "expo-router";
 import { useCallback, useMemo, useState } from "react";
+import { useTranslation } from "react-i18next";
 import { View } from "react-native";
 import { AppText } from "../../components/app-text";
 import { Button } from "../../components/button";
@@ -40,6 +41,7 @@ function EntryEditor({
 	}) => void;
 	onDelete: () => void;
 }) {
+	const { t } = useTranslation("food");
 	const { entry } = presented;
 	const [label, setLabel] = useState(entry.label);
 	const [servingLabel, setServingLabel] = useState(entry.servingLabel ?? "");
@@ -48,28 +50,32 @@ function EntryEditor({
 	const [time, setTime] = useState(localTimeOf(entry.occurredAt));
 	return (
 		<Card style={styles.section}>
-			<FormField label="Food name" value={label} onChangeText={setLabel} />
 			<FormField
-				label="Serving"
+				label={t("day.nameField")}
+				value={label}
+				onChangeText={setLabel}
+			/>
+			<FormField
+				label={t("day.servingField")}
 				value={servingLabel}
 				onChangeText={setServingLabel}
 			/>
 			<View style={styles.row}>
 				<FormField
-					label="Quantity"
+					label={t("day.quantityField")}
 					value={quantity}
 					onChangeText={setQuantity}
 					keyboardType="decimal-pad"
 					containerStyle={styles.grow}
 				/>
 				<FormField
-					label="Date"
+					label={t("day.dateField")}
 					value={localDay}
 					onChangeText={setLocalDay}
 					containerStyle={styles.grow}
 				/>
 				<FormField
-					label="Time"
+					label={t("day.timeField")}
 					value={time}
 					onChangeText={setTime}
 					containerStyle={styles.grow}
@@ -77,12 +83,12 @@ function EntryEditor({
 			</View>
 			{presented.contributions ? (
 				<AppText variant="caption" color="muted">
-					Stored snapshot: {presented.contributions}
+					{t("day.storedSnapshot", { value: presented.contributions })}
 				</AppText>
 			) : null}
 			<View style={styles.row}>
 				<Button
-					label="Save changes"
+					label={t("day.save")}
 					variant="secondary"
 					disabled={busy}
 					style={styles.grow}
@@ -97,7 +103,7 @@ function EntryEditor({
 					}
 				/>
 				<Button
-					label="Delete food"
+					label={t("day.delete")}
 					variant="text"
 					tone="danger"
 					disabled={busy}
@@ -110,6 +116,7 @@ function EntryEditor({
 }
 
 export function FoodDayScreen({ localDay, store }: FoodDayScreenProps) {
+	const { t } = useTranslation(["food", "common"]);
 	const food = useMemo(() => store ?? createFoodStore(), [store]);
 	const [snapshot, setSnapshot] = useState<FoodDaySnapshot | null>(null);
 	const [busy, setBusy] = useState(false);
@@ -146,9 +153,9 @@ export function FoodDayScreen({ localDay, store }: FoodDayScreenProps) {
 		return (
 			<Screen centered padded>
 				<EmptyState
-					title="Food day not found"
-					body={error ?? "This day could not be loaded."}
-					actionLabel="Back to food"
+					title={t("day.notFound")}
+					body={error ?? t("day.notFoundBody")}
+					actionLabel={t("day.back")}
 					onAction={() => router.replace("/food" as Href)}
 				/>
 			</Screen>
@@ -156,14 +163,16 @@ export function FoodDayScreen({ localDay, store }: FoodDayScreenProps) {
 	return (
 		<Screen scroll padded gap="lg" keyboardShouldPersistTaps="handled">
 			<Card style={styles.section}>
-				<SectionHeader title={snapshot.localDay} eyebrow="DAY TOTALS" />
+				<SectionHeader title={snapshot.localDay} eyebrow={t("day.eyebrow")} />
 				<View style={styles.totals}>
 					{snapshot.metrics.map((metric) => (
 						<View key={metric.metric.slug} style={styles.total}>
 							<AppText variant="micro" color="subtle">
 								{metric.metric.label.toUpperCase()}
 							</AppText>
-							<AppText variant="section">{metric.dayFormatted ?? "—"}</AppText>
+							<AppText variant="section">
+								{metric.dayFormatted ?? t("common:emDash")}
+							</AppText>
 						</View>
 					))}
 				</View>
@@ -171,9 +180,9 @@ export function FoodDayScreen({ localDay, store }: FoodDayScreenProps) {
 			{error ? <AppText color="danger">{error}</AppText> : null}
 			{snapshot.entries.length === 0 ? (
 				<EmptyState
-					title="No food on this day"
-					body="Deleted entries disappear from totals, trends, and goals immediately."
-					actionLabel="Back to food"
+					title={t("day.emptyTitle")}
+					body={t("day.emptyBody")}
+					actionLabel={t("day.back")}
 					onAction={() => router.replace("/food" as Href)}
 				/>
 			) : (

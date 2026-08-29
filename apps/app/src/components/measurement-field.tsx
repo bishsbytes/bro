@@ -4,21 +4,25 @@ import {
 	isCompoundDisplayUnit,
 	type MeasurementEntry,
 } from "@bro/domain";
+import { useTranslation } from "react-i18next";
 import { View } from "react-native";
 import { StyleSheet } from "../theme/unistyles";
 import { AppText } from "./app-text";
 import { FormField } from "./form-field";
 
-/** Spoken names for the parts of a compound field, for screen readers. */
-const UNIT_PART_NAMES: Partial<Record<DisplayUnit, string>> = {
-	kg: "kilograms",
-	lb: "pounds",
-	st: "stones",
-	cm: "centimetres",
-	in: "inches",
-	ft: "feet",
-	"%": "percent",
-};
+/**
+ * Spoken names for the parts of a compound field, for screen readers. The
+ * values are keys in the `common` catalogue, not copy.
+ */
+const UNIT_PART_KEYS = {
+	kg: "measurement.unitKg",
+	lb: "measurement.unitLb",
+	st: "measurement.unitSt",
+	cm: "measurement.unitCm",
+	in: "measurement.unitIn",
+	ft: "measurement.unitFt",
+	"%": "measurement.unitPercent",
+} as const satisfies Partial<Record<DisplayUnit, string>>;
 
 type MeasurementFieldProps = {
 	label: string;
@@ -47,11 +51,15 @@ export function MeasurementField({
 	error,
 	editable = true,
 }: MeasurementFieldProps) {
+	const { t } = useTranslation("common");
+
 	if (!isCompoundDisplayUnit(unit)) {
 		return (
 			<FormField
-				label={`${label} (${unit})`}
-				accessibilityLabel={accessibilityLabel ?? `${label} (${unit})`}
+				label={t("measurement.labelledUnit", { label, unit })}
+				accessibilityLabel={
+					accessibilityLabel ?? t("measurement.labelledUnit", { label, unit })
+				}
 				value={entry.major}
 				onChangeText={(major) => onChangeEntry({ major, minor: "" })}
 				placeholder={placeholder}
@@ -74,7 +82,10 @@ export function MeasurementField({
 			<View style={styles.parts}>
 				<View style={styles.part}>
 					<FormField
-						label={`${spokenBase} (${UNIT_PART_NAMES[unit]})`}
+						label={t("measurement.labelledUnit", {
+							label: spokenBase,
+							unit: t(UNIT_PART_KEYS[unit]),
+						})}
 						showLabel={false}
 						containerStyle={styles.partInput}
 						value={entry.major}
@@ -88,7 +99,10 @@ export function MeasurementField({
 				</View>
 				<View style={styles.part}>
 					<FormField
-						label={`${spokenBase} (${UNIT_PART_NAMES[minorUnit]})`}
+						label={t("measurement.labelledUnit", {
+							label: spokenBase,
+							unit: t(UNIT_PART_KEYS[minorUnit]),
+						})}
 						showLabel={false}
 						containerStyle={styles.partInput}
 						value={entry.minor}

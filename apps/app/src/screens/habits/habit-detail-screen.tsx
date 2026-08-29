@@ -1,6 +1,7 @@
 import type { HabitAdherenceState } from "@bro/logic";
 import { useFocusEffect } from "expo-router";
 import { useCallback, useMemo, useState } from "react";
+import { useTranslation } from "react-i18next";
 import { View } from "react-native";
 import { AppText } from "../../components/app-text";
 import { EmptyState } from "../../components/empty-state";
@@ -19,14 +20,23 @@ export type HabitDetailScreenProps = {
 	store?: Pick<HabitsStore, "loadHabitDetail">;
 };
 
-const STATE_LABELS: Record<HabitAdherenceState, string> = {
-	done: "Done",
-	missed: "Missed",
-	unscheduled: "Unscheduled",
-	"no-data": "No data",
-};
+/** Ordered as the legend renders them. */
+const ADHERENCE_STATES: readonly HabitAdherenceState[] = [
+	"done",
+	"missed",
+	"unscheduled",
+	"no-data",
+];
+
+const STATE_KEYS = {
+	done: "detail.stateDone",
+	missed: "detail.stateMissed",
+	unscheduled: "detail.stateUnscheduled",
+	"no-data": "detail.stateNoData",
+} as const;
 
 export function HabitDetailScreen({ id, store }: HabitDetailScreenProps) {
+	const { t } = useTranslation(["habits", "common"]);
 	const habits = useMemo(() => store ?? createHabitsStore(), [store]);
 	const [detail, setDetail] = useState<HabitDetail | null>(null);
 	const [loaded, setLoaded] = useState(false);
@@ -60,9 +70,9 @@ export function HabitDetailScreen({ id, store }: HabitDetailScreenProps) {
 		return (
 			<Screen centered padded>
 				<EmptyState
-					title={error ? "Habit record could not be loaded" : "Habit not found"}
-					body={error ?? "This habit is no longer available."}
-					actionLabel={error ? "Try again" : undefined}
+					title={error ? t("detail.loadFailed") : t("detail.notFound")}
+					body={error ?? t("detail.notFoundBody")}
+					actionLabel={error ? t("common:actions.tryAgain") : undefined}
 					onAction={error ? () => void load() : undefined}
 					tone={error ? "danger" : "default"}
 				/>
@@ -72,27 +82,27 @@ export function HabitDetailScreen({ id, store }: HabitDetailScreenProps) {
 
 	return (
 		<Screen scroll padded gap="lg">
-			<SectionHeader title={detail.label} eyebrow="LAST 8 WEEKS" />
-			<AppText color="muted">
-				A descriptive record of scheduled days. Missing metric data is kept
-				separate from a missed habit.
-			</AppText>
+			<SectionHeader title={detail.label} eyebrow={t("detail.eyebrow")} />
+			<AppText color="muted">{t("detail.intro")}</AppText>
 			<View style={styles.grid}>
 				{detail.days.map((day) => (
 					<View
 						key={day.localDay}
 						accessible
-						accessibilityLabel={`${day.localDay}: ${STATE_LABELS[day.state]}`}
+						accessibilityLabel={t("detail.daySummary", {
+							day: day.localDay,
+							state: t(STATE_KEYS[day.state]),
+						})}
 						style={[styles.day, styles[day.state]]}
 					/>
 				))}
 			</View>
 			<View style={styles.legend}>
-				{(Object.keys(STATE_LABELS) as HabitAdherenceState[]).map((state) => (
+				{ADHERENCE_STATES.map((state) => (
 					<View key={state} style={styles.legendItem}>
 						<View style={[styles.legendDay, styles[state]]} />
 						<AppText variant="caption" color="muted">
-							{STATE_LABELS[state]}
+							{t(STATE_KEYS[state])}
 						</AppText>
 					</View>
 				))}

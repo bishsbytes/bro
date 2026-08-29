@@ -1,6 +1,7 @@
 import type { WeekStartDay } from "@bro/domain";
 import { useFocusEffect } from "expo-router";
 import { useCallback, useMemo, useState } from "react";
+import { useTranslation } from "react-i18next";
 import { View } from "react-native";
 import { AppText } from "../../components/app-text";
 import { Button } from "../../components/button";
@@ -34,6 +35,7 @@ function resolvedLabel(
 }
 
 export function UnitsScreen({ store }: UnitsScreenProps) {
+	const { t } = useTranslation(["settings", "common"]);
 	const unitsStore = useMemo(() => store ?? createUnitSettingsStore(), [store]);
 	const [snapshot, setSnapshot] = useState<UnitSettingsSnapshot | null>(null);
 	const [weekStart, setWeekStart] = useState<WeekStartDay | null>(null);
@@ -98,16 +100,13 @@ export function UnitsScreen({ store }: UnitsScreenProps) {
 
 	return (
 		<Screen scroll padded gap="lg">
-			<AppText color="muted">
-				Choose how dates and measurements appear. Stored values stay unchanged,
-				so format choices never change your history or goals.
-			</AppText>
+			<AppText color="muted">{t("units.intro")}</AppText>
 
 			{error ? (
 				<EmptyState
-					title="Units could not be updated"
+					title={t("units.updateFailed")}
 					body={error}
-					actionLabel="Try again"
+					actionLabel={t("common:actions.tryAgain")}
 					onAction={() => void load()}
 					tone="danger"
 				/>
@@ -115,18 +114,18 @@ export function UnitsScreen({ store }: UnitsScreenProps) {
 
 			{weekStart ? (
 				<Card style={styles.setting}>
-					<SectionHeader title="Week starts on" />
-					<AppText color="muted">
-						Used to order days in the Today week strip and day pickers.
-					</AppText>
+					<SectionHeader title={t("units.weekStartTitle")} />
+					<AppText color="muted">{t("units.weekStartIntro")}</AppText>
 					<View style={styles.options}>
 						{WEEK_START_OPTIONS.map((option) => {
 							const selected = weekStart === option.day;
 							return (
 								<Button
 									key={option.day}
-									label={option.label}
-									accessibilityLabel={`Start weeks on ${option.label}`}
+									label={t(option.labelKey)}
+									accessibilityLabel={t("units.weekStartA11y", {
+										day: t(option.labelKey),
+									})}
 									accessibilityState={{ selected }}
 									variant={selected ? "primary" : "secondary"}
 									disabled={busyDimension === "week_start"}
@@ -143,18 +142,17 @@ export function UnitsScreen({ store }: UnitsScreenProps) {
 				<Card key={setting.dimension} style={styles.setting}>
 					<SectionHeader title={setting.title} />
 					<AppText color="muted">{setting.description}</AppText>
-					<AppText variant="label">Example: {setting.preview}</AppText>
+					<AppText variant="label">
+						{t("units.example", { value: setting.preview })}
+					</AppText>
 					{setting.resolutionSource === "locale" ? (
 						<AppText color="muted">
-							Device default: {resolvedLabel(setting)}. Choose an option to
-							override it.
+							{t("units.deviceDefault", { unit: resolvedLabel(setting) })}
 						</AppText>
 					) : null}
 					{setting.resolutionSource === "fallback" ? (
 						<AppText color="muted">
-							A saved unit is no longer supported. Using{" "}
-							{resolvedLabel(setting)}
-							until you choose another.
+							{t("units.unsupportedUnit", { unit: resolvedLabel(setting) })}
 						</AppText>
 					) : null}
 					<View style={styles.options}>
@@ -164,7 +162,10 @@ export function UnitsScreen({ store }: UnitsScreenProps) {
 								<Button
 									key={option.unit}
 									label={option.label}
-									accessibilityLabel={`Use ${option.label} for ${setting.title}`}
+									accessibilityLabel={t("units.useUnit", {
+										unit: option.label,
+										setting: setting.title,
+									})}
 									accessibilityState={{ selected }}
 									variant={selected ? "primary" : "secondary"}
 									disabled={busyDimension === setting.dimension}

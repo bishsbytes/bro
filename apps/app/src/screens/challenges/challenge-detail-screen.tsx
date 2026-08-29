@@ -1,5 +1,6 @@
 import { router, useFocusEffect } from "expo-router";
 import { useCallback, useMemo, useState } from "react";
+import { useTranslation } from "react-i18next";
 import { View } from "react-native";
 import { AppText } from "../../components/app-text";
 import { Button } from "../../components/button";
@@ -29,6 +30,7 @@ export function ChallengeDetailScreen({
 	enrolmentId: string;
 	store?: ChallengeDetailStore;
 }) {
+	const { t } = useTranslation("challenges");
 	const challenges = useMemo(() => store ?? createHabitsStore(), [store]);
 	const [detail, setDetail] = useState<ChallengeDetail | null>(null);
 	const [loaded, setLoaded] = useState(false);
@@ -89,9 +91,9 @@ export function ChallengeDetailScreen({
 		return (
 			<Screen centered padded>
 				<EmptyState
-					title="Challenge run not found"
-					body={error ?? "This run is no longer available on this device."}
-					actionLabel="Back to today"
+					title={t("detail.notFound")}
+					body={error ?? t("detail.notFoundBody")}
+					actionLabel={t("backToToday")}
 					onAction={() => router.replace("/")}
 					tone={error ? "danger" : undefined}
 				/>
@@ -99,76 +101,87 @@ export function ChallengeDetailScreen({
 		);
 	}
 
+	// Only a finished run has no next step, so this is non-null in exactly the
+	// unfinished branch below. Hoisted so that branch narrows it for the callback.
+	const nextDayIndex = detail.nextDayIndex;
+
 	return (
 		<Screen scroll padded contentContainerStyle={styles.content}>
 			<AppText variant="display">{detail.title}</AppText>
 			<AppText color="muted">
-				Started {detail.startedOn} · {detail.completedDayIndexes.length} of{" "}
-				{detail.durationDays} steps complete
+				{t("detail.progress", {
+					started: detail.startedOn,
+					done: detail.completedDayIndexes.length,
+					total: detail.durationDays,
+				})}
 			</AppText>
 			{error ? <AppText color="danger">{error}</AppText> : null}
 
 			{detail.isFinished ? (
 				<Card style={styles.card}>
-					<AppText variant="section">You finished it</AppText>
+					<AppText variant="section">{t("detail.finishedTitle")}</AppText>
 					<AppText color="muted">
-						You completed all {detail.durationDays} steps of {detail.title}.
+						{t("detail.finishedBody", {
+							total: detail.durationDays,
+							title: detail.title,
+						})}
 					</AppText>
-					<Button label="Back to today" onPress={() => router.replace("/")} />
+					<Button
+						label={t("backToToday")}
+						onPress={() => router.replace("/")}
+					/>
 				</Card>
 			) : null}
 
 			{detail.abandonedAt !== null ? (
 				<Card style={styles.card}>
-					<AppText variant="section">Challenge ended</AppText>
-					<AppText color="muted">
-						This run's history has been kept. You can start a fresh run whenever
-						you are ready.
-					</AppText>
+					<AppText variant="section">{t("detail.endedTitle")}</AppText>
+					<AppText color="muted">{t("detail.endedBody")}</AppText>
 					<Button
-						label="Start again"
+						label={t("detail.startAgain")}
 						loading={busy}
 						onPress={() => void restart()}
 					/>
 				</Card>
 			) : null}
 
-			{!detail.isFinished && detail.abandonedAt === null ? (
+			{!detail.isFinished &&
+			detail.abandonedAt === null &&
+			nextDayIndex !== null ? (
 				<>
 					<Card style={styles.card}>
 						<AppText variant="caption" color="brand">
-							DAY {detail.nextDayIndex} OF {detail.durationDays}
+							{t("detail.dayOf", {
+								day: nextDayIndex,
+								total: detail.durationDays,
+							})}
 						</AppText>
 						<AppText variant="section">
-							{detail.currentDay?.title ?? `Day ${detail.nextDayIndex}`}
+							{detail.currentDay?.title ??
+								t("detail.dayTitle", { day: nextDayIndex })}
 						</AppText>
 						<AppText color="muted">
-							{detail.currentDay?.action ??
-								"The authored step is unavailable in this version, but your run and progress are preserved."}
+							{detail.currentDay?.action ?? t("detail.stepUnavailable")}
 						</AppText>
 						<Button
-							label="Mark step done"
+							label={t("detail.markStepDone")}
 							loading={busy}
-							disabled={detail.nextDayIndex === null}
-							onPress={() => {
-								const dayIndex = detail.nextDayIndex;
-								if (dayIndex !== null) {
-									void mutate(() =>
-										challenges.completeChallengeDay(
-											detail.enrolmentId,
-											dayIndex,
-										),
-									);
-								}
-							}}
+							onPress={() =>
+								void mutate(() =>
+									challenges.completeChallengeDay(
+										detail.enrolmentId,
+										nextDayIndex,
+									),
+								)
+							}
 						/>
 					</Card>
 					<View style={styles.abandon}>
 						<AppText variant="caption" color="subtle">
-							Ending this run keeps every completed step in History.
+							{t("detail.abandonNote")}
 						</AppText>
 						<Button
-							label="Abandon challenge"
+							label={t("detail.abandon")}
 							variant="text"
 							tone="danger"
 							disabled={busy}

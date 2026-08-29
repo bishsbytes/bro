@@ -1,5 +1,6 @@
 import { type Href, router, useFocusEffect } from "expo-router";
 import { useCallback, useMemo, useState } from "react";
+import { useTranslation } from "react-i18next";
 import { View } from "react-native";
 import { AppText } from "../../components/app-text";
 import { Button } from "../../components/button";
@@ -21,6 +22,7 @@ type DrinksSettingsScreenProps = {
 };
 
 export function DrinksSettingsScreen({ store }: DrinksSettingsScreenProps) {
+	const { t } = useTranslation(["settings", "common"]);
 	const drinks = useMemo(() => store ?? createDrinksStore(), [store]);
 	const [snapshot, setSnapshot] = useState<DrinkSettingsSnapshot | null>(null);
 	const [busyKey, setBusyKey] = useState<string | null>(null);
@@ -68,9 +70,9 @@ export function DrinksSettingsScreen({ store }: DrinksSettingsScreenProps) {
 		return (
 			<Screen centered padded>
 				<EmptyState
-					title="Drink settings could not be loaded"
-					body={error ?? "Try again."}
-					actionLabel="Try again"
+					title={t("drinks.loadFailed")}
+					body={error ?? t("loadFailedBody")}
+					actionLabel={t("common:actions.tryAgain")}
 					onAction={() => void load()}
 					tone="danger"
 				/>
@@ -80,29 +82,30 @@ export function DrinksSettingsScreen({ store }: DrinksSettingsScreenProps) {
 
 	return (
 		<Screen scroll padded gap="lg">
-			<AppText color="muted">
-				Choose which daily drink totals appear in Trends. Logging remains
-				available whichever metrics you track.
-			</AppText>
+			<AppText color="muted">{t("drinks.intro")}</AppText>
 			<Button
-				label="Open drink log"
+				label={t("drinks.openLog")}
 				variant="secondary"
 				onPress={() => router.push("/drinks" as Href)}
 			/>
 			{error ? <AppText color="danger">{error}</AppText> : null}
 
 			<View style={styles.section}>
-				<SectionHeader title="Trends and goals" />
+				<SectionHeader title={t("drinks.trendsTitle")} />
 				{snapshot.metrics.map((metric) => (
 					<Card key={metric.metricSlug} style={styles.row}>
 						<View style={styles.grow}>
 							<AppText variant="label">{metric.label}</AppText>
 							<AppText variant="caption" color="muted">
-								Daily total from your logged drinks
+								{t("drinks.metricDetail")}
 							</AppText>
 						</View>
 						<ThemedSwitch
-							accessibilityLabel={`${metric.tracked ? "Stop tracking" : "Track"} ${metric.label}`}
+							accessibilityLabel={
+								metric.tracked
+									? t("drinks.stopTracking", { name: metric.label })
+									: t("drinks.track", { name: metric.label })
+							}
 							value={metric.tracked}
 							disabled={busyKey !== null}
 							onValueChange={(enabled) =>
@@ -116,11 +119,13 @@ export function DrinksSettingsScreen({ store }: DrinksSettingsScreenProps) {
 			</View>
 
 			<View style={styles.section}>
-				<SectionHeader title="Display units" />
+				<SectionHeader title={t("drinks.unitsTitle")} />
 				{snapshot.units.map((setting) => (
 					<Card key={setting.dimension} style={styles.section}>
 						<AppText variant="section">{setting.title}</AppText>
-						<AppText color="muted">Example: {setting.preview}</AppText>
+						<AppText color="muted">
+							{t("drinks.example", { value: setting.preview })}
+						</AppText>
 						<View style={styles.options}>
 							{setting.options.map((option) => {
 								const selected = setting.explicitUnit === option.unit;
@@ -128,7 +133,10 @@ export function DrinksSettingsScreen({ store }: DrinksSettingsScreenProps) {
 									<Button
 										key={option.unit}
 										label={option.label}
-										accessibilityLabel={`Use ${option.label} for ${setting.title}`}
+										accessibilityLabel={t("drinks.useUnit", {
+											unit: option.label,
+											setting: setting.title,
+										})}
 										accessibilityState={{ selected }}
 										variant={selected ? "primary" : "secondary"}
 										disabled={busyKey !== null}

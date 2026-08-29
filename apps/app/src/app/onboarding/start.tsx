@@ -1,4 +1,5 @@
 import { router } from "expo-router";
+import { useTranslation } from "react-i18next";
 import { AppText } from "../../components/app-text";
 import { Button } from "../../components/button";
 import { FullScreen as Screen } from "../../components/screen";
@@ -6,6 +7,7 @@ import { useDeviceSettings } from "../../providers/device-settings-provider";
 import { onboardingStyles as styles } from "../../screens/onboarding/onboarding-styles";
 
 export default function StartRoute() {
+	const { t } = useTranslation("onboarding");
 	const { completeOnboarding } = useDeviceSettings();
 
 	const start = () => {
@@ -16,22 +18,21 @@ export default function StartRoute() {
 	return (
 		<Screen padded centered>
 			<AppText variant="display" style={styles.title}>
-				Ready when you are
+				{t("start.title")}
 			</AppText>
 			<AppText color="muted" style={styles.body}>
-				Use the core app for free, for as long as you want, with no account.
+				{t("start.body")}
 			</AppText>
 			<AppText color="muted" style={styles.body}>
-				Later, if you want your notes on more than one device, you can add an
-				account and upgrade. Up to you — the app works fully without either.
+				{t("start.accountNote")}
 			</AppText>
 			<Button
-				label="Start using the app"
+				label={t("start.action")}
 				style={styles.primaryButton}
 				onPress={start}
 			/>
 			<Button
-				label="I already have an account"
+				label={t("start.haveAccount")}
 				variant="text"
 				style={styles.secondaryButton}
 				onPress={() => router.push("/sign-in")}

@@ -1,5 +1,6 @@
 import type { AccentColor, ThemeMode } from "@bro/database-app";
 import MaterialIcons from "@expo/vector-icons/MaterialIcons";
+import { useTranslation } from "react-i18next";
 import { TouchableOpacity, View } from "react-native";
 import { AppText } from "../../components/app-text";
 import { Card } from "../../components/card";
@@ -13,33 +14,36 @@ import {
 	useUnistyles,
 } from "../../theme/unistyles";
 
-const THEME_OPTIONS: readonly {
-	value: ThemeMode;
-	label: string;
-	detail: string;
-	icon: keyof typeof MaterialIcons.glyphMap;
-}[] = [
+/** `labelKey` and `detailKey` are keys in the `settings` catalogue, not copy. */
+/** Keys in the `settings` catalogue, not copy. */
+const THEME_OPTIONS = [
 	{
 		value: "system",
-		label: "System",
-		detail: "Match this device",
+		labelKey: "appearance.themeSystem",
+		detailKey: "appearance.themeSystemDetail",
 		icon: "brightness-auto",
 	},
 	{
 		value: "light",
-		label: "Light",
-		detail: "Always use light mode",
+		labelKey: "appearance.themeLight",
+		detailKey: "appearance.themeLightDetail",
 		icon: "light-mode",
 	},
 	{
 		value: "dark",
-		label: "Dark",
-		detail: "Always use dark mode",
+		labelKey: "appearance.themeDark",
+		detailKey: "appearance.themeDarkDetail",
 		icon: "dark-mode",
 	},
-];
+] as const satisfies readonly {
+	value: ThemeMode;
+	labelKey: string;
+	detailKey: string;
+	icon: keyof typeof MaterialIcons.glyphMap;
+}[];
 
 export function AppearanceScreen() {
+	const { t } = useTranslation("settings");
 	const { settings, updateAppearance } = useDeviceSettings();
 	const { theme, rt } = useUnistyles();
 	const activeScheme = rt.themeName === "dark" ? "dark" : "light";
@@ -54,13 +58,10 @@ export function AppearanceScreen() {
 
 	return (
 		<Screen scroll padded gap="lg">
-			<AppText color="muted">
-				Keep bro calm and monochrome, or add a little colour where it matters.
-				Changes appear instantly and stay on this device.
-			</AppText>
+			<AppText color="muted">{t("appearance.intro")}</AppText>
 
 			<Card style={styles.card}>
-				<SectionHeader title="Theme" />
+				<SectionHeader title={t("appearance.themeTitle")} />
 				<View accessibilityRole="radiogroup" style={styles.themeOptions}>
 					{THEME_OPTIONS.map((option) => {
 						const selected = option.value === settings.themeMode;
@@ -68,7 +69,9 @@ export function AppearanceScreen() {
 							<TouchableOpacity
 								key={option.value}
 								accessibilityRole="radio"
-								accessibilityLabel={`${option.label} theme`}
+								accessibilityLabel={t("appearance.themeA11y", {
+									name: t(option.labelKey),
+								})}
 								accessibilityState={{ selected }}
 								activeOpacity={0.72}
 								style={[styles.themeOption, selected && styles.selectedOption]}
@@ -87,10 +90,10 @@ export function AppearanceScreen() {
 								</View>
 								<View style={styles.themeCopy}>
 									<AppText variant="label" style={styles.optionLabel}>
-										{option.label}
+										{t(option.labelKey)}
 									</AppText>
 									<AppText variant="caption" color="muted">
-										{option.detail}
+										{t(option.detailKey)}
 									</AppText>
 								</View>
 								<MaterialIcons
@@ -105,11 +108,8 @@ export function AppearanceScreen() {
 			</Card>
 
 			<Card style={styles.card}>
-				<SectionHeader title="Accent colour" />
-				<AppText color="muted">
-					Used for primary actions, selected days, charts, and active
-					navigation.
-				</AppText>
+				<SectionHeader title={t("appearance.accentTitle")} />
+				<AppText color="muted">{t("appearance.accentIntro")}</AppText>
 				<View accessibilityRole="radiogroup" style={styles.accents}>
 					{ACCENT_OPTIONS.map((option) => {
 						const selected = option.value === settings.accentColor;
@@ -118,7 +118,9 @@ export function AppearanceScreen() {
 							<TouchableOpacity
 								key={option.value}
 								accessibilityRole="radio"
-								accessibilityLabel={`${option.label} accent`}
+								accessibilityLabel={t("appearance.accentA11y", {
+									name: t(option.labelKey),
+								})}
 								accessibilityState={{ selected }}
 								activeOpacity={0.72}
 								style={[
@@ -140,7 +142,7 @@ export function AppearanceScreen() {
 									) : null}
 								</View>
 								<AppText variant="caption" style={styles.accentLabel}>
-									{option.label}
+									{t(option.labelKey)}
 								</AppText>
 							</TouchableOpacity>
 						);

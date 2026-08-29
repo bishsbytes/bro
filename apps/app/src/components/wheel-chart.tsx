@@ -1,3 +1,4 @@
+import { useTranslation } from "react-i18next";
 import { View } from "react-native";
 import Svg, { Line, Polygon } from "react-native-svg";
 import type { WheelScore } from "../review/review-store";
@@ -35,6 +36,7 @@ type WheelChartProps = {
 };
 
 export function WheelChart({ scores, previousScores = [] }: WheelChartProps) {
+	const { t } = useTranslation("common");
 	const { theme } = useUnistyles();
 	const previousBySlug = new Map(
 		previousScores.map((score) => [score.slug, score.value]),
@@ -48,7 +50,7 @@ export function WheelChart({ scores, previousScores = [] }: WheelChartProps) {
 	return (
 		<View style={styles.container}>
 			<Svg
-				accessibilityLabel="Wheel of life chart"
+				accessibilityLabel={t("a11y.wheelChart")}
 				viewBox={`0 0 ${SIZE} ${SIZE}`}
 				height={320}
 				width="100%"
@@ -97,13 +99,13 @@ export function WheelChart({ scores, previousScores = [] }: WheelChartProps) {
 			<View style={styles.legend}>
 				<View style={styles.legendItem}>
 					<View style={[styles.swatch, styles.current]} />
-					<AppText variant="caption">This review</AppText>
+					<AppText variant="caption">{t("a11y.wheelThisReview")}</AppText>
 				</View>
 				{comparablePrevious ? (
 					<View style={styles.legendItem}>
 						<View style={[styles.swatch, styles.previous]} />
 						<AppText variant="caption" color="muted">
-							Previous review
+							{t("a11y.wheelPreviousReview")}
 						</AppText>
 					</View>
 				) : null}

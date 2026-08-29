@@ -1,7 +1,9 @@
 import type { Observation } from "@bro/database-app";
 import type { MeasurementEntry } from "@bro/domain";
 import { router, useFocusEffect } from "expo-router";
+import type { TFunction } from "i18next";
 import { useCallback, useMemo, useState } from "react";
+import { useTranslation } from "react-i18next";
 import { View } from "react-native";
 import {
 	type BodyMetricDetail,
@@ -50,10 +52,11 @@ function dateTimeLabel(observation: Observation): string {
 	});
 }
 
-function sourceLabel(source: string): string {
+/** Apple Health and Health Connect are product names and stay untranslated. */
+function sourceLabel(t: TFunction<"body">, source: string): string {
 	if (source === "healthkit") return "Apple Health";
 	if (source === "health_connect") return "Health Connect";
-	return "You";
+	return t("sourceYou");
 }
 
 function HistoryEditor({
@@ -71,6 +74,7 @@ function HistoryEditor({
 	onSave: (canonicalValue: number) => void;
 	onDelete: () => void;
 }) {
+	const { t } = useTranslation("body");
 	const [value, setValue] = useState(() =>
 		measurementInputOf(entry.observation.value, presentation),
 	);
@@ -92,29 +96,36 @@ function HistoryEditor({
 				{dateTimeLabel(entry.observation)}
 			</AppText>
 			<MeasurementField
-				label="Value"
+				label={t("history.valueField")}
 				unit={presentation.displayUnit}
-				accessibilityLabel={`Edit ${presentation.label} ${entry.observation.id}`}
+				accessibilityLabel={t("history.editA11y", {
+					name: presentation.label,
+					id: entry.observation.id,
+				})}
 				entry={value}
 				error={error}
 				editable={!busy}
 				onChangeEntry={setValue}
 			/>
 			<AppText variant="micro" color="subtle">
-				Source: {entry.observation.source}
+				{t("history.source", { source: entry.observation.source })}
 			</AppText>
 			<View style={styles.actions}>
 				<Button
-					label="Save measurement"
-					accessibilityLabel={`Save measurement ${entry.observation.id}`}
+					label={t("history.save")}
+					accessibilityLabel={t("history.saveA11y", {
+						id: entry.observation.id,
+					})}
 					variant="secondary"
 					disabled={busy}
 					style={styles.actionButton}
 					onPress={save}
 				/>
 				<Button
-					label="Delete measurement"
-					accessibilityLabel={`Delete measurement ${entry.observation.id}`}
+					label={t("history.delete")}
+					accessibilityLabel={t("history.deleteA11y", {
+						id: entry.observation.id,
+					})}
 					variant="text"
 					tone="danger"
 					disabled={busy}
@@ -131,16 +142,20 @@ function ImportedHistoryRow({
 }: {
 	entry: BodyMetricDetail["history"][number];
 }) {
+	const { t } = useTranslation("body");
+
 	return (
 		<Card style={styles.historyCard}>
 			<AppText variant="section">{entry.formattedValue}</AppText>
 			<AppText variant="caption" color="muted">
-				{dateTimeLabel(entry.observation)} · Source:{" "}
-				{sourceLabel(entry.observation.source)}
+				{t("latestWithSource", {
+					when: dateTimeLabel(entry.observation),
+					source: sourceLabel(t, entry.observation.source),
+				})}
 			</AppText>
 			{entry.selected ? (
 				<AppText variant="micro" color="brand">
-					Used for this day's value
+					{t("history.usedForDay")}
 				</AppText>
 			) : null}
 		</Card>
@@ -148,6 +163,7 @@ function ImportedHistoryRow({
 }
 
 export function BodyMetricScreen({ metricSlug, store }: BodyMetricScreenProps) {
+	const { t } = useTranslation(["body", "common"]);
 	const body = useMemo(() => store ?? createBodyStore(), [store]);
 	const [detail, setDetail] = useState<BodyMetricDetail | null | undefined>(
 		undefined,
@@ -244,9 +260,9 @@ export function BodyMetricScreen({ metricSlug, store }: BodyMetricScreenProps) {
 		return (
 			<Screen centered padded>
 				<EmptyState
-					title="Measurement not found"
-					body={error ?? "This measurement is not available."}
-					actionLabel="Back to Body"
+					title={t("notFound")}
+					body={error ?? t("notFoundBody")}
+					actionLabel={t("backToBody")}
 					onAction={() => router.replace("/log")}
 				/>
 			</Screen>
@@ -258,16 +274,21 @@ export function BodyMetricScreen({ metricSlug, store }: BodyMetricScreenProps) {
 	return (
 		<Screen scroll padded gap="lg" keyboardShouldPersistTaps="handled">
 			<Card style={styles.summaryCard}>
-				<SectionHeader title={detail.label} eyebrow="LATEST" />
-				<AppText variant="display">{detail.latestFormatted ?? "—"}</AppText>
+				<SectionHeader title={detail.label} eyebrow={t("latestEyebrow")} />
+				<AppText variant="display">
+					{detail.latestFormatted ?? t("common:emDash")}
+				</AppText>
 				<AppText color="muted">
 					{detail.latest
 						? detail.hasImportedData
-							? `${dateTimeLabel(detail.latest)} · Source: ${sourceLabel(detail.latest.source)}`
+							? t("latestWithSource", {
+									when: dateTimeLabel(detail.latest),
+									source: sourceLabel(t, detail.latest.source),
+								})
 							: dateTimeLabel(detail.latest)
 						: detail.userEnterable
-							? "Log this measurement from your daily check-in."
-							: "No imported measurements yet."}
+							? t("noneLoggedPrompt")
+							: t("noneImported")}
 				</AppText>
 				{detail.series.observedDayCount > 0 ? (
 					<TrendChart series={detail.series} />
@@ -278,45 +299,52 @@ export function BodyMetricScreen({ metricSlug, store }: BodyMetricScreenProps) {
 
 			{detail.editablePresentation ? (
 				<View style={styles.section}>
-					<SectionHeader title="Goal" />
+					<SectionHeader title={t("goal.title")} />
 					{activeGoal ? (
 						<Card style={styles.goalCard}>
 							<AppText variant="section">
-								Target {activeGoal.targetFormatted}
+								{t("goal.target", { value: activeGoal.targetFormatted })}
 							</AppText>
 							<AppText color="muted">
-								{activeGoal.startFormatted
-									? `Started at ${activeGoal.startFormatted}`
-									: "No starting measurement"}
-								{" · "}
-								{activeGoal.currentFormatted
-									? `Latest ${activeGoal.currentFormatted}`
-									: "No current measurement"}
+								{t("goal.summary", {
+									start: activeGoal.startFormatted
+										? t("goal.startValue", {
+												value: activeGoal.startFormatted,
+											})
+										: t("goal.startValueUnknown"),
+									current: activeGoal.currentFormatted
+										? t("goal.currentValue", {
+												value: activeGoal.currentFormatted,
+											})
+										: t("goal.currentValueUnknown"),
+								})}
 							</AppText>
 							{activeGoal.goal.targetDate ? (
 								<AppText variant="caption" color="subtle">
-									Target date {activeGoal.goal.targetDate}
+									{t("goal.targetDate", { date: activeGoal.goal.targetDate })}
 								</AppText>
 							) : null}
 							{activeGoal.targetReached ? (
 								<AppText variant="caption" color="brand">
-									Target reached — mark it achieved?
+									{t("goal.targetReached")}
 								</AppText>
 							) : activeGoal.progressPercent !== null ? (
 								<AppText variant="caption" color="brand">
-									{activeGoal.progressPercent}% of the way
+									{t("goal.percentComplete", {
+										percent: activeGoal.progressPercent,
+									})}
 								</AppText>
 							) : null}
 							<View style={styles.actions}>
 								<Button
-									label="Mark goal achieved"
+									label={t("goal.achieve")}
 									variant="secondary"
 									disabled={busy}
 									style={styles.actionButton}
 									onPress={() => void updateGoal(activeGoal.goal.id, "achieve")}
 								/>
 								<Button
-									label="Stop goal"
+									label={t("goal.abandon")}
 									variant="text"
 									disabled={busy}
 									style={styles.actionButton}
@@ -327,51 +355,51 @@ export function BodyMetricScreen({ metricSlug, store }: BodyMetricScreenProps) {
 					) : detail.latest ? (
 						<Card style={styles.goalCard}>
 							<MeasurementField
-								label="Target"
+								label={t("goal.targetField")}
 								unit={detail.editablePresentation.displayUnit}
 								entry={target}
 								error={targetError}
 								onChangeEntry={setTarget}
 							/>
 							<FormField
-								label="Target date (optional)"
+								label={t("goal.targetDateField")}
 								value={targetDate}
-								placeholder="YYYY-MM-DD"
+								placeholder={t("goal.targetDatePlaceholder")}
 								autoCapitalize="none"
 								onChangeText={setTargetDate}
 							/>
 							<Button
-								label="Save goal"
+								label={t("goal.save")}
 								loading={busy}
 								onPress={() => void saveGoal()}
 							/>
 						</Card>
 					) : (
-						<AppText color="muted">
-							Log a measurement before setting a goal.
-						</AppText>
+						<AppText color="muted">{t("goal.needMeasurement")}</AppText>
 					)}
 
 					{detail.goals
 						.filter((goal) => goal.status !== "active")
 						.map((goal) => (
 							<AppText key={goal.goal.id} variant="caption" color="muted">
-								{goal.status === "achieved" ? "Achieved" : "Stopped"}: target{" "}
-								{goal.targetFormatted}
+								{t("goal.pastGoal", {
+									status:
+										goal.status === "achieved"
+											? t("goal.statusAchieved")
+											: t("goal.statusAbandoned"),
+									value: goal.targetFormatted,
+								})}
 							</AppText>
 						))}
 				</View>
 			) : (
-				<AppText color="muted">
-					Imported measurements are read-only in bro. Manage access in your
-					health platform settings.
-				</AppText>
+				<AppText color="muted">{t("readOnly")}</AppText>
 			)}
 
 			<View style={styles.section}>
-				<SectionHeader title="History" />
+				<SectionHeader title={t("history.title")} />
 				{detail.history.length === 0 ? (
-					<AppText color="muted">No measurements logged yet.</AppText>
+					<AppText color="muted">{t("history.empty")}</AppText>
 				) : null}
 				{detail.history.map((entry) =>
 					entry.editable && detail.editablePresentation ? (

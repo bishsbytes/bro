@@ -1,6 +1,8 @@
 import type { DayNote, Observation } from "@bro/database-app";
 import { resolveMetric } from "@bro/domain/metric-registry";
+import type { TFunction } from "i18next";
 import { useEffect, useMemo, useState } from "react";
+import { useTranslation } from "react-i18next";
 import { View } from "react-native";
 import { AppText } from "../../components/app-text";
 import { Button } from "../../components/button";
@@ -44,6 +46,7 @@ function CheckInEditor({
 	) => void;
 	onDelete: (checkIn: HistoricalCheckIn) => void;
 }) {
+	const { t } = useTranslation("history");
 	const [mood, setMood] = useState(checkIn.mood.value);
 	const [optional, setOptional] = useState<Record<string, number>>(
 		Object.fromEntries(
@@ -60,12 +63,16 @@ function CheckInEditor({
 				})}
 			</AppText>
 			<AppText variant="micro" color="subtle">
-				Mood source: {checkIn.mood.source}
+				{t("day.moodSource", { source: checkIn.mood.source })}
 			</AppText>
 			<AppText variant="label" color="muted">
-				Mood
+				{t("day.mood")}
 			</AppText>
-			<ScoreRow accessibilityPrefix="Mood" selected={mood} onSelect={setMood} />
+			<ScoreRow
+				accessibilityPrefix={t("day.mood")}
+				selected={mood}
+				onSelect={setMood}
+			/>
 			{checkIn.optionalScores.map((score) => {
 				const resolved = resolveMetric(score.metricSlug);
 				const label =
@@ -90,11 +97,11 @@ function CheckInEditor({
 			})}
 			<View style={styles.actions}>
 				<Button
-					label="Save changes"
+					label={t("day.saveCheckIn")}
 					onPress={() => onSave(checkIn, mood, optional)}
 				/>
 				<Button
-					label="Delete check-in"
+					label={t("day.deleteCheckIn")}
 					variant="text"
 					tone="danger"
 					onPress={() => onDelete(checkIn)}
@@ -113,25 +120,27 @@ function NoteEditor({
 	onSave: (note: DayNote, body: string) => void;
 	onDelete: (note: DayNote) => void;
 }) {
+	const { t } = useTranslation("history");
 	const [body, setBody] = useState(note.body);
+
 	return (
 		<Card style={styles.card}>
 			<FormField
-				label="Note"
+				label={t("day.note")}
 				showLabel={false}
-				accessibilityLabel={`Note ${note.id}`}
+				accessibilityLabel={t("day.noteA11y", { id: note.id })}
 				multiline
 				value={body}
 				onChangeText={setBody}
 			/>
 			<View style={styles.actions}>
 				<Button
-					label="Save note"
+					label={t("day.saveNote")}
 					variant="text"
 					onPress={() => onSave(note, body)}
 				/>
 				<Button
-					label="Delete note"
+					label={t("day.deleteNote")}
 					variant="text"
 					tone="danger"
 					onPress={() => onDelete(note)}
@@ -148,25 +157,30 @@ function ObservationRow({
 	observation: Observation;
 	onDelete?: (observation: Observation) => void;
 }) {
+	const { t } = useTranslation("history");
 	const resolved = resolveMetric(observation.metricSlug);
 	const title =
-		resolved.kind === "known"
-			? resolved.metric.kind === "tag"
-				? resolved.metric.label
-				: `${resolved.metric.label}: ${observation.value}`
-			: `${observation.metricSlug}: ${observation.value}`;
+		resolved.kind === "known" && resolved.metric.kind === "tag"
+			? resolved.metric.label
+			: t("day.labelledValue", {
+					label:
+						resolved.kind === "known"
+							? resolved.metric.label
+							: observation.metricSlug,
+					value: observation.value,
+				});
 
 	return (
 		<Card style={styles.observationRow}>
 			<View style={styles.grow}>
 				<AppText variant="score">{title}</AppText>
 				<AppText variant="micro" color="subtle">
-					Source: {observation.source}
+					{t("day.source", { source: observation.source })}
 				</AppText>
 			</View>
 			{onDelete ? (
 				<Button
-					label={resolved.kind === "known" ? "Remove" : "Delete"}
+					label={resolved.kind === "known" ? t("day.remove") : t("day.delete")}
 					variant="text"
 					tone="danger"
 					onPress={() => onDelete(observation)}
@@ -176,13 +190,15 @@ function ObservationRow({
 	);
 }
 
-function sourceLabel(source: string): string {
+/** Apple Health and Health Connect are product names and stay untranslated. */
+function sourceLabel(t: TFunction<"history">, source: string): string {
 	if (source === "healthkit") return "Apple Health";
 	if (source === "health_connect") return "Health Connect";
-	return source === "user" ? "You" : source;
+	return source === "user" ? t("day.sourceYou") : source;
 }
 
 export function HistoryDayScreen({ localDay, store }: HistoryDayScreenProps) {
+	const { t } = useTranslation("history");
 	const history = useMemo(() => store ?? createHistoryStore(), [store]);
 	const [day, setDay] = useState<HistoryDay | null>(null);
 	const [error, setError] = useState<string | null>(null);
@@ -225,7 +241,7 @@ export function HistoryDayScreen({ localDay, store }: HistoryDayScreenProps) {
 			{day ? (
 				<>
 					{day.habitCompletions.length > 0 ? (
-						<SectionHeader title="Habits completed" />
+						<SectionHeader title={t("day.habitsCompleted")} />
 					) : null}
 					{day.habitCompletions.map((completion) => (
 						<Card key={completion.id} style={styles.card}>
@@ -233,19 +249,22 @@ export function HistoryDayScreen({ localDay, store }: HistoryDayScreenProps) {
 						</Card>
 					))}
 					{day.challengeSteps.length > 0 ? (
-						<SectionHeader title="Challenge steps" />
+						<SectionHeader title={t("day.challengeSteps")} />
 					) : null}
 					{day.challengeSteps.map((step) => (
 						<Card key={step.id} style={styles.card}>
 							<AppText variant="caption" color="brand">
-								{step.title} · Day {step.dayIndex}
+								{t("day.challengeStep", {
+									title: step.title,
+									day: step.dayIndex,
+								})}
 							</AppText>
 							<AppText variant="score">{step.dayTitle}</AppText>
 						</Card>
 					))}
-					<SectionHeader title="Check-ins" />
+					<SectionHeader title={t("day.checkIns")} />
 					{day.checkIns.length === 0 ? (
-						<AppText color="muted">No scored check-ins.</AppText>
+						<AppText color="muted">{t("day.noCheckIns")}</AppText>
 					) : null}
 					{day.checkIns.map((checkIn) => (
 						<CheckInEditor
@@ -260,7 +279,7 @@ export function HistoryDayScreen({ localDay, store }: HistoryDayScreenProps) {
 						/>
 					))}
 					{day.unpairedScored.length > 0 ? (
-						<SectionHeader title="Unpaired observations" />
+						<SectionHeader title={t("day.unpaired")} />
 					) : null}
 					{day.unpairedScored.map((observation) => (
 						<ObservationRow
@@ -272,7 +291,9 @@ export function HistoryDayScreen({ localDay, store }: HistoryDayScreenProps) {
 						/>
 					))}
 
-					{day.tags.length > 0 ? <SectionHeader title="What happened" /> : null}
+					{day.tags.length > 0 ? (
+						<SectionHeader title={t("day.whatHappened")} />
+					) : null}
 					{day.tags.map((tag) => (
 						<ObservationRow
 							key={tag.id}
@@ -284,14 +305,14 @@ export function HistoryDayScreen({ localDay, store }: HistoryDayScreenProps) {
 					))}
 
 					{day.assessments.length > 0 ? (
-						<SectionHeader title="Assessment scores" />
+						<SectionHeader title={t("day.assessments")} />
 					) : null}
 					{day.assessments.map((assessment) => (
 						<ObservationRow key={assessment.id} observation={assessment} />
 					))}
 
 					{day.measurements.length > 0 ? (
-						<SectionHeader title="Measurements" />
+						<SectionHeader title={t("day.measurements")} />
 					) : null}
 					{day.measurements.map((measurement) => (
 						<Card
@@ -300,16 +321,26 @@ export function HistoryDayScreen({ localDay, store }: HistoryDayScreenProps) {
 						>
 							<View style={styles.grow}>
 								<AppText variant="score">
-									{measurement.label}: {measurement.formattedValue}
+									{t("day.labelledValue", {
+										label: measurement.label,
+										value: measurement.formattedValue,
+									})}
 								</AppText>
 								<AppText variant="micro" color="subtle">
-									Source: {sourceLabel(measurement.source)}
-									{measurement.selected ? " · Used for daily value" : ""}
+									{measurement.selected
+										? t("day.usedForDay", {
+												source: t("day.source", {
+													source: sourceLabel(t, measurement.source),
+												}),
+											})
+										: t("day.source", {
+												source: sourceLabel(t, measurement.source),
+											})}
 								</AppText>
 							</View>
 							{measurement.observation ? (
 								<Button
-									label="Delete"
+									label={t("day.delete")}
 									variant="text"
 									tone="danger"
 									onPress={() =>
@@ -325,7 +356,7 @@ export function HistoryDayScreen({ localDay, store }: HistoryDayScreenProps) {
 					))}
 
 					{day.unknown.length > 0 ? (
-						<SectionHeader title="Other observations" />
+						<SectionHeader title={t("day.other")} />
 					) : null}
 					{day.unknown.map((observation) => (
 						<ObservationRow
@@ -337,7 +368,9 @@ export function HistoryDayScreen({ localDay, store }: HistoryDayScreenProps) {
 						/>
 					))}
 
-					{day.notes.length > 0 ? <SectionHeader title="Notes" /> : null}
+					{day.notes.length > 0 ? (
+						<SectionHeader title={t("day.notes")} />
+					) : null}
 					{day.notes.map((note) => (
 						<NoteEditor
 							key={note.id}

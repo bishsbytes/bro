@@ -1,23 +1,25 @@
 import { router } from "expo-router";
+import { useTranslation } from "react-i18next";
 import { AppText } from "../../components/app-text";
 import { Button } from "../../components/button";
 import { FullScreen as Screen } from "../../components/screen";
 import { onboardingStyles as styles } from "../../screens/onboarding/onboarding-styles";
 
 export default function WelcomeRoute() {
+	const { t } = useTranslation("onboarding");
 	return (
 		<Screen padded centered>
 			<AppText variant="label" color="brand" style={styles.eyebrow}>
-				bro
+				{t("welcome.eyebrow")}
 			</AppText>
 			<AppText variant="display" style={styles.title}>
-				A private place to check in with yourself.
+				{t("welcome.title")}
 			</AppText>
 			<AppText color="muted" style={styles.body}>
-				No account. No sign-up. Nothing to fill in first.
+				{t("welcome.body")}
 			</AppText>
 			<Button
-				label="Continue"
+				label={t("continueAction")}
 				style={styles.primaryButton}
 				onPress={() => router.push("/onboarding/privacy")}
 			/>

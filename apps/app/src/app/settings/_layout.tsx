@@ -1,8 +1,10 @@
 import { Stack } from "expo-router";
+import { useTranslation } from "react-i18next";
 import { stackScreenOptions, useUnistyles } from "../../theme/unistyles";
 
 export default function SettingsLayout() {
 	const { theme } = useUnistyles();
+	const { t } = useTranslation("navigation");
 
 	return (
 		<Stack
@@ -11,17 +13,29 @@ export default function SettingsLayout() {
 				animation: process.env.NODE_ENV === "test" ? "none" : "default",
 			}}
 		>
-			<Stack.Screen name="index" options={{ title: "Settings" }} />
-			<Stack.Screen name="reminders" options={{ title: "Reminders" }} />
-			<Stack.Screen name="units" options={{ title: "Units & format" }} />
-			<Stack.Screen name="appearance" options={{ title: "Appearance" }} />
-			<Stack.Screen name="check-ins" options={{ title: "Check-ins" }} />
-			<Stack.Screen name="drinks" options={{ title: "Drink settings" }} />
-			<Stack.Screen name="food" options={{ title: "Food settings" }} />
-			<Stack.Screen name="health" options={{ title: "Health data" }} />
-			<Stack.Screen name="privacy" options={{ title: "Privacy" }} />
-			<Stack.Screen name="licences" options={{ title: "Data licences" }} />
-			<Stack.Screen name="export" options={{ title: "Export your data" }} />
+			<Stack.Screen name="index" options={{ title: t("settings.index") }} />
+			<Stack.Screen
+				name="reminders"
+				options={{ title: t("settings.reminders") }}
+			/>
+			<Stack.Screen name="units" options={{ title: t("settings.units") }} />
+			<Stack.Screen
+				name="appearance"
+				options={{ title: t("settings.appearance") }}
+			/>
+			<Stack.Screen
+				name="check-ins"
+				options={{ title: t("settings.checkIns") }}
+			/>
+			<Stack.Screen name="drinks" options={{ title: t("settings.drinks") }} />
+			<Stack.Screen name="food" options={{ title: t("settings.food") }} />
+			<Stack.Screen name="health" options={{ title: t("settings.health") }} />
+			<Stack.Screen name="privacy" options={{ title: t("settings.privacy") }} />
+			<Stack.Screen
+				name="licences"
+				options={{ title: t("settings.licences") }}
+			/>
+			<Stack.Screen name="export" options={{ title: t("settings.export") }} />
 		</Stack>
 	);
 }

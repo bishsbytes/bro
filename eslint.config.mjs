@@ -85,7 +85,26 @@ export default [
 		// `apps/app/src/i18n`. The list is a ratchet rather than a blanket rule:
 		// add each feature's directory as it is migrated, so the rule stays an
 		// error everywhere it applies instead of a warning nobody reads.
-		files: ["apps/app/src/screens/review/**/*.tsx"],
+		files: [
+			"apps/app/src/app/**/*.tsx",
+			"apps/app/src/components/**/*.tsx",
+			"apps/app/src/screens/auth/**/*.tsx",
+			"apps/app/src/screens/body/**/*.tsx",
+			"apps/app/src/screens/challenges/**/*.tsx",
+			"apps/app/src/screens/check-in/**/*.tsx",
+			"apps/app/src/screens/drinks/**/*.tsx",
+			"apps/app/src/screens/food/**/*.tsx",
+			"apps/app/src/screens/habits/**/*.tsx",
+			"apps/app/src/screens/history/**/*.tsx",
+			"apps/app/src/screens/home/**/*.tsx",
+			"apps/app/src/screens/insights/**/*.tsx",
+			"apps/app/src/screens/life/**/*.tsx",
+			"apps/app/src/screens/log/**/*.tsx",
+			"apps/app/src/screens/privacy/**/*.tsx",
+			"apps/app/src/screens/review/**/*.tsx",
+			"apps/app/src/screens/settings/**/*.tsx",
+		],
+		ignores: ["**/*.test.tsx"],
 		plugins: { i18next },
 		rules: {
 			"i18next/no-literal-string": [

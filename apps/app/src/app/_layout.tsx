@@ -13,6 +13,7 @@ import {
 import { Stack } from "expo-router";
 import * as SplashScreen from "expo-splash-screen";
 import { useCallback, useEffect, useState } from "react";
+import { useTranslation } from "react-i18next";
 import { Text, TouchableOpacity, View } from "react-native";
 import { SystemBars } from "react-native-edge-to-edge";
 import { LoadingIndicator } from "../components/loading-indicator";
@@ -54,12 +55,14 @@ function StorageError({
 	error: Error;
 	onRetry: () => void;
 }) {
+	const { t } = useTranslation("common");
+
 	return (
 		<View style={styles.centered}>
-			<Text style={styles.errorTitle}>Local storage is unavailable</Text>
+			<Text style={styles.errorTitle}>{t("storage.unavailable")}</Text>
 			<Text style={styles.errorDetail}>{error.message}</Text>
 			<TouchableOpacity style={styles.retryButton} onPress={onRetry}>
-				<Text style={styles.retryButtonText}>Try again</Text>
+				<Text style={styles.retryButtonText}>{t("actions.tryAgain")}</Text>
 			</TouchableOpacity>
 		</View>
 	);
@@ -89,6 +92,7 @@ function AppProviders() {
 function RootNavigator() {
 	const { settings } = useDeviceSettings();
 	const { theme } = useUnistyles();
+	const { t } = useTranslation("navigation");
 
 	return (
 		<Stack
@@ -109,14 +113,23 @@ function RootNavigator() {
 				<Stack.Screen name="drinks" options={{ headerShown: false }} />
 				<Stack.Screen name="food" options={{ headerShown: false }} />
 				<Stack.Screen name="habits" options={{ headerShown: false }} />
-				<Stack.Screen name="life-areas" options={{ title: "Life areas" }} />
-				<Stack.Screen name="body/[slug]" options={{ title: "Measurement" }} />
+				<Stack.Screen
+					name="life-areas"
+					options={{ title: t("root.lifeAreas") }}
+				/>
+				<Stack.Screen
+					name="body/[slug]"
+					options={{ title: t("root.measurement") }}
+				/>
 				<Stack.Screen name="challenges" options={{ headerShown: false }} />
-				<Stack.Screen name="insights/[id]" options={{ title: "Insight" }} />
-				<Stack.Screen name="account" options={{ title: "Account" }} />
+				<Stack.Screen
+					name="insights/[id]"
+					options={{ title: t("root.insight") }}
+				/>
+				<Stack.Screen name="account" options={{ title: t("root.account") }} />
 			</Stack.Protected>
-			<Stack.Screen name="sign-in" options={{ title: "Sign in" }} />
-			<Stack.Screen name="sign-up" options={{ title: "Create account" }} />
+			<Stack.Screen name="sign-in" options={{ title: t("root.signIn") }} />
+			<Stack.Screen name="sign-up" options={{ title: t("root.signUp") }} />
 		</Stack>
 	);
 }

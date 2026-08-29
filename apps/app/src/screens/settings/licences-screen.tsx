@@ -1,3 +1,4 @@
+import { useTranslation } from "react-i18next";
 import { View } from "react-native";
 import { AppText } from "../../components/app-text";
 import { Card } from "../../components/card";
@@ -6,22 +7,20 @@ import { SectionHeader } from "../../components/section-header";
 import { StyleSheet } from "../../theme/unistyles";
 
 export function LicencesScreen() {
+	const { t } = useTranslation("settings");
+
 	return (
 		<Screen scroll padded gap="lg">
 			<Card style={styles.section}>
-				<SectionHeader title="Open Food Facts" eyebrow="FOOD DATA" />
+				<SectionHeader
+					title={t("licences.title")}
+					eyebrow={t("licences.eyebrow")}
+				/>
 				<View style={styles.section}>
-					<AppText color="muted">
-						Food search results are provided by Open Food Facts and its
-						contributors.
-					</AppText>
-					<AppText color="muted">
-						The Open Food Facts database is available under the Open Database
-						License (ODbL) 1.0. The licence requires attribution and share-alike
-						for public adaptations of the database.
-					</AppText>
+					<AppText color="muted">{t("licences.provider")}</AppText>
+					<AppText color="muted">{t("licences.licence")}</AppText>
 					<AppText variant="caption" color="subtle">
-						Source: Open Food Facts · Licence: ODbL-1.0
+						{t("licences.attribution")}
 					</AppText>
 				</View>
 			</Card>

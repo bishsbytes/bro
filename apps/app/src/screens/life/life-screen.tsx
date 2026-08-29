@@ -1,6 +1,7 @@
 import { isWheelReviewDue } from "@bro/logic";
 import { router, useFocusEffect } from "expo-router";
 import { useCallback, useMemo, useState } from "react";
+import { useTranslation } from "react-i18next";
 import { View } from "react-native";
 import { AppText } from "../../components/app-text";
 import { Button } from "../../components/button";
@@ -16,6 +17,7 @@ import {
 	type HabitsStore,
 	type TodayHabitsSnapshot,
 } from "../../habits/habits-store";
+import { nonBreaking } from "../../i18n";
 import {
 	createReviewStore,
 	type ReviewOverview,
@@ -45,6 +47,7 @@ function completedLabel(completedAt: number): string {
 }
 
 export function LifeScreen({ reviewStore, habitsStore, now }: LifeScreenProps) {
+	const { t } = useTranslation(["life", "common"]);
 	const reviews = useMemo(
 		() => reviewStore ?? createReviewStore(),
 		[reviewStore],
@@ -88,9 +91,9 @@ export function LifeScreen({ reviewStore, habitsStore, now }: LifeScreenProps) {
 		return (
 			<Screen centered padded>
 				<EmptyState
-					title="Your life view could not be loaded"
-					body={error ?? "Try again."}
-					actionLabel="Try again"
+					title={t("loadFailed")}
+					body={error ?? t("loadFailedBody")}
+					actionLabel={t("common:actions.tryAgain")}
 					onAction={() => void load()}
 					tone="danger"
 				/>
@@ -110,22 +113,24 @@ export function LifeScreen({ reviewStore, habitsStore, now }: LifeScreenProps) {
 	).length;
 	const habitDetail = snapshot.habits.hasHabits
 		? snapshot.habits.habits.length === 0
-			? "No habits scheduled today"
-			: `${snapshot.habits.habits.length} today · ${completedHabits} complete`
-		: "Choose a routine to keep the next small action in view";
+			? t("habits.none")
+			: t("habits.progress", {
+					total: snapshot.habits.habits.length,
+					done: completedHabits,
+				})
+		: t("habits.noRoutine");
 
 	return (
 		<Screen scroll padded gap="lg">
-			<AppText color="muted">
-				See where life stands, what you are focusing on, and the practices that
-				move it forward.
-			</AppText>
+			<AppText color="muted">{t("intro")}</AppText>
 
 			{latest && completedAt !== null ? (
 				<View style={styles.section}>
 					<SectionHeader
-						title="Your wheel"
-						eyebrow={`REVIEWED ${completedLabel(completedAt).toUpperCase()}`}
+						title={t("wheel.title")}
+						eyebrow={t("wheel.reviewedEyebrow", {
+							date: completedLabel(completedAt).toUpperCase(),
+						})}
 					/>
 					{latest.scores.length >= 3 ? (
 						<WheelChart
@@ -135,7 +140,7 @@ export function LifeScreen({ reviewStore, habitsStore, now }: LifeScreenProps) {
 					) : null}
 					<View style={styles.actions}>
 						<Button
-							label="Open latest review"
+							label={t("wheel.openLatest")}
 							variant="secondary"
 							onPress={() =>
 								router.push({
@@ -145,7 +150,7 @@ export function LifeScreen({ reviewStore, habitsStore, now }: LifeScreenProps) {
 							}
 						/>
 						<Button
-							label="Manage life areas"
+							label={t("wheel.manageAreas")}
 							variant="text"
 							onPress={() => router.push("/life-areas")}
 						/>
@@ -154,20 +159,17 @@ export function LifeScreen({ reviewStore, habitsStore, now }: LifeScreenProps) {
 			) : (
 				<Card style={styles.hero}>
 					<SectionHeader
-						title="Take stock of the bigger picture"
-						eyebrow="WHEEL OF LIFE"
+						title={t("wheel.emptyTitle")}
+						eyebrow={t("wheel.emptyEyebrow")}
 					/>
-					<AppText color="muted">
-						Rate the areas of your life, choose where to focus, and create a
-						first snapshot to come back to.
-					</AppText>
+					<AppText color="muted">{t("wheel.emptyBody")}</AppText>
 					<Button
-						label={"Take\u00a0stock"}
-						accessibilityLabel="Take stock"
+						label={nonBreaking(t("wheel.takeStock"))}
+						accessibilityLabel={t("wheel.takeStock")}
 						onPress={() => router.push("/review/new")}
 					/>
 					<Button
-						label="Manage life areas"
+						label={t("wheel.manageAreas")}
 						variant="text"
 						onPress={() => router.push("/life-areas")}
 					/>
@@ -176,11 +178,16 @@ export function LifeScreen({ reviewStore, habitsStore, now }: LifeScreenProps) {
 
 			{focusAreas.length > 0 ? (
 				<View style={styles.section}>
-					<SectionHeader title="Focus areas" eyebrow="WHAT MATTERS NOW" />
+					<SectionHeader
+						title={t("focus.title")}
+						eyebrow={t("focus.eyebrow")}
+					/>
 					{focusAreas.map((score) => (
 						<Card key={score.slug} style={styles.focusRow}>
 							<AppText variant="label">{score.label}</AppText>
-							<AppText variant="score">{score.value}/10</AppText>
+							<AppText variant="score">
+								{t("focus.scoreOutOf", { value: score.value })}
+							</AppText>
 						</Card>
 					))}
 				</View>
@@ -188,7 +195,10 @@ export function LifeScreen({ reviewStore, habitsStore, now }: LifeScreenProps) {
 
 			{overview.goals.length > 0 ? (
 				<View style={styles.section}>
-					<SectionHeader title="Goals" eyebrow="YOUR DIRECTION" />
+					<SectionHeader
+						title={t("goals.title")}
+						eyebrow={t("goals.eyebrow")}
+					/>
 					{overview.goals.map((progress) => (
 						<Card key={progress.goal.id} style={styles.goalCard}>
 							<View style={styles.focusRow}>
@@ -197,22 +207,31 @@ export function LifeScreen({ reviewStore, habitsStore, now }: LifeScreenProps) {
 								</AppText>
 								<AppText variant="caption" color="brand">
 									{progress.status === "active"
-										? "Active"
+										? t("goals.statusActive")
 										: progress.status === "achieved"
-											? "Achieved"
-											: "Stopped"}
+											? t("goals.statusAchieved")
+											: t("goals.statusAbandoned")}
 								</AppText>
 							</View>
 							<AppText color="muted">
-								{progress.currentFormatted === null
-									? "No current value"
-									: `Latest ${progress.currentFormatted}`}
-								{" · "}Target {progress.targetFormatted}
+								{t("goals.summary", {
+									current:
+										progress.currentFormatted === null
+											? t("goals.currentValueUnknown")
+											: t("goals.currentValue", {
+													value: progress.currentFormatted,
+												}),
+									target: t("goals.targetValue", {
+										value: progress.targetFormatted,
+									}),
+								})}
 							</AppText>
 							{progress.status === "active" &&
 							progress.progressPercent !== null ? (
 								<AppText variant="caption" color="brand">
-									{progress.progressPercent}% of the way
+									{t("goals.percentComplete", {
+										percent: progress.progressPercent,
+									})}
 								</AppText>
 							) : null}
 						</Card>
@@ -221,25 +240,28 @@ export function LifeScreen({ reviewStore, habitsStore, now }: LifeScreenProps) {
 			) : null}
 
 			<View style={styles.section}>
-				<SectionHeader title="Habits" eyebrow="WHAT YOU PRACTISE" />
+				<SectionHeader
+					title={t("habits.title")}
+					eyebrow={t("habits.eyebrow")}
+				/>
 				<ListRow
-					title="Your habits"
+					title={t("habits.rowTitle")}
 					detail={habitDetail}
-					accessibilityLabel="Manage habits"
+					accessibilityLabel={t("habits.manage")}
 					onPress={() => router.push("/habits")}
 				/>
 			</View>
 
 			{latest && reviewDue ? (
 				<Card style={styles.hero}>
-					<SectionHeader title="Time to take stock" eyebrow="WHEEL REVIEW" />
-					<AppText color="muted">
-						It has been more than five weeks since your last snapshot. See what
-						has moved and choose your next focus.
-					</AppText>
+					<SectionHeader
+						title={t("wheel.dueTitle")}
+						eyebrow={t("wheel.dueEyebrow")}
+					/>
+					<AppText color="muted">{t("wheel.dueBody")}</AppText>
 					<Button
-						label={"Take\u00a0stock"}
-						accessibilityLabel="Take stock"
+						label={nonBreaking(t("wheel.takeStock"))}
+						accessibilityLabel={t("wheel.takeStock")}
 						onPress={() => router.push("/review/new")}
 					/>
 				</Card>

@@ -1,12 +1,13 @@
 import { useFocusEffect } from "expo-router";
 import { useCallback, useMemo, useState } from "react";
+import { useTranslation } from "react-i18next";
 import { View } from "react-native";
 import {
 	type CheckInSettingsSnapshot,
 	type CheckInSettingsStore,
 	createCheckInSettingsStore,
 } from "../../check-in/check-in-settings-store";
-import { TAG_CATEGORY_LABELS } from "../../check-in/tag-categories";
+import { TAG_CATEGORY_KEYS } from "../../check-in/tag-categories";
 import { AppText } from "../../components/app-text";
 import { Card } from "../../components/card";
 import { EmptyState } from "../../components/empty-state";
@@ -21,6 +22,7 @@ type CheckInSettingsScreenProps = {
 };
 
 export function CheckInSettingsScreen({ store }: CheckInSettingsScreenProps) {
+	const { t } = useTranslation(["settings", "checkIn", "common"]);
 	const checkIns = useMemo(
 		() => store ?? createCheckInSettingsStore(),
 		[store],
@@ -66,9 +68,9 @@ export function CheckInSettingsScreen({ store }: CheckInSettingsScreenProps) {
 		return (
 			<Screen centered padded>
 				<EmptyState
-					title="Check-in settings could not be loaded"
-					body={error ?? "Try again."}
-					actionLabel="Try again"
+					title={t("checkIns.loadFailed")}
+					body={error ?? t("loadFailedBody")}
+					actionLabel={t("common:actions.tryAgain")}
 					onAction={() => void load()}
 					tone="danger"
 				/>
@@ -76,19 +78,18 @@ export function CheckInSettingsScreen({ store }: CheckInSettingsScreenProps) {
 		);
 	}
 
-	const groupedTags = Object.entries(TAG_CATEGORY_LABELS).flatMap(
-		([category, label]) => {
+	const groupedTags = Object.entries(TAG_CATEGORY_KEYS).flatMap(
+		([category, key]) => {
 			const tags = snapshot.tags.filter((tag) => tag.category === category);
-			return tags.length > 0 ? [{ category, label, tags }] : [];
+			return tags.length > 0
+				? [{ category, label: t(`checkIn:${key}` as const), tags }]
+				: [];
 		},
 	);
 
 	return (
 		<Screen scroll padded gap="lg">
-			<AppText color="muted">
-				Mood is always included. Choose which optional scores you want available
-				during check-ins.
-			</AppText>
+			<AppText color="muted">{t("checkIns.intro")}</AppText>
 			{error ? <AppText color="danger">{error}</AppText> : null}
 			<View style={styles.section}>
 				{snapshot.metrics.map((metric) => (
@@ -97,12 +98,16 @@ export function CheckInSettingsScreen({ store }: CheckInSettingsScreenProps) {
 							<AppText variant="label">{metric.label}</AppText>
 							<AppText variant="caption" color="muted">
 								{metric.sensitive
-									? "Sensitive · scored from 1 to 5"
-									: "Scored from 1 to 5"}
+									? t("checkIns.scoredSensitive")
+									: t("checkIns.scored")}
 							</AppText>
 						</View>
 						<ThemedSwitch
-							accessibilityLabel={`${metric.enabled ? "Remove" : "Add"} ${metric.label} from check-ins`}
+							accessibilityLabel={
+								metric.enabled
+									? t("checkIns.removeScore", { name: metric.label })
+									: t("checkIns.addScore", { name: metric.label })
+							}
 							value={metric.enabled}
 							disabled={busyKey !== null}
 							onValueChange={(enabled) =>
@@ -113,13 +118,10 @@ export function CheckInSettingsScreen({ store }: CheckInSettingsScreenProps) {
 				))}
 			</View>
 			<AppText variant="caption" color="subtle">
-				Turning a score off does not delete anything you already logged.
+				{t("checkIns.scoresNote")}
 			</AppText>
-			<SectionHeader title="What happened" />
-			<AppText color="muted">
-				Choose the tags you want to see under your check-in. Keep the list short
-				enough to tap through in seconds.
-			</AppText>
+			<SectionHeader title={t("checkIns.tagsTitle")} />
+			<AppText color="muted">{t("checkIns.tagsIntro")}</AppText>
 			{groupedTags.map(({ category, label, tags }) => (
 				<View key={category} style={styles.section}>
 					<AppText variant="caption" color="subtle">
@@ -131,12 +133,16 @@ export function CheckInSettingsScreen({ store }: CheckInSettingsScreenProps) {
 								<AppText variant="label">{tag.label}</AppText>
 								{tag.sensitive ? (
 									<AppText variant="caption" color="muted">
-										Sensitive
+										{t("checkIns.sensitive")}
 									</AppText>
 								) : null}
 							</View>
 							<ThemedSwitch
-								accessibilityLabel={`${tag.enabled ? "Remove" : "Add"} ${tag.label} tag`}
+								accessibilityLabel={
+									tag.enabled
+										? t("checkIns.removeTag", { name: tag.label })
+										: t("checkIns.addTag", { name: tag.label })
+								}
 								value={tag.enabled}
 								disabled={busyKey !== null}
 								onValueChange={(enabled) =>
@@ -148,7 +154,7 @@ export function CheckInSettingsScreen({ store }: CheckInSettingsScreenProps) {
 				</View>
 			))}
 			<AppText variant="caption" color="subtle">
-				Turning a tag off does not delete anything you already logged.
+				{t("checkIns.tagsNote")}
 			</AppText>
 		</Screen>
 	);

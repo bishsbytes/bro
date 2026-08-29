@@ -43,11 +43,12 @@ type UnitPreferences = Pick<
 
 const WEEK_START_PREFERENCE_DIMENSION = "week_start";
 
+/** `labelKey` is a key in the `settings` catalogue, not copy. */
 export const WEEK_START_OPTIONS = [
-	{ day: "monday", label: "Monday" },
-	{ day: "sunday", label: "Sunday" },
-	{ day: "saturday", label: "Saturday" },
-] as const satisfies readonly { day: WeekStartDay; label: string }[];
+	{ day: "monday", labelKey: "units.monday" },
+	{ day: "sunday", labelKey: "units.sunday" },
+	{ day: "saturday", labelKey: "units.saturday" },
+] as const satisfies readonly { day: WeekStartDay; labelKey: string }[];
 
 function isWeekStartDay(value: string): value is WeekStartDay {
 	return WEEK_START_OPTIONS.some((option) => option.day === value);

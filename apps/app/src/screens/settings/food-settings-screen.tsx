@@ -1,5 +1,6 @@
 import { type Href, router, useFocusEffect } from "expo-router";
 import { useCallback, useMemo, useState } from "react";
+import { useTranslation } from "react-i18next";
 import { View } from "react-native";
 import { AppText } from "../../components/app-text";
 import { Button } from "../../components/button";
@@ -21,6 +22,7 @@ type FoodSettingsScreenProps = {
 };
 
 export function FoodSettingsScreen({ store }: FoodSettingsScreenProps) {
+	const { t } = useTranslation(["settings", "common"]);
 	const food = useMemo(() => store ?? createFoodStore(), [store]);
 	const [snapshot, setSnapshot] = useState<FoodSettingsSnapshot | null>(null);
 	const [busyKey, setBusyKey] = useState<string | null>(null);
@@ -55,9 +57,9 @@ export function FoodSettingsScreen({ store }: FoodSettingsScreenProps) {
 		return (
 			<Screen centered padded>
 				<EmptyState
-					title="Food settings could not be loaded"
-					body={error ?? "Try again."}
-					actionLabel="Try again"
+					title={t("food.loadFailed")}
+					body={error ?? t("loadFailedBody")}
+					actionLabel={t("common:actions.tryAgain")}
 					onAction={() => void load()}
 					tone="danger"
 				/>
@@ -65,28 +67,29 @@ export function FoodSettingsScreen({ store }: FoodSettingsScreenProps) {
 		);
 	return (
 		<Screen scroll padded gap="lg">
-			<AppText color="muted">
-				Choose which daily nutrition totals appear in Trends. Logging remains
-				available whichever metrics you track.
-			</AppText>
+			<AppText color="muted">{t("food.intro")}</AppText>
 			<Button
-				label="Open food log"
+				label={t("food.openLog")}
 				variant="secondary"
 				onPress={() => router.push("/food" as Href)}
 			/>
 			{error ? <AppText color="danger">{error}</AppText> : null}
 			<View style={styles.section}>
-				<SectionHeader title="Trends and goals" />
+				<SectionHeader title={t("food.trendsTitle")} />
 				{snapshot.metrics.map((metric) => (
 					<Card key={metric.metricSlug} style={styles.row}>
 						<View style={styles.grow}>
 							<AppText variant="label">{metric.label}</AppText>
 							<AppText variant="caption" color="muted">
-								Daily total from food and other applicable entries
+								{t("food.metricDetail")}
 							</AppText>
 						</View>
 						<ThemedSwitch
-							accessibilityLabel={`${metric.tracked ? "Stop tracking" : "Track"} ${metric.label}`}
+							accessibilityLabel={
+								metric.tracked
+									? t("food.stopTracking", { name: metric.label })
+									: t("food.track", { name: metric.label })
+							}
 							value={metric.tracked}
 							disabled={busyKey !== null}
 							onValueChange={(enabled) =>
@@ -97,11 +100,8 @@ export function FoodSettingsScreen({ store }: FoodSettingsScreenProps) {
 				))}
 			</View>
 			<Card style={styles.section}>
-				<SectionHeader title="Display units" />
-				<AppText color="muted">
-					Energy is shown in kcal. Protein, carbohydrate, and fat are shown in
-					grams.
-				</AppText>
+				<SectionHeader title={t("food.unitsTitle")} />
+				<AppText color="muted">{t("food.unitsBody")}</AppText>
 			</Card>
 		</Screen>
 	);
