@@ -85,6 +85,8 @@ export const food = {
 		provenance: "{{source}} · {{licence}}",
 		choose: "Choose",
 		chooseA11y: "Choose {{name}}",
+		logTitle: "Log {{name}}",
+		dismissA11y: "Close food details",
 		servingLabel: "Serving",
 		quantityField: "Number of servings",
 		dateField: "Date",

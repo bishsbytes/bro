@@ -3,6 +3,97 @@ globalThis.fetch = jest.fn(async () => {
 	throw new Error("Unexpected network request in test.");
 }) as typeof fetch;
 
+require("react-native-gesture-handler/jestSetup");
+
+// Keep Reanimated/native gestures outside Jest while preserving the public
+// close behavior and backdrop configuration exercised by ModalSheet tests.
+jest.mock("@gorhom/bottom-sheet", () => {
+	const React = jest.requireActual<typeof import("react")>("react");
+	const { Pressable, ScrollView, View } =
+		jest.requireActual<typeof import("react-native")>("react-native");
+	type MockSheetProps = {
+		children?: React.ReactNode;
+		backdropComponent?: React.ComponentType<Record<string, unknown>>;
+		enableDynamicSizing?: boolean;
+		index?: number;
+		maxDynamicContentSize?: number;
+		onClose?: () => void;
+		snapPoints?: Array<string | number>;
+	};
+	type MockBackdropProps = Record<string, unknown> & {
+		onPress?: () => void;
+		pressBehavior?: string;
+	};
+
+	const CloseContext = React.createContext<(() => void) | null>(null);
+	const MockBottomSheet = React.forwardRef<
+		{ close: () => void },
+		MockSheetProps
+	>(
+		(
+			{
+				backdropComponent: Backdrop,
+				children,
+				enableDynamicSizing,
+				index,
+				maxDynamicContentSize,
+				onClose,
+				snapPoints,
+			},
+			ref,
+		) => {
+			const close = React.useCallback(() => onClose?.(), [onClose]);
+			React.useImperativeHandle(ref, () => ({ close }), [close]);
+
+			return React.createElement(
+				CloseContext.Provider,
+				{ value: close },
+				React.createElement(
+					View,
+					{
+						testID: "bottom-sheet",
+						enableDynamicSizing,
+						index,
+						maxDynamicContentSize,
+						snapPoints,
+					} as unknown as React.ComponentProps<typeof View>,
+					Backdrop
+						? React.createElement(Backdrop, {
+								animatedIndex: { value: index ?? 0 },
+								animatedPosition: { value: 0 },
+							})
+						: null,
+					children,
+				),
+			);
+		},
+	);
+	const MockBackdrop = ({
+		onPress,
+		pressBehavior,
+		...props
+	}: MockBackdropProps) => {
+		const close = React.useContext(CloseContext);
+		return React.createElement(Pressable, {
+			...props,
+			testID: "modal-sheet-backdrop",
+			onPress: () => {
+				onPress?.();
+				if (pressBehavior === "close") {
+					close?.();
+				}
+			},
+		});
+	};
+
+	return {
+		__esModule: true,
+		default: MockBottomSheet,
+		BottomSheetBackdrop: MockBackdrop,
+		BottomSheetScrollView: ScrollView,
+	};
+});
+
 // Expo Crypto 56 exposes native AES classes that are unavailable in Jest's
 // native-module shim. The app only consumes random bytes for UUIDv7 ids.
 let mockRandomByte = 0;

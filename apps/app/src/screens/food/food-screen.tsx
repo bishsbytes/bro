@@ -6,6 +6,7 @@ import { type Href, router, Stack } from "expo-router";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import {
+	Keyboard,
 	TextInput,
 	TouchableOpacity,
 	useWindowDimensions,
@@ -18,6 +19,7 @@ import { EmptyState } from "../../components/empty-state";
 import { FormField } from "../../components/form-field";
 import { ListRow } from "../../components/list-row";
 import { LoadingIndicator } from "../../components/loading-indicator";
+import { ModalSheet } from "../../components/modal-sheet";
 import { LoadingScreen, StackScreen as Screen } from "../../components/screen";
 import { SectionHeader } from "../../components/section-header";
 import {
@@ -386,6 +388,105 @@ function CustomFoodEditor({
 	);
 }
 
+function SearchedFoodLogForm({
+	result,
+	servingId,
+	onServingChange,
+	quantity,
+	onQuantityChange,
+	localDay,
+	onLocalDayChange,
+	time,
+	onTimeChange,
+	busy,
+	onCancel,
+	onSave,
+}: {
+	result: FoodSearchResult;
+	servingId: string;
+	onServingChange: (servingId: string) => void;
+	quantity: string;
+	onQuantityChange: (quantity: string) => void;
+	localDay: string;
+	onLocalDayChange: (localDay: string) => void;
+	time: string;
+	onTimeChange: (time: string) => void;
+	busy: boolean;
+	onCancel: () => void;
+	onSave: () => void;
+}) {
+	const { t } = useTranslation("food");
+
+	return (
+		<View style={styles.section}>
+			<View style={styles.section}>
+				<AppText variant="section">
+					{t("search.logTitle", { name: result.label })}
+				</AppText>
+				{result.brand ? (
+					<AppText variant="caption" color="muted">
+						{result.brand}
+					</AppText>
+				) : null}
+				<AppText variant="micro" color="subtle">
+					{t("search.provenance", {
+						source: result.source,
+						licence: result.licence,
+					})}
+				</AppText>
+			</View>
+			<AppText variant="label">{t("search.servingLabel")}</AppText>
+			<View style={styles.wrap}>
+				{result.servings.map((serving) => (
+					<Button
+						key={serving.id}
+						label={serving.label}
+						variant={servingId === serving.id ? "primary" : "secondary"}
+						onPress={() => onServingChange(serving.id)}
+					/>
+				))}
+			</View>
+			<FormField
+				label={t("search.quantityField")}
+				value={quantity}
+				onChangeText={onQuantityChange}
+				keyboardType="decimal-pad"
+			/>
+			<View style={styles.actions}>
+				<FormField
+					label={t("search.dateField")}
+					value={localDay}
+					onChangeText={onLocalDayChange}
+					placeholder={t("search.datePlaceholder")}
+					containerStyle={styles.grow}
+				/>
+				<FormField
+					label={t("search.timeField")}
+					value={time}
+					onChangeText={onTimeChange}
+					placeholder={t("search.timePlaceholder")}
+					containerStyle={styles.grow}
+				/>
+			</View>
+			<View style={styles.actions}>
+				<Button
+					label={t("search.cancel")}
+					variant="text"
+					style={styles.grow}
+					onPress={onCancel}
+				/>
+				<Button
+					label={t("search.save")}
+					loading={busy}
+					disabled={!servingId}
+					style={styles.grow}
+					onPress={onSave}
+				/>
+			</View>
+		</View>
+	);
+}
+
 export function FoodScreen({
 	view = "overview",
 	initialCustomId,
@@ -554,9 +655,16 @@ export function FoodScreen({
 	}
 
 	function selectSearchResult(result: FoodSearchResult) {
+		Keyboard.dismiss();
 		resetAdd();
 		setSelectedSearchRef(result.ref);
 		setSearchServingId(result.servings[0]?.id ?? "");
+	}
+
+	function closeSearchResult() {
+		setSelectedSearchRef("");
+		setSearchServingId("");
+		setQuantity("1");
 	}
 
 	async function saveSearchResult() {
@@ -631,10 +739,10 @@ export function FoodScreen({
 	const selectedCustom = snapshot.customFoods.find(
 		({ consumable }) => consumable.id === customId,
 	)?.consumable;
-	const trackedMetrics = snapshot.metrics.filter((metric) => metric.tracked);
 	const selectedSearchResult = searchSnapshot?.results.find(
 		(result) => result.ref === selectedSearchRef,
 	);
+	const trackedMetrics = snapshot.metrics.filter((metric) => metric.tracked);
 	const showingOverview = view === "overview";
 	const showingSearchResults =
 		view === "log" && submittedSearchQuery.trim().length >= 2;
@@ -978,60 +1086,6 @@ export function FoodScreen({
 								/>
 							</Card>
 						))}
-						{selectedSearchResult ? (
-							<View style={styles.section}>
-								<AppText variant="label">{t("search.servingLabel")}</AppText>
-								<View style={styles.wrap}>
-									{selectedSearchResult.servings.map((serving) => (
-										<Button
-											key={serving.id}
-											label={serving.label}
-											variant={
-												searchServingId === serving.id ? "primary" : "secondary"
-											}
-											onPress={() => setSearchServingId(serving.id)}
-										/>
-									))}
-								</View>
-								<FormField
-									label={t("search.quantityField")}
-									value={quantity}
-									onChangeText={setQuantity}
-									keyboardType="decimal-pad"
-								/>
-								<View style={styles.actions}>
-									<FormField
-										label={t("search.dateField")}
-										value={localDay}
-										onChangeText={setLocalDay}
-										placeholder={t("search.datePlaceholder")}
-										containerStyle={styles.grow}
-									/>
-									<FormField
-										label={t("search.timeField")}
-										value={time}
-										onChangeText={setTime}
-										placeholder={t("search.timePlaceholder")}
-										containerStyle={styles.grow}
-									/>
-								</View>
-								<View style={styles.actions}>
-									<Button
-										label={t("search.cancel")}
-										variant="text"
-										style={styles.grow}
-										onPress={() => setSelectedSearchRef("")}
-									/>
-									<Button
-										label={t("search.save")}
-										loading={busy}
-										disabled={!searchServingId}
-										style={styles.grow}
-										onPress={() => void saveSearchResult()}
-									/>
-								</View>
-							</View>
-						) : null}
 						<TouchableOpacity
 							accessibilityRole="button"
 							onPress={() => router.push("/settings/licences" as Href)}
@@ -1343,6 +1397,28 @@ export function FoodScreen({
 					</View>
 				) : null}
 			</Screen>
+			{selectedSearchResult ? (
+				<ModalSheet
+					visible
+					onClose={closeSearchResult}
+					closeAccessibilityLabel={t("search.dismissA11y")}
+				>
+					<SearchedFoodLogForm
+						result={selectedSearchResult}
+						servingId={searchServingId}
+						onServingChange={setSearchServingId}
+						quantity={quantity}
+						onQuantityChange={setQuantity}
+						localDay={localDay}
+						onLocalDayChange={setLocalDay}
+						time={time}
+						onTimeChange={setTime}
+						busy={busy}
+						onCancel={closeSearchResult}
+						onSave={() => void saveSearchResult()}
+					/>
+				</ModalSheet>
+			) : null}
 		</>
 	);
 }

@@ -248,6 +248,7 @@ describe("food logging flow", () => {
 		await fireEvent.press(
 			view.getByLabelText("Choose Provider chicken thighs"),
 		);
+		expect(view.getByText("Log Provider chicken thighs")).toBeTruthy();
 		await fireEvent.changeText(view.getByLabelText("Number of servings"), "2");
 		await fireEvent.press(view.getByText("Save searched food"));
 		expect(

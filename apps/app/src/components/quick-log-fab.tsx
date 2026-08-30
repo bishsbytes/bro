@@ -2,10 +2,10 @@ import MaterialIcons from "@expo/vector-icons/MaterialIcons";
 import { type Href, router } from "expo-router";
 import { useState } from "react";
 import { useTranslation } from "react-i18next";
-import { Modal, Pressable, TouchableOpacity, View } from "react-native";
-import { useSafeAreaInsets } from "react-native-safe-area-context";
+import { TouchableOpacity, View } from "react-native";
 import { StyleSheet, useUnistyles } from "../theme/unistyles";
 import { AppText } from "./app-text";
+import { ModalSheet } from "./modal-sheet";
 
 type MaterialIconName = React.ComponentProps<typeof MaterialIcons>["name"];
 
@@ -50,7 +50,6 @@ function QuickLogAction({ icon, title, detail, onPress }: QuickLogActionProps) {
 export function QuickLogFab({ bottom }: { bottom: number }) {
 	const { t } = useTranslation("navigation");
 	const { theme } = useUnistyles();
-	const insets = useSafeAreaInsets();
 	const [open, setOpen] = useState(false);
 
 	function choose(href: Href) {
@@ -70,51 +69,33 @@ export function QuickLogFab({ bottom }: { bottom: number }) {
 				<MaterialIcons name="add" color={theme.colors.onBrand} size={28} />
 			</TouchableOpacity>
 
-			<Modal
-				animationType="slide"
-				transparent
+			<ModalSheet
 				visible={open}
-				onRequestClose={() => setOpen(false)}
+				onClose={() => setOpen(false)}
+				closeAccessibilityLabel={t("quickLog.close")}
 			>
-				<View style={styles.overlay}>
-					<Pressable
-						accessibilityRole="button"
-						accessibilityLabel={t("quickLog.close")}
-						style={styles.backdrop}
-						onPress={() => setOpen(false)}
+				<AppText variant="section">{t("quickLog.title")}</AppText>
+				<View style={styles.actions}>
+					<QuickLogAction
+						icon="restaurant"
+						title={t("quickLog.food")}
+						detail={t("quickLog.foodDetail")}
+						onPress={() => choose("/food/log")}
 					/>
-					<View
-						accessibilityViewIsModal
-						style={[
-							styles.sheet,
-							{ paddingBottom: insets.bottom + theme.spacing.lg },
-						]}
-					>
-						<View style={styles.handle} />
-						<AppText variant="section">{t("quickLog.title")}</AppText>
-						<View style={styles.actions}>
-							<QuickLogAction
-								icon="restaurant"
-								title={t("quickLog.food")}
-								detail={t("quickLog.foodDetail")}
-								onPress={() => choose("/food/log")}
-							/>
-							<QuickLogAction
-								icon="local-drink"
-								title={t("quickLog.drink")}
-								detail={t("quickLog.drinkDetail")}
-								onPress={() => choose("/drinks/log")}
-							/>
-							<QuickLogAction
-								icon="sentiment-satisfied"
-								title={t("quickLog.checkIn")}
-								detail={t("quickLog.checkInDetail")}
-								onPress={() => choose("/check-in")}
-							/>
-						</View>
-					</View>
+					<QuickLogAction
+						icon="local-drink"
+						title={t("quickLog.drink")}
+						detail={t("quickLog.drinkDetail")}
+						onPress={() => choose("/drinks/log")}
+					/>
+					<QuickLogAction
+						icon="sentiment-satisfied"
+						title={t("quickLog.checkIn")}
+						detail={t("quickLog.checkInDetail")}
+						onPress={() => choose("/check-in")}
+					/>
 				</View>
-			</Modal>
+			</ModalSheet>
 		</>
 	);
 }
@@ -131,26 +112,6 @@ const styles = StyleSheet.create((theme) => ({
 		borderRadius: theme.radius.pill,
 		backgroundColor: theme.colors.brand,
 		elevation: 8,
-	},
-	overlay: { flex: 1, justifyContent: "flex-end" },
-	backdrop: {
-		...StyleSheet.absoluteFillObject,
-		backgroundColor: theme.colors.scrim,
-	},
-	sheet: {
-		gap: theme.spacing.lg,
-		paddingTop: theme.spacing.sm,
-		paddingHorizontal: theme.spacing.lg,
-		borderTopLeftRadius: theme.radius.lg,
-		borderTopRightRadius: theme.radius.lg,
-		backgroundColor: theme.colors.background,
-	},
-	handle: {
-		alignSelf: "center",
-		width: 40,
-		height: 4,
-		borderRadius: theme.radius.pill,
-		backgroundColor: theme.colors.border,
 	},
 	actions: { gap: theme.spacing.sm },
 	actionRow: {
