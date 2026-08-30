@@ -6,6 +6,7 @@ export const log = {
 	/** Renders in capitals; see the note on eyebrows in the review catalogue. */
 	todayEyebrow: "TODAY",
 	bodyEyebrow: "YOUR BODY",
+	consumption: "Food & drinks",
 	drinks: "Drinks",
 	food: "Food",
 	entries_one: "{{count}} entry",

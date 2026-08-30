@@ -95,6 +95,10 @@ describe("Log screen", () => {
 										metric: { slug: "fluid_intake", label: "Fluid" },
 										dayFormatted: "1.5 L",
 									},
+									{
+										metric: { slug: "energy_intake", label: "Energy intake" },
+										dayFormatted: "2,100 kcal",
+									},
 								],
 							}) as unknown as DrinkDaySnapshot,
 					),
@@ -109,6 +113,10 @@ describe("Log screen", () => {
 										metric: { slug: "protein_intake", label: "Protein" },
 										dayFormatted: "82.0 g",
 									},
+									{
+										metric: { slug: "energy_intake", label: "Energy intake" },
+										dayFormatted: "2,100 kcal",
+									},
 								],
 							}) as unknown as FoodDaySnapshot,
 					),
@@ -119,6 +127,11 @@ describe("Log screen", () => {
 		expect(await screen.findByText("1.5 L")).toBeTruthy();
 		expect(screen.getByText("82.0 g")).toBeTruthy();
 		expect(screen.getByText("1 entry")).toBeTruthy();
+		expect(screen.getByText("Food & drinks")).toBeTruthy();
+		expect(screen.getAllByText("Drinks")).toHaveLength(1);
+		expect(screen.getAllByText("Food")).toHaveLength(1);
+		expect(screen.getAllByText("ENERGY INTAKE")).toHaveLength(1);
+		expect(screen.getAllByText("2,100 kcal")).toHaveLength(1);
 
 		await fireEvent.press(screen.getByLabelText("Open Drinks"));
 		expect(mockPush).toHaveBeenLastCalledWith("/drinks");

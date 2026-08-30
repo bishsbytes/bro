@@ -104,6 +104,7 @@ function DailySummary({
 			title={title}
 			value={t("entries", { count: entryCount })}
 			accessibilityLabel={t("open", { name: title })}
+			style={styles.summaryRow}
 			onPress={onPress}
 		>
 			<View style={styles.summaryMetrics}>
@@ -233,29 +234,54 @@ export function LogScreen({
 
 	const visible = snapshot.body.metrics.filter((metric) => metric.visible);
 	const untracked = snapshot.body.metrics.filter((metric) => !metric.visible);
+	const energy =
+		snapshot.food.metrics.find(
+			({ metric }) => metric.slug === "energy_intake",
+		) ??
+		snapshot.drinks.metrics.find(
+			({ metric }) => metric.slug === "energy_intake",
+		);
+	const drinkMetrics = snapshot.drinks.metrics.filter(
+		({ metric }) => metric.slug !== "energy_intake",
+	);
+	const foodMetrics = snapshot.food.metrics.filter(
+		({ metric }) => metric.slug !== "energy_intake",
+	);
 
 	return (
 		<Screen scroll padded gap="lg">
 			<AppText color="muted">{t("intro")}</AppText>
 
 			<View style={styles.section}>
-				<SectionHeader title={t("drinks")} eyebrow={t("todayEyebrow")} />
-				<DailySummary
-					title={t("drinks")}
-					entryCount={snapshot.drinks.entries.length}
-					metrics={snapshot.drinks.metrics}
-					onPress={() => router.push("/drinks")}
-				/>
-			</View>
-
-			<View style={styles.section}>
-				<SectionHeader title={t("food")} eyebrow={t("todayEyebrow")} />
-				<DailySummary
-					title={t("food")}
-					entryCount={snapshot.food.entries.length}
-					metrics={snapshot.food.metrics}
-					onPress={() => router.push("/food")}
-				/>
+				<SectionHeader title={t("consumption")} eyebrow={t("todayEyebrow")} />
+				<Card style={styles.summaryCard}>
+					{energy ? (
+						<View style={styles.sharedMetric}>
+							<AppText variant="micro" color="subtle">
+								{upperCaseForLanguage(energy.metric.label)}
+							</AppText>
+							<AppText variant="section">
+								{energy.dayFormatted ?? t("common:emDash")}
+							</AppText>
+						</View>
+					) : null}
+					<View style={energy ? styles.summaryDivider : undefined}>
+						<DailySummary
+							title={t("drinks")}
+							entryCount={snapshot.drinks.entries.length}
+							metrics={drinkMetrics}
+							onPress={() => router.push("/drinks")}
+						/>
+					</View>
+					<View style={styles.summaryDivider}>
+						<DailySummary
+							title={t("food")}
+							entryCount={snapshot.food.entries.length}
+							metrics={foodMetrics}
+							onPress={() => router.push("/food")}
+						/>
+					</View>
+				</Card>
 			</View>
 
 			{error ? <AppText color="danger">{error}</AppText> : null}
@@ -415,13 +441,31 @@ const styles = StyleSheet.create((theme) => ({
 		gap: theme.spacing.md,
 	},
 	grow: { flex: 1, gap: theme.spacing.xs },
+	summaryCard: { paddingVertical: theme.spacing.sm },
+	sharedMetric: {
+		flexDirection: "row",
+		alignItems: "center",
+		justifyContent: "space-between",
+		gap: theme.spacing.md,
+		paddingVertical: theme.spacing.md,
+	},
+	summaryDivider: {
+		borderTopWidth: 1,
+		borderTopColor: theme.colors.border,
+	},
+	summaryRow: {
+		paddingHorizontal: 0,
+		paddingVertical: theme.spacing.md,
+		borderRadius: 0,
+		backgroundColor: "transparent",
+	},
 	summaryMetrics: {
 		flexDirection: "row",
 		flexWrap: "wrap",
 		gap: theme.spacing.md,
 		marginTop: theme.spacing.sm,
 	},
-	summaryMetric: { minWidth: "40%", gap: theme.spacing.xs },
+	summaryMetric: { flex: 1, minWidth: "28%", gap: theme.spacing.xs },
 }));
 
 export default LogScreen;
