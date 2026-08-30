@@ -121,8 +121,26 @@ describe("drink logging flow", () => {
 		await act(async () => expoRouter.replace("/drinks"));
 		await fireEvent.press(view.getByLabelText("Log a drink"));
 		await waitFor(() => expect(router.getPathname()).toBe("/drinks/log"));
-		await fireEvent.press(await view.findByText("Choose a drink"));
-		await fireEvent.press(view.getByText("Lager, 4.5%"));
+		expect(await view.findByText("Recent drinks")).toBeTruthy();
+		expect(view.getByText("Alcoholic")).toBeTruthy();
+		expect(view.getByText("Caffeinated")).toBeTruthy();
+		expect(view.getByText("Other")).toBeTruthy();
+		expect(view.getByText("Can't find it?")).toBeTruthy();
+		await fireEvent.press(view.getByLabelText("Log a drink manually"));
+		expect(view.getByLabelText("Drink name")).toBeTruthy();
+		expect(
+			view.getByLabelText("Save drink").props.accessibilityState,
+		).toMatchObject({ disabled: true });
+		await fireEvent.press(view.getByText("Cancel"));
+		expect(view.queryByLabelText("Drink name")).toBeNull();
+		await fireEvent.changeText(view.getByLabelText("Drink search"), "lager");
+		expect(view.queryByText("Water")).toBeNull();
+		expect(view.getByLabelText("Clear search")).toBeTruthy();
+		await fireEvent.press(view.getByLabelText("Clear search"));
+		expect(view.getByLabelText("Drink search").props.value).toBe("");
+		expect(view.getByText("5 serving sizes")).toBeTruthy();
+		await fireEvent.press(view.getByLabelText("Log Lager, 4.5%"));
+		expect(view.getByText("Log Lager, 4.5%")).toBeTruthy();
 		await fireEvent.press(view.getByText("Save drink"));
 		await waitFor(() => expect(router.getPathname()).toBe("/drinks"));
 		expect(await view.findByText(/^1 × pint ·/)).toBeTruthy();
@@ -180,8 +198,8 @@ describe("drink logging flow", () => {
 		await act(async () => expoRouter.replace("/drinks"));
 		await fireEvent.press(await view.findByLabelText("Log a drink"));
 		await waitFor(() => expect(router.getPathname()).toBe("/drinks/log"));
-		await fireEvent.press(await view.findByText("Choose a drink"));
-		await fireEvent.press(view.getByText("Water"));
+		await fireEvent.press(await view.findByLabelText("Log Water"));
+		expect(view.getByText("Log Water")).toBeTruthy();
 		await fireEvent.press(view.getByText("Last night"));
 		await fireEvent.press(view.getByText("Save drink"));
 		expect(await view.findByDisplayValue("Water")).toBeTruthy();
