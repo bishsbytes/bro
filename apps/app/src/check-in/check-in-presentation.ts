@@ -1,7 +1,14 @@
+import type { IconName } from "../components/icon";
 import { resolveMetric } from "../content";
 
 /** One face per point of the Mood scale, lowest first. */
-export const MOOD_FACES = ["😞", "🙁", "😐", "🙂", "😄"] as const;
+export const MOOD_FACES = [
+	"mood-lowest",
+	"mood-low",
+	"mood-neutral",
+	"mood-high",
+	"mood-highest",
+] as const satisfies readonly IconName[];
 
 /**
  * A metric's label, falling back to the raw slug. Under sync a newer binary

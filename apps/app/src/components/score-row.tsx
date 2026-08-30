@@ -1,7 +1,8 @@
 import { useTranslation } from "react-i18next";
 import { TouchableOpacity, View } from "react-native";
-import { StyleSheet } from "../theme/unistyles";
+import { StyleSheet, useUnistyles } from "../theme/unistyles";
 import { AppText } from "./app-text";
+import { Icon, type IconName } from "./icon";
 
 const DEFAULT_SCORES = [1, 2, 3, 4, 5] as const;
 
@@ -15,8 +16,8 @@ type ScoreRowProps = {
 	onSelect: (score: number) => void;
 	/** The scale on offer, lowest first; defaults to the daily five-point one. */
 	scores?: readonly number[];
-	/** One glyph per score; when given, the numeral drops to a caption below it. */
-	faces?: readonly string[];
+	/** One face icon per score; when given, the numeral drops to a caption below it. */
+	faces?: readonly IconName[];
 	disabled?: boolean;
 };
 
@@ -29,6 +30,7 @@ export function ScoreRow({
 	disabled = false,
 }: ScoreRowProps) {
 	const { t } = useTranslation("common");
+	const { theme } = useUnistyles();
 	const rows: number[][] = [];
 	for (let start = 0; start < scores.length; start += MAX_PER_ROW) {
 		rows.push([...scores.slice(start, start + MAX_PER_ROW)]);
@@ -60,7 +62,14 @@ export function ScoreRow({
 							>
 								{face ? (
 									<>
-										<AppText style={styles.face}>{face}</AppText>
+										<Icon
+											testID={`score-face-${score}`}
+											name={face}
+											size={theme.typography.face.fontSize}
+											color={
+												isSelected ? theme.colors.brand : theme.colors.textMuted
+											}
+										/>
 										<AppText
 											variant="micro"
 											color="subtle"
@@ -110,8 +119,4 @@ const styles = StyleSheet.create((theme) => ({
 	},
 	selectedText: { color: theme.colors.onSelected },
 	disabled: { opacity: theme.opacity.disabled },
-	face: {
-		fontSize: theme.typography.face.fontSize,
-		lineHeight: theme.typography.face.lineHeight,
-	},
 }));

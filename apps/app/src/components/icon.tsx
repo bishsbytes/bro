@@ -7,6 +7,10 @@ import Circle from "lucide-react-native/icons/circle";
 import CircleCheck from "lucide-react-native/icons/circle-check";
 import Compass from "lucide-react-native/icons/compass";
 import CupSoda from "lucide-react-native/icons/cup-soda";
+import FaceAngry from "lucide-react-native/icons/face-angry";
+import FaceGrinning from "lucide-react-native/icons/face-grinning";
+import FaceNeutral from "lucide-react-native/icons/face-neutral";
+import FaceSlightlyFrowning from "lucide-react-native/icons/face-slightly-frowning";
 import FaceSlightlySmiling from "lucide-react-native/icons/face-slightly-smiling";
 import Moon from "lucide-react-native/icons/moon";
 import NotebookPen from "lucide-react-native/icons/notebook-pen";
@@ -36,6 +40,11 @@ const ICONS = {
 	insights: ChartLine,
 	journal: Sun,
 	log: NotebookPen,
+	"mood-high": FaceSlightlySmiling,
+	"mood-highest": FaceGrinning,
+	"mood-low": FaceSlightlyFrowning,
+	"mood-lowest": FaceAngry,
+	"mood-neutral": FaceNeutral,
 	person: User,
 	search: Search,
 	"theme-dark": Moon,

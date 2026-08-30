@@ -1,4 +1,5 @@
 import { fireEvent, render } from "@testing-library/react-native";
+import { MOOD_FACES } from "../check-in/check-in-presentation";
 import { ScoreRow } from "./score-row";
 
 describe("ScoreRow", () => {
@@ -41,11 +42,11 @@ describe("ScoreRow", () => {
 				accessibilityPrefix="Mood"
 				selected={null}
 				onSelect={jest.fn()}
-				faces={["😞", "🙁", "😐", "🙂", "😄"]}
+				faces={MOOD_FACES}
 			/>,
 		);
 
-		expect(view.getByText("😄")).toBeTruthy();
+		expect(view.getAllByTestId(/^score-face-/)).toHaveLength(MOOD_FACES.length);
 		expect(view.getByLabelText("Mood 5")).toBeTruthy();
 	});
 

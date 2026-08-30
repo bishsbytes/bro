@@ -15,6 +15,7 @@ import {
 import { AppText } from "../../components/app-text";
 import { Button } from "../../components/button";
 import { EmptyState } from "../../components/empty-state";
+import type { IconName } from "../../components/icon";
 import { LoadingIndicator } from "../../components/loading-indicator";
 import { ScoreRow } from "../../components/score-row";
 import { LoadingScreen, FullScreen as Screen } from "../../components/screen";
@@ -33,7 +34,7 @@ type CheckInScreenProps = {
 type CheckInStep = {
 	slug: string;
 	label: string;
-	faces?: readonly string[];
+	faces?: readonly IconName[];
 	/** Shown under the scale so a 1 and a 5 mean the same thing every day. */
 	hint: string;
 };
