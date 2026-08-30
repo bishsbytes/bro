@@ -5,7 +5,12 @@ import MaterialIcons from "@expo/vector-icons/MaterialIcons";
 import { type Href, router, Stack } from "expo-router";
 import { useCallback, useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
-import { TouchableOpacity, View } from "react-native";
+import {
+	TextInput,
+	TouchableOpacity,
+	useWindowDimensions,
+	View,
+} from "react-native";
 import { AppText } from "../../components/app-text";
 import { Button } from "../../components/button";
 import { Card } from "../../components/card";
@@ -387,6 +392,8 @@ export function FoodScreen({
 }: FoodScreenProps) {
 	const { t } = useTranslation(["food", "common"]);
 	const { theme } = useUnistyles();
+	const { width: windowWidth } = useWindowDimensions();
+	const headerSearchWidth = Math.max(180, Math.min(520, windowWidth - 96));
 	const food = useMemo(() => store ?? createFoodStore(), [store]);
 	const foodSearch = useMemo(
 		() => searchStore ?? createFoodSearchStore(),
@@ -397,6 +404,7 @@ export function FoodScreen({
 	const [busy, setBusy] = useState(false);
 	const [searchBusy, setSearchBusy] = useState(false);
 	const [searchQuery, setSearchQuery] = useState("");
+	const [submittedSearchQuery, setSubmittedSearchQuery] = useState("");
 	const [selectedSearchRef, setSelectedSearchRef] = useState("");
 	const [searchServingId, setSearchServingId] = useState("");
 	const [mode, setMode] = useState<AddMode>(initialCustomId ? "custom" : null);
@@ -486,6 +494,7 @@ export function FoodScreen({
 	async function runSearch(query = searchQuery) {
 		if (searchBusy) return;
 		setSearchQuery(query);
+		setSubmittedSearchQuery(query);
 		setSearchBusy(true);
 		setError(null);
 		try {
@@ -583,40 +592,38 @@ export function FoodScreen({
 	);
 	const showingOverview = view === "overview";
 	const showingSearchResults =
-		view === "search" && searchQuery.trim().length >= 2;
+		view === "search" && submittedSearchQuery.trim().length >= 2;
 
 	return (
 		<>
 			{view === "search" ? (
 				<Stack.Screen
 					options={{
-						headerSearchBarOptions: {
-							autoCapitalize: "none",
-							barTintColor: theme.colors.surface,
-							headerIconColor: theme.colors.textMuted,
-							hideNavigationBar: false,
-							hideWhenScrolling: false,
-							hintTextColor: theme.colors.textSubtle,
-							obscureBackground: false,
-							onChangeText: (event) => setSearchQuery(event.nativeEvent.text),
-							onSearchButtonPress: (event) =>
-								void runSearch(event.nativeEvent.text),
-							placeholder: t("search.headerPlaceholder"),
-							placement: "integrated",
-							allowToolbarIntegration: false,
-							textColor: theme.colors.text,
-							tintColor: theme.colors.brand,
-						},
-						headerRight: () => (
-							<TouchableOpacity
-								accessibilityRole="button"
-								accessibilityLabel={t("search.addA11y")}
-								hitSlop={theme.spacing.sm}
-								style={styles.headerAction}
-								onPress={() => router.push("/food/log" as Href)}
-							>
-								<MaterialIcons name="add" color={theme.colors.text} size={24} />
-							</TouchableOpacity>
+						headerTitleAlign: "left",
+						headerTitle: () => (
+							<View style={[styles.headerSearch, { width: headerSearchWidth }]}>
+								<MaterialIcons
+									name="search"
+									color={theme.colors.textMuted}
+									size={24}
+								/>
+								<TextInput
+									accessibilityLabel={t("search.fieldA11y")}
+									autoCapitalize="none"
+									autoCorrect={false}
+									enterKeyHint="search"
+									placeholder={t("search.headerPlaceholder")}
+									placeholderTextColor={theme.colors.textSubtle}
+									returnKeyType="search"
+									style={styles.headerSearchInput}
+									value={searchQuery}
+									onChangeText={(query) => {
+										setSearchQuery(query);
+										setSubmittedSearchQuery("");
+									}}
+									onSubmitEditing={() => void runSearch()}
+								/>
+							</View>
 						),
 					}}
 				/>
@@ -780,28 +787,9 @@ export function FoodScreen({
 				{view === "search" && !showingSearchResults ? (
 					<>
 						<View style={styles.section}>
-							<SectionHeader
-								title={t("search.customTitle")}
-								action={
-									<TouchableOpacity
-										accessibilityRole="button"
-										accessibilityLabel={t("search.createCustomA11y")}
-										onPress={() => router.push("/food/custom" as Href)}
-									>
-										<MaterialIcons
-											name="add"
-											color={theme.colors.brand}
-											size={24}
-										/>
-									</TouchableOpacity>
-								}
-							/>
+							<SectionHeader title={t("search.customTitle")} />
 							{snapshot.customFoods.length === 0 ? (
-								<ListRow
-									title={t("search.customLog")}
-									detail={t("search.customLogDetail")}
-									onPress={() => router.push("/food/custom" as Href)}
-								/>
+								<AppText color="muted">{t("search.customEmpty")}</AppText>
 							) : (
 								snapshot.customFoods.map(({ consumable }) => (
 									<TouchableOpacity
@@ -835,6 +823,21 @@ export function FoodScreen({
 									</TouchableOpacity>
 								))
 							)}
+							<TouchableOpacity
+								accessibilityRole="button"
+								accessibilityLabel={t("search.customLogA11y")}
+								style={styles.customLogButton}
+								onPress={() => router.push("/food/log" as Href)}
+							>
+								<MaterialIcons
+									name="add"
+									color={theme.colors.brand}
+									size={24}
+								/>
+								<AppText variant="label" color="brand">
+									{t("search.customLog")}
+								</AppText>
+							</TouchableOpacity>
 						</View>
 
 						<View style={styles.section}>
@@ -1322,11 +1325,30 @@ const styles = StyleSheet.create((theme) => ({
 		alignItems: "center",
 		gap: theme.spacing.md,
 	},
-	headerAction: {
-		width: 40,
-		height: 40,
+	headerSearch: {
+		height: 44,
+		flexDirection: "row",
+		alignItems: "center",
+		gap: theme.spacing.sm,
+		paddingHorizontal: theme.spacing.md,
+		borderRadius: theme.radius.pill,
+		backgroundColor: theme.colors.surface,
+	},
+	headerSearchInput: {
+		...theme.typography.body,
+		flex: 1,
+		paddingVertical: 0,
+		color: theme.colors.text,
+	},
+	customLogButton: {
+		minHeight: theme.control.buttonMinHeight,
+		flexDirection: "row",
 		alignItems: "center",
 		justifyContent: "center",
+		gap: theme.spacing.sm,
+		paddingHorizontal: theme.spacing.lg,
+		borderRadius: theme.radius.pill,
+		backgroundColor: theme.colors.surface,
 	},
 	grow: { flex: 1 },
 	entry: { gap: theme.spacing.xs },

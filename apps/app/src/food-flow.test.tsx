@@ -72,42 +72,6 @@ const databaseApp: typeof DatabaseApp = jest.requireActual("@bro/database-app");
 const mockedUseSession = (authClient as unknown as { useSession: jest.Mock })
 	.useSession;
 
-type NativeTestNode = {
-	props?: Record<string, unknown>;
-	children?: unknown[];
-};
-
-function findNativeNode(
-	node: unknown,
-	property: string,
-	value: unknown,
-): NativeTestNode | null {
-	if (!node || typeof node !== "object") return null;
-	const candidate = node as NativeTestNode;
-	if (candidate.props?.[property] === value) return candidate;
-	for (const child of candidate.children ?? []) {
-		const match = findNativeNode(child, property, value);
-		if (match) return match;
-	}
-	return null;
-}
-
-function nativeRootInstance(root: unknown): unknown {
-	return (root as { instance?: unknown } | null)?.instance;
-}
-
-async function invokeNativeTextEvent(
-	node: NativeTestNode,
-	property: "onChangeText" | "onSearchButtonPress",
-	text: string,
-) {
-	const handler = node.props?.[property];
-	if (typeof handler !== "function") {
-		throw new Error(`Expected native handler ${property}.`);
-	}
-	await act(async () => handler({ nativeEvent: { text } }));
-}
-
 describe("food logging flow", () => {
 	afterEach(() => {
 		delete process.env.EXPO_PUBLIC_API_URL;
@@ -265,18 +229,10 @@ describe("food logging flow", () => {
 		const view = await router;
 		expect(await view.findByText("Recent foods")).toBeTruthy();
 		expect(view.getByLabelText("Log Chicken thighs again")).toBeTruthy();
-		const searchBar = findNativeNode(
-			nativeRootInstance(view.root),
-			"placeholder",
-			"What did you eat?",
-		);
-		if (!searchBar) throw new Error("Expected the header search bar.");
-		await invokeNativeTextEvent(searchBar, "onChangeText", "chicken thighs");
-		await invokeNativeTextEvent(
-			searchBar,
-			"onSearchButtonPress",
-			"chicken thighs",
-		);
+		expect(view.getByText("Custom log")).toBeTruthy();
+		const searchBar = view.getByLabelText("Food search");
+		await fireEvent.changeText(searchBar, "chicken thighs");
+		await fireEvent(searchBar, "submitEditing");
 		expect(await view.findByText("Open Food Facts · ODbL-1.0")).toBeTruthy();
 		expect(globalThis.fetch).toHaveBeenCalledWith(
 			"https://api.example.test/api/food/search?q=chicken+thighs",
@@ -306,25 +262,12 @@ describe("food logging flow", () => {
 		});
 
 		await act(async () => expoRouter.replace("/food/search"));
-		const retrySearchBar = findNativeNode(
-			nativeRootInstance(view.root),
-			"placeholder",
-			"What did you eat?",
-		);
-		if (!retrySearchBar) throw new Error("Expected the header search bar.");
-		await invokeNativeTextEvent(
-			retrySearchBar,
-			"onChangeText",
-			"chicken thighs",
-		);
+		const retrySearchBar = view.getByLabelText("Food search");
+		await fireEvent.changeText(retrySearchBar, "chicken thighs");
 		(globalThis.fetch as jest.Mock).mockRejectedValueOnce(
 			new TypeError("Network request failed"),
 		);
-		await invokeNativeTextEvent(
-			retrySearchBar,
-			"onSearchButtonPress",
-			"chicken thighs",
-		);
+		await fireEvent(retrySearchBar, "submitEditing");
 		expect(
 			await view.findByText(
 				"Search needs a connection. Your recents, custom foods, and saved results are still available.",
