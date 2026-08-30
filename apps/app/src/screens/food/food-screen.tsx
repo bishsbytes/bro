@@ -19,6 +19,7 @@ import { EmptyState } from "../../components/empty-state";
 import { FormField } from "../../components/form-field";
 import { ListRow } from "../../components/list-row";
 import { LoadingIndicator } from "../../components/loading-indicator";
+import { LogConfirmationToast } from "../../components/log-confirmation-toast";
 import { ModalSheet } from "../../components/modal-sheet";
 import { LoadingScreen, StackScreen as Screen } from "../../components/screen";
 import { SectionHeader } from "../../components/section-header";
@@ -505,7 +506,12 @@ export function FoodScreen({
 	const [searchSnapshot, setSearchSnapshot] =
 		useState<FoodSearchSnapshot | null>(null);
 	const searchRequestId = useRef(0);
+	const confirmationSequence = useRef(0);
 	const [busy, setBusy] = useState(false);
+	const [recentConfirmation, setRecentConfirmation] = useState<{
+		name: string;
+		sequence: number;
+	} | null>(null);
 	const [searchBusy, setSearchBusy] = useState(false);
 	const [searchQuery, setSearchQuery] = useState("");
 	const [submittedSearchQuery, setSubmittedSearchQuery] = useState("");
@@ -529,6 +535,10 @@ export function FoodScreen({
 	const [goalSlug, setGoalSlug] = useState<string | null>(null);
 	const [goalTarget, setGoalTarget] = useState("");
 	const [goalDate, setGoalDate] = useState("");
+	const dismissRecentConfirmation = useCallback(
+		() => setRecentConfirmation(null),
+		[],
+	);
 
 	const {
 		data: snapshot,
@@ -571,6 +581,13 @@ export function FoodScreen({
 			return false;
 		} finally {
 			setBusy(false);
+		}
+	}
+
+	async function repeatRecent(id: string, name: string) {
+		if (await mutate(() => food.repeatEntry(id))) {
+			confirmationSequence.current += 1;
+			setRecentConfirmation({ name, sequence: confirmationSequence.current });
 		}
 	}
 
@@ -876,9 +893,7 @@ export function FoodScreen({
 										})}
 										variant="secondary"
 										disabled={busy}
-										onPress={() =>
-											void mutate(() => food.repeatEntry(entry.id))
-										}
+										onPress={() => void repeatRecent(entry.id, entry.label)}
 									/>
 								))}
 							</View>
@@ -1015,9 +1030,7 @@ export function FoodScreen({
 											name: entry.label,
 										})}
 										disabled={busy}
-										onPress={() =>
-											void mutate(() => food.repeatEntry(entry.id))
-										}
+										onPress={() => void repeatRecent(entry.id, entry.label)}
 									>
 										<Card style={styles.searchResult}>
 											<View style={styles.grow}>
@@ -1397,6 +1410,17 @@ export function FoodScreen({
 					</View>
 				) : null}
 			</Screen>
+			<LogConfirmationToast
+				key={recentConfirmation?.sequence}
+				message={
+					recentConfirmation
+						? t("quickAdd.added", { food: recentConfirmation.name })
+						: null
+				}
+				actionLabel={t("common:actions.viewLog")}
+				onDismiss={dismissRecentConfirmation}
+				onAction={() => router.push(`/food/${snapshot.localDay}` as Href)}
+			/>
 			{selectedSearchResult ? (
 				<ModalSheet
 					visible

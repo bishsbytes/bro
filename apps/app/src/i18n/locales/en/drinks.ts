@@ -24,6 +24,7 @@ export const drinks = {
 		empty: "Your usual drinks will appear here after the first log.",
 		/** A drink and the serving it was logged in. */
 		option: "{{drink}} · {{serving}}",
+		added: "{{drink}} added",
 	},
 	browse: {
 		headerPlaceholder: "What did you drink?",

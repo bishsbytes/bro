@@ -24,6 +24,7 @@ export const food = {
 		empty: "Your usual foods will appear here after the first log.",
 		/** A food and the serving it was logged in. */
 		option: "{{food}} · {{serving}}",
+		added: "{{food}} added",
 	},
 	custom: {
 		title: "Custom foods and recipes",

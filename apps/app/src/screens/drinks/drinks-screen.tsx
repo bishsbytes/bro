@@ -2,7 +2,7 @@ import { previousLocalDay } from "@bro/domain";
 import { ethanolKgFromVolumeAndAbv } from "@bro/domain/drink-catalogue";
 import MaterialIcons from "@expo/vector-icons/MaterialIcons";
 import { type Href, router, Stack } from "expo-router";
-import { useCallback, useMemo, useState } from "react";
+import { useCallback, useMemo, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import {
 	Keyboard,
@@ -18,6 +18,7 @@ import { Card } from "../../components/card";
 import { EmptyState } from "../../components/empty-state";
 import { FormField } from "../../components/form-field";
 import { ListRow } from "../../components/list-row";
+import { LogConfirmationToast } from "../../components/log-confirmation-toast";
 import { ModalSheet } from "../../components/modal-sheet";
 import { LoadingScreen, StackScreen as Screen } from "../../components/screen";
 import { SectionHeader } from "../../components/section-header";
@@ -279,6 +280,11 @@ export function DrinksScreen({ view = "overview", store }: DrinksScreenProps) {
 	const headerSearchWidth = Math.max(180, Math.min(520, windowWidth - 96));
 	const drinks = useMemo(() => store ?? createDrinksStore(), [store]);
 	const [busy, setBusy] = useState(false);
+	const confirmationSequence = useRef(0);
+	const [recentConfirmation, setRecentConfirmation] = useState<{
+		name: string;
+		sequence: number;
+	} | null>(null);
 	const [searchQuery, setSearchQuery] = useState("");
 	const [browseFilter, setBrowseFilter] = useState<BrowseFilter>("hydration");
 	const [mode, setMode] = useState<AddMode>(null);
@@ -300,6 +306,10 @@ export function DrinksScreen({ view = "overview", store }: DrinksScreenProps) {
 	const [goalSlug, setGoalSlug] = useState<string | null>(null);
 	const [goalTarget, setGoalTarget] = useState("");
 	const [goalDate, setGoalDate] = useState("");
+	const dismissRecentConfirmation = useCallback(
+		() => setRecentConfirmation(null),
+		[],
+	);
 
 	const {
 		data: snapshot,
@@ -332,6 +342,13 @@ export function DrinksScreen({ view = "overview", store }: DrinksScreenProps) {
 			return false;
 		} finally {
 			setBusy(false);
+		}
+	}
+
+	async function repeatRecent(id: string, name: string) {
+		if (await mutate(() => drinks.repeatEntry(id))) {
+			confirmationSequence.current += 1;
+			setRecentConfirmation({ name, sequence: confirmationSequence.current });
 		}
 	}
 
@@ -711,9 +728,7 @@ export function DrinksScreen({ view = "overview", store }: DrinksScreenProps) {
 										})}
 										variant="secondary"
 										disabled={busy}
-										onPress={() =>
-											void mutate(() => drinks.repeatEntry(entry.id))
-										}
+										onPress={() => void repeatRecent(entry.id, entry.label)}
 									/>
 								))}
 							</View>
@@ -857,7 +872,7 @@ export function DrinksScreen({ view = "overview", store }: DrinksScreenProps) {
 													disabled={busy}
 													style={styles.quickLogButton}
 													onPress={() =>
-														void mutate(() => drinks.repeatEntry(entry.id))
+														void repeatRecent(entry.id, entry.label)
 													}
 												/>
 											))}
@@ -1152,6 +1167,17 @@ export function DrinksScreen({ view = "overview", store }: DrinksScreenProps) {
 					</View>
 				) : null}
 			</Screen>
+			<LogConfirmationToast
+				key={recentConfirmation?.sequence}
+				message={
+					recentConfirmation
+						? t("quickAdd.added", { drink: recentConfirmation.name })
+						: null
+				}
+				actionLabel={t("common:actions.viewLog")}
+				onDismiss={dismissRecentConfirmation}
+				onAction={() => router.push(`/drinks/${snapshot.localDay}` as Href)}
+			/>
 			{view === "log" && mode ? (
 				<ModalSheet
 					visible

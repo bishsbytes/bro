@@ -225,6 +225,16 @@ describe("drink logging flow", () => {
 		if (!lastNight) throw new Error("Expected the last-night drink.");
 		expect(router.getPathname()).toBe(`/drinks/${lastNight.localDay}`);
 
+		await act(async () => expoRouter.replace("/drinks/log"));
+		await fireEvent.press(await view.findByLabelText("Log Water again"));
+		expect(await view.findByText("Water added")).toBeTruthy();
+		const repeatedWater = (
+			await new databaseApp.ConsumptionEntryRepository(db).listAll()
+		).find(({ id }) => id !== lastNight.id);
+		if (!repeatedWater) throw new Error("Expected the repeated water entry.");
+		await fireEvent.press(view.getByText("View log"));
+		expect(router.getPathname()).toBe(`/drinks/${repeatedWater.localDay}`);
+
 		expect(globalThis.fetch).not.toHaveBeenCalled();
 		expect(mockedUseSession).not.toHaveBeenCalled();
 	});

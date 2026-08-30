@@ -184,6 +184,15 @@ describe("food logging flow", () => {
 				proteinG: 52,
 			},
 		);
+		await act(async () => expoRouter.replace("/food/log"));
+		await fireEvent.press(await view.findByLabelText("Log Chicken bowl again"));
+		expect(await view.findByText("Chicken bowl added")).toBeTruthy();
+		const repeatedFood = (
+			await new databaseApp.ConsumptionEntryRepository(db).listAll()
+		).find(({ id }) => !entries.some((entry) => entry.id === id));
+		if (!repeatedFood) throw new Error("Expected the repeated food entry.");
+		await fireEvent.press(view.getByText("View log"));
+		expect(router.getPathname()).toBe(`/food/${repeatedFood.localDay}`);
 		expect(await new databaseApp.ObservationRepository(db).listAll()).toEqual(
 			[],
 		);

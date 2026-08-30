@@ -5,6 +5,7 @@
 export const common = {
 	actions: {
 		tryAgain: "Try again",
+		viewLog: "View log",
 	},
 	/** Stands in for a value that has not been recorded. */
 	emDash: "—",
