@@ -3,7 +3,7 @@ import { previousLocalDay } from "@bro/domain";
 import type { FoodSearchResult } from "@bro/domain/food-search";
 import MaterialIcons from "@expo/vector-icons/MaterialIcons";
 import { type Href, router, Stack } from "expo-router";
-import { useCallback, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import {
 	TextInput,
@@ -55,6 +55,8 @@ type FoodScreenProps = {
 };
 
 type AddMode = "custom" | "free" | null;
+
+const SEARCH_DEBOUNCE_MS = 300;
 
 function optionalNumber(value: string): number | null {
 	return value.trim() ? Number(value) : null;
@@ -401,6 +403,7 @@ export function FoodScreen({
 	);
 	const [searchSnapshot, setSearchSnapshot] =
 		useState<FoodSearchSnapshot | null>(null);
+	const searchRequestId = useRef(0);
 	const [busy, setBusy] = useState(false);
 	const [searchBusy, setSearchBusy] = useState(false);
 	const [searchQuery, setSearchQuery] = useState("");
@@ -478,7 +481,7 @@ export function FoodScreen({
 		setServingId(selected?.servings[0]?.id ?? "");
 	}
 
-	function resetAdd() {
+	const resetAdd = useCallback(() => {
 		setMode(null);
 		setCustomId("");
 		setServingId("");
@@ -489,24 +492,65 @@ export function FoodScreen({
 		setProtein("");
 		setCarbs("");
 		setFat("");
-	}
+	}, []);
 
-	async function runSearch(query = searchQuery) {
-		if (searchBusy) return;
-		resetAdd();
-		setSearchQuery(query);
-		setSubmittedSearchQuery(query);
-		setSearchBusy(true);
-		setError(null);
-		try {
-			setSearchSnapshot(await foodSearch.search(query));
+	useEffect(() => {
+		if (view !== "log") return;
+		const requestId = ++searchRequestId.current;
+		const query = searchQuery.trim();
+		if (query.length < 2) {
+			setSubmittedSearchQuery("");
 			setSelectedSearchRef("");
 			setSearchServingId("");
-		} catch (caught) {
-			setError(toMessage(caught));
-		} finally {
 			setSearchBusy(false);
+			return;
 		}
+
+		const timeout = setTimeout(() => {
+			resetAdd();
+			setSubmittedSearchQuery(query);
+			setSearchBusy(true);
+			setError(null);
+			void foodSearch
+				.search(query)
+				.then((next) => {
+					if (requestId !== searchRequestId.current) return;
+					setSearchSnapshot(next);
+					setSelectedSearchRef("");
+					setSearchServingId("");
+				})
+				.catch((caught) => {
+					if (requestId === searchRequestId.current) {
+						setError(toMessage(caught));
+					}
+				})
+				.finally(() => {
+					if (requestId === searchRequestId.current) {
+						setSearchBusy(false);
+					}
+				});
+		}, SEARCH_DEBOUNCE_MS);
+
+		return () => {
+			clearTimeout(timeout);
+			if (requestId === searchRequestId.current) {
+				searchRequestId.current += 1;
+			}
+		};
+	}, [foodSearch, resetAdd, searchQuery, setError, view]);
+
+	function updateSearchQuery(query: string) {
+		searchRequestId.current += 1;
+		setSearchQuery(query);
+		setSubmittedSearchQuery("");
+		setSelectedSearchRef("");
+		setSearchServingId("");
+		setSearchBusy(false);
+		setError(null);
+	}
+
+	function clearSearch() {
+		updateSearchQuery("");
 	}
 
 	function selectSearchResult(result: FoodSearchResult) {
@@ -618,12 +662,23 @@ export function FoodScreen({
 									returnKeyType="search"
 									style={styles.headerSearchInput}
 									value={searchQuery}
-									onChangeText={(query) => {
-										setSearchQuery(query);
-										setSubmittedSearchQuery("");
-									}}
-									onSubmitEditing={() => void runSearch()}
+									onChangeText={updateSearchQuery}
 								/>
+								{searchQuery ? (
+									<TouchableOpacity
+										accessibilityRole="button"
+										accessibilityLabel={t("search.clearA11y")}
+										hitSlop={8}
+										style={styles.headerSearchClear}
+										onPress={clearSearch}
+									>
+										<MaterialIcons
+											name="close"
+											color={theme.colors.textMuted}
+											size={24}
+										/>
+									</TouchableOpacity>
+								) : null}
 							</View>
 						),
 					}}
@@ -1322,6 +1377,12 @@ const styles = StyleSheet.create((theme) => ({
 		flex: 1,
 		paddingVertical: 0,
 		color: theme.colors.text,
+	},
+	headerSearchClear: {
+		width: 24,
+		height: 24,
+		alignItems: "center",
+		justifyContent: "center",
 	},
 	customLogButton: {
 		minHeight: theme.control.buttonMinHeight,

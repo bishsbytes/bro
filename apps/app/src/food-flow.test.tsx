@@ -227,9 +227,16 @@ describe("food logging flow", () => {
 		expect(view.getByLabelText("Log Chicken thighs again")).toBeTruthy();
 		expect(view.getByText("Custom log")).toBeTruthy();
 		const searchBar = view.getByLabelText("Food search");
-		await fireEvent.changeText(searchBar, "chicken thighs");
-		await fireEvent(searchBar, "submitEditing");
+		await fireEvent.changeText(searchBar, "chicken");
+		expect(view.getByLabelText("Clear search")).toBeTruthy();
+		await fireEvent.press(view.getByLabelText("Clear search"));
+		expect(view.getByLabelText("Food search").props.value).toBe("");
+		await fireEvent.changeText(
+			view.getByLabelText("Food search"),
+			"chicken thighs",
+		);
 		expect(await view.findByText("Open Food Facts · ODbL-1.0")).toBeTruthy();
+		expect(globalThis.fetch).toHaveBeenCalledTimes(1);
 		expect(globalThis.fetch).toHaveBeenCalledWith(
 			"https://api.example.test/api/food/search?q=chicken+thighs",
 			expect.objectContaining({
@@ -259,11 +266,10 @@ describe("food logging flow", () => {
 
 		await act(async () => expoRouter.replace("/food/log"));
 		const retrySearchBar = view.getByLabelText("Food search");
-		await fireEvent.changeText(retrySearchBar, "chicken thighs");
 		(globalThis.fetch as jest.Mock).mockRejectedValueOnce(
 			new TypeError("Network request failed"),
 		);
-		await fireEvent(retrySearchBar, "submitEditing");
+		await fireEvent.changeText(retrySearchBar, "chicken thighs");
 		expect(
 			await view.findByText(
 				"Search needs a connection. Your recents, custom foods, and saved results are still available.",

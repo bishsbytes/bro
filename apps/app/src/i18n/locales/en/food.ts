@@ -62,6 +62,7 @@ export const food = {
 	search: {
 		headerPlaceholder: "What did you eat?",
 		fieldA11y: "Food search",
+		clearA11y: "Clear search",
 		customTitle: "Custom foods",
 		customEmpty: "You haven't created a custom food yet.",
 		customLog: "Custom log",
