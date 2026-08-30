@@ -1,6 +1,6 @@
 import { previousLocalDay } from "@bro/domain";
 import { ethanolKgFromVolumeAndAbv } from "@bro/domain/drink-catalogue";
-import { type Href, router, useFocusEffect } from "expo-router";
+import { type Href, router } from "expo-router";
 import { useCallback, useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { TouchableOpacity, View } from "react-native";
@@ -9,15 +9,12 @@ import { Button } from "../../components/button";
 import { Card } from "../../components/card";
 import { EmptyState } from "../../components/empty-state";
 import { FormField } from "../../components/form-field";
-import { LoadingIndicator } from "../../components/loading-indicator";
-import { StackScreen as Screen } from "../../components/screen";
+import { LoadingScreen, StackScreen as Screen } from "../../components/screen";
 import { SectionHeader } from "../../components/section-header";
-import {
-	createDrinksStore,
-	type DrinkDaySnapshot,
-	type DrinksStore,
-} from "../../drinks/drinks-store";
+import { createDrinksStore, type DrinksStore } from "../../drinks/drinks-store";
 import { upperCaseForLanguage } from "../../i18n";
+import { toMessage } from "../../lib/errors";
+import { useFocusStoreLoad } from "../../lib/use-store-load";
 import { StyleSheet } from "../../theme/unistyles";
 
 type DrinksScreenProps = {
@@ -45,8 +42,6 @@ function optionalNumber(value: string): number | null {
 export function DrinksScreen({ store }: DrinksScreenProps) {
 	const { t } = useTranslation(["drinks", "common"]);
 	const drinks = useMemo(() => store ?? createDrinksStore(), [store]);
-	const [snapshot, setSnapshot] = useState<DrinkDaySnapshot | null>(null);
-	const [error, setError] = useState<string | null>(null);
 	const [busy, setBusy] = useState(false);
 	const [mode, setMode] = useState<AddMode>(null);
 	const [catalogueId, setCatalogueId] = useState("");
@@ -68,22 +63,22 @@ export function DrinksScreen({ store }: DrinksScreenProps) {
 	const [goalTarget, setGoalTarget] = useState("");
 	const [goalDate, setGoalDate] = useState("");
 
-	const load = useCallback(async () => {
-		setError(null);
-		try {
+	const {
+		data: snapshot,
+		error,
+		loading,
+		reload,
+		setData: setSnapshot,
+		setError,
+	} = useFocusStoreLoad(
+		useCallback(async () => {
 			const next = await drinks.loadToday();
-			setSnapshot(next);
+			// Seed the entry form the first time only, so a part-filled row
+			// survives the refresh that follows a save.
 			setLocalDay((current) => current || next.localDay);
 			setTime((current) => current || next.defaultTime);
-		} catch (caught) {
-			setError(caught instanceof Error ? caught.message : String(caught));
-		}
-	}, [drinks]);
-
-	useFocusEffect(
-		useCallback(() => {
-			void load();
-		}, [load]),
+			return next;
+		}, [drinks]),
 	);
 
 	async function mutate(work: () => Promise<unknown>): Promise<boolean> {
@@ -95,7 +90,7 @@ export function DrinksScreen({ store }: DrinksScreenProps) {
 			setSnapshot(await drinks.loadToday());
 			return true;
 		} catch (caught) {
-			setError(caught instanceof Error ? caught.message : String(caught));
+			setError(toMessage(caught));
 			return false;
 		} finally {
 			setBusy(false);
@@ -260,12 +255,8 @@ export function DrinksScreen({ store }: DrinksScreenProps) {
 		});
 	}
 
-	if (!snapshot && !error) {
-		return (
-			<Screen centered>
-				<LoadingIndicator size="large" />
-			</Screen>
-		);
+	if (loading) {
+		return <LoadingScreen />;
 	}
 
 	if (!snapshot) {
@@ -275,7 +266,7 @@ export function DrinksScreen({ store }: DrinksScreenProps) {
 					title={t("loadFailed")}
 					body={error ?? t("loadFailedBody")}
 					actionLabel={t("common:actions.tryAgain")}
-					onAction={() => void load()}
+					onAction={() => void reload()}
 					tone="danger"
 				/>
 			</Screen>

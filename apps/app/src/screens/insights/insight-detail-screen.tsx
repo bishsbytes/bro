@@ -1,19 +1,17 @@
-import type { ShownInsight } from "@bro/logic";
 import { formatInsightValue, renderInsightSummary } from "@bro/logic";
-import { useFocusEffect } from "expo-router";
-import { useCallback, useMemo, useState } from "react";
+import { useCallback, useMemo } from "react";
 import { useTranslation } from "react-i18next";
 import { View } from "react-native";
 import { AppText } from "../../components/app-text";
 import { Card } from "../../components/card";
 import { EmptyState } from "../../components/empty-state";
-import { LoadingIndicator } from "../../components/loading-indicator";
-import { StackScreen as Screen } from "../../components/screen";
+import { LoadingScreen, StackScreen as Screen } from "../../components/screen";
 import { SectionHeader } from "../../components/section-header";
 import {
 	createInsightStore,
 	type InsightStore,
 } from "../../insight/insight-store";
+import { useFocusStoreLoad } from "../../lib/use-store-load";
 import { StyleSheet } from "../../theme/unistyles";
 
 type InsightDetailScreenProps = {
@@ -24,33 +22,17 @@ type InsightDetailScreenProps = {
 export function InsightDetailScreen({ id, store }: InsightDetailScreenProps) {
 	const { t } = useTranslation(["insights", "common"]);
 	const insights = useMemo(() => store ?? createInsightStore(), [store]);
-	const [insight, setInsight] = useState<ShownInsight | null>(null);
-	const [loaded, setLoaded] = useState(false);
-	const [error, setError] = useState<string | null>(null);
-
-	const load = useCallback(async () => {
-		setError(null);
-		try {
-			setInsight(await insights.loadDetail(id));
-		} catch (caught) {
-			setError(caught instanceof Error ? caught.message : String(caught));
-		} finally {
-			setLoaded(true);
-		}
-	}, [id, insights]);
-
-	useFocusEffect(
-		useCallback(() => {
-			void load();
-		}, [load]),
+	const {
+		data: insight,
+		error,
+		loading,
+		reload,
+	} = useFocusStoreLoad(
+		useCallback(() => insights.loadDetail(id), [id, insights]),
 	);
 
-	if (!loaded) {
-		return (
-			<Screen centered>
-				<LoadingIndicator size="large" />
-			</Screen>
-		);
+	if (loading) {
+		return <LoadingScreen />;
 	}
 	if (error || !insight) {
 		return (
@@ -59,7 +41,7 @@ export function InsightDetailScreen({ id, store }: InsightDetailScreenProps) {
 					title={error ? t("detail.loadFailed") : t("detail.goneTitle")}
 					body={error ?? t("detail.goneBody")}
 					actionLabel={error ? t("common:actions.tryAgain") : undefined}
-					onAction={error ? () => void load() : undefined}
+					onAction={error ? () => void reload() : undefined}
 					tone={error ? "danger" : "default"}
 				/>
 			</Screen>

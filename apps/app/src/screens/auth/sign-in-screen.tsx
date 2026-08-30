@@ -5,6 +5,7 @@ import { AppText } from "../../components/app-text";
 import { Button } from "../../components/button";
 import { FormField } from "../../components/form-field";
 import { StackScreen as Screen } from "../../components/screen";
+import { toMessage } from "../../lib/errors";
 import { authStyles } from "./auth-styles";
 
 export type SignInScreenProps = {
@@ -28,7 +29,7 @@ export function SignInScreen({ onShowSignUp, onSuccess }: SignInScreenProps) {
 			await signIn(email.trim(), password);
 			await onSuccess?.();
 		} catch (caught) {
-			setError(caught instanceof Error ? caught.message : t("signIn.failed"));
+			setError(toMessage(caught, t("signIn.failed")));
 		} finally {
 			setSubmitting(false);
 		}

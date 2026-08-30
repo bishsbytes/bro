@@ -4,7 +4,7 @@ import {
 	TREND_PERIODS,
 	type TrendPeriod,
 } from "@bro/logic";
-import { type Href, router, useFocusEffect } from "expo-router";
+import { type Href, router } from "expo-router";
 import { useCallback, useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { TouchableOpacity, View } from "react-native";
@@ -18,15 +18,11 @@ import { SectionHeader } from "../../components/section-header";
 import { TrendChart } from "../../components/trend-chart";
 import {
 	createInsightStore,
-	type InsightSnapshot,
 	type InsightStore,
 } from "../../insight/insight-store";
+import { useFocusStoreLoad } from "../../lib/use-store-load";
 import { StyleSheet } from "../../theme/unistyles";
-import {
-	createTrendsStore,
-	type TrendsSnapshot,
-	type TrendsStore,
-} from "../../trends/trends-store";
+import { createTrendsStore, type TrendsStore } from "../../trends/trends-store";
 
 type InsightsScreenProps = {
 	store?: Pick<TrendsStore, "load">;
@@ -41,44 +37,21 @@ export function InsightsScreen({ store, insightStore }: InsightsScreenProps) {
 		[insightStore],
 	);
 	const [period, setPeriod] = useState<TrendPeriod>(7);
-	const [snapshot, setSnapshot] = useState<TrendsSnapshot | null>(null);
-	const [insightSnapshot, setInsightSnapshot] =
-		useState<InsightSnapshot | null>(null);
-	const [error, setError] = useState<string | null>(null);
-	const [insightError, setInsightError] = useState<string | null>(null);
-
-	const loadInsights = useCallback(async () => {
-		setInsightError(null);
-		try {
-			setInsightSnapshot(await insights.load());
-		} catch (caught) {
-			setInsightError(
-				caught instanceof Error ? caught.message : String(caught),
-			);
-		}
-	}, [insights]);
-
-	useFocusEffect(
-		useCallback(() => {
-			let active = true;
-			setSnapshot(null);
-			setError(null);
-			void trends
-				.load(period)
-				.then((nextSnapshot) => {
-					if (active) setSnapshot(nextSnapshot);
-				})
-				.catch((caught: unknown) => {
-					if (active) {
-						setError(caught instanceof Error ? caught.message : String(caught));
-					}
-				});
-			void loadInsights();
-			return () => {
-				active = false;
-			};
-		}, [loadInsights, period, trends]),
+	// Two independent reads: a slow or failed trends query still leaves the
+	// patterns section above it readable, and each retries on its own.
+	const {
+		data: snapshot,
+		error,
+		loading,
+	} = useFocusStoreLoad(
+		useCallback(() => trends.load(period), [period, trends]),
 	);
+	const {
+		data: insightSnapshot,
+		error: insightError,
+		loading: insightLoading,
+		reload: reloadInsights,
+	} = useFocusStoreLoad(useCallback(() => insights.load(), [insights]));
 
 	return (
 		<Screen scroll padded contentContainerStyle={styles.content}>
@@ -89,15 +62,13 @@ export function InsightsScreen({ store, insightStore }: InsightsScreenProps) {
 					title={t("patterns.title")}
 					eyebrow={t("patterns.eyebrow")}
 				/>
-				{!insightSnapshot && !insightError ? (
-					<LoadingIndicator size="large" />
-				) : null}
+				{insightLoading ? <LoadingIndicator size="large" /> : null}
 				{insightError ? (
 					<EmptyState
 						title={t("patterns.loadFailed")}
 						body={insightError}
 						actionLabel={t("common:actions.tryAgain")}
-						onAction={() => void loadInsights()}
+						onAction={() => void reloadInsights()}
 						tone="danger"
 					/>
 				) : null}
@@ -161,7 +132,7 @@ export function InsightsScreen({ store, insightStore }: InsightsScreenProps) {
 					))}
 				</View>
 
-				{!snapshot && !error ? <LoadingIndicator size="large" /> : null}
+				{loading ? <LoadingIndicator size="large" /> : null}
 				{error ? (
 					<EmptyState
 						title={t("trends.loadFailed")}

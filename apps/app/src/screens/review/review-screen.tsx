@@ -1,5 +1,5 @@
 import type { Assessment } from "@bro/database-app";
-import { router, useFocusEffect } from "expo-router";
+import { router } from "expo-router";
 import { useCallback, useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { View } from "react-native";
@@ -8,14 +8,15 @@ import { Button } from "../../components/button";
 import { Card } from "../../components/card";
 import { EmptyState } from "../../components/empty-state";
 import { ListRow } from "../../components/list-row";
-import { LoadingIndicator } from "../../components/loading-indicator";
-import { StackScreen as Screen } from "../../components/screen";
+import { LoadingScreen, StackScreen as Screen } from "../../components/screen";
 import { SectionHeader } from "../../components/section-header";
+import { toMessage } from "../../lib/errors";
+import { useFocusStoreLoad } from "../../lib/use-store-load";
 import {
-	createReviewStore,
-	type ReviewOverview,
-	type ReviewStore,
-} from "../../review/review-store";
+	assessmentDate,
+	formatReviewDate,
+} from "../../review/review-presentation";
+import { createReviewStore, type ReviewStore } from "../../review/review-store";
 import { StyleSheet } from "../../theme/unistyles";
 
 type ReviewScreenProps = {
@@ -23,13 +24,7 @@ type ReviewScreenProps = {
 };
 
 function completedLabel(assessment: Assessment): string {
-	return new Date(
-		assessment.completedAt ?? assessment.startedAt,
-	).toLocaleDateString(undefined, {
-		day: "numeric",
-		month: "short",
-		year: "numeric",
-	});
+	return formatReviewDate(assessmentDate(assessment), "short");
 }
 
 export function ReviewScreen({ store }: ReviewScreenProps) {
@@ -37,24 +32,14 @@ export function ReviewScreen({ store }: ReviewScreenProps) {
 	// shared copy can be reached with an explicit `common:` prefix.
 	const { t } = useTranslation(["review", "common"]);
 	const reviews = useMemo(() => store ?? createReviewStore(), [store]);
-	const [overview, setOverview] = useState<ReviewOverview | null>(null);
-	const [error, setError] = useState<string | null>(null);
 	const [updatingGoalId, setUpdatingGoalId] = useState<string | null>(null);
-
-	const load = useCallback(async () => {
-		setError(null);
-		try {
-			setOverview(await reviews.loadOverview());
-		} catch (caught) {
-			setError(caught instanceof Error ? caught.message : String(caught));
-		}
-	}, [reviews]);
-
-	useFocusEffect(
-		useCallback(() => {
-			void load();
-		}, [load]),
-	);
+	const {
+		data: overview,
+		error,
+		loading,
+		reload,
+		setError,
+	} = useFocusStoreLoad(useCallback(() => reviews.loadOverview(), [reviews]));
 
 	const updateGoal = useCallback(
 		async (id: string, action: "achieve" | "abandon") => {
@@ -66,22 +51,18 @@ export function ReviewScreen({ store }: ReviewScreenProps) {
 				} else {
 					await reviews.abandonGoal(id);
 				}
-				await load();
+				await reload();
 			} catch (caught) {
-				setError(caught instanceof Error ? caught.message : String(caught));
+				setError(toMessage(caught));
 			} finally {
 				setUpdatingGoalId(null);
 			}
 		},
-		[load, reviews],
+		[reload, reviews, setError],
 	);
 
-	if (!overview && !error) {
-		return (
-			<Screen centered>
-				<LoadingIndicator size="large" />
-			</Screen>
-		);
+	if (loading) {
+		return <LoadingScreen />;
 	}
 
 	return (
@@ -180,7 +161,7 @@ export function ReviewScreen({ store }: ReviewScreenProps) {
 					title={t("history.loadFailed")}
 					body={error}
 					actionLabel={t("common:actions.tryAgain")}
-					onAction={() => void load()}
+					onAction={() => void reload()}
 					tone="danger"
 				/>
 			) : null}

@@ -1,23 +1,25 @@
 import type { DayNote, Observation } from "@bro/database-app";
 import type { TFunction } from "i18next";
-import { useEffect, useMemo, useState } from "react";
+import { useCallback, useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { View } from "react-native";
 import { AppText } from "../../components/app-text";
 import { Button } from "../../components/button";
 import { Card } from "../../components/card";
 import { FormField } from "../../components/form-field";
-import { LoadingIndicator } from "../../components/loading-indicator";
 import { ScoreRow } from "../../components/score-row";
-import { StackScreen as Screen } from "../../components/screen";
+import { LoadingScreen, StackScreen as Screen } from "../../components/screen";
 import { SectionHeader } from "../../components/section-header";
 import { resolveMetric } from "../../content";
+import { healthPlatformLabel } from "../../health/platform-label";
 import {
 	createHistoryStore,
 	type HistoricalCheckIn,
 	type HistoryDay,
 	type HistoryStore,
 } from "../../history/history-store";
+import { toMessage } from "../../lib/errors";
+import { useStoreLoad } from "../../lib/use-store-load";
 import { StyleSheet } from "../../theme/unistyles";
 
 type HistoryDayScreenProps = {
@@ -190,43 +192,38 @@ function ObservationRow({
 	);
 }
 
-/** Apple Health and Health Connect are product names and stay untranslated. */
+/** Unlike the other observation lists, an unrecognised source shows as-is. */
 function sourceLabel(t: TFunction<"history">, source: string): string {
-	if (source === "healthkit") return "Apple Health";
-	if (source === "health_connect") return "Health Connect";
-	return source === "user" ? t("day.sourceYou") : source;
+	return (
+		healthPlatformLabel(source) ??
+		(source === "user" ? t("day.sourceYou") : source)
+	);
 }
 
 export function HistoryDayScreen({ localDay, store }: HistoryDayScreenProps) {
 	const { t } = useTranslation("history");
 	const history = useMemo(() => store ?? createHistoryStore(), [store]);
-	const [day, setDay] = useState<HistoryDay | null>(null);
-	const [error, setError] = useState<string | null>(null);
-
-	useEffect(() => {
-		void history
-			.loadDay(localDay)
-			.then(setDay)
-			.catch((caught: unknown) =>
-				setError(caught instanceof Error ? caught.message : String(caught)),
-			);
-	}, [history, localDay]);
+	const {
+		data: day,
+		error,
+		loading,
+		setData: setDay,
+		setError,
+	} = useStoreLoad(
+		useCallback(() => history.loadDay(localDay), [history, localDay]),
+	);
 
 	async function mutate(work: () => Promise<HistoryDay>) {
 		setError(null);
 		try {
 			setDay(await work());
 		} catch (caught) {
-			setError(caught instanceof Error ? caught.message : String(caught));
+			setError(toMessage(caught));
 		}
 	}
 
-	if (!day && !error) {
-		return (
-			<Screen centered>
-				<LoadingIndicator size="large" />
-			</Screen>
-		);
+	if (loading) {
+		return <LoadingScreen />;
 	}
 
 	return (

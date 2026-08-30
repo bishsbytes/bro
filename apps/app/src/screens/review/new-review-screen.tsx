@@ -1,20 +1,20 @@
 import { router, useNavigation } from "expo-router";
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { ScrollView, TouchableOpacity, View } from "react-native";
 import { AppText } from "../../components/app-text";
 import { Button } from "../../components/button";
 import { Card } from "../../components/card";
 import { EmptyState } from "../../components/empty-state";
-import { LoadingIndicator } from "../../components/loading-indicator";
 import { ScoreRow } from "../../components/score-row";
-import { FullScreen as Screen } from "../../components/screen";
+import { LoadingScreen, FullScreen as Screen } from "../../components/screen";
 import { WheelChart } from "../../components/wheel-chart";
 import { playSelectionHaptic } from "../../feedback/selection-haptic";
+import { toMessage } from "../../lib/errors";
+import { useStoreLoad } from "../../lib/use-store-load";
 import { formatScore } from "../../review/review-presentation";
 import {
 	createReviewStore,
-	type ReviewDraft,
 	type ReviewStore,
 	type WheelScore,
 } from "../../review/review-store";
@@ -38,13 +38,17 @@ export function NewReviewScreen({ store }: NewReviewScreenProps) {
 	const { t } = useTranslation("review");
 	const navigation = useNavigation();
 	const reviews = useMemo(() => store ?? createReviewStore(), [store]);
-	const [draft, setDraft] = useState<ReviewDraft | null>(null);
 	const [scores, setScores] = useState<Record<string, number>>({});
 	const [focusItemSlugs, setFocusItemSlugs] = useState<string[]>([]);
 	const [index, setIndex] = useState(0);
 	const [confirmingExit, setConfirmingExit] = useState(false);
-	const [error, setError] = useState<string | null>(null);
 	const [saving, setSaving] = useState(false);
+	const {
+		data: draft,
+		error,
+		loading,
+		setError,
+	} = useStoreLoad(useCallback(() => reviews.beginSitting(), [reviews]));
 
 	const steps = draft?.items ?? [];
 	const answered = Object.keys(scores).length;
@@ -52,25 +56,6 @@ export function NewReviewScreen({ store }: NewReviewScreenProps) {
 	// Set before any navigation this screen asks for, so the guard below lets
 	// the deliberate exits — a discard, and the hop to the saved result — past.
 	const leaving = useRef(false);
-
-	useEffect(() => {
-		let active = true;
-		void reviews
-			.beginSitting()
-			.then((nextDraft) => {
-				if (active) {
-					setDraft(nextDraft);
-				}
-			})
-			.catch((caught: unknown) => {
-				if (active) {
-					setError(caught instanceof Error ? caught.message : String(caught));
-				}
-			});
-		return () => {
-			active = false;
-		};
-	}, [reviews]);
 
 	// A swipe or hardware back would drop every score on the floor, so it does
 	// what the screen's own Back does instead: steps back through the areas, and
@@ -115,18 +100,14 @@ export function NewReviewScreen({ store }: NewReviewScreenProps) {
 				params: { id: result.assessment.id },
 			});
 		} catch (caught) {
-			setError(caught instanceof Error ? caught.message : String(caught));
+			setError(toMessage(caught));
 		} finally {
 			setSaving(false);
 		}
 	}
 
-	if (!draft && !error) {
-		return (
-			<Screen centered>
-				<LoadingIndicator size="large" />
-			</Screen>
-		);
+	if (loading) {
+		return <LoadingScreen variant="full" />;
 	}
 
 	if (!draft) {

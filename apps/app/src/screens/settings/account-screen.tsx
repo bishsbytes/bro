@@ -11,6 +11,7 @@ import { ListRow } from "../../components/list-row";
 import { LoadingIndicator } from "../../components/loading-indicator";
 import { StackScreen as Screen } from "../../components/screen";
 import { SectionHeader } from "../../components/section-header";
+import { toMessage } from "../../lib/errors";
 import { useDeviceSettings } from "../../providers/device-settings-provider";
 import { StyleSheet } from "../../theme/unistyles";
 
@@ -55,9 +56,7 @@ export function AccountScreen() {
 		} catch (caught) {
 			// Sign-out is local-first and reports revocation failure in its result,
 			// so reaching here means the device-local clearing itself broke.
-			setActionError(
-				caught instanceof Error ? caught.message : t("account.signOutFailed"),
-			);
+			setActionError(toMessage(caught, t("account.signOutFailed")));
 		} finally {
 			setSubmitting(false);
 		}
@@ -72,9 +71,7 @@ export function AccountScreen() {
 			resetAction();
 			setNotice(t("account.deleted"));
 		} catch (caught) {
-			setActionError(
-				caught instanceof Error ? caught.message : t("account.deleteFailed"),
-			);
+			setActionError(toMessage(caught, t("account.deleteFailed")));
 		} finally {
 			setSubmitting(false);
 		}

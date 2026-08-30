@@ -1,4 +1,3 @@
-import { useFocusEffect } from "expo-router";
 import type { TFunction } from "i18next";
 import { useCallback, useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
@@ -7,14 +6,15 @@ import { AppText } from "../../components/app-text";
 import { Button } from "../../components/button";
 import { Card } from "../../components/card";
 import { EmptyState } from "../../components/empty-state";
-import { LoadingIndicator } from "../../components/loading-indicator";
-import { StackScreen as Screen } from "../../components/screen";
+import { LoadingScreen, StackScreen as Screen } from "../../components/screen";
 import { SectionHeader } from "../../components/section-header";
 import {
 	createHealthSettingsStore,
 	type HealthSettingsSnapshot,
 	type HealthSettingsStore,
 } from "../../health/health-settings-store";
+import { toMessage } from "../../lib/errors";
+import { useFocusStoreLoad } from "../../lib/use-store-load";
 import { StyleSheet } from "../../theme/unistyles";
 
 type HealthSettingsScreenProps = {
@@ -37,26 +37,17 @@ function importedAtLabel(
 export function HealthSettingsScreen({ store }: HealthSettingsScreenProps) {
 	const { t } = useTranslation(["settings", "common"]);
 	const health = useMemo(() => store ?? createHealthSettingsStore(), [store]);
-	const [snapshot, setSnapshot] = useState<HealthSettingsSnapshot | null>(null);
 	const [busy, setBusy] = useState<
 		"connect" | "refresh" | "disconnect" | "settings" | null
 	>(null);
-	const [error, setError] = useState<string | null>(null);
-
-	const load = useCallback(async () => {
-		setError(null);
-		try {
-			setSnapshot(await health.load());
-		} catch (caught) {
-			setError(caught instanceof Error ? caught.message : String(caught));
-		}
-	}, [health]);
-
-	useFocusEffect(
-		useCallback(() => {
-			void load();
-		}, [load]),
-	);
+	const {
+		data: snapshot,
+		error,
+		loading,
+		reload,
+		setData: setSnapshot,
+		setError,
+	} = useFocusStoreLoad(useCallback(() => health.load(), [health]));
 
 	async function run(
 		action: Exclude<typeof busy, null>,
@@ -69,18 +60,14 @@ export function HealthSettingsScreen({ store }: HealthSettingsScreenProps) {
 			const next = await work();
 			if (next) setSnapshot(next);
 		} catch (caught) {
-			setError(caught instanceof Error ? caught.message : String(caught));
+			setError(toMessage(caught));
 		} finally {
 			setBusy(null);
 		}
 	}
 
-	if (!snapshot && !error) {
-		return (
-			<Screen centered>
-				<LoadingIndicator size="large" />
-			</Screen>
-		);
+	if (loading) {
+		return <LoadingScreen />;
 	}
 
 	if (!snapshot) {
@@ -90,7 +77,7 @@ export function HealthSettingsScreen({ store }: HealthSettingsScreenProps) {
 					title={t("health.loadFailed")}
 					body={error ?? t("loadFailedBody")}
 					actionLabel={t("common:actions.tryAgain")}
-					onAction={() => void load()}
+					onAction={() => void reload()}
 					tone="danger"
 				/>
 			</Screen>

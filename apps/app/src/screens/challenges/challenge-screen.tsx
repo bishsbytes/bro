@@ -8,6 +8,7 @@ import { EmptyState } from "../../components/empty-state";
 import { StackScreen as Screen } from "../../components/screen";
 import { resolveChallenge } from "../../content";
 import { createHabitsStore, type HabitsStore } from "../../habits/habits-store";
+import { toMessage } from "../../lib/errors";
 import { StyleSheet } from "../../theme/unistyles";
 
 export function ChallengeScreen({
@@ -31,7 +32,7 @@ export function ChallengeScreen({
 			const enrolment = await challenges.startChallenge(challenge.slug);
 			router.replace(`/challenges/${enrolment.id}`);
 		} catch (caught) {
-			setError(caught instanceof Error ? caught.message : String(caught));
+			setError(toMessage(caught));
 		} finally {
 			setStarting(false);
 		}

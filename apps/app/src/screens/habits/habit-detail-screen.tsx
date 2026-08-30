@@ -1,18 +1,13 @@
 import type { HabitAdherenceState } from "@bro/logic";
-import { useFocusEffect } from "expo-router";
-import { useCallback, useMemo, useState } from "react";
+import { useCallback, useMemo } from "react";
 import { useTranslation } from "react-i18next";
 import { View } from "react-native";
 import { AppText } from "../../components/app-text";
 import { EmptyState } from "../../components/empty-state";
-import { LoadingIndicator } from "../../components/loading-indicator";
-import { StackScreen as Screen } from "../../components/screen";
+import { LoadingScreen, StackScreen as Screen } from "../../components/screen";
 import { SectionHeader } from "../../components/section-header";
-import {
-	createHabitsStore,
-	type HabitDetail,
-	type HabitsStore,
-} from "../../habits/habits-store";
+import { createHabitsStore, type HabitsStore } from "../../habits/habits-store";
+import { useFocusStoreLoad } from "../../lib/use-store-load";
 import { StyleSheet } from "../../theme/unistyles";
 
 export type HabitDetailScreenProps = {
@@ -38,33 +33,17 @@ const STATE_KEYS = {
 export function HabitDetailScreen({ id, store }: HabitDetailScreenProps) {
 	const { t } = useTranslation(["habits", "common"]);
 	const habits = useMemo(() => store ?? createHabitsStore(), [store]);
-	const [detail, setDetail] = useState<HabitDetail | null>(null);
-	const [loaded, setLoaded] = useState(false);
-	const [error, setError] = useState<string | null>(null);
-
-	const load = useCallback(async () => {
-		setError(null);
-		try {
-			setDetail(await habits.loadHabitDetail(id));
-		} catch (caught) {
-			setError(caught instanceof Error ? caught.message : String(caught));
-		} finally {
-			setLoaded(true);
-		}
-	}, [habits, id]);
-
-	useFocusEffect(
-		useCallback(() => {
-			void load();
-		}, [load]),
+	const {
+		data: detail,
+		error,
+		loading,
+		reload,
+	} = useFocusStoreLoad(
+		useCallback(() => habits.loadHabitDetail(id), [habits, id]),
 	);
 
-	if (!loaded) {
-		return (
-			<Screen centered>
-				<LoadingIndicator size="large" />
-			</Screen>
-		);
+	if (loading) {
+		return <LoadingScreen />;
 	}
 	if (error || !detail) {
 		return (
@@ -73,7 +52,7 @@ export function HabitDetailScreen({ id, store }: HabitDetailScreenProps) {
 					title={error ? t("detail.loadFailed") : t("detail.notFound")}
 					body={error ?? t("detail.notFoundBody")}
 					actionLabel={error ? t("common:actions.tryAgain") : undefined}
-					onAction={error ? () => void load() : undefined}
+					onAction={error ? () => void reload() : undefined}
 					tone={error ? "danger" : "default"}
 				/>
 			</Screen>

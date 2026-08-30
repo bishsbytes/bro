@@ -1,4 +1,4 @@
-import { type Href, router, useFocusEffect } from "expo-router";
+import { type Href, router } from "expo-router";
 import { useCallback, useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { View } from "react-native";
@@ -6,15 +6,12 @@ import { AppText } from "../../components/app-text";
 import { Button } from "../../components/button";
 import { Card } from "../../components/card";
 import { EmptyState } from "../../components/empty-state";
-import { LoadingIndicator } from "../../components/loading-indicator";
-import { StackScreen as Screen } from "../../components/screen";
+import { LoadingScreen, StackScreen as Screen } from "../../components/screen";
 import { SectionHeader } from "../../components/section-header";
 import { ThemedSwitch } from "../../components/themed-switch";
-import {
-	createFoodStore,
-	type FoodSettingsSnapshot,
-	type FoodStore,
-} from "../../food/food-store";
+import { createFoodStore, type FoodStore } from "../../food/food-store";
+import { toMessage } from "../../lib/errors";
+import { useFocusStoreLoad } from "../../lib/use-store-load";
 import { StyleSheet } from "../../theme/unistyles";
 
 type FoodSettingsScreenProps = {
@@ -24,35 +21,32 @@ type FoodSettingsScreenProps = {
 export function FoodSettingsScreen({ store }: FoodSettingsScreenProps) {
 	const { t } = useTranslation(["settings", "common"]);
 	const food = useMemo(() => store ?? createFoodStore(), [store]);
-	const [snapshot, setSnapshot] = useState<FoodSettingsSnapshot | null>(null);
 	const [busyKey, setBusyKey] = useState<string | null>(null);
-	const [error, setError] = useState<string | null>(null);
-	const load = useCallback(async () => {
-		setError(null);
-		try {
-			setSnapshot(await food.loadSettings());
-		} catch (caught) {
-			setError(caught instanceof Error ? caught.message : String(caught));
-		}
-	}, [food]);
-	useFocusEffect(useCallback(() => void load(), [load]));
+	const {
+		data: snapshot,
+		error,
+		loading,
+		reload,
+		setData: setSnapshot,
+		setError,
+	} = useFocusStoreLoad(useCallback(() => food.loadSettings(), [food]));
+
 	async function setTracked(metricSlug: string, enabled: boolean) {
 		setBusyKey(metricSlug);
 		setError(null);
 		try {
 			setSnapshot(await food.setTracked(metricSlug, enabled));
 		} catch (caught) {
-			setError(caught instanceof Error ? caught.message : String(caught));
+			setError(toMessage(caught));
 		} finally {
 			setBusyKey(null);
 		}
 	}
-	if (!snapshot && !error)
-		return (
-			<Screen centered>
-				<LoadingIndicator size="large" />
-			</Screen>
-		);
+
+	if (loading) {
+		return <LoadingScreen />;
+	}
+
 	if (!snapshot)
 		return (
 			<Screen centered padded>
@@ -60,7 +54,7 @@ export function FoodSettingsScreen({ store }: FoodSettingsScreenProps) {
 					title={t("food.loadFailed")}
 					body={error ?? t("loadFailedBody")}
 					actionLabel={t("common:actions.tryAgain")}
-					onAction={() => void load()}
+					onAction={() => void reload()}
 					tone="danger"
 				/>
 			</Screen>

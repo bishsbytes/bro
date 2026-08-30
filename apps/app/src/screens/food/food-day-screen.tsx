@@ -1,5 +1,5 @@
 import { localTimeOf } from "@bro/domain";
-import { type Href, router, useFocusEffect } from "expo-router";
+import { type Href, router } from "expo-router";
 import { useCallback, useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { View } from "react-native";
@@ -8,16 +8,16 @@ import { Button } from "../../components/button";
 import { Card } from "../../components/card";
 import { EmptyState } from "../../components/empty-state";
 import { FormField } from "../../components/form-field";
-import { LoadingIndicator } from "../../components/loading-indicator";
-import { StackScreen as Screen } from "../../components/screen";
+import { LoadingScreen, StackScreen as Screen } from "../../components/screen";
 import { SectionHeader } from "../../components/section-header";
 import {
 	createFoodStore,
-	type FoodDaySnapshot,
 	type FoodStore,
 	type PresentedFoodEntry,
 } from "../../food/food-store";
 import { upperCaseForLanguage } from "../../i18n";
+import { toMessage } from "../../lib/errors";
+import { useFocusStoreLoad } from "../../lib/use-store-load";
 import { StyleSheet } from "../../theme/unistyles";
 
 type FoodDayScreenProps = {
@@ -119,18 +119,17 @@ function EntryEditor({
 export function FoodDayScreen({ localDay, store }: FoodDayScreenProps) {
 	const { t } = useTranslation(["food", "common"]);
 	const food = useMemo(() => store ?? createFoodStore(), [store]);
-	const [snapshot, setSnapshot] = useState<FoodDaySnapshot | null>(null);
 	const [busy, setBusy] = useState(false);
-	const [error, setError] = useState<string | null>(null);
-	const load = useCallback(async () => {
-		setError(null);
-		try {
-			setSnapshot(await food.loadDay(localDay));
-		} catch (caught) {
-			setError(caught instanceof Error ? caught.message : String(caught));
-		}
-	}, [food, localDay]);
-	useFocusEffect(useCallback(() => void load(), [load]));
+	const {
+		data: snapshot,
+		error,
+		loading,
+		setData: setSnapshot,
+		setError,
+	} = useFocusStoreLoad(
+		useCallback(() => food.loadDay(localDay), [food, localDay]),
+	);
+
 	async function mutate(work: () => Promise<unknown>) {
 		if (busy) return;
 		setBusy(true);
@@ -139,17 +138,15 @@ export function FoodDayScreen({ localDay, store }: FoodDayScreenProps) {
 			await work();
 			setSnapshot(await food.loadDay(localDay));
 		} catch (caught) {
-			setError(caught instanceof Error ? caught.message : String(caught));
+			setError(toMessage(caught));
 		} finally {
 			setBusy(false);
 		}
 	}
-	if (!snapshot && !error)
-		return (
-			<Screen centered>
-				<LoadingIndicator size="large" />
-			</Screen>
-		);
+
+	if (loading) {
+		return <LoadingScreen />;
+	}
 	if (!snapshot)
 		return (
 			<Screen centered padded>

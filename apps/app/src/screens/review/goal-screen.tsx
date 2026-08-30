@@ -1,18 +1,15 @@
 import { router } from "expo-router";
-import { useEffect, useMemo, useState } from "react";
+import { useCallback, useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { AppText } from "../../components/app-text";
 import { Button } from "../../components/button";
 import { Card } from "../../components/card";
 import { EmptyState } from "../../components/empty-state";
 import { FormField } from "../../components/form-field";
-import { LoadingIndicator } from "../../components/loading-indicator";
-import { StackScreen as Screen } from "../../components/screen";
-import {
-	createReviewStore,
-	type GoalSetup,
-	type ReviewStore,
-} from "../../review/review-store";
+import { LoadingScreen, StackScreen as Screen } from "../../components/screen";
+import { toMessage } from "../../lib/errors";
+import { useStoreLoad } from "../../lib/use-store-load";
+import { createReviewStore, type ReviewStore } from "../../review/review-store";
 import { StyleSheet } from "../../theme/unistyles";
 
 type GoalScreenProps = {
@@ -28,31 +25,24 @@ export function GoalScreen({
 }: GoalScreenProps) {
 	const { t } = useTranslation("review");
 	const reviews = useMemo(() => store ?? createReviewStore(), [store]);
-	const [setup, setSetup] = useState<GoalSetup | null | undefined>(undefined);
 	const [target, setTarget] = useState("");
 	const [targetDate, setTargetDate] = useState("");
-	const [error, setError] = useState<string | null>(null);
 	const [saving, setSaving] = useState(false);
-
-	useEffect(() => {
-		setSetup(undefined);
-		setError(null);
-		void reviews
-			.loadGoalSetup(assessmentId, metricSlug)
-			.then((nextSetup) => {
-				setSetup(nextSetup);
-				if (nextSetup) {
-					setTarget(
-						String(
-							nextSetup.currentValue < 10 ? nextSetup.currentValue + 1 : 9,
-						),
-					);
-				}
-			})
-			.catch((caught: unknown) => {
-				setError(caught instanceof Error ? caught.message : String(caught));
-			});
-	}, [assessmentId, metricSlug, reviews]);
+	const {
+		data: setup,
+		error,
+		loading,
+		setError,
+	} = useStoreLoad(
+		useCallback(async () => {
+			const next = await reviews.loadGoalSetup(assessmentId, metricSlug);
+			// Open on the next point up, so the common case is one tap to save.
+			if (next) {
+				setTarget(String(next.currentValue < 10 ? next.currentValue + 1 : 9));
+			}
+			return next;
+		}, [assessmentId, metricSlug, reviews]),
+	);
 
 	async function save() {
 		if (!setup || saving) {
@@ -69,18 +59,14 @@ export function GoalScreen({
 			);
 			router.replace("/review");
 		} catch (caught) {
-			setError(caught instanceof Error ? caught.message : String(caught));
+			setError(toMessage(caught));
 		} finally {
 			setSaving(false);
 		}
 	}
 
-	if (setup === undefined && !error) {
-		return (
-			<Screen centered>
-				<LoadingIndicator size="large" />
-			</Screen>
-		);
+	if (loading) {
+		return <LoadingScreen />;
 	}
 
 	if (!setup) {

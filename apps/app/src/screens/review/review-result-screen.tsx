@@ -1,23 +1,23 @@
 import { router } from "expo-router";
 import type { TFunction } from "i18next";
-import { useEffect, useMemo, useState } from "react";
+import { useCallback, useMemo } from "react";
 import { useTranslation } from "react-i18next";
 import { View } from "react-native";
 import { AppText } from "../../components/app-text";
 import { Button } from "../../components/button";
 import { Card } from "../../components/card";
 import { EmptyState } from "../../components/empty-state";
-import { LoadingIndicator } from "../../components/loading-indicator";
-import { StackScreen as Screen } from "../../components/screen";
+import { LoadingScreen, StackScreen as Screen } from "../../components/screen";
 import { SectionHeader } from "../../components/section-header";
 import { WheelChart } from "../../components/wheel-chart";
 import { challengeForArea, habitsForArea } from "../../content";
-import { formatScore } from "../../review/review-presentation";
+import { useStoreLoad } from "../../lib/use-store-load";
 import {
-	createReviewStore,
-	type ReviewResult,
-	type ReviewStore,
-} from "../../review/review-store";
+	assessmentDate,
+	formatReviewDate,
+	formatScore,
+} from "../../review/review-presentation";
+import { createReviewStore, type ReviewStore } from "../../review/review-store";
 import { StyleSheet } from "../../theme/unistyles";
 
 type ReviewResultScreenProps = {
@@ -38,28 +38,19 @@ export function ReviewResultScreen({
 }: ReviewResultScreenProps) {
 	const { t } = useTranslation("review");
 	const reviews = useMemo(() => store ?? createReviewStore(), [store]);
-	const [result, setResult] = useState<ReviewResult | null | undefined>(
-		undefined,
+	const {
+		data: result,
+		error,
+		loading,
+	} = useStoreLoad(
+		useCallback(
+			() => reviews.loadResult(assessmentId),
+			[assessmentId, reviews],
+		),
 	);
-	const [error, setError] = useState<string | null>(null);
 
-	useEffect(() => {
-		setResult(undefined);
-		setError(null);
-		void reviews
-			.loadResult(assessmentId)
-			.then(setResult)
-			.catch((caught: unknown) =>
-				setError(caught instanceof Error ? caught.message : String(caught)),
-			);
-	}, [assessmentId, reviews]);
-
-	if (result === undefined && !error) {
-		return (
-			<Screen centered>
-				<LoadingIndicator size="large" />
-			</Screen>
-		);
+	if (loading) {
+		return <LoadingScreen />;
 	}
 
 	if (!result || error) {
@@ -78,13 +69,7 @@ export function ReviewResultScreen({
 	const comparisonBySlug = new Map(
 		result.comparisons.map((comparison) => [comparison.slug, comparison]),
 	);
-	const completed = new Date(
-		result.assessment.completedAt ?? result.assessment.startedAt,
-	).toLocaleDateString(undefined, {
-		day: "numeric",
-		month: "long",
-		year: "numeric",
-	});
+	const completed = formatReviewDate(assessmentDate(result.assessment));
 
 	return (
 		<Screen scroll padded contentContainerStyle={styles.content}>

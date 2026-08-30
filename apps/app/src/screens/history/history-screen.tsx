@@ -1,18 +1,17 @@
 import { localDayOf } from "@bro/domain";
 import { formatLocalDayLabel } from "@bro/logic";
-import { router, useFocusEffect } from "expo-router";
-import { useCallback, useMemo, useState } from "react";
+import { router } from "expo-router";
+import { useCallback, useMemo } from "react";
 import { useTranslation } from "react-i18next";
 import { AppText } from "../../components/app-text";
 import { EmptyState } from "../../components/empty-state";
 import { ListRow } from "../../components/list-row";
-import { LoadingIndicator } from "../../components/loading-indicator";
-import { StackScreen as Screen } from "../../components/screen";
+import { LoadingScreen, StackScreen as Screen } from "../../components/screen";
 import {
 	createHistoryStore,
-	type HistoryDaySummary,
 	type HistoryStore,
 } from "../../history/history-store";
+import { useFocusStoreLoad } from "../../lib/use-store-load";
 
 type HistoryScreenProps = {
 	store?: Pick<HistoryStore, "loadHistory">;
@@ -21,31 +20,16 @@ type HistoryScreenProps = {
 export function HistoryScreen({ store }: HistoryScreenProps) {
 	const { t } = useTranslation(["history", "common"]);
 	const history = useMemo(() => store ?? createHistoryStore(), [store]);
-	const [days, setDays] = useState<HistoryDaySummary[] | null>(null);
-	const [error, setError] = useState<string | null>(null);
 	const todayLocalDay = localDayOf(new Date());
+	const {
+		data: days,
+		error,
+		loading,
+		reload,
+	} = useFocusStoreLoad(useCallback(() => history.loadHistory(), [history]));
 
-	const load = useCallback(async () => {
-		setError(null);
-		try {
-			setDays(await history.loadHistory());
-		} catch (caught) {
-			setError(caught instanceof Error ? caught.message : String(caught));
-		}
-	}, [history]);
-
-	useFocusEffect(
-		useCallback(() => {
-			void load();
-		}, [load]),
-	);
-
-	if (!days && !error) {
-		return (
-			<Screen centered>
-				<LoadingIndicator size="large" />
-			</Screen>
-		);
+	if (loading) {
+		return <LoadingScreen />;
 	}
 
 	return (
@@ -55,7 +39,7 @@ export function HistoryScreen({ store }: HistoryScreenProps) {
 					title={t("loadFailed")}
 					body={error}
 					actionLabel={t("common:actions.tryAgain")}
-					onAction={() => void load()}
+					onAction={() => void reload()}
 					tone="danger"
 				/>
 			) : null}

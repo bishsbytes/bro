@@ -1,6 +1,6 @@
 import { isWheelReviewDue } from "@bro/logic";
-import { router, useFocusEffect } from "expo-router";
-import { useCallback, useMemo, useState } from "react";
+import { router } from "expo-router";
+import { useCallback, useMemo } from "react";
 import { useTranslation } from "react-i18next";
 import { View } from "react-native";
 import { AppText } from "../../components/app-text";
@@ -8,8 +8,7 @@ import { Button } from "../../components/button";
 import { Card } from "../../components/card";
 import { EmptyState } from "../../components/empty-state";
 import { ListRow } from "../../components/list-row";
-import { LoadingIndicator } from "../../components/loading-indicator";
-import { Screen } from "../../components/screen";
+import { LoadingScreen, Screen } from "../../components/screen";
 import { SectionHeader } from "../../components/section-header";
 import { WheelChart } from "../../components/wheel-chart";
 import {
@@ -17,6 +16,8 @@ import {
 	type HabitsStore,
 	type TodayHabitsSnapshot,
 } from "../../habits/habits-store";
+import { useFocusStoreLoad } from "../../lib/use-store-load";
+import { formatReviewDate } from "../../review/review-presentation";
 import {
 	createReviewStore,
 	type ReviewOverview,
@@ -37,14 +38,6 @@ type LifeSnapshot = {
 	habits: TodayHabitsSnapshot;
 };
 
-function completedLabel(completedAt: number): string {
-	return new Date(completedAt).toLocaleDateString(undefined, {
-		day: "numeric",
-		month: "long",
-		year: "numeric",
-	});
-}
-
 export function LifeScreen({ reviewStore, habitsStore, now }: LifeScreenProps) {
 	const { t } = useTranslation(["life", "common"]);
 	const reviews = useMemo(
@@ -55,35 +48,24 @@ export function LifeScreen({ reviewStore, habitsStore, now }: LifeScreenProps) {
 		() => habitsStore ?? createHabitsStore(),
 		[habitsStore],
 	);
-	const [snapshot, setSnapshot] = useState<LifeSnapshot | null>(null);
-	const [error, setError] = useState<string | null>(null);
-
-	const load = useCallback(async () => {
-		setError(null);
-		try {
+	const {
+		data: snapshot,
+		error,
+		loading,
+		reload,
+	} = useFocusStoreLoad(
+		useCallback(async (): Promise<LifeSnapshot> => {
 			const [overview, latest, habitsToday] = await Promise.all([
 				reviews.loadOverview(),
 				reviews.loadLatestWheel(),
 				habits.loadToday(),
 			]);
-			setSnapshot({ overview, latest, habits: habitsToday });
-		} catch (caught) {
-			setError(caught instanceof Error ? caught.message : String(caught));
-		}
-	}, [habits, reviews]);
-
-	useFocusEffect(
-		useCallback(() => {
-			void load();
-		}, [load]),
+			return { overview, latest, habits: habitsToday };
+		}, [habits, reviews]),
 	);
 
-	if (!snapshot && !error) {
-		return (
-			<Screen centered>
-				<LoadingIndicator size="large" />
-			</Screen>
-		);
+	if (loading) {
+		return <LoadingScreen variant="tab" />;
 	}
 
 	if (!snapshot) {
@@ -93,7 +75,7 @@ export function LifeScreen({ reviewStore, habitsStore, now }: LifeScreenProps) {
 					title={t("loadFailed")}
 					body={error ?? t("loadFailedBody")}
 					actionLabel={t("common:actions.tryAgain")}
-					onAction={() => void load()}
+					onAction={() => void reload()}
 					tone="danger"
 				/>
 			</Screen>
@@ -128,7 +110,7 @@ export function LifeScreen({ reviewStore, habitsStore, now }: LifeScreenProps) {
 					<SectionHeader
 						title={t("wheel.title")}
 						eyebrow={t("wheel.reviewedEyebrow", {
-							date: completedLabel(completedAt).toLocaleUpperCase(),
+							date: formatReviewDate(completedAt).toLocaleUpperCase(),
 						})}
 					/>
 					{latest.scores.length >= 3 ? (

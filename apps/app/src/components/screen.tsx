@@ -7,6 +7,7 @@ import {
 } from "react-native";
 import { type Edge, SafeAreaView } from "react-native-safe-area-context";
 import { StyleSheet, useUnistyles } from "../theme/unistyles";
+import { LoadingIndicator } from "./loading-indicator";
 
 type Spacing = "xs" | "sm" | "md" | "lg" | "xl" | "xxl" | "xxxl";
 
@@ -83,6 +84,31 @@ export function StackScreen(props: StackScreenProps) {
 /** Screen used without either a native header or a bottom tab bar. */
 export function FullScreen(props: FullScreenProps) {
 	return <Screen {...props} edges={["top", "bottom"]} />;
+}
+
+/**
+ * A whole screen given over to its first load.
+ *
+ * `variant` names the Screen the loaded content will use, so the spinner sits
+ * inside the same safe-area boundary and content does not jump when it
+ * arrives. Most screens sit under a native stack header, hence the default.
+ */
+export function LoadingScreen({
+	variant = "stack",
+}: {
+	variant?: "stack" | "tab" | "full";
+}) {
+	const Boundary =
+		variant === "stack"
+			? StackScreen
+			: variant === "full"
+				? FullScreen
+				: Screen;
+	return (
+		<Boundary centered>
+			<LoadingIndicator size="large" />
+		</Boundary>
+	);
 }
 
 const styles = StyleSheet.create((theme) => ({

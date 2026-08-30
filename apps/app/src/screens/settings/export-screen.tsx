@@ -13,6 +13,7 @@ import {
 	exportFileName,
 	shareExport,
 } from "../../export/share-export";
+import { toMessage } from "../../lib/errors";
 import { StyleSheet } from "../../theme/unistyles";
 
 type ExportScreenProps = {
@@ -40,7 +41,7 @@ export function ExportScreen({
 			const shared = await share(payload, exportFileName());
 			setResult(shared.message);
 		} catch (caught) {
-			setError(caught instanceof Error ? caught.message : String(caught));
+			setError(toMessage(caught));
 		} finally {
 			setBusy(false);
 		}

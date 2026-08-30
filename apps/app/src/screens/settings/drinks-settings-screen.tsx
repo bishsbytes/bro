@@ -1,4 +1,4 @@
-import { type Href, router, useFocusEffect } from "expo-router";
+import { type Href, router } from "expo-router";
 import { useCallback, useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { View } from "react-native";
@@ -6,8 +6,7 @@ import { AppText } from "../../components/app-text";
 import { Button } from "../../components/button";
 import { Card } from "../../components/card";
 import { EmptyState } from "../../components/empty-state";
-import { LoadingIndicator } from "../../components/loading-indicator";
-import { StackScreen as Screen } from "../../components/screen";
+import { LoadingScreen, StackScreen as Screen } from "../../components/screen";
 import { SectionHeader } from "../../components/section-header";
 import { ThemedSwitch } from "../../components/themed-switch";
 import {
@@ -15,6 +14,8 @@ import {
 	type DrinkSettingsSnapshot,
 	type DrinksStore,
 } from "../../drinks/drinks-store";
+import { toMessage } from "../../lib/errors";
+import { useFocusStoreLoad } from "../../lib/use-store-load";
 import { StyleSheet } from "../../theme/unistyles";
 
 type DrinksSettingsScreenProps = {
@@ -24,24 +25,15 @@ type DrinksSettingsScreenProps = {
 export function DrinksSettingsScreen({ store }: DrinksSettingsScreenProps) {
 	const { t } = useTranslation(["settings", "common"]);
 	const drinks = useMemo(() => store ?? createDrinksStore(), [store]);
-	const [snapshot, setSnapshot] = useState<DrinkSettingsSnapshot | null>(null);
 	const [busyKey, setBusyKey] = useState<string | null>(null);
-	const [error, setError] = useState<string | null>(null);
-
-	const load = useCallback(async () => {
-		setError(null);
-		try {
-			setSnapshot(await drinks.loadSettings());
-		} catch (caught) {
-			setError(caught instanceof Error ? caught.message : String(caught));
-		}
-	}, [drinks]);
-
-	useFocusEffect(
-		useCallback(() => {
-			void load();
-		}, [load]),
-	);
+	const {
+		data: snapshot,
+		error,
+		loading,
+		reload,
+		setData: setSnapshot,
+		setError,
+	} = useFocusStoreLoad(useCallback(() => drinks.loadSettings(), [drinks]));
 
 	async function mutate(
 		key: string,
@@ -52,18 +44,14 @@ export function DrinksSettingsScreen({ store }: DrinksSettingsScreenProps) {
 		try {
 			setSnapshot(await work());
 		} catch (caught) {
-			setError(caught instanceof Error ? caught.message : String(caught));
+			setError(toMessage(caught));
 		} finally {
 			setBusyKey(null);
 		}
 	}
 
-	if (!snapshot && !error) {
-		return (
-			<Screen centered>
-				<LoadingIndicator size="large" />
-			</Screen>
-		);
+	if (loading) {
+		return <LoadingScreen />;
 	}
 
 	if (!snapshot) {
@@ -73,7 +61,7 @@ export function DrinksSettingsScreen({ store }: DrinksSettingsScreenProps) {
 					title={t("drinks.loadFailed")}
 					body={error ?? t("loadFailedBody")}
 					actionLabel={t("common:actions.tryAgain")}
-					onAction={() => void load()}
+					onAction={() => void reload()}
 					tone="danger"
 				/>
 			</Screen>

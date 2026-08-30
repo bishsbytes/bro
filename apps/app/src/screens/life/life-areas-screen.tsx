@@ -10,7 +10,6 @@ import {
 	MAX_ACTIVE_LIFE_AREAS,
 	type ResolvedLifeArea,
 } from "@bro/domain/life-area-catalogue";
-import { useFocusEffect } from "expo-router";
 import { useCallback, useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { View } from "react-native";
@@ -19,10 +18,11 @@ import { Button } from "../../components/button";
 import { Card } from "../../components/card";
 import { EmptyState } from "../../components/empty-state";
 import { FormField } from "../../components/form-field";
-import { LoadingIndicator } from "../../components/loading-indicator";
-import { StackScreen as Screen } from "../../components/screen";
+import { LoadingScreen, StackScreen as Screen } from "../../components/screen";
 import { ThemedSwitch } from "../../components/themed-switch";
 import { resolveLifeAreas } from "../../content";
+import { toMessage } from "../../lib/errors";
+import { useFocusStoreLoad } from "../../lib/use-store-load";
 import { StyleSheet } from "../../theme/unistyles";
 
 type LifeAreaRepository = Pick<
@@ -44,27 +44,21 @@ export function LifeAreasScreen({ repository }: LifeAreasScreenProps) {
 		() => repository ?? createRepository(),
 		[repository],
 	);
-	const [areas, setAreas] = useState<ResolvedLifeArea[] | null>(null);
 	const [editingSlug, setEditingSlug] = useState<LifeAreaSlug | null>(null);
 	const [labelDraft, setLabelDraft] = useState("");
 	const [busy, setBusy] = useState(false);
-	const [error, setError] = useState<string | null>(null);
-
-	const load = useCallback(async () => {
-		try {
-			setError(null);
+	const {
+		data: areas,
+		error,
+		loading,
+		reload,
+		setError,
+	} = useFocusStoreLoad(
+		useCallback(async () => {
 			const overlays: ResolvedTrackedMetric[] =
 				await areasRepository.listResolved(DEFAULT_LIFE_AREA_METRICS);
-			setAreas(resolveLifeAreas(overlays));
-		} catch (caught) {
-			setError(caught instanceof Error ? caught.message : String(caught));
-		}
-	}, [areasRepository]);
-
-	useFocusEffect(
-		useCallback(() => {
-			void load();
-		}, [load]),
+			return resolveLifeAreas(overlays);
+		}, [areasRepository]),
 	);
 
 	async function mutate(work: () => Promise<unknown>) {
@@ -73,9 +67,9 @@ export function LifeAreasScreen({ repository }: LifeAreasScreenProps) {
 		try {
 			await work();
 			setEditingSlug(null);
-			await load();
+			await reload();
 		} catch (caught) {
-			setError(caught instanceof Error ? caught.message : String(caught));
+			setError(toMessage(caught));
 		} finally {
 			setBusy(false);
 		}
@@ -112,12 +106,8 @@ export function LifeAreasScreen({ repository }: LifeAreasScreenProps) {
 		);
 	}
 
-	if (!areas && !error) {
-		return (
-			<Screen centered>
-				<LoadingIndicator size="large" />
-			</Screen>
-		);
+	if (loading) {
+		return <LoadingScreen />;
 	}
 
 	if (!areas) {
@@ -127,7 +117,7 @@ export function LifeAreasScreen({ repository }: LifeAreasScreenProps) {
 					title={t("areas.loadFailed")}
 					body={error ?? t("loadFailedBody")}
 					actionLabel={t("common:actions.tryAgain")}
-					onAction={() => void load()}
+					onAction={() => void reload()}
 					tone="danger"
 				/>
 			</Screen>

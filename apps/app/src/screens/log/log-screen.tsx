@@ -1,5 +1,5 @@
 import type { MeasurementEntry } from "@bro/domain";
-import { router, useFocusEffect } from "expo-router";
+import { router } from "expo-router";
 import type { TFunction } from "i18next";
 import { useCallback, useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
@@ -16,9 +16,8 @@ import { Button } from "../../components/button";
 import { Card } from "../../components/card";
 import { EmptyState } from "../../components/empty-state";
 import { ListRow } from "../../components/list-row";
-import { LoadingIndicator } from "../../components/loading-indicator";
 import { MeasurementField } from "../../components/measurement-field";
-import { Screen } from "../../components/screen";
+import { LoadingScreen, Screen } from "../../components/screen";
 import { SectionHeader } from "../../components/section-header";
 import { ThemedSwitch } from "../../components/themed-switch";
 import { TrendChart } from "../../components/trend-chart";
@@ -32,7 +31,10 @@ import {
 	type FoodDaySnapshot,
 	type FoodStore,
 } from "../../food/food-store";
+import { healthPlatformLabel } from "../../health/platform-label";
 import { upperCaseForLanguage } from "../../i18n";
+import { toMessage } from "../../lib/errors";
+import { useFocusStoreLoad } from "../../lib/use-store-load";
 import {
 	EMPTY_ENTRY,
 	isBlankEntry,
@@ -63,11 +65,8 @@ function observedLabel(observedAt: number): string {
 	});
 }
 
-/** Apple Health and Health Connect are product names and stay untranslated. */
 function sourceLabel(t: TFunction<"log">, source: string): string {
-	if (source === "healthkit") return "Apple Health";
-	if (source === "health_connect") return "Health Connect";
-	return t("measurements.sourceYou");
+	return healthPlatformLabel(source) ?? t("measurements.sourceYou");
 }
 
 function goalLine(t: TFunction<"log">, goal: BodyGoalProgress): string {
@@ -135,34 +134,25 @@ export function LogScreen({
 		[drinksStore],
 	);
 	const food = useMemo(() => foodStore ?? createFoodStore(), [foodStore]);
-	const [snapshot, setSnapshot] = useState<LogSnapshot | null>(null);
 	const [busySlug, setBusySlug] = useState<string | null>(null);
-	const [error, setError] = useState<string | null>(null);
 	const [entries, setEntries] = useState<Record<string, MeasurementEntry>>({});
 	const [entryErrors, setEntryErrors] = useState<Record<string, string>>({});
-
-	const load = useCallback(async () => {
-		setError(null);
-		try {
+	const {
+		data: snapshot,
+		error,
+		loading,
+		reload,
+		setData: setSnapshot,
+		setError,
+	} = useFocusStoreLoad(
+		useCallback(async (): Promise<LogSnapshot> => {
 			const [bodyOverview, drinksToday, foodToday] = await Promise.all([
 				body.loadOverview(),
 				drinks.loadToday(),
 				food.loadToday(),
 			]);
-			setSnapshot({
-				body: bodyOverview,
-				drinks: drinksToday,
-				food: foodToday,
-			});
-		} catch (caught) {
-			setError(caught instanceof Error ? caught.message : String(caught));
-		}
-	}, [body, drinks, food]);
-
-	useFocusEffect(
-		useCallback(() => {
-			void load();
-		}, [load]),
+			return { body: bodyOverview, drinks: drinksToday, food: foodToday };
+		}, [body, drinks, food]),
 	);
 
 	async function setTracked(metricSlug: string, enabled: boolean) {
@@ -175,7 +165,7 @@ export function LogScreen({
 				body: await body.setTracked(metricSlug, enabled),
 			});
 		} catch (caught) {
-			setError(caught instanceof Error ? caught.message : String(caught));
+			setError(toMessage(caught));
 		} finally {
 			setBusySlug(null);
 		}
@@ -217,18 +207,14 @@ export function LogScreen({
 			setSnapshot({ ...snapshot, body: recorded });
 			setEntries((current) => ({ ...current, [metricSlug]: EMPTY_ENTRY }));
 		} catch (caught) {
-			setError(caught instanceof Error ? caught.message : String(caught));
+			setError(toMessage(caught));
 		} finally {
 			setBusySlug(null);
 		}
 	}
 
-	if (!snapshot && !error) {
-		return (
-			<Screen centered>
-				<LoadingIndicator size="large" />
-			</Screen>
-		);
+	if (loading) {
+		return <LoadingScreen variant="tab" />;
 	}
 
 	if (!snapshot) {
@@ -238,7 +224,7 @@ export function LogScreen({
 					title={t("loadFailed")}
 					body={error ?? t("loadFailedBody")}
 					actionLabel={t("common:actions.tryAgain")}
-					onAction={() => void load()}
+					onAction={() => void reload()}
 					tone="danger"
 				/>
 			</Screen>

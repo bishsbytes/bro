@@ -17,8 +17,9 @@ import { Button } from "../../components/button";
 import { EmptyState } from "../../components/empty-state";
 import { LoadingIndicator } from "../../components/loading-indicator";
 import { ScoreRow } from "../../components/score-row";
-import { FullScreen as Screen } from "../../components/screen";
+import { LoadingScreen, FullScreen as Screen } from "../../components/screen";
 import { playSelectionHaptic } from "../../feedback/selection-haptic";
+import { toMessage } from "../../lib/errors";
 import { StyleSheet } from "../../theme/unistyles";
 
 type CheckInScreenProps = {
@@ -125,7 +126,7 @@ export function CheckInScreen({
 			})
 			.catch((caught: unknown) => {
 				if (!active) return;
-				setLoadError(caught instanceof Error ? caught.message : String(caught));
+				setLoadError(toMessage(caught));
 			});
 		return () => {
 			active = false;
@@ -176,7 +177,7 @@ export function CheckInScreen({
 			return true;
 		} catch (caught) {
 			committed.current = false;
-			setSaveError(caught instanceof Error ? caught.message : String(caught));
+			setSaveError(toMessage(caught));
 			return false;
 		} finally {
 			setSaving(false);
@@ -220,11 +221,7 @@ export function CheckInScreen({
 	}
 
 	if (!today && !loadError) {
-		return (
-			<Screen centered>
-				<LoadingIndicator size="large" />
-			</Screen>
-		);
+		return <LoadingScreen variant="full" />;
 	}
 
 	if (!today) {

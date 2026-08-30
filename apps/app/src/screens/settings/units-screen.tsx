@@ -1,5 +1,4 @@
 import type { WeekStartDay } from "@bro/domain";
-import { useFocusEffect } from "expo-router";
 import { useCallback, useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { View } from "react-native";
@@ -7,9 +6,10 @@ import { AppText } from "../../components/app-text";
 import { Button } from "../../components/button";
 import { Card } from "../../components/card";
 import { EmptyState } from "../../components/empty-state";
-import { LoadingIndicator } from "../../components/loading-indicator";
-import { StackScreen as Screen } from "../../components/screen";
+import { LoadingScreen, StackScreen as Screen } from "../../components/screen";
 import { SectionHeader } from "../../components/section-header";
+import { toMessage } from "../../lib/errors";
+import { useFocusStoreLoad } from "../../lib/use-store-load";
 import { StyleSheet } from "../../theme/unistyles";
 import {
 	createUnitSettingsStore,
@@ -37,65 +37,53 @@ function resolvedLabel(
 export function UnitsScreen({ store }: UnitsScreenProps) {
 	const { t } = useTranslation(["settings", "common"]);
 	const unitsStore = useMemo(() => store ?? createUnitSettingsStore(), [store]);
-	const [snapshot, setSnapshot] = useState<UnitSettingsSnapshot | null>(null);
-	const [weekStart, setWeekStart] = useState<WeekStartDay | null>(null);
-	const [error, setError] = useState<string | null>(null);
 	const [busyDimension, setBusyDimension] = useState<string | null>(null);
-
-	const load = useCallback(async () => {
-		try {
-			setError(null);
-			const [nextSnapshot, nextWeekStart] = await Promise.all([
+	// Units and week start are separate preferences, but the screen shows them
+	// as one page and has nothing to say until both have arrived.
+	const { data, error, loading, reload, setData, setError } = useFocusStoreLoad(
+		useCallback(async () => {
+			const [snapshot, weekStart] = await Promise.all([
 				unitsStore.load(),
 				unitsStore.loadWeekStart(),
 			]);
-			setSnapshot(nextSnapshot);
-			setWeekStart(nextWeekStart);
-		} catch (caught) {
-			setError(caught instanceof Error ? caught.message : String(caught));
-		}
-	}, [unitsStore]);
-
-	useFocusEffect(
-		useCallback(() => {
-			void load();
-		}, [load]),
+			return { snapshot, weekStart };
+		}, [unitsStore]),
 	);
+	const snapshot = data?.snapshot;
+	const weekStart = data?.weekStart;
 
 	async function choose(
 		dimension: UnitSettingsSnapshot["settings"][number]["dimension"],
 		unit: string,
 	) {
+		if (!data) return;
 		setBusyDimension(dimension);
 		setError(null);
 		try {
-			setSnapshot(await unitsStore.set(dimension, unit));
+			setData({ ...data, snapshot: await unitsStore.set(dimension, unit) });
 		} catch (caught) {
-			setError(caught instanceof Error ? caught.message : String(caught));
+			setError(toMessage(caught));
 		} finally {
 			setBusyDimension(null);
 		}
 	}
 
 	async function chooseWeekStart(day: WeekStartDay) {
+		if (!data) return;
 		setBusyDimension("week_start");
 		setError(null);
 		try {
 			await unitsStore.setWeekStart(day);
-			setWeekStart(day);
+			setData({ ...data, weekStart: day });
 		} catch (caught) {
-			setError(caught instanceof Error ? caught.message : String(caught));
+			setError(toMessage(caught));
 		} finally {
 			setBusyDimension(null);
 		}
 	}
 
-	if ((!snapshot || !weekStart) && !error) {
-		return (
-			<Screen centered>
-				<LoadingIndicator size="large" />
-			</Screen>
-		);
+	if (loading) {
+		return <LoadingScreen />;
 	}
 
 	return (
@@ -107,7 +95,7 @@ export function UnitsScreen({ store }: UnitsScreenProps) {
 					title={t("units.updateFailed")}
 					body={error}
 					actionLabel={t("common:actions.tryAgain")}
-					onAction={() => void load()}
+					onAction={() => void reload()}
 					tone="danger"
 				/>
 			) : null}

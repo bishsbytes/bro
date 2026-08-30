@@ -1,7 +1,7 @@
 import type { WeekStartDay } from "@bro/domain";
 import type { HabitTemplate } from "@bro/domain/habit-catalogue";
 import { orderedIsoWeekdays } from "@bro/logic";
-import { type Href, router, useFocusEffect } from "expo-router";
+import { type Href, router } from "expo-router";
 import type { TFunction } from "i18next";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
@@ -11,17 +11,17 @@ import { Button } from "../../components/button";
 import { Card } from "../../components/card";
 import { EmptyState } from "../../components/empty-state";
 import { FormField } from "../../components/form-field";
-import { LoadingIndicator } from "../../components/loading-indicator";
-import { StackScreen as Screen } from "../../components/screen";
+import { LoadingScreen, StackScreen as Screen } from "../../components/screen";
 import { SectionHeader } from "../../components/section-header";
 import { resolveHabit } from "../../content";
 import {
 	createHabitsStore,
 	type HabitEditorDraft,
 	type HabitSettingsItem,
-	type HabitSettingsSnapshot,
 	type HabitsStore,
 } from "../../habits/habits-store";
+import { toMessage } from "../../lib/errors";
+import { useFocusStoreLoad } from "../../lib/use-store-load";
 import { StyleSheet } from "../../theme/unistyles";
 import {
 	createUnitSettingsStore,
@@ -66,9 +66,6 @@ export function HabitsScreen({
 		() => unitSettingsStore ?? createUnitSettingsStore(),
 		[unitSettingsStore],
 	);
-	const [snapshot, setSnapshot] = useState<HabitSettingsSnapshot | null>(null);
-	const [weekStart, setWeekStart] = useState<WeekStartDay>("monday");
-	const weekdays = useMemo(() => orderedIsoWeekdays(weekStart), [weekStart]);
 	const [editor, setEditor] = useState<Editor | null>(null);
 	const consumedAddParam = useRef(false);
 	const [label, setLabel] = useState("");
@@ -76,27 +73,18 @@ export function HabitsScreen({
 	const [target, setTarget] = useState("");
 	const [areaSlug, setAreaSlug] = useState<string | null>(null);
 	const [busy, setBusy] = useState(false);
-	const [error, setError] = useState<string | null>(null);
-
-	const load = useCallback(async () => {
-		setError(null);
-		try {
-			const [nextSnapshot, nextWeekStart] = await Promise.all([
+	const { data, error, loading, reload, setError } = useFocusStoreLoad(
+		useCallback(async () => {
+			const [snapshot, weekStart] = await Promise.all([
 				habits.loadSettings(),
 				unitSettings.loadWeekStart(),
 			]);
-			setSnapshot(nextSnapshot);
-			setWeekStart(nextWeekStart);
-		} catch (caught) {
-			setError(caught instanceof Error ? caught.message : String(caught));
-		}
-	}, [habits, unitSettings]);
-
-	useFocusEffect(
-		useCallback(() => {
-			void load();
-		}, [load]),
+			return { snapshot, weekStart };
+		}, [habits, unitSettings]),
 	);
+	const snapshot = data?.snapshot;
+	const weekStart: WeekStartDay = data?.weekStart ?? "monday";
+	const weekdays = useMemo(() => orderedIsoWeekdays(weekStart), [weekStart]);
 
 	// A push from the review flow can preselect a catalogue habit to add. The
 	// param is consumed once, after the first load, and an already-active slug
@@ -155,9 +143,9 @@ export function HabitsScreen({
 		try {
 			await work();
 			if (closeEditor) setEditor(null);
-			await load();
+			await reload();
 		} catch (caught) {
-			setError(caught instanceof Error ? caught.message : String(caught));
+			setError(toMessage(caught));
 		} finally {
 			setBusy(false);
 		}
@@ -214,12 +202,8 @@ export function HabitsScreen({
 		}, true);
 	}
 
-	if (!snapshot && !error) {
-		return (
-			<Screen centered>
-				<LoadingIndicator size="large" />
-			</Screen>
-		);
+	if (loading) {
+		return <LoadingScreen />;
 	}
 	if (!snapshot) {
 		return (
@@ -228,7 +212,7 @@ export function HabitsScreen({
 					title={t("loadFailed")}
 					body={error ?? t("loadFailedBody")}
 					actionLabel={t("common:actions.tryAgain")}
-					onAction={() => void load()}
+					onAction={() => void reload()}
 					tone="danger"
 				/>
 			</Screen>

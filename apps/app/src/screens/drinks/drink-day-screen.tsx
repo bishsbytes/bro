@@ -1,5 +1,5 @@
 import { localTimeOf } from "@bro/domain";
-import { type Href, router, useFocusEffect } from "expo-router";
+import { type Href, router } from "expo-router";
 import { useCallback, useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { View } from "react-native";
@@ -8,16 +8,16 @@ import { Button } from "../../components/button";
 import { Card } from "../../components/card";
 import { EmptyState } from "../../components/empty-state";
 import { FormField } from "../../components/form-field";
-import { LoadingIndicator } from "../../components/loading-indicator";
-import { StackScreen as Screen } from "../../components/screen";
+import { LoadingScreen, StackScreen as Screen } from "../../components/screen";
 import { SectionHeader } from "../../components/section-header";
 import {
 	createDrinksStore,
-	type DrinkDaySnapshot,
 	type DrinksStore,
 	type PresentedDrinkEntry,
 } from "../../drinks/drinks-store";
 import { upperCaseForLanguage } from "../../i18n";
+import { toMessage } from "../../lib/errors";
+import { useFocusStoreLoad } from "../../lib/use-store-load";
 import { StyleSheet } from "../../theme/unistyles";
 
 type DrinkDayScreenProps = {
@@ -120,23 +120,15 @@ function EntryEditor({
 export function DrinkDayScreen({ localDay, store }: DrinkDayScreenProps) {
 	const { t } = useTranslation(["drinks", "common"]);
 	const drinks = useMemo(() => store ?? createDrinksStore(), [store]);
-	const [snapshot, setSnapshot] = useState<DrinkDaySnapshot | null>(null);
 	const [busy, setBusy] = useState(false);
-	const [error, setError] = useState<string | null>(null);
-
-	const load = useCallback(async () => {
-		setError(null);
-		try {
-			setSnapshot(await drinks.loadDay(localDay));
-		} catch (caught) {
-			setError(caught instanceof Error ? caught.message : String(caught));
-		}
-	}, [drinks, localDay]);
-
-	useFocusEffect(
-		useCallback(() => {
-			void load();
-		}, [load]),
+	const {
+		data: snapshot,
+		error,
+		loading,
+		setData: setSnapshot,
+		setError,
+	} = useFocusStoreLoad(
+		useCallback(() => drinks.loadDay(localDay), [drinks, localDay]),
 	);
 
 	async function mutate(work: () => Promise<unknown>) {
@@ -147,18 +139,14 @@ export function DrinkDayScreen({ localDay, store }: DrinkDayScreenProps) {
 			await work();
 			setSnapshot(await drinks.loadDay(localDay));
 		} catch (caught) {
-			setError(caught instanceof Error ? caught.message : String(caught));
+			setError(toMessage(caught));
 		} finally {
 			setBusy(false);
 		}
 	}
 
-	if (!snapshot && !error) {
-		return (
-			<Screen centered>
-				<LoadingIndicator size="large" />
-			</Screen>
-		);
+	if (loading) {
+		return <LoadingScreen />;
 	}
 
 	if (!snapshot) {

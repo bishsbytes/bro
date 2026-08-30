@@ -12,6 +12,8 @@ import { StackScreen as Screen } from "../../components/screen";
 import { SectionHeader } from "../../components/section-header";
 import type { HealthGatewayAvailability } from "../../health/gateway";
 import { healthImportEngine } from "../../health/import-service";
+import { healthPlatformLabel } from "../../health/platform-label";
+import { toMessage } from "../../lib/errors";
 import { useDeviceSettings } from "../../providers/device-settings-provider";
 import { cancelAllReminderNotifications } from "../../reminders/reminder-materialiser";
 import { ACCENT_OPTIONS, StyleSheet } from "../../theme/unistyles";
@@ -60,9 +62,7 @@ function HealthSettingsEntry({
 	}, [availability]);
 
 	if (!health?.platform) return null;
-	// Apple Health and Health Connect are product names and stay untranslated.
-	const platform =
-		health.platform === "healthkit" ? "Apple Health" : "Health Connect";
+	const platform = healthPlatformLabel(health.platform);
 	return (
 		<ListRow
 			title={t("index.health")}
@@ -96,9 +96,7 @@ export function SettingsScreen({
 			await cancelReminderNotifications();
 			setDeleteStep("complete");
 		} catch (caught) {
-			setError(
-				caught instanceof Error ? caught.message : t("localData.failed"),
-			);
+			setError(toMessage(caught, t("localData.failed")));
 		} finally {
 			setDeleting(false);
 		}

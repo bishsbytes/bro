@@ -1,7 +1,7 @@
 import type { CreateCustomConsumableComponent } from "@bro/database-app";
 import { previousLocalDay } from "@bro/domain";
 import type { FoodSearchResult } from "@bro/domain/food-search";
-import { type Href, router, useFocusEffect } from "expo-router";
+import { type Href, router } from "expo-router";
 import { useCallback, useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { TouchableOpacity, View } from "react-native";
@@ -10,8 +10,7 @@ import { Button } from "../../components/button";
 import { Card } from "../../components/card";
 import { EmptyState } from "../../components/empty-state";
 import { FormField } from "../../components/form-field";
-import { LoadingIndicator } from "../../components/loading-indicator";
-import { StackScreen as Screen } from "../../components/screen";
+import { LoadingScreen, StackScreen as Screen } from "../../components/screen";
 import { SectionHeader } from "../../components/section-header";
 import {
 	createFoodSearchStore,
@@ -21,10 +20,11 @@ import {
 import {
 	type CustomFood,
 	createFoodStore,
-	type FoodDaySnapshot,
 	type FoodStore,
 } from "../../food/food-store";
 import { upperCaseForLanguage } from "../../i18n";
+import { toMessage } from "../../lib/errors";
+import { useFocusStoreLoad } from "../../lib/use-store-load";
 import { StyleSheet } from "../../theme/unistyles";
 
 type FoodScreenProps = {
@@ -326,10 +326,8 @@ export function FoodScreen({ store, searchStore }: FoodScreenProps) {
 		() => searchStore ?? createFoodSearchStore(),
 		[searchStore],
 	);
-	const [snapshot, setSnapshot] = useState<FoodDaySnapshot | null>(null);
 	const [searchSnapshot, setSearchSnapshot] =
 		useState<FoodSearchSnapshot | null>(null);
-	const [error, setError] = useState<string | null>(null);
 	const [busy, setBusy] = useState(false);
 	const [searchBusy, setSearchBusy] = useState(false);
 	const [searchQuery, setSearchQuery] = useState("");
@@ -354,23 +352,27 @@ export function FoodScreen({ store, searchStore }: FoodScreenProps) {
 	const [goalTarget, setGoalTarget] = useState("");
 	const [goalDate, setGoalDate] = useState("");
 
-	const load = useCallback(async () => {
-		setError(null);
-		try {
+	const {
+		data: snapshot,
+		error,
+		loading,
+		reload,
+		setData: setSnapshot,
+		setError,
+	} = useFocusStoreLoad(
+		useCallback(async () => {
 			const [next, cached] = await Promise.all([
 				food.loadToday(),
 				foodSearch.loadCached(),
 			]);
-			setSnapshot(next);
+			// The cached search results and the entry form are seeded once, so a
+			// part-typed search or row survives the refresh that follows a save.
 			setSearchSnapshot((current) => current ?? cached);
 			setLocalDay((current) => current || next.localDay);
 			setTime((current) => current || next.defaultTime);
-		} catch (caught) {
-			setError(caught instanceof Error ? caught.message : String(caught));
-		}
-	}, [food, foodSearch]);
-
-	useFocusEffect(useCallback(() => void load(), [load]));
+			return next;
+		}, [food, foodSearch]),
+	);
 
 	async function mutate(work: () => Promise<unknown>): Promise<boolean> {
 		if (busy) return false;
@@ -381,7 +383,7 @@ export function FoodScreen({ store, searchStore }: FoodScreenProps) {
 			setSnapshot(await food.loadToday());
 			return true;
 		} catch (caught) {
-			setError(caught instanceof Error ? caught.message : String(caught));
+			setError(toMessage(caught));
 			return false;
 		} finally {
 			setBusy(false);
@@ -418,7 +420,7 @@ export function FoodScreen({ store, searchStore }: FoodScreenProps) {
 			setSelectedSearchRef("");
 			setSearchServingId("");
 		} catch (caught) {
-			setError(caught instanceof Error ? caught.message : String(caught));
+			setError(toMessage(caught));
 		} finally {
 			setSearchBusy(false);
 		}
@@ -476,12 +478,9 @@ export function FoodScreen({ store, searchStore }: FoodScreenProps) {
 			router.push(`/food/${savedDay}` as Href);
 	}
 
-	if (!snapshot && !error)
-		return (
-			<Screen centered>
-				<LoadingIndicator size="large" />
-			</Screen>
-		);
+	if (loading) {
+		return <LoadingScreen />;
+	}
 	if (!snapshot) {
 		return (
 			<Screen centered padded>
@@ -489,7 +488,7 @@ export function FoodScreen({ store, searchStore }: FoodScreenProps) {
 					title={t("loadFailed")}
 					body={error ?? t("loadFailedBody")}
 					actionLabel={t("common:actions.tryAgain")}
-					onAction={() => void load()}
+					onAction={() => void reload()}
 					tone="danger"
 				/>
 			</Screen>

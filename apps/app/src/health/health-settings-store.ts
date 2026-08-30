@@ -9,6 +9,7 @@ import { i18n } from "../i18n";
 import type { HealthGatewayAvailability } from "./gateway";
 import type { HealthImportEngine } from "./import-engine";
 import { healthImportEngine } from "./import-service";
+import { healthPlatformLabel } from "./platform-label";
 
 export type HealthMetricConnectionStatus = {
 	metricSlug: HealthMetricSlug;
@@ -30,11 +31,8 @@ type HealthSettingsEngine = Pick<
 	"availability" | "connect" | "refresh" | "disconnect" | "openSettings"
 >;
 
-/** Apple Health and Health Connect are product names and stay untranslated. */
 function platformLabel(platform: HealthPlatform | null): string {
-	if (platform === "healthkit") return "Apple Health";
-	if (platform === "health_connect") return "Health Connect";
-	return i18n.t("settings:index.health");
+	return healthPlatformLabel(platform) ?? i18n.t("settings:index.health");
 }
 
 function metricLabel(metricSlug: HealthMetricSlug): string {

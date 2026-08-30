@@ -1,4 +1,4 @@
-import { router, useFocusEffect } from "expo-router";
+import { router } from "expo-router";
 import { useCallback, useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { View } from "react-native";
@@ -6,13 +6,14 @@ import { AppText } from "../../components/app-text";
 import { Button } from "../../components/button";
 import { Card } from "../../components/card";
 import { EmptyState } from "../../components/empty-state";
-import { LoadingIndicator } from "../../components/loading-indicator";
-import { StackScreen as Screen } from "../../components/screen";
+import { LoadingScreen, StackScreen as Screen } from "../../components/screen";
 import {
 	type ChallengeDetail,
 	createHabitsStore,
 	type HabitsStore,
 } from "../../habits/habits-store";
+import { toMessage } from "../../lib/errors";
+import { useFocusStoreLoad } from "../../lib/use-store-load";
 import { StyleSheet } from "../../theme/unistyles";
 
 type ChallengeDetailStore = Pick<
@@ -32,26 +33,18 @@ export function ChallengeDetailScreen({
 }) {
 	const { t } = useTranslation("challenges");
 	const challenges = useMemo(() => store ?? createHabitsStore(), [store]);
-	const [detail, setDetail] = useState<ChallengeDetail | null>(null);
-	const [loaded, setLoaded] = useState(false);
 	const [busy, setBusy] = useState(false);
-	const [error, setError] = useState<string | null>(null);
-
-	const load = useCallback(async () => {
-		setError(null);
-		try {
-			setDetail(await challenges.loadChallenge(enrolmentId));
-		} catch (caught) {
-			setError(caught instanceof Error ? caught.message : String(caught));
-		} finally {
-			setLoaded(true);
-		}
-	}, [challenges, enrolmentId]);
-
-	useFocusEffect(
-		useCallback(() => {
-			void load();
-		}, [load]),
+	const {
+		data: detail,
+		error,
+		loading,
+		setData: setDetail,
+		setError,
+	} = useFocusStoreLoad(
+		useCallback(
+			() => challenges.loadChallenge(enrolmentId),
+			[challenges, enrolmentId],
+		),
 	);
 
 	async function mutate(work: () => Promise<ChallengeDetail>) {
@@ -60,7 +53,7 @@ export function ChallengeDetailScreen({
 		try {
 			setDetail(await work());
 		} catch (caught) {
-			setError(caught instanceof Error ? caught.message : String(caught));
+			setError(toMessage(caught));
 		} finally {
 			setBusy(false);
 		}
@@ -74,18 +67,14 @@ export function ChallengeDetailScreen({
 			const enrolment = await challenges.startChallenge(detail.challengeSlug);
 			router.replace(`/challenges/${enrolment.id}`);
 		} catch (caught) {
-			setError(caught instanceof Error ? caught.message : String(caught));
+			setError(toMessage(caught));
 		} finally {
 			setBusy(false);
 		}
 	}
 
-	if (!loaded && !error) {
-		return (
-			<Screen centered>
-				<LoadingIndicator size="large" />
-			</Screen>
-		);
+	if (loading) {
+		return <LoadingScreen />;
 	}
 	if (!detail) {
 		return (

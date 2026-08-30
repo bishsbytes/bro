@@ -139,6 +139,29 @@ alias to the development machine. The iOS simulator and web can use
 - **TypeScript project references** are managed by `nx sync`; run it after adding a cross-package import.
 - Dependencies shared with Expo must match the SDK. Check `node_modules/expo/bundledNativeModules.json` for the correct version rather than taking `latest`.
 
+### Reading a feature store from a screen
+
+A screen does not hand-roll the read. [`useFocusStoreLoad`](apps/app/src/lib/use-store-load.ts) re-reads every time the screen comes into focus — the default, so returning after an edit shows the edit — and `useStoreLoad` reads on mount and whenever its loader changes, for a detail screen keyed on a route parameter. Both take a `useCallback`-stabilised loader and return `{ data, error, loading, reload, setData, setError }`.
+
+```tsx
+const history = useMemo(() => store ?? createHistoryStore(), [store]);
+const { data: days, error, loading, reload } = useFocusStoreLoad(
+  useCallback(() => history.loadHistory(), [history]),
+);
+
+if (loading) return <LoadingScreen />;
+```
+
+`data` is `undefined` until the first attempt settles, which is what `loading` reports, so a loader that legitimately resolves to `null` — a record since deleted — stays distinguishable from one still in flight. Test `loading`, never `data === null`. The hook drops a response superseded by a newer one, keeps the current content on screen while refreshing, and shows the spinner again only when there is nothing to keep.
+
+Mutations stay in the screen: run the write, then `setData` the snapshot it returns, or `reload()`. The `store?` prop stays the test seam — it is the argument to `createXStore()`, not something the hook owns.
+
+[`LoadingScreen`](apps/app/src/components/screen.tsx) renders the whole-screen spinner. Its `variant` must match the Screen the loaded content uses (`stack` by default, `tab`, or `full`), so the spinner sits inside the same safe-area boundary.
+
+[`toMessage`](apps/app/src/lib/errors.ts) narrows a caught `unknown` to the message a screen shows, with an optional translated fallback for the non-`Error` case.
+
+`home-screen` deliberately keeps its own loader: its reads share a write stamp with the note save and check-in commit so a slow read cannot land on top of a newer write.
+
 ## Localisation
 
 All user-facing copy in the app comes from typed catalogues in [`apps/app/src/i18n`](apps/app/src/i18n), read through i18next. The catalogues are TypeScript rather than JSON so that each entry can carry a translator note and so key types flow into `t()` without extra tsconfig setup — a typo or a deleted key fails `nx typecheck`.
@@ -175,5 +198,5 @@ The same reasoning applies to the field-validation messages in `packages/databas
 - Expo Router now keeps onboarding and the local app independent of remote authentication; sign-in and sign-up are optional account routes.
 - Only local embedded storage is currently supported. Replica connection and synchronization return in Phase 5 with API-minted credentials.
 - Reminder notifications bake their copy in at schedule time, and the materialiser reconciles by identifier alone. Adding an in-app language picker will need every scheduled reminder cancelled and rescheduled on the switch; see the note in [`reminders/notification-gateway.ts`](apps/app/src/reminders/notification-gateway.ts).
-- The map from a health source to its display name (`"healthkit"` → Apple Health) is duplicated in the log, body, and history screens, with the history copy differing on unknown sources. Worth consolidating when one of them next changes.
+- The map from a health source to its display name (`"healthkit"` → Apple Health) lives in [`health/platform-label.ts`](apps/app/src/health/platform-label.ts). It returns `null` for anything else, because callers word that case differently — the log and body screens say "You", settings falls back to its own section title, and the history day screen shows the raw source.
 - `src/content` rebuilds its wrapper objects on every call, so identity comparisons against a catalogue entry will not hold. Nothing compares them today; compare slugs if that need arises.

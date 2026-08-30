@@ -7,7 +7,6 @@ import {
 	orderedIsoWeekdays,
 	weekdaysFromMask,
 } from "@bro/logic";
-import { useFocusEffect } from "expo-router";
 import type { TFunction } from "i18next";
 import { useCallback, useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
@@ -17,13 +16,13 @@ import { Button } from "../../components/button";
 import { Card } from "../../components/card";
 import { EmptyState } from "../../components/empty-state";
 import { FormField } from "../../components/form-field";
-import { LoadingIndicator } from "../../components/loading-indicator";
-import { StackScreen as Screen } from "../../components/screen";
+import { LoadingScreen, StackScreen as Screen } from "../../components/screen";
 import { SectionHeader } from "../../components/section-header";
 import { ThemedSwitch } from "../../components/themed-switch";
+import { toMessage } from "../../lib/errors";
+import { useFocusStoreLoad } from "../../lib/use-store-load";
 import {
 	createReminderStore,
-	type ReminderScreenState,
 	type ReminderStore,
 } from "../../reminders/reminder-store";
 import { StyleSheet } from "../../theme/unistyles";
@@ -154,31 +153,19 @@ export function RemindersScreen({
 		() => unitSettingsStore ?? createUnitSettingsStore(),
 		[unitSettingsStore],
 	);
-	const [state, setState] = useState<ReminderScreenState | null>(null);
-	const [error, setError] = useState<string | null>(null);
 	const [busy, setBusy] = useState(false);
 	const [editing, setEditing] = useState<Reminder | "new" | null>(null);
-	const [weekStart, setWeekStart] = useState<WeekStartDay>("monday");
-
-	const load = useCallback(async () => {
-		try {
-			setError(null);
-			const [nextState, nextWeekStart] = await Promise.all([
+	const { data, error, loading, reload, setError } = useFocusStoreLoad(
+		useCallback(async () => {
+			const [state, weekStart] = await Promise.all([
 				remindersStore.load(),
 				unitSettings.loadWeekStart(),
 			]);
-			setState(nextState);
-			setWeekStart(nextWeekStart);
-		} catch (caught) {
-			setError(caught instanceof Error ? caught.message : String(caught));
-		}
-	}, [remindersStore, unitSettings]);
-
-	useFocusEffect(
-		useCallback(() => {
-			void load();
-		}, [load]),
+			return { state, weekStart };
+		}, [remindersStore, unitSettings]),
 	);
+	const state = data?.state;
+	const weekStart: WeekStartDay = data?.weekStart ?? "monday";
 
 	async function mutate(work: () => Promise<void>) {
 		setBusy(true);
@@ -186,20 +173,16 @@ export function RemindersScreen({
 		try {
 			await work();
 			setEditing(null);
-			await load();
+			await reload();
 		} catch (caught) {
-			setError(caught instanceof Error ? caught.message : String(caught));
+			setError(toMessage(caught));
 		} finally {
 			setBusy(false);
 		}
 	}
 
-	if (!state && !error) {
-		return (
-			<Screen centered>
-				<LoadingIndicator size="large" />
-			</Screen>
-		);
+	if (loading) {
+		return <LoadingScreen />;
 	}
 
 	return (
@@ -223,7 +206,7 @@ export function RemindersScreen({
 					title={t("reminders.updateFailed")}
 					body={error}
 					actionLabel={t("common:actions.tryAgain")}
-					onAction={() => void load()}
+					onAction={() => void reload()}
 					tone="danger"
 				/>
 			) : null}

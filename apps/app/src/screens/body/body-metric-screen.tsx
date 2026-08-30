@@ -1,6 +1,6 @@
 import type { Observation } from "@bro/database-app";
 import type { MeasurementEntry } from "@bro/domain";
-import { router, useFocusEffect } from "expo-router";
+import { router } from "expo-router";
 import type { TFunction } from "i18next";
 import { useCallback, useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
@@ -16,11 +16,13 @@ import { Button } from "../../components/button";
 import { Card } from "../../components/card";
 import { EmptyState } from "../../components/empty-state";
 import { FormField } from "../../components/form-field";
-import { LoadingIndicator } from "../../components/loading-indicator";
 import { MeasurementField } from "../../components/measurement-field";
-import { StackScreen as Screen } from "../../components/screen";
+import { LoadingScreen, StackScreen as Screen } from "../../components/screen";
 import { SectionHeader } from "../../components/section-header";
 import { TrendChart } from "../../components/trend-chart";
+import { healthPlatformLabel } from "../../health/platform-label";
+import { toMessage } from "../../lib/errors";
+import { useFocusStoreLoad } from "../../lib/use-store-load";
 import {
 	EMPTY_ENTRY,
 	measurementInputOf,
@@ -52,11 +54,8 @@ function dateTimeLabel(observation: Observation): string {
 	});
 }
 
-/** Apple Health and Health Connect are product names and stay untranslated. */
 function sourceLabel(t: TFunction<"body">, source: string): string {
-	if (source === "healthkit") return "Apple Health";
-	if (source === "health_connect") return "Health Connect";
-	return t("sourceYou");
+	return healthPlatformLabel(source) ?? t("sourceYou");
 }
 
 function HistoryEditor({
@@ -165,28 +164,18 @@ function ImportedHistoryRow({
 export function BodyMetricScreen({ metricSlug, store }: BodyMetricScreenProps) {
 	const { t } = useTranslation(["body", "common"]);
 	const body = useMemo(() => store ?? createBodyStore(), [store]);
-	const [detail, setDetail] = useState<BodyMetricDetail | null | undefined>(
-		undefined,
-	);
 	const [target, setTarget] = useState<MeasurementEntry>(EMPTY_ENTRY);
 	const [targetDate, setTargetDate] = useState("");
 	const [targetError, setTargetError] = useState<string | null>(null);
-	const [error, setError] = useState<string | null>(null);
 	const [busy, setBusy] = useState(false);
-
-	const load = useCallback(async () => {
-		setError(null);
-		try {
-			setDetail(await body.loadMetric(metricSlug));
-		} catch (caught) {
-			setError(caught instanceof Error ? caught.message : String(caught));
-		}
-	}, [body, metricSlug]);
-
-	useFocusEffect(
-		useCallback(() => {
-			void load();
-		}, [load]),
+	const {
+		data: detail,
+		error,
+		loading,
+		setData: setDetail,
+		setError,
+	} = useFocusStoreLoad(
+		useCallback(() => body.loadMetric(metricSlug), [body, metricSlug]),
 	);
 
 	async function mutate(work: () => Promise<BodyMetricDetail | null>) {
@@ -195,7 +184,7 @@ export function BodyMetricScreen({ metricSlug, store }: BodyMetricScreenProps) {
 		try {
 			setDetail(await work());
 		} catch (caught) {
-			setError(caught instanceof Error ? caught.message : String(caught));
+			setError(toMessage(caught));
 		} finally {
 			setBusy(false);
 		}
@@ -212,7 +201,7 @@ export function BodyMetricScreen({ metricSlug, store }: BodyMetricScreenProps) {
 			}
 			setDetail(await body.loadMetric(metricSlug));
 		} catch (caught) {
-			setError(caught instanceof Error ? caught.message : String(caught));
+			setError(toMessage(caught));
 		} finally {
 			setBusy(false);
 		}
@@ -242,18 +231,14 @@ export function BodyMetricScreen({ metricSlug, store }: BodyMetricScreenProps) {
 			setTargetDate("");
 			setDetail(await body.loadMetric(metricSlug));
 		} catch (caught) {
-			setError(caught instanceof Error ? caught.message : String(caught));
+			setError(toMessage(caught));
 		} finally {
 			setBusy(false);
 		}
 	}
 
-	if (detail === undefined && !error) {
-		return (
-			<Screen centered>
-				<LoadingIndicator size="large" />
-			</Screen>
-		);
+	if (loading) {
+		return <LoadingScreen />;
 	}
 
 	if (!detail) {

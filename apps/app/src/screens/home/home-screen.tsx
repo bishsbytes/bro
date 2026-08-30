@@ -24,7 +24,7 @@ import { DayPager } from "../../components/day-pager";
 import { FormField } from "../../components/form-field";
 import { LoadingIndicator } from "../../components/loading-indicator";
 import { ScoreRow } from "../../components/score-row";
-import { Screen } from "../../components/screen";
+import { LoadingScreen, Screen } from "../../components/screen";
 import { SectionHeader } from "../../components/section-header";
 import { useSetTodayHeaderVisibleMonthDay } from "../../components/today-header-month-context";
 import {
@@ -43,6 +43,7 @@ import {
 	type HistoryMeasurementChange,
 	type HistoryStore,
 } from "../../history/history-store";
+import { toMessage } from "../../lib/errors";
 import {
 	createReviewStore,
 	type ReviewResult,
@@ -451,7 +452,7 @@ export function HomeScreen({
 				current === previouslySaved ? loaded.note : current,
 			);
 		} catch (caught) {
-			setError(caught instanceof Error ? caught.message : String(caught));
+			setError(toMessage(caught));
 		}
 	}, [checkIns]);
 
@@ -460,9 +461,7 @@ export function HomeScreen({
 		try {
 			setHabitsToday(await routines.loadToday());
 		} catch (caught) {
-			setRoutineError(
-				caught instanceof Error ? caught.message : String(caught),
-			);
+			setRoutineError(toMessage(caught));
 		}
 	}, [routines]);
 
@@ -471,7 +470,7 @@ export function HomeScreen({
 		try {
 			setLatestWheel(await reviews.loadLatestWheel());
 		} catch (caught) {
-			setWheelError(caught instanceof Error ? caught.message : String(caught));
+			setWheelError(toMessage(caught));
 		}
 	}, [reviews]);
 
@@ -535,9 +534,7 @@ export function HomeScreen({
 				}
 				setIndicators(new Map(indicatorCache.current));
 			} catch (caught) {
-				setRoutineError(
-					caught instanceof Error ? caught.message : String(caught),
-				);
+				setRoutineError(toMessage(caught));
 			}
 		},
 		[checkIns, routines],
@@ -626,7 +623,7 @@ export function HomeScreen({
 					day: cached?.day ?? null,
 					habits: cached?.habits ?? null,
 					loading: false,
-					error: caught instanceof Error ? caught.message : String(caught),
+					error: toMessage(caught),
 					generation: stamp,
 				});
 			}
@@ -672,9 +669,7 @@ export function HomeScreen({
 				.then(setWeekStart)
 				.catch((caught) => {
 					setWeekStart("monday");
-					setRoutineError(
-						caught instanceof Error ? caught.message : String(caught),
-					);
+					setRoutineError(toMessage(caught));
 				});
 		}, [clock, load, loadIndicatorRange, loadRoutines, loadWheel, settings]),
 	);
@@ -688,9 +683,7 @@ export function HomeScreen({
 			invalidateIndicatorDay(habitsToday.localDay);
 			await loadRoutines();
 		} catch (caught) {
-			setRoutineError(
-				caught instanceof Error ? caught.message : String(caught),
-			);
+			setRoutineError(toMessage(caught));
 		} finally {
 			setRoutineBusy(null);
 		}
@@ -710,9 +703,7 @@ export function HomeScreen({
 			invalidateIndicatorDay(habitsToday.localDay);
 			await loadRoutines();
 		} catch (caught) {
-			setRoutineError(
-				caught instanceof Error ? caught.message : String(caught),
-			);
+			setRoutineError(toMessage(caught));
 		} finally {
 			setRoutineBusy(null);
 		}
@@ -728,9 +719,7 @@ export function HomeScreen({
 			invalidateIndicatorDay(localDay);
 			await loadPastDay(localDay, true);
 		} catch (caught) {
-			setRoutineError(
-				caught instanceof Error ? caught.message : String(caught),
-			);
+			setRoutineError(toMessage(caught));
 		} finally {
 			setRoutineBusy(null);
 		}
@@ -759,7 +748,7 @@ export function HomeScreen({
 		} catch (caught) {
 			if (request !== tagRequestRef.current) return;
 			setSelectedTags(previous);
-			setError(caught instanceof Error ? caught.message : String(caught));
+			setError(toMessage(caught));
 		} finally {
 			tagsInFlightRef.current -= 1;
 		}
@@ -783,18 +772,14 @@ export function HomeScreen({
 			if (stamp !== todayWriteRef.current) return;
 			setToday(saved);
 		} catch (caught) {
-			setError(caught instanceof Error ? caught.message : String(caught));
+			setError(toMessage(caught));
 		} finally {
 			setSavingNote(false);
 		}
 	}
 
 	if ((!today || !weekStart) && !error) {
-		return (
-			<Screen centered>
-				<LoadingIndicator size="large" />
-			</Screen>
-		);
+		return <LoadingScreen variant="tab" />;
 	}
 
 	if (!today) {
@@ -812,11 +797,7 @@ export function HomeScreen({
 	}
 
 	if (!weekStart) {
-		return (
-			<Screen centered>
-				<LoadingIndicator size="large" />
-			</Screen>
-		);
+		return <LoadingScreen variant="tab" />;
 	}
 	const groupedTags = Object.entries(TAG_CATEGORY_KEYS).map(
 		([category, key]) => ({
