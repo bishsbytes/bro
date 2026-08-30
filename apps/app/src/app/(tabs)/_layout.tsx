@@ -7,6 +7,7 @@ import { TouchableOpacity, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { AppHeader } from "../../components/app-header";
 import { AvatarIdentityContext } from "../../components/avatar-identity-context";
+import { QuickLogFab } from "../../components/quick-log-fab";
 import {
 	TodayHeaderMonthProvider,
 	useTodayHeaderMonth,
@@ -140,6 +141,11 @@ function TabShell() {
 						}}
 					/>
 				</Tabs>
+				{pathname === "/" || pathname === "/log" ? (
+					<QuickLogFab
+						bottom={TAB_BAR_CONTENT_HEIGHT + insets.bottom + theme.spacing.lg}
+					/>
+				) : null}
 			</View>
 		</AvatarIdentityContext.Provider>
 	);

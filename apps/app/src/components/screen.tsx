@@ -21,6 +21,7 @@ type ScreenProps = {
 	style?: ViewStyle;
 	contentContainerStyle?: ScrollViewProps["contentContainerStyle"];
 	keyboardShouldPersistTaps?: ScrollViewProps["keyboardShouldPersistTaps"];
+	contentInsetAdjustmentBehavior?: ScrollViewProps["contentInsetAdjustmentBehavior"];
 };
 
 type StackScreenProps = Omit<ScreenProps, "edges">;
@@ -36,6 +37,7 @@ export function Screen({
 	style,
 	contentContainerStyle,
 	keyboardShouldPersistTaps,
+	contentInsetAdjustmentBehavior,
 }: ScreenProps) {
 	const { theme } = useUnistyles();
 	const contentStyle = [
@@ -62,6 +64,7 @@ export function Screen({
 					style={styles.scroll}
 					contentContainerStyle={contentStyle}
 					keyboardShouldPersistTaps={keyboardShouldPersistTaps}
+					contentInsetAdjustmentBehavior={contentInsetAdjustmentBehavior}
 				>
 					{children}
 				</ScrollView>

@@ -72,6 +72,42 @@ const databaseApp: typeof DatabaseApp = jest.requireActual("@bro/database-app");
 const mockedUseSession = (authClient as unknown as { useSession: jest.Mock })
 	.useSession;
 
+type NativeTestNode = {
+	props?: Record<string, unknown>;
+	children?: unknown[];
+};
+
+function findNativeNode(
+	node: unknown,
+	property: string,
+	value: unknown,
+): NativeTestNode | null {
+	if (!node || typeof node !== "object") return null;
+	const candidate = node as NativeTestNode;
+	if (candidate.props?.[property] === value) return candidate;
+	for (const child of candidate.children ?? []) {
+		const match = findNativeNode(child, property, value);
+		if (match) return match;
+	}
+	return null;
+}
+
+function nativeRootInstance(root: unknown): unknown {
+	return (root as { instance?: unknown } | null)?.instance;
+}
+
+async function invokeNativeTextEvent(
+	node: NativeTestNode,
+	property: "onChangeText" | "onSearchButtonPress",
+	text: string,
+) {
+	const handler = node.props?.[property];
+	if (typeof handler !== "function") {
+		throw new Error(`Expected native handler ${property}.`);
+	}
+	await act(async () => handler({ nativeEvent: { text } }));
+}
+
 describe("food logging flow", () => {
 	afterEach(() => {
 		delete process.env.EXPO_PUBLIC_API_URL;
@@ -98,7 +134,9 @@ describe("food logging flow", () => {
 		await fireEvent.press(view.getByText("Open food log"));
 		await waitFor(() => expect(router.getPathname()).toBe("/food"));
 		expect(await view.findByText("Nothing logged")).toBeTruthy();
-		await fireEvent.press(view.getByText("Something else"));
+		await fireEvent.press(view.getByLabelText("Log food"));
+		await waitFor(() => expect(router.getPathname()).toBe("/food/log"));
+		await fireEvent.press(await view.findByText("Something else"));
 		await fireEvent.changeText(
 			view.getByLabelText("Food name"),
 			"Chicken thighs",
@@ -113,6 +151,7 @@ describe("food logging flow", () => {
 		);
 		await fireEvent.changeText(view.getByLabelText("Number of servings"), "2");
 		await fireEvent.press(view.getByText("Save food"));
+		await waitFor(() => expect(router.getPathname()).toBe("/food"));
 		expect(await view.findByText("52.0 g")).toBeTruthy();
 		expect(
 			(await new databaseApp.ConsumptionEntryRepository(db).listAll())[0],
@@ -121,7 +160,9 @@ describe("food logging flow", () => {
 			proteinG: 52,
 		});
 
-		await fireEvent.press(view.getByText("Set goal for Protein"));
+		await fireEvent.press(view.getByText("Daily goals"));
+		await waitFor(() => expect(router.getPathname()).toBe("/food/goals"));
+		await fireEvent.press(await view.findByText("Set goal for Protein"));
 		await fireEvent.changeText(view.getByLabelText("Target (g)"), "60");
 		await fireEvent.press(view.getByText("Save goal"));
 		expect(
@@ -140,8 +181,20 @@ describe("food logging flow", () => {
 		await fireEvent.press(view.getByText("Save changes"));
 		expect(await view.findByText("26.0 g")).toBeTruthy();
 
-		await act(async () => expoRouter.replace("/food"));
+		await act(async () => expoRouter.replace("/food/custom"));
 		await fireEvent.press(await view.findByText("Create"));
+		expect(view.getByText("Nutrition per serving")).toBeTruthy();
+		expect(view.getByLabelText("Energy (kcal)")).toBeTruthy();
+		expect(view.getByLabelText("Protein (g)")).toBeTruthy();
+		expect(view.getByLabelText("Carbs (g)")).toBeTruthy();
+		expect(view.getByLabelText("Fat (g)")).toBeTruthy();
+		await fireEvent.changeText(view.getByLabelText("Name"), "Empty food");
+		expect(
+			view.getByText("Enter at least one of energy, protein, carbs, or fat."),
+		).toBeTruthy();
+		expect(
+			view.getByLabelText("Save custom food").props.accessibilityState,
+		).toMatchObject({ disabled: true });
 		await fireEvent.press(view.getByText("Recipe"));
 		await fireEvent.changeText(view.getByLabelText("Name"), "Chicken bowl");
 		await fireEvent.changeText(
@@ -154,7 +207,8 @@ describe("food logging flow", () => {
 		await fireEvent.press(view.getByText("Save custom food"));
 		expect(await view.findByText("1 recipe component")).toBeTruthy();
 
-		await fireEvent.press(view.getByText("Choose custom food"));
+		await act(async () => expoRouter.replace("/food/log"));
+		await fireEvent.press(await view.findByText("Choose custom food"));
 		const chickenBowlMatches = view.getAllByText("Chicken bowl");
 		const chickenBowlButton = chickenBowlMatches.at(-1);
 		if (!chickenBowlButton) throw new Error("Expected the recipe log button.");
@@ -207,13 +261,22 @@ describe("food logging flow", () => {
 			),
 		);
 
-		const router = renderRouter("src/app", { initialUrl: "/food" });
+		const router = renderRouter("src/app", { initialUrl: "/food/search" });
 		const view = await router;
-		await fireEvent.changeText(
-			await view.findByLabelText("Food search"),
+		expect(await view.findByText("Recent foods")).toBeTruthy();
+		expect(view.getByLabelText("Log Chicken thighs again")).toBeTruthy();
+		const searchBar = findNativeNode(
+			nativeRootInstance(view.root),
+			"placeholder",
+			"What did you eat?",
+		);
+		if (!searchBar) throw new Error("Expected the header search bar.");
+		await invokeNativeTextEvent(searchBar, "onChangeText", "chicken thighs");
+		await invokeNativeTextEvent(
+			searchBar,
+			"onSearchButtonPress",
 			"chicken thighs",
 		);
-		await fireEvent.press(view.getByText("Search"));
 		expect(await view.findByText("Open Food Facts · ODbL-1.0")).toBeTruthy();
 		expect(globalThis.fetch).toHaveBeenCalledWith(
 			"https://api.example.test/api/food/search?q=chicken+thighs",
@@ -242,18 +305,31 @@ describe("food logging flow", () => {
 			fatG: null,
 		});
 
+		await act(async () => expoRouter.replace("/food/search"));
+		const retrySearchBar = findNativeNode(
+			nativeRootInstance(view.root),
+			"placeholder",
+			"What did you eat?",
+		);
+		if (!retrySearchBar) throw new Error("Expected the header search bar.");
+		await invokeNativeTextEvent(
+			retrySearchBar,
+			"onChangeText",
+			"chicken thighs",
+		);
 		(globalThis.fetch as jest.Mock).mockRejectedValueOnce(
 			new TypeError("Network request failed"),
 		);
-		await fireEvent.press(view.getByText("Search"));
+		await invokeNativeTextEvent(
+			retrySearchBar,
+			"onSearchButtonPress",
+			"chicken thighs",
+		);
 		expect(
 			await view.findByText(
 				"Search needs a connection. Your recents, custom foods, and saved results are still available.",
 			),
 		).toBeTruthy();
-		expect(view.getByLabelText("Food search").props.value).toBe(
-			"chicken thighs",
-		);
 		await fireEvent.press(
 			view.getByText(
 				"Food data from Open Food Facts under ODbL 1.0 · Licence details",

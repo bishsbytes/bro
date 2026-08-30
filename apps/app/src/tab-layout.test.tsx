@@ -1,5 +1,5 @@
 import { localDayOf } from "@bro/domain";
-import { render } from "@testing-library/react-native";
+import { fireEvent, render } from "@testing-library/react-native";
 import * as Haptics from "expo-haptics";
 import type { ReactNode } from "react";
 import { StyleSheet as NativeStyleSheet } from "react-native";
@@ -107,6 +107,19 @@ describe("TabLayout", () => {
 
 		expect(screen.getByText("Log")).toBeTruthy();
 		expect(screen.queryByText(currentMonth)).toBeNull();
+	});
+
+	it("opens quick logging from Today and sends each choice to a focused screen", async () => {
+		const screen = await render(<TabLayout />);
+		const { router } = jest.requireMock("expo-router") as {
+			router: { push: jest.Mock };
+		};
+
+		await fireEvent.press(screen.getByLabelText("Log"));
+		expect(screen.getByText("What would you like to log?")).toBeTruthy();
+		await fireEvent.press(screen.getByLabelText("Food"));
+
+		expect(router.push).toHaveBeenCalledWith("/food/search");
 	});
 
 	it("ticks only when the selected bottom tab changes", async () => {

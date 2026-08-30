@@ -100,9 +100,31 @@ describe("drink logging flow", () => {
 		await fireEvent.press(view.getByText("Open drink log"));
 		await waitFor(() => expect(router.getPathname()).toBe("/drinks"));
 		expect(await view.findByText("Nothing logged")).toBeTruthy();
-		await fireEvent.press(view.getByText("Choose a drink"));
+		await fireEvent.press(view.getByText("Custom drinks"));
+		await waitFor(() => expect(router.getPathname()).toBe("/drinks/custom"));
+		await fireEvent.press(await view.findByText("Create"));
+		expect(view.getByText("Serving details")).toBeTruthy();
+		expect(view.getByLabelText("Volume (ml)")).toBeTruthy();
+		expect(view.getByLabelText("Caffeine (mg)")).toBeTruthy();
+		expect(view.getByLabelText("Energy (kcal)")).toBeTruthy();
+		expect(view.getByLabelText("ABV %")).toBeTruthy();
+		await fireEvent.changeText(
+			view.getByLabelText("Custom drink name"),
+			"Mystery drink",
+		);
+		expect(
+			view.getByText("Enter at least one of volume, caffeine, or energy."),
+		).toBeTruthy();
+		expect(
+			view.getByLabelText("Save custom drink").props.accessibilityState,
+		).toMatchObject({ disabled: true });
+		await act(async () => expoRouter.replace("/drinks"));
+		await fireEvent.press(view.getByLabelText("Log a drink"));
+		await waitFor(() => expect(router.getPathname()).toBe("/drinks/log"));
+		await fireEvent.press(await view.findByText("Choose a drink"));
 		await fireEvent.press(view.getByText("Lager, 4.5%"));
 		await fireEvent.press(view.getByText("Save drink"));
+		await waitFor(() => expect(router.getPathname()).toBe("/drinks"));
 		expect(await view.findByText(/^1 × pint ·/)).toBeTruthy();
 		expect(view.getAllByText("2.6 units").length).toBeGreaterThan(0);
 		const [entry] = await new databaseApp.ConsumptionEntryRepository(
@@ -118,7 +140,9 @@ describe("drink logging flow", () => {
 			[],
 		);
 
-		await fireEvent.press(view.getByText("Set goal for Alcohol"));
+		await fireEvent.press(view.getByText("Daily goals"));
+		await waitFor(() => expect(router.getPathname()).toBe("/drinks/goals"));
+		await fireEvent.press(await view.findByText("Set goal for Alcohol"));
 		await fireEvent.changeText(view.getByLabelText("Target (uk_unit)"), "2");
 		await fireEvent.press(view.getByText("Save goal"));
 		expect(await view.findByText(/Target 2.0 units/)).toBeTruthy();
@@ -154,6 +178,8 @@ describe("drink logging flow", () => {
 		);
 
 		await act(async () => expoRouter.replace("/drinks"));
+		await fireEvent.press(await view.findByLabelText("Log a drink"));
+		await waitFor(() => expect(router.getPathname()).toBe("/drinks/log"));
 		await fireEvent.press(await view.findByText("Choose a drink"));
 		await fireEvent.press(view.getByText("Water"));
 		await fireEvent.press(view.getByText("Last night"));

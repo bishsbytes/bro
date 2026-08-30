@@ -10,6 +10,13 @@ export const drinks = {
 		weekTotal: "7 days {{value}}",
 		disclaimer: "Quantities are totals, not ratings or guideline comparisons.",
 	},
+	overview: {
+		manageTitle: "Manage",
+		custom: "Custom drinks",
+		customDetail: "Create and manage drinks you use often.",
+		goals: "Daily goals",
+		goalsDetail: "Review or change goals for tracked drink metrics.",
+	},
 	quickAdd: {
 		title: "Quick add",
 		/** Renders in capitals; see the note on eyebrows in the review catalogue. */
@@ -26,10 +33,12 @@ export const drinks = {
 		delete: "Delete",
 		nameField: "Custom drink name",
 		servingField: "Serving",
+		detailsTitle: "Serving details",
 		volumeField: "Volume (ml)",
 		abvField: "ABV %",
 		caffeineField: "Caffeine (mg)",
 		energyField: "Energy (kcal)",
+		quantityHelp: "Enter at least one of volume, caffeine, or energy.",
 		cancel: "Cancel",
 		save: "Save custom drink",
 	},

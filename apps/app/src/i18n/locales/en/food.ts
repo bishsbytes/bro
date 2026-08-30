@@ -10,6 +10,13 @@ export const food = {
 		weekTotal: "7 days {{value}}",
 		disclaimer: "Totals are stated without targets, allowances, or ratings.",
 	},
+	overview: {
+		manageTitle: "Manage",
+		custom: "Custom foods and recipes",
+		customDetail: "Create and manage foods you use often.",
+		goals: "Daily goals",
+		goalsDetail: "Review or change goals for tracked nutrition metrics.",
+	},
 	quickAdd: {
 		title: "Quick add",
 		/** Renders in capitals; see the note on eyebrows in the review catalogue. */
@@ -33,6 +40,7 @@ export const food = {
 		nameField: "Name",
 		brandField: "Brand (optional)",
 		servingField: "Serving",
+		nutritionTitle: "Nutrition per serving",
 		componentsLabel: "Recipe components",
 		/** A recipe component and how much of it goes in, e.g. "2 × Egg". */
 		component: "{{quantity}} × {{name}}",
@@ -44,12 +52,24 @@ export const food = {
 		carbsField: "Carbs (g)",
 		fatField: "Fat (g)",
 		addComponent: "Add component",
+		componentQuantityHelp:
+			"Enter at least one nutrition value for each component.",
 		energyField: "Energy (kcal)",
+		quantityHelp: "Enter at least one of energy, protein, carbs, or fat.",
 		cancel: "Cancel",
 		save: "Save custom food",
 	},
 	search: {
-		title: "Search foods",
+		headerPlaceholder: "What did you eat?",
+		addA11y: "Log food manually",
+		customTitle: "Custom foods",
+		createCustomA11y: "Create custom food",
+		customLog: "Create a custom food",
+		customLogDetail: "Save a food or recipe you use often.",
+		logCustomA11y: "Log {{name}}",
+		recentTitle: "Recent foods",
+		logRecentA11y: "Log {{name}} again",
+		resultsTitle: "Search results",
 		stillAvailable:
 			"Your recents, custom foods, and saved results are still available.",
 		/** {{rest}} is the sentence above, appended to each outcome. */
@@ -60,9 +80,6 @@ export const food = {
 		noResults: "No matching foods found. You can still add the food yourself.",
 		/** Renders in capitals; see the note on eyebrows in the review catalogue. */
 		cachedEyebrow: "SAVED FOR OFFLINE",
-		field: "Food search",
-		placeholder: "Chicken thighs",
-		submit: "Search",
 		/** The provider and the licence its data is published under. */
 		provenance: "{{source}} · {{licence}}",
 		choose: "Choose",

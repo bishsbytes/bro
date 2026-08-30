@@ -1,7 +1,8 @@
 import type { CreateCustomConsumableComponent } from "@bro/database-app";
 import { previousLocalDay } from "@bro/domain";
 import type { FoodSearchResult } from "@bro/domain/food-search";
-import { type Href, router } from "expo-router";
+import MaterialIcons from "@expo/vector-icons/MaterialIcons";
+import { type Href, router, Stack } from "expo-router";
 import { useCallback, useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { TouchableOpacity, View } from "react-native";
@@ -10,6 +11,8 @@ import { Button } from "../../components/button";
 import { Card } from "../../components/card";
 import { EmptyState } from "../../components/empty-state";
 import { FormField } from "../../components/form-field";
+import { ListRow } from "../../components/list-row";
+import { LoadingIndicator } from "../../components/loading-indicator";
 import { LoadingScreen, StackScreen as Screen } from "../../components/screen";
 import { SectionHeader } from "../../components/section-header";
 import {
@@ -25,9 +28,11 @@ import {
 import { upperCaseForLanguage } from "../../i18n";
 import { toMessage } from "../../lib/errors";
 import { useFocusStoreLoad } from "../../lib/use-store-load";
-import { StyleSheet } from "../../theme/unistyles";
+import { StyleSheet, useUnistyles } from "../../theme/unistyles";
 
 type FoodScreenProps = {
+	view?: "overview" | "search" | "custom" | "log" | "goals";
+	initialCustomId?: string;
 	store?: Pick<
 		FoodStore,
 		| "loadToday"
@@ -48,6 +53,21 @@ type AddMode = "custom" | "free" | null;
 
 function optionalNumber(value: string): number | null {
 	return value.trim() ? Number(value) : null;
+}
+
+function isNonNegativeNumber(value: string): boolean {
+	const number = Number(value);
+	return value.trim() !== "" && Number.isFinite(number) && number >= 0;
+}
+
+function areOptionalNonNegativeNumbers(...values: string[]): boolean {
+	return values.every(
+		(value) => value.trim() === "" || isNonNegativeNumber(value),
+	);
+}
+
+function hasCanonicalFoodQuantity(...values: string[]): boolean {
+	return values.some(isNonNegativeNumber);
 }
 
 function CustomFoodEditor({
@@ -102,6 +122,31 @@ function CustomFoodEditor({
 	const [componentProtein, setComponentProtein] = useState("");
 	const [componentCarbs, setComponentCarbs] = useState("");
 	const [componentFat, setComponentFat] = useState("");
+	const hasServingQuantity = hasCanonicalFoodQuantity(
+		energy,
+		protein,
+		carbs,
+		fat,
+	);
+	const hasComponentQuantity = hasCanonicalFoodQuantity(
+		componentEnergy,
+		componentProtein,
+		componentCarbs,
+		componentFat,
+	);
+	const servingQuantitiesValid = areOptionalNonNegativeNumbers(
+		energy,
+		protein,
+		carbs,
+		fat,
+	);
+	const componentQuantitiesValid = areOptionalNonNegativeNumbers(
+		componentEnergy,
+		componentProtein,
+		componentCarbs,
+		componentFat,
+	);
+	const componentServingQuantity = Number(componentQuantity);
 
 	function addComponent() {
 		setComponents((current) => [
@@ -180,13 +225,13 @@ function CustomFoodEditor({
 				value={brand}
 				onChangeText={setBrand}
 			/>
-			<FormField
-				label={t("custom.servingField")}
-				value={servingLabel}
-				onChangeText={setServingLabel}
-			/>
 			{isRecipe ? (
 				<View style={styles.section}>
+					<FormField
+						label={t("custom.servingField")}
+						value={servingLabel}
+						onChangeText={setServingLabel}
+					/>
 					<AppText variant="label">{t("custom.componentsLabel")}</AppText>
 					{components.map((component, index) => (
 						<View
@@ -259,44 +304,54 @@ function CustomFoodEditor({
 					<Button
 						label={t("custom.addComponent")}
 						variant="secondary"
-						disabled={!componentLabel.trim()}
+						disabled={
+							!componentLabel.trim() ||
+							!hasComponentQuantity ||
+							!componentQuantitiesValid ||
+							!Number.isFinite(componentServingQuantity) ||
+							componentServingQuantity <= 0
+						}
 						onPress={addComponent}
 					/>
+					<AppText variant="caption" color="muted">
+						{t("custom.componentQuantityHelp")}
+					</AppText>
 				</View>
 			) : (
 				<>
-					<View style={styles.actions}>
-						<FormField
-							label={t("custom.energyField")}
-							value={energy}
-							onChangeText={setEnergy}
-							keyboardType="decimal-pad"
-							containerStyle={styles.grow}
-						/>
-						<FormField
-							label={t("custom.proteinField")}
-							value={protein}
-							onChangeText={setProtein}
-							keyboardType="decimal-pad"
-							containerStyle={styles.grow}
-						/>
-					</View>
-					<View style={styles.actions}>
-						<FormField
-							label={t("custom.carbsField")}
-							value={carbs}
-							onChangeText={setCarbs}
-							keyboardType="decimal-pad"
-							containerStyle={styles.grow}
-						/>
-						<FormField
-							label={t("custom.fatField")}
-							value={fat}
-							onChangeText={setFat}
-							keyboardType="decimal-pad"
-							containerStyle={styles.grow}
-						/>
-					</View>
+					<SectionHeader title={t("custom.nutritionTitle")} />
+					<AppText variant="caption" color="muted">
+						{t("custom.quantityHelp")}
+					</AppText>
+					<FormField
+						label={t("custom.energyField")}
+						value={energy}
+						onChangeText={setEnergy}
+						keyboardType="decimal-pad"
+					/>
+					<FormField
+						label={t("custom.proteinField")}
+						value={protein}
+						onChangeText={setProtein}
+						keyboardType="decimal-pad"
+					/>
+					<FormField
+						label={t("custom.carbsField")}
+						value={carbs}
+						onChangeText={setCarbs}
+						keyboardType="decimal-pad"
+					/>
+					<FormField
+						label={t("custom.fatField")}
+						value={fat}
+						onChangeText={setFat}
+						keyboardType="decimal-pad"
+					/>
+					<FormField
+						label={t("custom.servingField")}
+						value={servingLabel}
+						onChangeText={setServingLabel}
+					/>
 				</>
 			)}
 			<View style={styles.actions}>
@@ -310,7 +365,12 @@ function CustomFoodEditor({
 				<Button
 					label={t("custom.save")}
 					loading={busy}
-					disabled={!label.trim() || (isRecipe && components.length === 0)}
+					disabled={
+						!label.trim() ||
+						(isRecipe
+							? components.length === 0
+							: !hasServingQuantity || !servingQuantitiesValid)
+					}
 					style={styles.grow}
 					onPress={save}
 				/>
@@ -319,8 +379,14 @@ function CustomFoodEditor({
 	);
 }
 
-export function FoodScreen({ store, searchStore }: FoodScreenProps) {
+export function FoodScreen({
+	view = "overview",
+	initialCustomId,
+	store,
+	searchStore,
+}: FoodScreenProps) {
 	const { t } = useTranslation(["food", "common"]);
+	const { theme } = useUnistyles();
 	const food = useMemo(() => store ?? createFoodStore(), [store]);
 	const foodSearch = useMemo(
 		() => searchStore ?? createFoodSearchStore(),
@@ -333,8 +399,8 @@ export function FoodScreen({ store, searchStore }: FoodScreenProps) {
 	const [searchQuery, setSearchQuery] = useState("");
 	const [selectedSearchRef, setSelectedSearchRef] = useState("");
 	const [searchServingId, setSearchServingId] = useState("");
-	const [mode, setMode] = useState<AddMode>(null);
-	const [customId, setCustomId] = useState("");
+	const [mode, setMode] = useState<AddMode>(initialCustomId ? "custom" : null);
+	const [customId, setCustomId] = useState(initialCustomId ?? "");
 	const [servingId, setServingId] = useState("");
 	const [quantity, setQuantity] = useState("1");
 	const [localDay, setLocalDay] = useState("");
@@ -370,8 +436,14 @@ export function FoodScreen({ store, searchStore }: FoodScreenProps) {
 			setSearchSnapshot((current) => current ?? cached);
 			setLocalDay((current) => current || next.localDay);
 			setTime((current) => current || next.defaultTime);
+			if (initialCustomId) {
+				const selected = next.customFoods.find(
+					({ consumable }) => consumable.id === initialCustomId,
+				)?.consumable;
+				setServingId((current) => current || selected?.servings[0]?.id || "");
+			}
 			return next;
-		}, [food, foodSearch]),
+		}, [food, foodSearch, initialCustomId]),
 	);
 
 	async function mutate(work: () => Promise<unknown>): Promise<boolean> {
@@ -411,12 +483,13 @@ export function FoodScreen({ store, searchStore }: FoodScreenProps) {
 		setFat("");
 	}
 
-	async function runSearch() {
+	async function runSearch(query = searchQuery) {
 		if (searchBusy) return;
+		setSearchQuery(query);
 		setSearchBusy(true);
 		setError(null);
 		try {
-			setSearchSnapshot(await foodSearch.search(searchQuery));
+			setSearchSnapshot(await foodSearch.search(query));
 			setSelectedSearchRef("");
 			setSearchServingId("");
 		} catch (caught) {
@@ -448,8 +521,11 @@ export function FoodScreen({ store, searchStore }: FoodScreenProps) {
 		setSelectedSearchRef("");
 		setSearchServingId("");
 		setQuantity("1");
-		if (savedDay !== snapshot?.localDay)
+		if (savedDay !== snapshot?.localDay) {
 			router.push(`/food/${savedDay}` as Href);
+		} else {
+			router.replace("/food" as Href);
+		}
 	}
 
 	async function saveEntry() {
@@ -474,8 +550,11 @@ export function FoodScreen({ store, searchStore }: FoodScreenProps) {
 		);
 		if (!saved) return;
 		resetAdd();
-		if (savedDay !== snapshot?.localDay)
+		if (savedDay !== snapshot?.localDay) {
 			router.push(`/food/${savedDay}` as Href);
+		} else {
+			router.replace("/food" as Href);
+		}
 	}
 
 	if (loading) {
@@ -502,547 +581,728 @@ export function FoodScreen({ store, searchStore }: FoodScreenProps) {
 	const selectedSearchResult = searchSnapshot?.results.find(
 		(result) => result.ref === selectedSearchRef,
 	);
+	const showingOverview = view === "overview";
+	const showingSearchResults =
+		view === "search" && searchQuery.trim().length >= 2;
 
 	return (
-		<Screen scroll padded gap="lg" keyboardShouldPersistTaps="handled">
-			<Card style={styles.section}>
-				<SectionHeader
-					title={t("today.title")}
-					eyebrow={snapshot.localDay}
-					action={
-						<TouchableOpacity
-							accessibilityRole="button"
-							onPress={() => router.push("/settings/food" as Href)}
-						>
-							<AppText variant="label" color="brand">
-								{t("today.settings")}
-							</AppText>
-						</TouchableOpacity>
-					}
+		<>
+			{view === "search" ? (
+				<Stack.Screen
+					options={{
+						headerSearchBarOptions: {
+							autoCapitalize: "none",
+							barTintColor: theme.colors.surface,
+							headerIconColor: theme.colors.textMuted,
+							hideNavigationBar: false,
+							hideWhenScrolling: false,
+							hintTextColor: theme.colors.textSubtle,
+							obscureBackground: false,
+							onChangeText: (event) => setSearchQuery(event.nativeEvent.text),
+							onSearchButtonPress: (event) =>
+								void runSearch(event.nativeEvent.text),
+							placeholder: t("search.headerPlaceholder"),
+							placement: "integrated",
+							allowToolbarIntegration: false,
+							textColor: theme.colors.text,
+							tintColor: theme.colors.brand,
+						},
+						headerRight: () => (
+							<TouchableOpacity
+								accessibilityRole="button"
+								accessibilityLabel={t("search.addA11y")}
+								hitSlop={theme.spacing.sm}
+								style={styles.headerAction}
+								onPress={() => router.push("/food/log" as Href)}
+							>
+								<MaterialIcons name="add" color={theme.colors.text} size={24} />
+							</TouchableOpacity>
+						),
+					}}
 				/>
-				<View style={styles.totals}>
-					{snapshot.metrics.map((metric) => (
-						<View key={metric.metric.slug} style={styles.total}>
-							<AppText variant="micro" color="subtle">
-								{upperCaseForLanguage(metric.metric.label)}
-							</AppText>
-							<AppText variant="section">
-								{metric.dayFormatted ?? t("common:emDash")}
-							</AppText>
-							<AppText variant="micro" color="muted">
-								{t("today.weekTotal", {
-									value: metric.weekFormatted ?? t("common:emDash"),
-								})}
-							</AppText>
-						</View>
-					))}
-				</View>
-				<AppText variant="caption" color="subtle">
-					{t("today.disclaimer")}
-				</AppText>
-			</Card>
-			{error ? <AppText color="danger">{error}</AppText> : null}
-
-			<View style={styles.section}>
-				<SectionHeader
-					title={t("quickAdd.title")}
-					eyebrow={t("quickAdd.eyebrow")}
-				/>
-				{snapshot.recents.length === 0 ? (
-					<AppText color="muted">{t("quickAdd.empty")}</AppText>
-				) : (
-					<View style={styles.wrap}>
-						{snapshot.recents.map(({ entry }) => (
-							<Button
-								key={entry.id}
-								label={t("quickAdd.option", {
-									food: entry.label,
-									serving: entry.servingLabel ?? t("defaultServing"),
-								})}
-								variant="secondary"
-								disabled={busy}
-								onPress={() => void mutate(() => food.repeatEntry(entry.id))}
-							/>
-						))}
-					</View>
-				)}
-			</View>
-
-			<View style={styles.section}>
-				<SectionHeader
-					title={t("custom.title")}
-					action={
-						<Button
-							label={t("custom.create")}
-							variant="text"
-							onPress={() => setCustomEditor("new")}
+			) : null}
+			<Screen
+				scroll
+				padded
+				gap="lg"
+				keyboardShouldPersistTaps="handled"
+				contentInsetAdjustmentBehavior={
+					view === "search" ? "automatic" : undefined
+				}
+			>
+				{showingOverview ? (
+					<Card style={styles.section}>
+						<SectionHeader
+							title={t("today.title")}
+							eyebrow={snapshot.localDay}
+							action={
+								<TouchableOpacity
+									accessibilityRole="button"
+									onPress={() => router.push("/settings/food" as Href)}
+								>
+									<AppText variant="label" color="brand">
+										{t("today.settings")}
+									</AppText>
+								</TouchableOpacity>
+							}
 						/>
-					}
-				/>
-				{snapshot.customFoods.length === 0 ? (
-					<AppText color="muted">{t("custom.empty")}</AppText>
-				) : (
-					snapshot.customFoods.map((custom) => (
-						<Card key={custom.consumable.id} style={styles.componentRow}>
-							<View style={styles.grow}>
-								<AppText variant="label">{custom.consumable.label}</AppText>
-								<AppText variant="caption" color="muted">
-									{custom.consumable.isRecipe
-										? t("custom.components", {
-												count: custom.components.length,
-											})
-										: custom.consumable.servings[0]?.label}
-								</AppText>
+						<View style={styles.totals}>
+							{snapshot.metrics.map((metric) => (
+								<View key={metric.metric.slug} style={styles.total}>
+									<AppText variant="micro" color="subtle">
+										{upperCaseForLanguage(metric.metric.label)}
+									</AppText>
+									<AppText variant="section">
+										{metric.dayFormatted ?? t("common:emDash")}
+									</AppText>
+									<AppText variant="micro" color="muted">
+										{t("today.weekTotal", {
+											value: metric.weekFormatted ?? t("common:emDash"),
+										})}
+									</AppText>
+								</View>
+							))}
+						</View>
+						<AppText variant="caption" color="subtle">
+							{t("today.disclaimer")}
+						</AppText>
+					</Card>
+				) : null}
+				{error ? <AppText color="danger">{error}</AppText> : null}
+
+				{showingOverview ? (
+					<View style={styles.section}>
+						<SectionHeader title={t("overview.manageTitle")} />
+						<ListRow
+							title={t("overview.custom")}
+							detail={t("overview.customDetail")}
+							onPress={() => router.push("/food/custom" as Href)}
+						/>
+						<ListRow
+							title={t("overview.goals")}
+							detail={t("overview.goalsDetail")}
+							onPress={() => router.push("/food/goals" as Href)}
+						/>
+					</View>
+				) : null}
+
+				{showingOverview ? (
+					<View style={styles.section}>
+						<SectionHeader
+							title={t("quickAdd.title")}
+							eyebrow={t("quickAdd.eyebrow")}
+						/>
+						{snapshot.recents.length === 0 ? (
+							<AppText color="muted">{t("quickAdd.empty")}</AppText>
+						) : (
+							<View style={styles.wrap}>
+								{snapshot.recents.map(({ entry }) => (
+									<Button
+										key={entry.id}
+										label={t("quickAdd.option", {
+											food: entry.label,
+											serving: entry.servingLabel ?? t("defaultServing"),
+										})}
+										variant="secondary"
+										disabled={busy}
+										onPress={() =>
+											void mutate(() => food.repeatEntry(entry.id))
+										}
+									/>
+								))}
 							</View>
-							<Button
-								label={t("custom.edit")}
-								variant="text"
-								onPress={() => setCustomEditor(custom)}
-							/>
-							<Button
-								label={t("custom.delete")}
-								variant="text"
-								tone="danger"
-								disabled={busy}
-								onPress={() =>
-									void mutate(() => food.deleteCustom(custom.consumable.id))
+						)}
+					</View>
+				) : null}
+
+				{view === "custom" ? (
+					<View style={styles.section}>
+						<SectionHeader
+							title={t("custom.title")}
+							action={
+								<Button
+									label={t("custom.create")}
+									variant="text"
+									onPress={() => setCustomEditor("new")}
+								/>
+							}
+						/>
+						{snapshot.customFoods.length === 0 ? (
+							<AppText color="muted">{t("custom.empty")}</AppText>
+						) : (
+							snapshot.customFoods.map((custom) => (
+								<Card key={custom.consumable.id} style={styles.componentRow}>
+									<View style={styles.grow}>
+										<AppText variant="label">{custom.consumable.label}</AppText>
+										<AppText variant="caption" color="muted">
+											{custom.consumable.isRecipe
+												? t("custom.components", {
+														count: custom.components.length,
+													})
+												: custom.consumable.servings[0]?.label}
+										</AppText>
+									</View>
+									<Button
+										label={t("custom.edit")}
+										variant="text"
+										onPress={() => setCustomEditor(custom)}
+									/>
+									<Button
+										label={t("custom.delete")}
+										variant="text"
+										tone="danger"
+										disabled={busy}
+										onPress={() =>
+											void mutate(() => food.deleteCustom(custom.consumable.id))
+										}
+									/>
+								</Card>
+							))
+						)}
+						{customEditor ? (
+							<CustomFoodEditor
+								key={
+									customEditor === "new" ? "new" : customEditor.consumable.id
+								}
+								initial={customEditor === "new" ? null : customEditor}
+								busy={busy}
+								onCancel={() => setCustomEditor(null)}
+								onSave={(draft) =>
+									void mutate(() => food.saveCustom(draft)).then((saved) => {
+										if (saved) setCustomEditor(null);
+									})
 								}
 							/>
-						</Card>
-					))
-				)}
-				{customEditor ? (
-					<CustomFoodEditor
-						key={customEditor === "new" ? "new" : customEditor.consumable.id}
-						initial={customEditor === "new" ? null : customEditor}
-						busy={busy}
-						onCancel={() => setCustomEditor(null)}
-						onSave={(draft) =>
-							void mutate(() => food.saveCustom(draft)).then((saved) => {
-								if (saved) setCustomEditor(null);
-							})
-						}
-					/>
+						) : null}
+					</View>
 				) : null}
-			</View>
 
-			<Card style={styles.section}>
-				<SectionHeader
-					title={t("search.title")}
-					eyebrow={
-						searchSnapshot?.fromCache && searchSnapshot.results.length > 0
-							? t("search.cachedEyebrow")
-							: undefined
-					}
-				/>
-				<FormField
-					label={t("search.field")}
-					value={searchQuery}
-					onChangeText={setSearchQuery}
-					placeholder={t("search.placeholder")}
-					onSubmitEditing={() => void runSearch()}
-				/>
-				<Button
-					label={t("search.submit")}
-					loading={searchBusy}
-					disabled={searchQuery.trim().length < 2}
-					onPress={() => void runSearch()}
-				/>
-				{searchSnapshot?.message ? (
-					<AppText color={searchSnapshot.offline ? "muted" : "subtle"}>
-						{searchSnapshot.message}
-					</AppText>
+				{view === "search" && !showingSearchResults ? (
+					<>
+						<View style={styles.section}>
+							<SectionHeader
+								title={t("search.customTitle")}
+								action={
+									<TouchableOpacity
+										accessibilityRole="button"
+										accessibilityLabel={t("search.createCustomA11y")}
+										onPress={() => router.push("/food/custom" as Href)}
+									>
+										<MaterialIcons
+											name="add"
+											color={theme.colors.brand}
+											size={24}
+										/>
+									</TouchableOpacity>
+								}
+							/>
+							{snapshot.customFoods.length === 0 ? (
+								<ListRow
+									title={t("search.customLog")}
+									detail={t("search.customLogDetail")}
+									onPress={() => router.push("/food/custom" as Href)}
+								/>
+							) : (
+								snapshot.customFoods.map(({ consumable }) => (
+									<TouchableOpacity
+										key={consumable.id}
+										accessibilityRole="button"
+										accessibilityLabel={t("search.logCustomA11y", {
+											name: consumable.label,
+										})}
+										onPress={() =>
+											router.push({
+												pathname: "/food/log",
+												params: { customId: consumable.id },
+											})
+										}
+									>
+										<Card style={styles.searchResult}>
+											<View style={styles.grow}>
+												<AppText variant="label">{consumable.label}</AppText>
+												<AppText variant="caption" color="muted">
+													{consumable.brand ??
+														consumable.servings[0]?.label ??
+														t("defaultServing")}
+												</AppText>
+											</View>
+											<MaterialIcons
+												name="add"
+												color={theme.colors.textMuted}
+												size={28}
+											/>
+										</Card>
+									</TouchableOpacity>
+								))
+							)}
+						</View>
+
+						<View style={styles.section}>
+							<SectionHeader title={t("search.recentTitle")} />
+							{snapshot.recents.length === 0 ? (
+								<AppText color="muted">{t("quickAdd.empty")}</AppText>
+							) : (
+								snapshot.recents.map(({ entry, detail, contributions }) => (
+									<TouchableOpacity
+										key={entry.id}
+										accessibilityRole="button"
+										accessibilityLabel={t("search.logRecentA11y", {
+											name: entry.label,
+										})}
+										disabled={busy}
+										onPress={() =>
+											void mutate(() => food.repeatEntry(entry.id))
+										}
+									>
+										<Card style={styles.searchResult}>
+											<View style={styles.grow}>
+												<AppText variant="label">{entry.label}</AppText>
+												<AppText variant="caption" color="muted">
+													{detail}
+												</AppText>
+												{contributions ? (
+													<AppText variant="micro" color="subtle">
+														{contributions}
+													</AppText>
+												) : null}
+											</View>
+											<MaterialIcons
+												name="add"
+												color={theme.colors.textMuted}
+												size={28}
+											/>
+										</Card>
+									</TouchableOpacity>
+								))
+							)}
+						</View>
+					</>
 				) : null}
-				{searchSnapshot?.results.map((result) => (
-					<Card key={result.ref} style={styles.searchResult}>
-						<View style={styles.grow}>
-							<AppText variant="label">{result.label}</AppText>
-							{result.brand ? (
-								<AppText variant="caption" color="muted">
-									{result.brand}
-								</AppText>
-							) : null}
-							<AppText variant="micro" color="subtle">
-								{t("search.provenance", {
-									source: result.source,
-									licence: result.licence,
-								})}
+
+				{showingSearchResults ? (
+					<View style={styles.section}>
+						<SectionHeader
+							title={t("search.resultsTitle")}
+							eyebrow={
+								searchSnapshot?.fromCache && searchSnapshot.results.length > 0
+									? t("search.cachedEyebrow")
+									: undefined
+							}
+						/>
+						{searchBusy ? <LoadingIndicator /> : null}
+						{searchSnapshot?.message ? (
+							<AppText color={searchSnapshot.offline ? "muted" : "subtle"}>
+								{searchSnapshot.message}
 							</AppText>
-						</View>
-						<Button
-							label={t("search.choose")}
-							variant="secondary"
-							accessibilityLabel={t("search.chooseA11y", {
-								name: result.label,
-							})}
-							onPress={() => selectSearchResult(result)}
-						/>
-					</Card>
-				))}
-				{selectedSearchResult ? (
-					<View style={styles.section}>
-						<AppText variant="label">{t("search.servingLabel")}</AppText>
-						<View style={styles.wrap}>
-							{selectedSearchResult.servings.map((serving) => (
+						) : null}
+						{searchSnapshot?.results.map((result) => (
+							<Card key={result.ref} style={styles.searchResult}>
+								<View style={styles.grow}>
+									<AppText variant="label">{result.label}</AppText>
+									{result.brand ? (
+										<AppText variant="caption" color="muted">
+											{result.brand}
+										</AppText>
+									) : null}
+									<AppText variant="micro" color="subtle">
+										{t("search.provenance", {
+											source: result.source,
+											licence: result.licence,
+										})}
+									</AppText>
+								</View>
 								<Button
-									key={serving.id}
-									label={serving.label}
-									variant={
-										searchServingId === serving.id ? "primary" : "secondary"
-									}
-									onPress={() => setSearchServingId(serving.id)}
+									label={t("search.choose")}
+									variant="secondary"
+									accessibilityLabel={t("search.chooseA11y", {
+										name: result.label,
+									})}
+									onPress={() => selectSearchResult(result)}
 								/>
-							))}
-						</View>
-						<FormField
-							label={t("search.quantityField")}
-							value={quantity}
-							onChangeText={setQuantity}
-							keyboardType="decimal-pad"
-						/>
-						<View style={styles.actions}>
-							<FormField
-								label={t("search.dateField")}
-								value={localDay}
-								onChangeText={setLocalDay}
-								placeholder={t("search.datePlaceholder")}
-								containerStyle={styles.grow}
-							/>
-							<FormField
-								label={t("search.timeField")}
-								value={time}
-								onChangeText={setTime}
-								placeholder={t("search.timePlaceholder")}
-								containerStyle={styles.grow}
-							/>
-						</View>
-						<View style={styles.actions}>
-							<Button
-								label={t("search.cancel")}
-								variant="text"
-								style={styles.grow}
-								onPress={() => setSelectedSearchRef("")}
-							/>
-							<Button
-								label={t("search.save")}
-								loading={busy}
-								disabled={!searchServingId}
-								style={styles.grow}
-								onPress={() => void saveSearchResult()}
-							/>
-						</View>
-					</View>
-				) : null}
-				<TouchableOpacity
-					accessibilityRole="button"
-					onPress={() => router.push("/settings/licences" as Href)}
-				>
-					<AppText variant="caption" color="brand">
-						{t("search.licenceNotice")}
-					</AppText>
-				</TouchableOpacity>
-			</Card>
-
-			<Card style={styles.section}>
-				<SectionHeader title={t("add.title")} />
-				{mode === null ? (
-					<View style={styles.actions}>
-						<Button
-							label={t("add.chooseCustom")}
-							style={styles.grow}
-							disabled={snapshot.customFoods.length === 0}
-							onPress={() => setMode("custom")}
-						/>
-						<Button
-							label={t("add.chooseFree")}
-							variant="secondary"
-							style={styles.grow}
-							onPress={() => setMode("free")}
-						/>
-					</View>
-				) : null}
-				{mode === "custom" ? (
-					<View style={styles.section}>
-						<AppText variant="label">{t("add.customLabel")}</AppText>
-						<View style={styles.wrap}>
-							{snapshot.customFoods.map(({ consumable }) => (
-								<Button
-									key={consumable.id}
-									label={consumable.label}
-									variant={customId === consumable.id ? "primary" : "secondary"}
-									onPress={() => selectCustom(consumable.id)}
-								/>
-							))}
-						</View>
-						{selectedCustom ? (
-							<>
-								<AppText variant="label">{t("add.servingLabel")}</AppText>
+							</Card>
+						))}
+						{selectedSearchResult ? (
+							<View style={styles.section}>
+								<AppText variant="label">{t("search.servingLabel")}</AppText>
 								<View style={styles.wrap}>
-									{selectedCustom.servings.map((serving) => (
+									{selectedSearchResult.servings.map((serving) => (
 										<Button
 											key={serving.id}
 											label={serving.label}
 											variant={
-												servingId === serving.id ? "primary" : "secondary"
+												searchServingId === serving.id ? "primary" : "secondary"
 											}
-											onPress={() => setServingId(serving.id)}
+											onPress={() => setSearchServingId(serving.id)}
 										/>
 									))}
 								</View>
-							</>
-						) : null}
-					</View>
-				) : null}
-				{mode === "free" ? (
-					<View style={styles.section}>
-						<FormField
-							label={t("add.nameField")}
-							value={label}
-							onChangeText={setLabel}
-						/>
-						<FormField
-							label={t("add.servingNameField")}
-							value={servingLabel}
-							onChangeText={setServingLabel}
-							placeholder={t("add.servingNamePlaceholder")}
-						/>
-						<View style={styles.actions}>
-							<FormField
-								label={t("add.energyField")}
-								value={energy}
-								onChangeText={setEnergy}
-								keyboardType="decimal-pad"
-								containerStyle={styles.grow}
-							/>
-							<FormField
-								label={t("add.proteinField")}
-								value={protein}
-								onChangeText={setProtein}
-								keyboardType="decimal-pad"
-								containerStyle={styles.grow}
-							/>
-						</View>
-						<View style={styles.actions}>
-							<FormField
-								label={t("add.carbsField")}
-								value={carbs}
-								onChangeText={setCarbs}
-								keyboardType="decimal-pad"
-								containerStyle={styles.grow}
-							/>
-							<FormField
-								label={t("add.fatField")}
-								value={fat}
-								onChangeText={setFat}
-								keyboardType="decimal-pad"
-								containerStyle={styles.grow}
-							/>
-						</View>
-					</View>
-				) : null}
-				{mode ? (
-					<>
-						<FormField
-							label={t("add.quantityField")}
-							value={quantity}
-							onChangeText={setQuantity}
-							keyboardType="decimal-pad"
-						/>
-						<View style={styles.actions}>
-							<FormField
-								label={t("add.dateField")}
-								value={localDay}
-								onChangeText={setLocalDay}
-								placeholder={t("search.datePlaceholder")}
-								containerStyle={styles.grow}
-							/>
-							<FormField
-								label={t("add.timeField")}
-								value={time}
-								onChangeText={setTime}
-								placeholder={t("search.timePlaceholder")}
-								containerStyle={styles.grow}
-							/>
-						</View>
-						<Button
-							label={t("add.yesterday")}
-							variant="text"
-							onPress={() => {
-								setLocalDay(previousLocalDay(snapshot.localDay));
-								setTime("20:00");
-							}}
-						/>
-						<View style={styles.actions}>
-							<Button
-								label={t("add.cancel")}
-								variant="text"
-								disabled={busy}
-								style={styles.grow}
-								onPress={resetAdd}
-							/>
-							<Button
-								label={t("add.save")}
-								loading={busy}
-								disabled={
-									mode === "custom" ? !customId || !servingId : !label.trim()
-								}
-								style={styles.grow}
-								onPress={() => void saveEntry()}
-							/>
-						</View>
-					</>
-				) : null}
-			</Card>
-
-			<View style={styles.section}>
-				<SectionHeader title={t("entries.title")} />
-				{snapshot.entries.length === 0 ? (
-					<EmptyState
-						title={t("entries.emptyTitle")}
-						body={t("entries.emptyBody")}
-					/>
-				) : (
-					snapshot.entries.map(({ entry, detail, contributions }) => (
-						<TouchableOpacity
-							key={entry.id}
-							accessibilityRole="button"
-							accessibilityLabel={t("entries.edit", { name: entry.label })}
-							onPress={() => router.push(`/food/${snapshot.localDay}` as Href)}
-						>
-							<Card style={styles.entry}>
-								<AppText variant="label">{entry.label}</AppText>
-								<AppText variant="caption" color="muted">
-									{detail}
-								</AppText>
-								{contributions ? (
-									<AppText variant="micro" color="subtle">
-										{contributions}
-									</AppText>
-								) : null}
-							</Card>
-						</TouchableOpacity>
-					))
-				)}
-			</View>
-			{snapshot.recentLocalDays.length > 0 ? (
-				<View style={styles.section}>
-					<SectionHeader title={t("entries.recentDays")} />
-					<View style={styles.wrap}>
-						{snapshot.recentLocalDays.map((day) => (
-							<Button
-								key={day}
-								label={day}
-								variant="secondary"
-								onPress={() => router.push(`/food/${day}` as Href)}
-							/>
-						))}
-					</View>
-				</View>
-			) : null}
-
-			<View style={styles.section}>
-				<SectionHeader title={t("goals.title")} />
-				{trackedMetrics.length === 0 ? (
-					<AppText color="muted">{t("goals.needMetrics")}</AppText>
-				) : null}
-				{trackedMetrics.map((metric) => {
-					const activeGoal = metric.goals.find(
-						(goal) => goal.status === "active",
-					);
-					return (
-						<Card key={metric.metric.slug} style={styles.section}>
-							<SectionHeader title={metric.metric.label} />
-							{activeGoal ? (
-								<>
-									<AppText>
-										{t("goals.summary", {
-											target: activeGoal.targetFormatted,
-											current:
-												activeGoal.currentFormatted ?? t("common:emDash"),
-										})}
-									</AppText>
-									{activeGoal.targetReached ? (
-										<AppText variant="caption" color="brand">
-											{t("goals.targetReached")}
-										</AppText>
-									) : activeGoal.progressPercent !== null ? (
-										<AppText variant="caption" color="brand">
-											{t("goals.percentComplete", {
-												percent: activeGoal.progressPercent,
-											})}
-										</AppText>
-									) : null}
-									<View style={styles.actions}>
-										<Button
-											label={t("goals.achieve")}
-											variant="secondary"
-											disabled={busy}
-											style={styles.grow}
-											onPress={() =>
-												void mutate(() => food.achieveGoal(activeGoal.goal.id))
-											}
-										/>
-										<Button
-											label={t("goals.abandon")}
-											variant="text"
-											disabled={busy}
-											style={styles.grow}
-											onPress={() =>
-												void mutate(() => food.abandonGoal(activeGoal.goal.id))
-											}
-										/>
-									</View>
-								</>
-							) : goalSlug === metric.metric.slug ? (
-								<>
+								<FormField
+									label={t("search.quantityField")}
+									value={quantity}
+									onChangeText={setQuantity}
+									keyboardType="decimal-pad"
+								/>
+								<View style={styles.actions}>
 									<FormField
-										label={t("goals.targetField", {
-											unit: metric.displayUnit,
-										})}
-										value={goalTarget}
-										onChangeText={setGoalTarget}
-										keyboardType="decimal-pad"
+										label={t("search.dateField")}
+										value={localDay}
+										onChangeText={setLocalDay}
+										placeholder={t("search.datePlaceholder")}
+										containerStyle={styles.grow}
 									/>
 									<FormField
-										label={t("goals.targetDateField")}
-										value={goalDate}
-										onChangeText={setGoalDate}
-										placeholder={t("search.datePlaceholder")}
+										label={t("search.timeField")}
+										value={time}
+										onChangeText={setTime}
+										placeholder={t("search.timePlaceholder")}
+										containerStyle={styles.grow}
+									/>
+								</View>
+								<View style={styles.actions}>
+									<Button
+										label={t("search.cancel")}
+										variant="text"
+										style={styles.grow}
+										onPress={() => setSelectedSearchRef("")}
 									/>
 									<Button
-										label={t("goals.save")}
+										label={t("search.save")}
 										loading={busy}
-										onPress={() =>
-											void mutate(() =>
-												food.createGoal(
-													metric.metric.slug,
-													goalTarget,
-													goalDate.trim() || null,
-												),
-											).then((saved) => {
-												if (saved) {
-													setGoalSlug(null);
-													setGoalTarget("");
-													setGoalDate("");
-												}
-											})
-										}
+										disabled={!searchServingId}
+										style={styles.grow}
+										onPress={() => void saveSearchResult()}
 									/>
-								</>
-							) : metric.dayValue !== null ? (
+								</View>
+							</View>
+						) : null}
+						<TouchableOpacity
+							accessibilityRole="button"
+							onPress={() => router.push("/settings/licences" as Href)}
+						>
+							<AppText variant="caption" color="brand">
+								{t("search.licenceNotice")}
+							</AppText>
+						</TouchableOpacity>
+					</View>
+				) : null}
+
+				{view === "log" ? (
+					<Card style={styles.section}>
+						<SectionHeader title={t("add.title")} />
+						{mode === null ? (
+							<View style={styles.actions}>
 								<Button
-									label={t("goals.setFor", { name: metric.metric.label })}
-									variant="secondary"
-									onPress={() => setGoalSlug(metric.metric.slug)}
+									label={t("add.chooseCustom")}
+									style={styles.grow}
+									disabled={snapshot.customFoods.length === 0}
+									onPress={() => setMode("custom")}
 								/>
-							) : (
-								<AppText color="muted">{t("goals.needValue")}</AppText>
-							)}
-						</Card>
-					);
-				})}
-			</View>
-		</Screen>
+								<Button
+									label={t("add.chooseFree")}
+									variant="secondary"
+									style={styles.grow}
+									onPress={() => setMode("free")}
+								/>
+							</View>
+						) : null}
+						{mode === "custom" ? (
+							<View style={styles.section}>
+								<AppText variant="label">{t("add.customLabel")}</AppText>
+								<View style={styles.wrap}>
+									{snapshot.customFoods.map(({ consumable }) => (
+										<Button
+											key={consumable.id}
+											label={consumable.label}
+											variant={
+												customId === consumable.id ? "primary" : "secondary"
+											}
+											onPress={() => selectCustom(consumable.id)}
+										/>
+									))}
+								</View>
+								{selectedCustom ? (
+									<>
+										<AppText variant="label">{t("add.servingLabel")}</AppText>
+										<View style={styles.wrap}>
+											{selectedCustom.servings.map((serving) => (
+												<Button
+													key={serving.id}
+													label={serving.label}
+													variant={
+														servingId === serving.id ? "primary" : "secondary"
+													}
+													onPress={() => setServingId(serving.id)}
+												/>
+											))}
+										</View>
+									</>
+								) : null}
+							</View>
+						) : null}
+						{mode === "free" ? (
+							<View style={styles.section}>
+								<FormField
+									label={t("add.nameField")}
+									value={label}
+									onChangeText={setLabel}
+								/>
+								<FormField
+									label={t("add.servingNameField")}
+									value={servingLabel}
+									onChangeText={setServingLabel}
+									placeholder={t("add.servingNamePlaceholder")}
+								/>
+								<View style={styles.actions}>
+									<FormField
+										label={t("add.energyField")}
+										value={energy}
+										onChangeText={setEnergy}
+										keyboardType="decimal-pad"
+										containerStyle={styles.grow}
+									/>
+									<FormField
+										label={t("add.proteinField")}
+										value={protein}
+										onChangeText={setProtein}
+										keyboardType="decimal-pad"
+										containerStyle={styles.grow}
+									/>
+								</View>
+								<View style={styles.actions}>
+									<FormField
+										label={t("add.carbsField")}
+										value={carbs}
+										onChangeText={setCarbs}
+										keyboardType="decimal-pad"
+										containerStyle={styles.grow}
+									/>
+									<FormField
+										label={t("add.fatField")}
+										value={fat}
+										onChangeText={setFat}
+										keyboardType="decimal-pad"
+										containerStyle={styles.grow}
+									/>
+								</View>
+							</View>
+						) : null}
+						{mode ? (
+							<>
+								<FormField
+									label={t("add.quantityField")}
+									value={quantity}
+									onChangeText={setQuantity}
+									keyboardType="decimal-pad"
+								/>
+								<View style={styles.actions}>
+									<FormField
+										label={t("add.dateField")}
+										value={localDay}
+										onChangeText={setLocalDay}
+										placeholder={t("search.datePlaceholder")}
+										containerStyle={styles.grow}
+									/>
+									<FormField
+										label={t("add.timeField")}
+										value={time}
+										onChangeText={setTime}
+										placeholder={t("search.timePlaceholder")}
+										containerStyle={styles.grow}
+									/>
+								</View>
+								<Button
+									label={t("add.yesterday")}
+									variant="text"
+									onPress={() => {
+										setLocalDay(previousLocalDay(snapshot.localDay));
+										setTime("20:00");
+									}}
+								/>
+								<View style={styles.actions}>
+									<Button
+										label={t("add.cancel")}
+										variant="text"
+										disabled={busy}
+										style={styles.grow}
+										onPress={resetAdd}
+									/>
+									<Button
+										label={t("add.save")}
+										loading={busy}
+										disabled={
+											mode === "custom"
+												? !customId || !servingId
+												: !label.trim()
+										}
+										style={styles.grow}
+										onPress={() => void saveEntry()}
+									/>
+								</View>
+							</>
+						) : null}
+					</Card>
+				) : null}
+
+				{showingOverview ? (
+					<View style={styles.section}>
+						<SectionHeader title={t("entries.title")} />
+						{snapshot.entries.length === 0 ? (
+							<EmptyState
+								title={t("entries.emptyTitle")}
+								body={t("entries.emptyBody")}
+							/>
+						) : (
+							snapshot.entries.map(({ entry, detail, contributions }) => (
+								<TouchableOpacity
+									key={entry.id}
+									accessibilityRole="button"
+									accessibilityLabel={t("entries.edit", { name: entry.label })}
+									onPress={() =>
+										router.push(`/food/${snapshot.localDay}` as Href)
+									}
+								>
+									<Card style={styles.entry}>
+										<AppText variant="label">{entry.label}</AppText>
+										<AppText variant="caption" color="muted">
+											{detail}
+										</AppText>
+										{contributions ? (
+											<AppText variant="micro" color="subtle">
+												{contributions}
+											</AppText>
+										) : null}
+									</Card>
+								</TouchableOpacity>
+							))
+						)}
+					</View>
+				) : null}
+				{showingOverview && snapshot.recentLocalDays.length > 0 ? (
+					<View style={styles.section}>
+						<SectionHeader title={t("entries.recentDays")} />
+						<View style={styles.wrap}>
+							{snapshot.recentLocalDays.map((day) => (
+								<Button
+									key={day}
+									label={day}
+									variant="secondary"
+									onPress={() => router.push(`/food/${day}` as Href)}
+								/>
+							))}
+						</View>
+					</View>
+				) : null}
+
+				{view === "goals" ? (
+					<View style={styles.section}>
+						<SectionHeader title={t("goals.title")} />
+						{trackedMetrics.length === 0 ? (
+							<AppText color="muted">{t("goals.needMetrics")}</AppText>
+						) : null}
+						{trackedMetrics.map((metric) => {
+							const activeGoal = metric.goals.find(
+								(goal) => goal.status === "active",
+							);
+							return (
+								<Card key={metric.metric.slug} style={styles.section}>
+									<SectionHeader title={metric.metric.label} />
+									{activeGoal ? (
+										<>
+											<AppText>
+												{t("goals.summary", {
+													target: activeGoal.targetFormatted,
+													current:
+														activeGoal.currentFormatted ?? t("common:emDash"),
+												})}
+											</AppText>
+											{activeGoal.targetReached ? (
+												<AppText variant="caption" color="brand">
+													{t("goals.targetReached")}
+												</AppText>
+											) : activeGoal.progressPercent !== null ? (
+												<AppText variant="caption" color="brand">
+													{t("goals.percentComplete", {
+														percent: activeGoal.progressPercent,
+													})}
+												</AppText>
+											) : null}
+											<View style={styles.actions}>
+												<Button
+													label={t("goals.achieve")}
+													variant="secondary"
+													disabled={busy}
+													style={styles.grow}
+													onPress={() =>
+														void mutate(() =>
+															food.achieveGoal(activeGoal.goal.id),
+														)
+													}
+												/>
+												<Button
+													label={t("goals.abandon")}
+													variant="text"
+													disabled={busy}
+													style={styles.grow}
+													onPress={() =>
+														void mutate(() =>
+															food.abandonGoal(activeGoal.goal.id),
+														)
+													}
+												/>
+											</View>
+										</>
+									) : goalSlug === metric.metric.slug ? (
+										<>
+											<FormField
+												label={t("goals.targetField", {
+													unit: metric.displayUnit,
+												})}
+												value={goalTarget}
+												onChangeText={setGoalTarget}
+												keyboardType="decimal-pad"
+											/>
+											<FormField
+												label={t("goals.targetDateField")}
+												value={goalDate}
+												onChangeText={setGoalDate}
+												placeholder={t("search.datePlaceholder")}
+											/>
+											<Button
+												label={t("goals.save")}
+												loading={busy}
+												onPress={() =>
+													void mutate(() =>
+														food.createGoal(
+															metric.metric.slug,
+															goalTarget,
+															goalDate.trim() || null,
+														),
+													).then((saved) => {
+														if (saved) {
+															setGoalSlug(null);
+															setGoalTarget("");
+															setGoalDate("");
+														}
+													})
+												}
+											/>
+										</>
+									) : metric.dayValue !== null ? (
+										<Button
+											label={t("goals.setFor", { name: metric.metric.label })}
+											variant="secondary"
+											onPress={() => setGoalSlug(metric.metric.slug)}
+										/>
+									) : (
+										<AppText color="muted">{t("goals.needValue")}</AppText>
+									)}
+								</Card>
+							);
+						})}
+					</View>
+				) : null}
+			</Screen>
+		</>
 	);
 }
 
@@ -1061,6 +1321,12 @@ const styles = StyleSheet.create((theme) => ({
 		flexDirection: "row",
 		alignItems: "center",
 		gap: theme.spacing.md,
+	},
+	headerAction: {
+		width: 40,
+		height: 40,
+		alignItems: "center",
+		justifyContent: "center",
 	},
 	grow: { flex: 1 },
 	entry: { gap: theme.spacing.xs },

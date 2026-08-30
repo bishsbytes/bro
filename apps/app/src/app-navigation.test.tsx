@@ -233,7 +233,7 @@ describe("app entry", () => {
 		const { router, view } = await launch({ onboardingComplete: true });
 		expect(view.getByLabelText("Account")).toBeTruthy();
 
-		await press(view, "Log");
+		await fireEvent.press(view.getByLabelText(/^Log, tab/));
 		await waitFor(() => expect(router.getPathname()).toBe("/log"));
 		expect(await view.findByText("No body metrics tracked")).toBeTruthy();
 		expect(view.getByLabelText("Account")).toBeTruthy();

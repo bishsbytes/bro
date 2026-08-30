@@ -9,6 +9,7 @@ import { Button } from "../../components/button";
 import { Card } from "../../components/card";
 import { EmptyState } from "../../components/empty-state";
 import { FormField } from "../../components/form-field";
+import { ListRow } from "../../components/list-row";
 import { LoadingScreen, StackScreen as Screen } from "../../components/screen";
 import { SectionHeader } from "../../components/section-header";
 import { createDrinksStore, type DrinksStore } from "../../drinks/drinks-store";
@@ -18,6 +19,7 @@ import { useFocusStoreLoad } from "../../lib/use-store-load";
 import { StyleSheet } from "../../theme/unistyles";
 
 type DrinksScreenProps = {
+	view?: "overview" | "custom" | "log" | "goals";
 	store?: Pick<
 		DrinksStore,
 		| "loadToday"
@@ -39,7 +41,13 @@ function optionalNumber(value: string): number | null {
 	return value.trim() ? Number(value) : null;
 }
 
-export function DrinksScreen({ store }: DrinksScreenProps) {
+function isOptionalNonNegativeNumber(value: string): boolean {
+	if (value.trim() === "") return true;
+	const number = Number(value);
+	return Number.isFinite(number) && number >= 0;
+}
+
+export function DrinksScreen({ view = "overview", store }: DrinksScreenProps) {
 	const { t } = useTranslation(["drinks", "common"]);
 	const drinks = useMemo(() => store ?? createDrinksStore(), [store]);
 	const [busy, setBusy] = useState(false);
@@ -206,6 +214,8 @@ export function DrinksScreen({ store }: DrinksScreenProps) {
 		resetAddForm();
 		if (savedDay !== snapshot?.localDay) {
 			router.push(`/drinks/${savedDay}` as Href);
+		} else {
+			router.replace("/drinks" as Href);
 		}
 	}
 
@@ -228,6 +238,8 @@ export function DrinksScreen({ store }: DrinksScreenProps) {
 		resetAddForm();
 		if (savedDay !== snapshot?.localDay) {
 			router.push(`/drinks/${savedDay}` as Href);
+		} else {
+			router.replace("/drinks" as Href);
 		}
 	}
 
@@ -241,8 +253,11 @@ export function DrinksScreen({ store }: DrinksScreenProps) {
 		);
 		if (!saved) return;
 		resetAddForm();
-		if (savedDay !== snapshot?.localDay)
+		if (savedDay !== snapshot?.localDay) {
 			router.push(`/drinks/${savedDay}` as Href);
+		} else {
+			router.replace("/drinks" as Href);
+		}
 	}
 
 	async function saveGoal() {
@@ -280,410 +295,450 @@ export function DrinksScreen({ store }: DrinksScreenProps) {
 		(drink) => drink.id === customId,
 	);
 	const trackedMetrics = snapshot.metrics.filter((metric) => metric.tracked);
+	const showingOverview = view === "overview";
+	const customHasCanonicalQuantity = [volumeMl, caffeineMg, energyKcal].some(
+		(value) => value.trim() !== "" && isOptionalNonNegativeNumber(value),
+	);
+	const customQuantitiesValid = [volumeMl, abv, caffeineMg, energyKcal].every(
+		isOptionalNonNegativeNumber,
+	);
+	const customAbvValid =
+		abv.trim() === "" || (volumeMl.trim() !== "" && Number(abv) <= 100);
 
 	return (
 		<Screen scroll padded gap="lg" keyboardShouldPersistTaps="handled">
-			<Card style={styles.section}>
-				<SectionHeader
-					title={t("today.title")}
-					eyebrow={snapshot.localDay}
-					action={
-						<TouchableOpacity
-							accessibilityRole="button"
-							onPress={() => router.push("/settings/drinks" as Href)}
-						>
-							<AppText variant="label" color="brand">
-								{t("today.settings")}
-							</AppText>
-						</TouchableOpacity>
-					}
-				/>
-				<View style={styles.totals}>
-					{snapshot.metrics.map((metric) => (
-						<View key={metric.metric.slug} style={styles.total}>
-							<AppText variant="micro" color="subtle">
-								{upperCaseForLanguage(metric.metric.label)}
-							</AppText>
-							<AppText variant="section">
-								{metric.dayFormatted ?? t("common:emDash")}
-							</AppText>
-							<AppText variant="micro" color="muted">
-								{t("today.weekTotal", {
-									value: metric.weekFormatted ?? t("common:emDash"),
-								})}
-							</AppText>
-						</View>
-					))}
-				</View>
-				<AppText variant="caption" color="subtle">
-					{t("today.disclaimer")}
-				</AppText>
-			</Card>
+			{showingOverview ? (
+				<Card style={styles.section}>
+					<SectionHeader
+						title={t("today.title")}
+						eyebrow={snapshot.localDay}
+						action={
+							<TouchableOpacity
+								accessibilityRole="button"
+								onPress={() => router.push("/settings/drinks" as Href)}
+							>
+								<AppText variant="label" color="brand">
+									{t("today.settings")}
+								</AppText>
+							</TouchableOpacity>
+						}
+					/>
+					<View style={styles.totals}>
+						{snapshot.metrics.map((metric) => (
+							<View key={metric.metric.slug} style={styles.total}>
+								<AppText variant="micro" color="subtle">
+									{upperCaseForLanguage(metric.metric.label)}
+								</AppText>
+								<AppText variant="section">
+									{metric.dayFormatted ?? t("common:emDash")}
+								</AppText>
+								<AppText variant="micro" color="muted">
+									{t("today.weekTotal", {
+										value: metric.weekFormatted ?? t("common:emDash"),
+									})}
+								</AppText>
+							</View>
+						))}
+					</View>
+					<AppText variant="caption" color="subtle">
+						{t("today.disclaimer")}
+					</AppText>
+				</Card>
+			) : null}
 
 			{error ? <AppText color="danger">{error}</AppText> : null}
 
-			<View style={styles.section}>
-				<SectionHeader
-					title={t("quickAdd.title")}
-					eyebrow={t("quickAdd.eyebrow")}
-				/>
-				{snapshot.recents.length === 0 ? (
-					<AppText color="muted">{t("quickAdd.empty")}</AppText>
-				) : (
-					<View style={styles.wrap}>
-						{snapshot.recents.map(({ entry }) => (
-							<Button
-								key={entry.id}
-								label={t("quickAdd.option", {
-									drink: entry.label,
-									serving: entry.servingLabel ?? t("defaultServing"),
-								})}
-								variant="secondary"
-								disabled={busy}
-								onPress={() => void mutate(() => drinks.repeatEntry(entry.id))}
-							/>
-						))}
-					</View>
-				)}
-			</View>
+			{showingOverview ? (
+				<View style={styles.section}>
+					<SectionHeader title={t("overview.manageTitle")} />
+					<ListRow
+						title={t("overview.custom")}
+						detail={t("overview.customDetail")}
+						onPress={() => router.push("/drinks/custom" as Href)}
+					/>
+					<ListRow
+						title={t("overview.goals")}
+						detail={t("overview.goalsDetail")}
+						onPress={() => router.push("/drinks/goals" as Href)}
+					/>
+				</View>
+			) : null}
 
-			<View style={styles.section}>
-				<SectionHeader
-					title={t("custom.title")}
-					action={
-						<Button
-							label={t("custom.create")}
-							variant="text"
-							onPress={() => editCustom(null)}
-						/>
-					}
-				/>
-				{snapshot.customDrinks.length === 0 ? (
-					<AppText color="muted">{t("custom.empty")}</AppText>
-				) : (
-					snapshot.customDrinks.map((drink) => (
-						<Card key={drink.id} style={styles.actions}>
-							<View style={styles.grow}>
-								<AppText variant="label">{drink.label}</AppText>
-								<AppText variant="caption" color="muted">
-									{drink.servings[0]?.label}
-								</AppText>
-							</View>
+			{showingOverview ? (
+				<View style={styles.section}>
+					<SectionHeader
+						title={t("quickAdd.title")}
+						eyebrow={t("quickAdd.eyebrow")}
+					/>
+					{snapshot.recents.length === 0 ? (
+						<AppText color="muted">{t("quickAdd.empty")}</AppText>
+					) : (
+						<View style={styles.wrap}>
+							{snapshot.recents.map(({ entry }) => (
+								<Button
+									key={entry.id}
+									label={t("quickAdd.option", {
+										drink: entry.label,
+										serving: entry.servingLabel ?? t("defaultServing"),
+									})}
+									variant="secondary"
+									disabled={busy}
+									onPress={() =>
+										void mutate(() => drinks.repeatEntry(entry.id))
+									}
+								/>
+							))}
+						</View>
+					)}
+				</View>
+			) : null}
+
+			{view === "custom" ? (
+				<View style={styles.section}>
+					<SectionHeader
+						title={t("custom.title")}
+						action={
 							<Button
-								label={t("custom.edit")}
+								label={t("custom.create")}
 								variant="text"
-								onPress={() => editCustom(drink.id)}
+								onPress={() => editCustom(null)}
 							/>
-							<Button
-								label={t("custom.delete")}
-								variant="text"
-								tone="danger"
-								disabled={busy}
-								onPress={() => void mutate(() => drinks.deleteCustom(drink.id))}
+						}
+					/>
+					{snapshot.customDrinks.length === 0 ? (
+						<AppText color="muted">{t("custom.empty")}</AppText>
+					) : (
+						snapshot.customDrinks.map((drink) => (
+							<Card key={drink.id} style={styles.actions}>
+								<View style={styles.grow}>
+									<AppText variant="label">{drink.label}</AppText>
+									<AppText variant="caption" color="muted">
+										{drink.servings[0]?.label}
+									</AppText>
+								</View>
+								<Button
+									label={t("custom.edit")}
+									variant="text"
+									onPress={() => editCustom(drink.id)}
+								/>
+								<Button
+									label={t("custom.delete")}
+									variant="text"
+									tone="danger"
+									disabled={busy}
+									onPress={() =>
+										void mutate(() => drinks.deleteCustom(drink.id))
+									}
+								/>
+							</Card>
+						))
+					)}
+					{editingCustomId !== null ? (
+						<Card style={styles.section}>
+							<FormField
+								label={t("custom.nameField")}
+								value={label}
+								onChangeText={setLabel}
 							/>
-						</Card>
-					))
-				)}
-				{editingCustomId !== null ? (
-					<Card style={styles.section}>
-						<FormField
-							label={t("custom.nameField")}
-							value={label}
-							onChangeText={setLabel}
-						/>
-						<FormField
-							label={t("custom.servingField")}
-							value={servingLabel}
-							onChangeText={setServingLabel}
-						/>
-						<View style={styles.actions}>
+							<SectionHeader title={t("custom.detailsTitle")} />
+							<AppText variant="caption" color="muted">
+								{t("custom.quantityHelp")}
+							</AppText>
 							<FormField
 								label={t("custom.volumeField")}
 								value={volumeMl}
 								onChangeText={setVolumeMl}
 								keyboardType="decimal-pad"
-								containerStyle={styles.grow}
 							/>
-							<FormField
-								label={t("custom.abvField")}
-								value={abv}
-								onChangeText={setAbv}
-								keyboardType="decimal-pad"
-								containerStyle={styles.grow}
-							/>
-						</View>
-						<View style={styles.actions}>
 							<FormField
 								label={t("custom.caffeineField")}
 								value={caffeineMg}
 								onChangeText={setCaffeineMg}
 								keyboardType="decimal-pad"
-								containerStyle={styles.grow}
 							/>
 							<FormField
 								label={t("custom.energyField")}
 								value={energyKcal}
 								onChangeText={setEnergyKcal}
 								keyboardType="decimal-pad"
-								containerStyle={styles.grow}
-							/>
-						</View>
-						<View style={styles.actions}>
-							<Button
-								label={t("custom.cancel")}
-								variant="text"
-								style={styles.grow}
-								onPress={() => {
-									setEditingCustomId(null);
-									resetAddForm();
-								}}
-							/>
-							<Button
-								label={t("custom.save")}
-								loading={busy}
-								disabled={!label.trim()}
-								style={styles.grow}
-								onPress={() => void saveCustomDrink()}
-							/>
-						</View>
-					</Card>
-				) : null}
-			</View>
-
-			<Card style={styles.section}>
-				<SectionHeader title={t("add.title")} />
-				{mode === null ? (
-					<View style={styles.actions}>
-						<Button
-							label={t("add.chooseCatalogue")}
-							style={styles.grow}
-							onPress={() => setMode("catalogue")}
-						/>
-						<Button
-							label={t("add.chooseCustom")}
-							variant="secondary"
-							style={styles.grow}
-							disabled={snapshot.customDrinks.length === 0}
-							onPress={() => setMode("custom")}
-						/>
-						<Button
-							label={t("add.chooseFree")}
-							variant="secondary"
-							style={styles.grow}
-							onPress={() => setMode("free")}
-						/>
-					</View>
-				) : null}
-
-				{mode === "catalogue" ? (
-					<View style={styles.section}>
-						<AppText variant="label">{t("add.drinkLabel")}</AppText>
-						<View style={styles.wrap}>
-							{snapshot.catalogue.map((drink) => (
-								<Button
-									key={drink.id}
-									label={drink.label}
-									variant={catalogueId === drink.id ? "primary" : "secondary"}
-									onPress={() => selectCatalogue(drink.id)}
-								/>
-							))}
-						</View>
-						{selectedDrink ? (
-							<>
-								<AppText variant="label">{t("add.servingLabel")}</AppText>
-								<View style={styles.wrap}>
-									{selectedDrink.servings.map((serving) => (
-										<Button
-											key={serving.id}
-											label={serving.label}
-											variant={
-												servingId === serving.id ? "primary" : "secondary"
-											}
-											onPress={() => setServingId(serving.id)}
-										/>
-									))}
-								</View>
-							</>
-						) : null}
-					</View>
-				) : null}
-
-				{mode === "custom" ? (
-					<View style={styles.section}>
-						<AppText variant="label">{t("add.customLabel")}</AppText>
-						<View style={styles.wrap}>
-							{snapshot.customDrinks.map((drink) => (
-								<Button
-									key={drink.id}
-									label={drink.label}
-									variant={customId === drink.id ? "primary" : "secondary"}
-									onPress={() => selectCustom(drink.id)}
-								/>
-							))}
-						</View>
-						{selectedCustom ? (
-							<>
-								<AppText variant="label">{t("add.servingLabel")}</AppText>
-								<View style={styles.wrap}>
-									{selectedCustom.servings.map((serving) => (
-										<Button
-											key={serving.id}
-											label={serving.label}
-											variant={
-												servingId === serving.id ? "primary" : "secondary"
-											}
-											onPress={() => setServingId(serving.id)}
-										/>
-									))}
-								</View>
-							</>
-						) : null}
-					</View>
-				) : null}
-
-				{mode === "free" ? (
-					<View style={styles.section}>
-						<FormField
-							label={t("add.nameField")}
-							value={label}
-							onChangeText={setLabel}
-						/>
-						<FormField
-							label={t("add.servingNameField")}
-							value={servingLabel}
-							onChangeText={setServingLabel}
-							placeholder={t("add.servingNamePlaceholder")}
-						/>
-						<View style={styles.actions}>
-							<FormField
-								label={t("add.volumeField")}
-								value={volumeMl}
-								onChangeText={setVolumeMl}
-								keyboardType="decimal-pad"
-								containerStyle={styles.grow}
 							/>
 							<FormField
-								label={t("add.abvField")}
+								label={t("custom.abvField")}
 								value={abv}
 								onChangeText={setAbv}
 								keyboardType="decimal-pad"
-								containerStyle={styles.grow}
-							/>
-						</View>
-						<View style={styles.actions}>
-							<FormField
-								label={t("add.caffeineField")}
-								value={caffeineMg}
-								onChangeText={setCaffeineMg}
-								keyboardType="decimal-pad"
-								containerStyle={styles.grow}
 							/>
 							<FormField
-								label={t("add.energyField")}
-								value={energyKcal}
-								onChangeText={setEnergyKcal}
-								keyboardType="decimal-pad"
-								containerStyle={styles.grow}
+								label={t("custom.servingField")}
+								value={servingLabel}
+								onChangeText={setServingLabel}
 							/>
-						</View>
-					</View>
-				) : null}
+							<View style={styles.actions}>
+								<Button
+									label={t("custom.cancel")}
+									variant="text"
+									style={styles.grow}
+									onPress={() => {
+										setEditingCustomId(null);
+										resetAddForm();
+									}}
+								/>
+								<Button
+									label={t("custom.save")}
+									loading={busy}
+									disabled={
+										!label.trim() ||
+										!customHasCanonicalQuantity ||
+										!customQuantitiesValid ||
+										!customAbvValid
+									}
+									style={styles.grow}
+									onPress={() => void saveCustomDrink()}
+								/>
+							</View>
+						</Card>
+					) : null}
+				</View>
+			) : null}
 
-				{mode ? (
-					<>
-						<FormField
-							label={t("add.quantityField")}
-							value={quantity}
-							onChangeText={setQuantity}
-							keyboardType="decimal-pad"
-						/>
-						<View style={styles.actions}>
-							<FormField
-								label={t("add.dateField")}
-								value={localDay}
-								onChangeText={setLocalDay}
-								placeholder={t("add.datePlaceholder")}
-								containerStyle={styles.grow}
-							/>
-							<FormField
-								label={t("add.timeField")}
-								value={time}
-								onChangeText={setTime}
-								placeholder={t("add.timePlaceholder")}
-								containerStyle={styles.grow}
-							/>
-						</View>
-						<Button
-							label={t("add.lastNight")}
-							variant="text"
-							onPress={() => {
-								setLocalDay(previousLocalDay(snapshot.localDay));
-								setTime("20:00");
-							}}
-						/>
+			{view === "log" ? (
+				<Card style={styles.section}>
+					<SectionHeader title={t("add.title")} />
+					{mode === null ? (
 						<View style={styles.actions}>
 							<Button
-								label={t("add.cancel")}
+								label={t("add.chooseCatalogue")}
+								style={styles.grow}
+								onPress={() => setMode("catalogue")}
+							/>
+							<Button
+								label={t("add.chooseCustom")}
+								variant="secondary"
+								style={styles.grow}
+								disabled={snapshot.customDrinks.length === 0}
+								onPress={() => setMode("custom")}
+							/>
+							<Button
+								label={t("add.chooseFree")}
+								variant="secondary"
+								style={styles.grow}
+								onPress={() => setMode("free")}
+							/>
+						</View>
+					) : null}
+
+					{mode === "catalogue" ? (
+						<View style={styles.section}>
+							<AppText variant="label">{t("add.drinkLabel")}</AppText>
+							<View style={styles.wrap}>
+								{snapshot.catalogue.map((drink) => (
+									<Button
+										key={drink.id}
+										label={drink.label}
+										variant={catalogueId === drink.id ? "primary" : "secondary"}
+										onPress={() => selectCatalogue(drink.id)}
+									/>
+								))}
+							</View>
+							{selectedDrink ? (
+								<>
+									<AppText variant="label">{t("add.servingLabel")}</AppText>
+									<View style={styles.wrap}>
+										{selectedDrink.servings.map((serving) => (
+											<Button
+												key={serving.id}
+												label={serving.label}
+												variant={
+													servingId === serving.id ? "primary" : "secondary"
+												}
+												onPress={() => setServingId(serving.id)}
+											/>
+										))}
+									</View>
+								</>
+							) : null}
+						</View>
+					) : null}
+
+					{mode === "custom" ? (
+						<View style={styles.section}>
+							<AppText variant="label">{t("add.customLabel")}</AppText>
+							<View style={styles.wrap}>
+								{snapshot.customDrinks.map((drink) => (
+									<Button
+										key={drink.id}
+										label={drink.label}
+										variant={customId === drink.id ? "primary" : "secondary"}
+										onPress={() => selectCustom(drink.id)}
+									/>
+								))}
+							</View>
+							{selectedCustom ? (
+								<>
+									<AppText variant="label">{t("add.servingLabel")}</AppText>
+									<View style={styles.wrap}>
+										{selectedCustom.servings.map((serving) => (
+											<Button
+												key={serving.id}
+												label={serving.label}
+												variant={
+													servingId === serving.id ? "primary" : "secondary"
+												}
+												onPress={() => setServingId(serving.id)}
+											/>
+										))}
+									</View>
+								</>
+							) : null}
+						</View>
+					) : null}
+
+					{mode === "free" ? (
+						<View style={styles.section}>
+							<FormField
+								label={t("add.nameField")}
+								value={label}
+								onChangeText={setLabel}
+							/>
+							<FormField
+								label={t("add.servingNameField")}
+								value={servingLabel}
+								onChangeText={setServingLabel}
+								placeholder={t("add.servingNamePlaceholder")}
+							/>
+							<View style={styles.actions}>
+								<FormField
+									label={t("add.volumeField")}
+									value={volumeMl}
+									onChangeText={setVolumeMl}
+									keyboardType="decimal-pad"
+									containerStyle={styles.grow}
+								/>
+								<FormField
+									label={t("add.abvField")}
+									value={abv}
+									onChangeText={setAbv}
+									keyboardType="decimal-pad"
+									containerStyle={styles.grow}
+								/>
+							</View>
+							<View style={styles.actions}>
+								<FormField
+									label={t("add.caffeineField")}
+									value={caffeineMg}
+									onChangeText={setCaffeineMg}
+									keyboardType="decimal-pad"
+									containerStyle={styles.grow}
+								/>
+								<FormField
+									label={t("add.energyField")}
+									value={energyKcal}
+									onChangeText={setEnergyKcal}
+									keyboardType="decimal-pad"
+									containerStyle={styles.grow}
+								/>
+							</View>
+						</View>
+					) : null}
+
+					{mode ? (
+						<>
+							<FormField
+								label={t("add.quantityField")}
+								value={quantity}
+								onChangeText={setQuantity}
+								keyboardType="decimal-pad"
+							/>
+							<View style={styles.actions}>
+								<FormField
+									label={t("add.dateField")}
+									value={localDay}
+									onChangeText={setLocalDay}
+									placeholder={t("add.datePlaceholder")}
+									containerStyle={styles.grow}
+								/>
+								<FormField
+									label={t("add.timeField")}
+									value={time}
+									onChangeText={setTime}
+									placeholder={t("add.timePlaceholder")}
+									containerStyle={styles.grow}
+								/>
+							</View>
+							<Button
+								label={t("add.lastNight")}
 								variant="text"
-								disabled={busy}
-								style={styles.grow}
-								onPress={resetAddForm}
+								onPress={() => {
+									setLocalDay(previousLocalDay(snapshot.localDay));
+									setTime("20:00");
+								}}
 							/>
-							<Button
-								label={t("add.save")}
-								loading={busy}
-								disabled={
-									(mode === "catalogue" && (!catalogueId || !servingId)) ||
-									(mode === "custom" && (!customId || !servingId))
-								}
-								style={styles.grow}
+							<View style={styles.actions}>
+								<Button
+									label={t("add.cancel")}
+									variant="text"
+									disabled={busy}
+									style={styles.grow}
+									onPress={resetAddForm}
+								/>
+								<Button
+									label={t("add.save")}
+									loading={busy}
+									disabled={
+										(mode === "catalogue" && (!catalogueId || !servingId)) ||
+										(mode === "custom" && (!customId || !servingId))
+									}
+									style={styles.grow}
+									onPress={() =>
+										void (mode === "catalogue"
+											? saveCatalogue()
+											: mode === "custom"
+												? saveCustomEntry()
+												: saveFree())
+									}
+								/>
+							</View>
+						</>
+					) : null}
+				</Card>
+			) : null}
+
+			{showingOverview ? (
+				<View style={styles.section}>
+					<SectionHeader title={t("entries.title")} />
+					{snapshot.entries.length === 0 ? (
+						<EmptyState
+							title={t("entries.emptyTitle")}
+							body={t("entries.emptyBody")}
+						/>
+					) : (
+						snapshot.entries.map(({ entry, detail, contributions }) => (
+							<TouchableOpacity
+								key={entry.id}
+								accessibilityRole="button"
+								accessibilityLabel={t("entries.edit", { name: entry.label })}
 								onPress={() =>
-									void (mode === "catalogue"
-										? saveCatalogue()
-										: mode === "custom"
-											? saveCustomEntry()
-											: saveFree())
+									router.push(`/drinks/${snapshot.localDay}` as Href)
 								}
-							/>
-						</View>
-					</>
-				) : null}
-			</Card>
-
-			<View style={styles.section}>
-				<SectionHeader title={t("entries.title")} />
-				{snapshot.entries.length === 0 ? (
-					<EmptyState
-						title={t("entries.emptyTitle")}
-						body={t("entries.emptyBody")}
-					/>
-				) : (
-					snapshot.entries.map(({ entry, detail, contributions }) => (
-						<TouchableOpacity
-							key={entry.id}
-							accessibilityRole="button"
-							accessibilityLabel={t("entries.edit", { name: entry.label })}
-							onPress={() =>
-								router.push(`/drinks/${snapshot.localDay}` as Href)
-							}
-						>
-							<Card style={styles.entry}>
-								<AppText variant="label">{entry.label}</AppText>
-								<AppText variant="caption" color="muted">
-									{detail}
-								</AppText>
-								{contributions ? (
-									<AppText variant="micro" color="subtle">
-										{contributions}
+							>
+								<Card style={styles.entry}>
+									<AppText variant="label">{entry.label}</AppText>
+									<AppText variant="caption" color="muted">
+										{detail}
 									</AppText>
-								) : null}
-							</Card>
-						</TouchableOpacity>
-					))
-				)}
-			</View>
+									{contributions ? (
+										<AppText variant="micro" color="subtle">
+											{contributions}
+										</AppText>
+									) : null}
+								</Card>
+							</TouchableOpacity>
+						))
+					)}
+				</View>
+			) : null}
 
-			{snapshot.recentLocalDays.length > 0 ? (
+			{showingOverview && snapshot.recentLocalDays.length > 0 ? (
 				<View style={styles.section}>
 					<SectionHeader title={t("entries.recentDays")} />
 					<View style={styles.wrap}>
@@ -699,98 +754,100 @@ export function DrinksScreen({ store }: DrinksScreenProps) {
 				</View>
 			) : null}
 
-			<View style={styles.section}>
-				<SectionHeader title={t("goals.title")} />
-				{trackedMetrics.length === 0 ? (
-					<AppText color="muted">{t("goals.needMetrics")}</AppText>
-				) : null}
-				{trackedMetrics.map((metric) => {
-					const activeGoal = metric.goals.find(
-						(goal) => goal.status === "active",
-					);
-					return (
-						<Card key={metric.metric.slug} style={styles.section}>
-							<SectionHeader title={metric.metric.label} />
-							{activeGoal ? (
-								<>
-									<AppText>
-										{t("goals.summary", {
-											target: activeGoal.targetFormatted,
-											current:
-												activeGoal.currentFormatted ?? t("common:emDash"),
-										})}
-									</AppText>
-									{activeGoal.targetReached ? (
-										<AppText variant="caption" color="brand">
-											{t("goals.targetReached")}
-										</AppText>
-									) : activeGoal.progressPercent !== null ? (
-										<AppText variant="caption" color="brand">
-											{t("goals.percentComplete", {
-												percent: activeGoal.progressPercent,
+			{view === "goals" ? (
+				<View style={styles.section}>
+					<SectionHeader title={t("goals.title")} />
+					{trackedMetrics.length === 0 ? (
+						<AppText color="muted">{t("goals.needMetrics")}</AppText>
+					) : null}
+					{trackedMetrics.map((metric) => {
+						const activeGoal = metric.goals.find(
+							(goal) => goal.status === "active",
+						);
+						return (
+							<Card key={metric.metric.slug} style={styles.section}>
+								<SectionHeader title={metric.metric.label} />
+								{activeGoal ? (
+									<>
+										<AppText>
+											{t("goals.summary", {
+												target: activeGoal.targetFormatted,
+												current:
+													activeGoal.currentFormatted ?? t("common:emDash"),
 											})}
 										</AppText>
-									) : null}
-									<View style={styles.actions}>
-										<Button
-											label={t("goals.achieve")}
-											variant="secondary"
-											disabled={busy}
-											style={styles.grow}
-											onPress={() =>
-												void mutate(() =>
-													drinks.achieveGoal(activeGoal.goal.id),
-												)
-											}
+										{activeGoal.targetReached ? (
+											<AppText variant="caption" color="brand">
+												{t("goals.targetReached")}
+											</AppText>
+										) : activeGoal.progressPercent !== null ? (
+											<AppText variant="caption" color="brand">
+												{t("goals.percentComplete", {
+													percent: activeGoal.progressPercent,
+												})}
+											</AppText>
+										) : null}
+										<View style={styles.actions}>
+											<Button
+												label={t("goals.achieve")}
+												variant="secondary"
+												disabled={busy}
+												style={styles.grow}
+												onPress={() =>
+													void mutate(() =>
+														drinks.achieveGoal(activeGoal.goal.id),
+													)
+												}
+											/>
+											<Button
+												label={t("goals.abandon")}
+												variant="text"
+												disabled={busy}
+												style={styles.grow}
+												onPress={() =>
+													void mutate(() =>
+														drinks.abandonGoal(activeGoal.goal.id),
+													)
+												}
+											/>
+										</View>
+									</>
+								) : goalSlug === metric.metric.slug ? (
+									<>
+										<FormField
+											label={t("goals.targetField", {
+												unit: metric.displayUnit,
+											})}
+											value={goalTarget}
+											onChangeText={setGoalTarget}
+											keyboardType="decimal-pad"
+										/>
+										<FormField
+											label={t("goals.targetDateField")}
+											value={goalDate}
+											onChangeText={setGoalDate}
+											placeholder={t("add.datePlaceholder")}
 										/>
 										<Button
-											label={t("goals.abandon")}
-											variant="text"
-											disabled={busy}
-											style={styles.grow}
-											onPress={() =>
-												void mutate(() =>
-													drinks.abandonGoal(activeGoal.goal.id),
-												)
-											}
+											label={t("goals.save")}
+											loading={busy}
+											onPress={() => void saveGoal()}
 										/>
-									</View>
-								</>
-							) : goalSlug === metric.metric.slug ? (
-								<>
-									<FormField
-										label={t("goals.targetField", {
-											unit: metric.displayUnit,
-										})}
-										value={goalTarget}
-										onChangeText={setGoalTarget}
-										keyboardType="decimal-pad"
-									/>
-									<FormField
-										label={t("goals.targetDateField")}
-										value={goalDate}
-										onChangeText={setGoalDate}
-										placeholder={t("add.datePlaceholder")}
-									/>
+									</>
+								) : metric.dayValue !== null ? (
 									<Button
-										label={t("goals.save")}
-										loading={busy}
-										onPress={() => void saveGoal()}
+										label={t("goals.setFor", { name: metric.metric.label })}
+										variant="secondary"
+										onPress={() => setGoalSlug(metric.metric.slug)}
 									/>
-								</>
-							) : metric.dayValue !== null ? (
-								<Button
-									label={t("goals.setFor", { name: metric.metric.label })}
-									variant="secondary"
-									onPress={() => setGoalSlug(metric.metric.slug)}
-								/>
-							) : (
-								<AppText color="muted">{t("goals.needValue")}</AppText>
-							)}
-						</Card>
-					);
-				})}
-			</View>
+								) : (
+									<AppText color="muted">{t("goals.needValue")}</AppText>
+								)}
+							</Card>
+						);
+					})}
+				</View>
+			) : null}
 		</Screen>
 	);
 }
