@@ -90,12 +90,16 @@ describe("health import engine", () => {
 
 	afterAll(() => mockSqlite.cleanup());
 
-	function engine(gateway: HealthGateway, selectedProductDb = productDb) {
+	function engine(
+		gateway: HealthGateway,
+		selectedProductDb = productDb,
+		now = NOW,
+	) {
 		return new HealthImportEngine({
 			gateway,
 			getProductDb: () => selectedProductDb,
 			getImportDb: () => importDb,
-			now: () => NOW,
+			now: () => now,
 			timeZone: () => "UTC",
 		});
 	}
@@ -239,6 +243,126 @@ describe("health import engine", () => {
 				"steps",
 			),
 		).toMatchObject({ changeToken: "token-2" });
+	});
+
+	it("advances the token without opening the rollup when nothing changed", async () => {
+		const gateway = new FakeGateway();
+		const agingSampleAt = new Date(NOW - 80 * DAY_MS).toISOString();
+		gateway.fetchChanges
+			.mockResolvedValueOnce({
+				mode: "snapshot",
+				additions: [steps("record-1", 500, agingSampleAt)],
+				deletions: [],
+				nextToken: "token-1",
+			})
+			.mockResolvedValueOnce({
+				mode: "changes",
+				additions: [],
+				deletions: [],
+				nextToken: "token-2",
+			});
+		await engine(gateway).connect(["steps"]);
+
+		// The rollup store is the expensive half of an import. A refresh the
+		// platform reports nothing for must not reach it at all.
+		const unusableProductDb = {
+			...productDb,
+			withTransactionAsync: async () => {
+				throw new Error("the rollup store should not have been opened");
+			},
+		} as unknown as SQLiteDatabase;
+		await expect(
+			engine(gateway, unusableProductDb, NOW + 20 * DAY_MS).refresh(),
+		).resolves.toEqual({
+			platform: "health_connect",
+			importedMetrics: ["steps"],
+			importedSamples: 0,
+		});
+
+		expect(
+			await new databaseApp.HealthConnectionRepository(importDb).find(
+				"health_connect",
+				"steps",
+			),
+		).toMatchObject({
+			changeToken: "token-2",
+			lastImportedAt: NOW + 20 * DAY_MS,
+		});
+		expect(
+			await new databaseApp.RawSampleRepository(importDb).listByMetricSource(
+				"steps",
+				"health_connect",
+			),
+		).toEqual([]);
+		expect(
+			await new databaseApp.DailyMetricRepository(productDb).listByMetric(
+				"steps",
+			),
+		).toMatchObject([{ localDay: "2026-05-28", value: 500 }]);
+	});
+
+	it("recomputes a changed day from every sample on it", async () => {
+		const gateway = new FakeGateway();
+		gateway.fetchChanges
+			.mockResolvedValueOnce({
+				mode: "snapshot",
+				additions: [
+					steps("untouched-day", 9_000, "2026-08-14T08:00:00.000Z"),
+					steps("morning", 3_000, "2026-08-15T08:00:00.000Z"),
+					steps("evening", 2_000, "2026-08-15T18:00:00.000Z"),
+				],
+				deletions: [],
+				nextToken: "token-1",
+			})
+			.mockResolvedValueOnce({
+				mode: "changes",
+				additions: [steps("evening", 2_500, "2026-08-15T18:00:00.000Z")],
+				deletions: [],
+				nextToken: "token-2",
+			});
+		const subject = engine(gateway);
+		await subject.connect(["steps"]);
+		await subject.refresh();
+
+		// Rolling the changed day up from the change alone would have recorded
+		// 2,500; its untouched morning sample still belongs in the total.
+		const daily = await new databaseApp.DailyMetricRepository(
+			productDb,
+		).listByMetric("steps");
+		expect(daily.map(({ localDay, value }) => ({ localDay, value }))).toEqual([
+			{ localDay: "2026-08-14", value: 9_000 },
+			{ localDay: "2026-08-15", value: 5_500 },
+		]);
+	});
+
+	it("recomputes the day a record left as well as the one it moved to", async () => {
+		const gateway = new FakeGateway();
+		gateway.fetchChanges
+			.mockResolvedValueOnce({
+				mode: "snapshot",
+				additions: [
+					steps("moved", 1_200, "2026-08-14T23:30:00.000Z"),
+					steps("stayed", 800, "2026-08-15T09:00:00.000Z"),
+				],
+				deletions: [],
+				nextToken: "token-1",
+			})
+			.mockResolvedValueOnce({
+				mode: "changes",
+				additions: [steps("moved", 1_200, "2026-08-15T00:30:00.000Z")],
+				deletions: [],
+				nextToken: "token-2",
+			});
+		const subject = engine(gateway);
+		await subject.connect(["steps"]);
+		await subject.refresh();
+
+		const daily = await new databaseApp.DailyMetricRepository(
+			productDb,
+		).listByMetric("steps");
+		expect(daily.map(({ localDay, value }) => ({ localDay, value }))).toEqual([
+			{ localDay: "2026-08-15", value: 2_000 },
+		]);
 	});
 
 	it("leaves raw data and the token unchanged when the rollup commit fails", async () => {

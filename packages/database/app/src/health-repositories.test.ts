@@ -122,6 +122,69 @@ describe("health import repositories", () => {
 		).toHaveLength(1);
 	});
 
+	it("writes a batch in one pass and reads back only the days asked for", async () => {
+		let id = 0;
+		const repository = new databaseApp.RawSampleRepository(
+			databaseApp.getLocalDb(),
+			{ now: () => 6_000, createId: () => `batch-${++id}` },
+		);
+		const sample = (
+			sourceRecordId: string,
+			localDay: string,
+			value: number,
+		) => ({
+			metricSlug: "weight",
+			value,
+			startedAt: 1_000,
+			endedAt: 1_000,
+			localDay,
+			source: "healthkit",
+			sourceRecordId,
+		});
+
+		// The last write for an identity wins, exactly as repeated upserts would.
+		await expect(
+			repository.upsertMany([
+				sample("mon", "2026-09-01", 80),
+				sample("tue", "2026-09-02", 81),
+				sample("wed", "2026-09-03", 82),
+				sample("tue", "2026-09-02", 81.5),
+			]),
+		).resolves.toBe(3);
+
+		expect(
+			(
+				await repository.listByMetricSourceDays("weight", "healthkit", [
+					"2026-09-01",
+					"2026-09-03",
+					"2026-09-09",
+				])
+			).map(({ sourceRecordId, value }) => ({ sourceRecordId, value })),
+		).toEqual([
+			{ sourceRecordId: "mon", value: 80 },
+			{ sourceRecordId: "wed", value: 82 },
+		]);
+		expect(
+			(
+				await repository.listBySourceRecords("healthkit", [
+					"tue",
+					"never-stored",
+				])
+			).map(({ sourceRecordId, localDay, value }) => ({
+				sourceRecordId,
+				localDay,
+				value,
+			})),
+		).toEqual([{ sourceRecordId: "tue", localDay: "2026-09-02", value: 81.5 }]);
+		await expect(
+			repository.listByMetricSourceDays("weight", "healthkit", []),
+		).resolves.toEqual([]);
+		await expect(
+			repository.listBySourceRecords("healthkit", []),
+		).resolves.toEqual([]);
+		await expect(repository.upsertMany([])).resolves.toBe(0);
+	});
+
 	it("caches normalised food payloads only in the disposable local store", async () => {
 		let now = 4_000;
 		const repository = new databaseApp.FoodCacheRepository(

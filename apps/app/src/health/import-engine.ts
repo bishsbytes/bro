@@ -219,20 +219,66 @@ export class HealthImportEngine {
 		}
 		if (batch.deletions.length === 0) return false;
 
-		const retained = await rawRepository.listByMetricSource(
-			metricSlug,
-			platform,
-		);
 		const known = new Set(
-			retained.map((sample) => identity(platform, sample.sourceRecordId)),
+			batch.additions.map((addition) =>
+				identity(platform, addition.sourceRecordId),
+			),
 		);
-		for (const addition of batch.additions) {
-			known.add(identity(platform, addition.sourceRecordId));
+		const retained = await rawRepository.listBySourceRecords(
+			platform,
+			batch.deletions
+				.filter((deletion) => deletion.source === platform)
+				.map((deletion) => deletion.sourceRecordId),
+		);
+		for (const sample of retained) {
+			// A record filed under another metric is no more use here than a pruned
+			// one: this metric's rollups cannot be recomputed from it.
+			if (sample.metricSlug === metricSlug) {
+				known.add(identity(platform, sample.sourceRecordId));
+			}
 		}
 		return batch.deletions.some(
 			(deletion) =>
 				!known.has(identity(deletion.source, deletion.sourceRecordId)),
 		);
+	}
+
+	/**
+	 * The retained samples a change batch can affect: every one sharing a day
+	 * with an addition, plus the days the batch's deletions and moved records
+	 * currently sit on.
+	 *
+	 * A rollup is recomputed from its own day alone, so this is everything the
+	 * merge needs. Reading the whole retention window instead would marshal and
+	 * sort tens of thousands of untouched per-minute samples on the JS thread —
+	 * on a foreground refresh, long enough to hold up the first tap that follows.
+	 */
+	private async retainedSamplesForBatch(
+		rawRepository: RawSampleRepository,
+		metricSlug: HealthMetricSlug,
+		batch: HealthGatewayBatch,
+		additions: readonly CanonicalHealthSample[],
+	): Promise<CanonicalHealthSample[]> {
+		const platform = this.dependencies.gateway.platform;
+		if (!platform) return [];
+		const days = new Set(additions.map((sample) => sample.localDay));
+		// A deletion names only a record, and an addition can move one to another
+		// day; either way the day it is filed under now also needs recomputing.
+		const displaced = await rawRepository.listBySourceRecords(platform, [
+			...batch.deletions
+				.filter((deletion) => deletion.source === platform)
+				.map((deletion) => deletion.sourceRecordId),
+			...additions.map((sample) => sample.sourceRecordId),
+		]);
+		for (const sample of displaced) {
+			days.add(sample.localDay);
+		}
+		const rows = await rawRepository.listByMetricSourceDays(
+			metricSlug,
+			platform,
+			[...days],
+		);
+		return rows.map(rawToCanonical);
 	}
 
 	private async importMetric(metricSlug: HealthMetricSlug): Promise<number> {
@@ -299,20 +345,47 @@ export class HealthImportEngine {
 			);
 			additions = mapAdditions(batch);
 		}
+		// A foreground refresh usually finds the platform has nothing new. It still
+		// ages the disposable raw cache, but it need not open the durable rollup
+		// store just to advance the token.
+		if (
+			batch.mode === "changes" &&
+			additions.length === 0 &&
+			batch.deletions.length === 0
+		) {
+			await importDb.withTransactionAsync(async () => {
+				await rawRepository.pruneEndedBefore(
+					daysBefore(importedAt, RAW_SAMPLE_RETENTION_DAYS),
+				);
+				await connectionRepository.markImported(
+					platform,
+					metricSlug,
+					batch.nextToken,
+					importedAt,
+				);
+			});
+			return 0;
+		}
+
 		const productDb = this.getProductDb();
 		const dailyRepository = new DailyMetricRepository(productDb, {
 			now: () => importedAt,
 		});
 
 		await importDb.withTransactionAsync(async () => {
-			const existingRows =
+			const existing =
 				batch.mode === "snapshot"
 					? []
-					: await rawRepository.listByMetricSource(metricSlug, platform);
-			const applied = applyHealthSampleChanges(
-				existingRows.map(rawToCanonical),
-				{ additions, deletions: batch.deletions },
-			);
+					: await this.retainedSamplesForBatch(
+							rawRepository,
+							metricSlug,
+							batch,
+							additions,
+						);
+			const applied = applyHealthSampleChanges(existing, {
+				additions,
+				deletions: batch.deletions,
+			});
 
 			if (batch.mode === "snapshot") {
 				await rawRepository.deleteByMetricSourceInCurrentTransaction(
@@ -327,9 +400,9 @@ export class HealthImportEngine {
 					);
 				}
 			}
-			for (const sample of additions) {
-				await rawRepository.upsert({ ...sample, importedAt });
-			}
+			await rawRepository.upsertMany(
+				additions.map((sample) => ({ ...sample, importedAt })),
+			);
 
 			await productDb.withTransactionAsync(async () => {
 				if (batch.mode === "snapshot") {

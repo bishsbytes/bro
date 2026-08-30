@@ -3,6 +3,10 @@ import { router } from "expo-router";
 import { useEffect } from "react";
 import { AppState } from "react-native";
 import {
+	type DeferredWork,
+	deferBackgroundWork,
+} from "../lib/defer-background-work";
+import {
 	addNotificationResponseListener,
 	clearInitialNotificationResponse,
 	getInitialNotificationResponseIdentifier,
@@ -24,17 +28,27 @@ export function ReminderNotificationEffects({
 			.then(() => refreshReminderNotifications())
 			.catch(reportReminderRefreshFailure);
 
+		// Rescheduling reads the whole pending notification queue back across the
+		// bridge. Nothing on screen shows it, and it only has to be right by the
+		// time the app next goes away, so it gives the resume a head start.
+		let pending: DeferredWork = { cancel: () => {} };
 		const appStateSubscription = AppState.addEventListener(
 			"change",
 			(state) => {
+				pending.cancel();
 				if (state === "active") {
-					void refreshReminderNotifications().catch(
-						reportReminderRefreshFailure,
-					);
+					pending = deferBackgroundWork(() => {
+						void refreshReminderNotifications().catch(
+							reportReminderRefreshFailure,
+						);
+					});
 				}
 			},
 		);
-		return () => appStateSubscription.remove();
+		return () => {
+			pending.cancel();
+			appStateSubscription.remove();
+		};
 	}, []);
 
 	useEffect(() => {

@@ -1,5 +1,5 @@
 import type { RawSample, UpsertRawSample } from "@bro/mobile-model";
-import { BaseRepository } from "./base-repository";
+import { BaseRepository, type SQLiteParam } from "./base-repository";
 
 export type { RawSample, UpsertRawSample } from "@bro/mobile-model";
 
@@ -19,6 +19,45 @@ type RawSampleRow = {
 const SELECT_COLUMNS =
 	"id, metric_slug, value, started_at, ended_at, local_day, source, source_record_id, origin, imported_at";
 const LOCAL_DAY_PATTERN = /^\d{4}-\d{2}-\d{2}$/;
+/**
+ * SQLite's own ceiling is far higher, but a bounded batch keeps one statement's
+ * size predictable and lets the callers below take a list of any length.
+ */
+const MAX_STATEMENT_PARAMETERS = 500;
+const UPSERT_COLUMNS = [
+	"id",
+	"metric_slug",
+	"value",
+	"started_at",
+	"ended_at",
+	"local_day",
+	"source",
+	"source_record_id",
+	"origin",
+	"imported_at",
+] as const;
+
+function chunked<Value>(values: readonly Value[], size: number): Value[][] {
+	const batches: Value[][] = [];
+	for (let index = 0; index < values.length; index += size) {
+		batches.push(values.slice(index, index + size));
+	}
+	return batches;
+}
+
+function placeholders(count: number): string {
+	return new Array(count).fill("?").join(", ");
+}
+
+/** The order `listByMetricSource` reads in, reapplied after a chunked read. */
+function byDayThenInterval(left: RawSample, right: RawSample): number {
+	return (
+		left.localDay.localeCompare(right.localDay) ||
+		left.endedAt - right.endedAt ||
+		left.startedAt - right.startedAt ||
+		left.sourceRecordId.localeCompare(right.sourceRecordId)
+	);
+}
 
 function toRawSample(row: RawSampleRow): RawSample {
 	return {
@@ -108,6 +147,66 @@ export class RawSampleRepository extends BaseRepository {
 		return toRawSample(row);
 	}
 
+	/**
+	 * Writes a whole platform batch, last value winning per identity.
+	 *
+	 * A health snapshot can carry tens of thousands of samples, and a statement
+	 * plus a read-back per row is enough round-tripping to stall the caller. This
+	 * inserts in multi-row batches and reports only how many rows it sent, so an
+	 * importer that does not need the stored rows never pays to read them back.
+	 */
+	async upsertMany(inputs: readonly UpsertRawSample[]): Promise<number> {
+		const latest = new Map<string, UpsertRawSample>();
+		for (const input of inputs) {
+			validate(input);
+			latest.set(
+				JSON.stringify([input.source.trim(), input.sourceRecordId.trim()]),
+				input,
+			);
+		}
+		const rows = [...latest.values()];
+		if (rows.length === 0) {
+			return 0;
+		}
+
+		const values = placeholders(UPSERT_COLUMNS.length);
+		for (const batch of chunked(
+			rows,
+			Math.floor(MAX_STATEMENT_PARAMETERS / UPSERT_COLUMNS.length),
+		)) {
+			const parameters: SQLiteParam[] = [];
+			for (const input of batch) {
+				const importedAt = input.importedAt ?? this.now();
+				parameters.push(
+					this.createId(importedAt),
+					input.metricSlug.trim(),
+					input.value,
+					input.startedAt,
+					input.endedAt,
+					input.localDay,
+					input.source.trim(),
+					input.sourceRecordId.trim(),
+					input.origin?.trim() || null,
+					importedAt,
+				);
+			}
+			await this.run(
+				`INSERT INTO raw_samples (${UPSERT_COLUMNS.join(", ")})
+				 VALUES ${batch.map(() => `(${values})`).join(", ")}
+				 ON CONFLICT (source, source_record_id) DO UPDATE SET
+					metric_slug = excluded.metric_slug,
+					value = excluded.value,
+					started_at = excluded.started_at,
+					ended_at = excluded.ended_at,
+					local_day = excluded.local_day,
+					origin = excluded.origin,
+					imported_at = excluded.imported_at`,
+				parameters,
+			);
+		}
+		return rows.length;
+	}
+
 	async listByMetricDay(
 		metricSlug: string,
 		localDay: string,
@@ -138,6 +237,81 @@ export class RawSampleRepository extends BaseRepository {
 			],
 		);
 		return rows.map(toRawSample);
+	}
+
+	/**
+	 * The samples on a named set of days, for callers that already know which
+	 * days they have to reason about.
+	 *
+	 * Recomputing a daily rollup only ever needs that day's samples, so an
+	 * importer applying a change batch should ask for the days the batch touches
+	 * rather than the whole retention window — which for a per-minute metric is
+	 * tens of thousands of rows to marshal and discard.
+	 */
+	async listByMetricSourceDays(
+		metricSlug: string,
+		source: string,
+		localDays: readonly string[],
+	): Promise<RawSample[]> {
+		const slug = required(metricSlug, "Raw sample metric slug");
+		const normalizedSource = required(source, "Raw sample source");
+		const days = [...new Set(localDays)];
+		for (const localDay of days) {
+			if (!LOCAL_DAY_PATTERN.test(localDay)) {
+				throw new TypeError("Raw sample local day must use YYYY-MM-DD.");
+			}
+		}
+
+		const rows: RawSampleRow[] = [];
+		// The metric and source are bound ahead of the day list in every batch.
+		for (const batch of chunked(days, MAX_STATEMENT_PARAMETERS - 2)) {
+			rows.push(
+				...(await this.all<RawSampleRow>(
+					`SELECT ${SELECT_COLUMNS} FROM raw_samples
+					 WHERE metric_slug = ? AND source = ?
+					   AND local_day IN (${placeholders(batch.length)})`,
+					[slug, normalizedSource, ...batch],
+				)),
+			);
+		}
+		return rows.map(toRawSample).sort(byDayThenInterval);
+	}
+
+	/**
+	 * The stored samples for a set of platform record ids, whatever metric or day
+	 * they are currently filed under. A change batch names a deletion by record
+	 * id alone, so this is how a caller discovers the day that deletion affects.
+	 */
+	async listBySourceRecords(
+		source: string,
+		sourceRecordIds: readonly string[],
+	): Promise<RawSample[]> {
+		const normalizedSource = required(source, "Raw sample source");
+		const identifiers = [
+			...new Set(
+				sourceRecordIds.map((sourceRecordId) =>
+					required(sourceRecordId, "Raw sample source record id"),
+				),
+			),
+		];
+
+		const rows: RawSampleRow[] = [];
+		// The source is bound ahead of the identifier list in every batch.
+		for (const batch of chunked(identifiers, MAX_STATEMENT_PARAMETERS - 1)) {
+			rows.push(
+				...(await this.all<RawSampleRow>(
+					`SELECT ${SELECT_COLUMNS} FROM raw_samples
+					 WHERE source = ?
+					   AND source_record_id IN (${placeholders(batch.length)})`,
+					[normalizedSource, ...batch],
+				)),
+			);
+		}
+		return rows
+			.map(toRawSample)
+			.sort((left, right) =>
+				left.sourceRecordId.localeCompare(right.sourceRecordId),
+			);
 	}
 
 	async deleteBySourceRecord(
