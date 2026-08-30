@@ -35,9 +35,7 @@ export const navigation = {
 	},
 	food: {
 		index: "Food",
-		searchA11y: "Search foods",
 		addA11y: "Log food",
-		search: "Search foods",
 		log: "Log food",
 		custom: "Custom foods",
 		goals: "Food goals",

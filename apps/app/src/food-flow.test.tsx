@@ -100,7 +100,7 @@ describe("food logging flow", () => {
 		expect(await view.findByText("Nothing logged")).toBeTruthy();
 		await fireEvent.press(view.getByLabelText("Log food"));
 		await waitFor(() => expect(router.getPathname()).toBe("/food/log"));
-		await fireEvent.press(await view.findByText("Something else"));
+		await fireEvent.press(await view.findByText("Custom log"));
 		await fireEvent.changeText(
 			view.getByLabelText("Food name"),
 			"Chicken thighs",
@@ -172,11 +172,7 @@ describe("food logging flow", () => {
 		expect(await view.findByText("1 recipe component")).toBeTruthy();
 
 		await act(async () => expoRouter.replace("/food/log"));
-		await fireEvent.press(await view.findByText("Choose custom food"));
-		const chickenBowlMatches = view.getAllByText("Chicken bowl");
-		const chickenBowlButton = chickenBowlMatches.at(-1);
-		if (!chickenBowlButton) throw new Error("Expected the recipe log button.");
-		await fireEvent.press(chickenBowlButton);
+		await fireEvent.press(await view.findByLabelText("Log Chicken bowl"));
 		await fireEvent.press(view.getByText("Save food"));
 		const entries = await new databaseApp.ConsumptionEntryRepository(
 			db,
@@ -225,7 +221,7 @@ describe("food logging flow", () => {
 			),
 		);
 
-		const router = renderRouter("src/app", { initialUrl: "/food/search" });
+		const router = renderRouter("src/app", { initialUrl: "/food/log" });
 		const view = await router;
 		expect(await view.findByText("Recent foods")).toBeTruthy();
 		expect(view.getByLabelText("Log Chicken thighs again")).toBeTruthy();
@@ -261,7 +257,7 @@ describe("food logging flow", () => {
 			fatG: null,
 		});
 
-		await act(async () => expoRouter.replace("/food/search"));
+		await act(async () => expoRouter.replace("/food/log"));
 		const retrySearchBar = view.getByLabelText("Food search");
 		await fireEvent.changeText(retrySearchBar, "chicken thighs");
 		(globalThis.fetch as jest.Mock).mockRejectedValueOnce(

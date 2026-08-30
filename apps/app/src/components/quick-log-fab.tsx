@@ -97,7 +97,7 @@ export function QuickLogFab({ bottom }: { bottom: number }) {
 								icon="restaurant"
 								title={t("quickLog.food")}
 								detail={t("quickLog.foodDetail")}
-								onPress={() => choose("/food/search")}
+								onPress={() => choose("/food/log")}
 							/>
 							<QuickLogAction
 								icon="local-drink"

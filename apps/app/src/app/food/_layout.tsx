@@ -1,7 +1,7 @@
 import MaterialIcons from "@expo/vector-icons/MaterialIcons";
 import { router, Stack } from "expo-router";
 import { useTranslation } from "react-i18next";
-import { TouchableOpacity, View } from "react-native";
+import { TouchableOpacity } from "react-native";
 import {
 	StyleSheet,
 	stackScreenOptions,
@@ -23,32 +23,17 @@ export default function FoodLayout() {
 				options={{
 					title: t("food.index"),
 					headerRight: () => (
-						<View style={styles.headerActions}>
-							<TouchableOpacity
-								accessibilityRole="button"
-								accessibilityLabel={t("food.searchA11y")}
-								style={styles.headerAction}
-								onPress={() => router.push("/food/search")}
-							>
-								<MaterialIcons
-									name="search"
-									color={theme.colors.text}
-									size={24}
-								/>
-							</TouchableOpacity>
-							<TouchableOpacity
-								accessibilityRole="button"
-								accessibilityLabel={t("food.addA11y")}
-								style={styles.headerAction}
-								onPress={() => router.push("/food/log")}
-							>
-								<MaterialIcons name="add" color={theme.colors.text} size={24} />
-							</TouchableOpacity>
-						</View>
+						<TouchableOpacity
+							accessibilityRole="button"
+							accessibilityLabel={t("food.addA11y")}
+							style={styles.headerAction}
+							onPress={() => router.push("/food/log")}
+						>
+							<MaterialIcons name="add" color={theme.colors.text} size={24} />
+						</TouchableOpacity>
 					),
 				}}
 			/>
-			<Stack.Screen name="search" options={{ title: t("food.search") }} />
 			<Stack.Screen name="log" options={{ title: t("food.log") }} />
 			<Stack.Screen name="custom" options={{ title: t("food.custom") }} />
 			<Stack.Screen name="goals" options={{ title: t("food.goals") }} />
@@ -57,8 +42,7 @@ export default function FoodLayout() {
 	);
 }
 
-const styles = StyleSheet.create((theme) => ({
-	headerActions: { flexDirection: "row", gap: theme.spacing.xs },
+const styles = StyleSheet.create((_theme) => ({
 	headerAction: {
 		width: 40,
 		height: 40,

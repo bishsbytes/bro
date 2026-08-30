@@ -36,7 +36,7 @@ import { useFocusStoreLoad } from "../../lib/use-store-load";
 import { StyleSheet, useUnistyles } from "../../theme/unistyles";
 
 type FoodScreenProps = {
-	view?: "overview" | "search" | "custom" | "log" | "goals";
+	view?: "overview" | "custom" | "log" | "goals";
 	initialCustomId?: string;
 	store?: Pick<
 		FoodStore,
@@ -493,6 +493,7 @@ export function FoodScreen({
 
 	async function runSearch(query = searchQuery) {
 		if (searchBusy) return;
+		resetAdd();
 		setSearchQuery(query);
 		setSubmittedSearchQuery(query);
 		setSearchBusy(true);
@@ -509,9 +510,9 @@ export function FoodScreen({
 	}
 
 	function selectSearchResult(result: FoodSearchResult) {
+		resetAdd();
 		setSelectedSearchRef(result.ref);
 		setSearchServingId(result.servings[0]?.id ?? "");
-		setMode(null);
 	}
 
 	async function saveSearchResult() {
@@ -592,11 +593,11 @@ export function FoodScreen({
 	);
 	const showingOverview = view === "overview";
 	const showingSearchResults =
-		view === "search" && submittedSearchQuery.trim().length >= 2;
+		view === "log" && submittedSearchQuery.trim().length >= 2;
 
 	return (
 		<>
-			{view === "search" ? (
+			{view === "log" ? (
 				<Stack.Screen
 					options={{
 						headerTitleAlign: "left",
@@ -634,7 +635,7 @@ export function FoodScreen({
 				gap="lg"
 				keyboardShouldPersistTaps="handled"
 				contentInsetAdjustmentBehavior={
-					view === "search" ? "automatic" : undefined
+					view === "log" ? "automatic" : undefined
 				}
 			>
 				{showingOverview ? (
@@ -784,7 +785,7 @@ export function FoodScreen({
 					</View>
 				) : null}
 
-				{view === "search" && !showingSearchResults ? (
+				{view === "log" && !showingSearchResults && mode === null ? (
 					<>
 						<View style={styles.section}>
 							<SectionHeader title={t("search.customTitle")} />
@@ -798,12 +799,10 @@ export function FoodScreen({
 										accessibilityLabel={t("search.logCustomA11y", {
 											name: consumable.label,
 										})}
-										onPress={() =>
-											router.push({
-												pathname: "/food/log",
-												params: { customId: consumable.id },
-											})
-										}
+										onPress={() => {
+											selectCustom(consumable.id);
+											setMode("custom");
+										}}
 									>
 										<Card style={styles.searchResult}>
 											<View style={styles.grow}>
@@ -827,7 +826,7 @@ export function FoodScreen({
 								accessibilityRole="button"
 								accessibilityLabel={t("search.customLogA11y")}
 								style={styles.customLogButton}
-								onPress={() => router.push("/food/log" as Href)}
+								onPress={() => setMode("free")}
 							>
 								<MaterialIcons
 									name="add"
@@ -989,25 +988,9 @@ export function FoodScreen({
 					</View>
 				) : null}
 
-				{view === "log" ? (
+				{view === "log" && mode ? (
 					<Card style={styles.section}>
 						<SectionHeader title={t("add.title")} />
-						{mode === null ? (
-							<View style={styles.actions}>
-								<Button
-									label={t("add.chooseCustom")}
-									style={styles.grow}
-									disabled={snapshot.customFoods.length === 0}
-									onPress={() => setMode("custom")}
-								/>
-								<Button
-									label={t("add.chooseFree")}
-									variant="secondary"
-									style={styles.grow}
-									onPress={() => setMode("free")}
-								/>
-							</View>
-						) : null}
 						{mode === "custom" ? (
 							<View style={styles.section}>
 								<AppText variant="label">{t("add.customLabel")}</AppText>

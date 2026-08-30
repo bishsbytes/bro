@@ -99,8 +99,6 @@ export const food = {
 	},
 	add: {
 		title: "Log food",
-		chooseCustom: "Choose custom food",
-		chooseFree: "Something else",
 		customLabel: "Food or recipe",
 		servingLabel: "Serving",
 		nameField: "Food name",

@@ -119,7 +119,7 @@ describe("TabLayout", () => {
 		expect(screen.getByText("What would you like to log?")).toBeTruthy();
 		await fireEvent.press(screen.getByLabelText("Food"));
 
-		expect(router.push).toHaveBeenCalledWith("/food/search");
+		expect(router.push).toHaveBeenCalledWith("/food/log");
 	});
 
 	it("ticks only when the selected bottom tab changes", async () => {
