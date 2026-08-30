@@ -1,13 +1,18 @@
 import { useTranslation } from "react-i18next";
 import { View } from "react-native";
-import Svg, { Line, Polygon } from "react-native-svg";
+import Svg, { G, Line, Polygon } from "react-native-svg";
+import { lifeAreaIconName } from "../review/life-area-icons";
 import type { WheelScore } from "../review/review-store";
 import { StyleSheet, useUnistyles } from "../theme/unistyles";
 import { AppText } from "./app-text";
+import { Icon } from "./icon";
 
 const SIZE = 320;
 const CENTRE = SIZE / 2;
 const RADIUS = 112;
+const AXIS_ICON_SIZE = 20;
+/** Icon centres sit this far beyond the rim, clear of a full-score polygon. */
+const AXIS_ICON_RADIUS = RADIUS + 22;
 
 function point(index: number, count: number, radius: number) {
 	const angle = -Math.PI / 2 + (index / count) * Math.PI * 2;
@@ -95,6 +100,22 @@ export function WheelChart({ scores, previousScores = [] }: WheelChartProps) {
 					strokeWidth="4"
 					strokeLinejoin="round"
 				/>
+				{scores.map((score, index) => {
+					const centre = point(index, scores.length, AXIS_ICON_RADIUS);
+					return (
+						<G
+							key={score.slug}
+							x={centre.x - AXIS_ICON_SIZE / 2}
+							y={centre.y - AXIS_ICON_SIZE / 2}
+						>
+							<Icon
+								name={lifeAreaIconName(score.slug)}
+								size={AXIS_ICON_SIZE}
+								color={theme.colors.textMuted}
+							/>
+						</G>
+					);
+				})}
 			</Svg>
 			<View style={styles.legend}>
 				<View style={styles.legendItem}>
