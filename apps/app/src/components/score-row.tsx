@@ -16,7 +16,7 @@ type ScoreRowProps = {
 	onSelect: (score: number) => void;
 	/** The scale on offer, lowest first; defaults to the daily five-point one. */
 	scores?: readonly number[];
-	/** One face icon per score; when given, the numeral drops to a caption below it. */
+	/** One face icon per score; when given, it replaces the visible numeral. */
 	faces?: readonly IconName[];
 	disabled?: boolean;
 };
@@ -61,23 +61,14 @@ export function ScoreRow({
 								onPress={() => onSelect(score)}
 							>
 								{face ? (
-									<>
-										<Icon
-											testID={`score-face-${score}`}
-											name={face}
-											size={theme.typography.face.fontSize}
-											color={
-												isSelected ? theme.colors.brand : theme.colors.textMuted
-											}
-										/>
-										<AppText
-											variant="micro"
-											color="subtle"
-											style={[isSelected && styles.selectedText]}
-										>
-											{score}
-										</AppText>
-									</>
+									<Icon
+										testID={`score-face-${score}`}
+										name={face}
+										size={theme.typography.face.fontSize}
+										color={
+											isSelected ? theme.colors.brand : theme.colors.textMuted
+										}
+									/>
 								) : (
 									<AppText
 										variant="score"

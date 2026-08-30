@@ -48,6 +48,7 @@ describe("ScoreRow", () => {
 
 		expect(view.getAllByTestId(/^score-face-/)).toHaveLength(MOOD_FACES.length);
 		expect(view.getByLabelText("Mood 5")).toBeTruthy();
+		expect(view.queryByText("5")).toBeNull();
 	});
 
 	it("ignores presses while disabled", async () => {
