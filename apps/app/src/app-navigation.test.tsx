@@ -250,8 +250,8 @@ describe("app entry", () => {
 		expect(await view.findByText("WHEEL OF LIFE")).toBeTruthy();
 		expect(view.getByLabelText("Account")).toBeTruthy();
 
-		// Today's pane carries the title "Today" too, so address the tab itself.
-		await fireEvent.press(view.getByLabelText(/^Today, tab/));
+		// The journal pane carries the title "Journal" too, so address the tab itself.
+		await fireEvent.press(view.getByLabelText(/^Journal, tab/));
 		await waitFor(() => expect(router.getPathname()).toBe("/"));
 		expect(await view.findByLabelText("Mood 4")).toBeTruthy();
 	});

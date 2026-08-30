@@ -74,7 +74,7 @@ describe("check-in screen", () => {
 			<CheckInScreen store={store} initialMood={4} />,
 		);
 
-		// Mood was answered on Today, so the flow opens on the next prompt and
+		// Mood was answered in the journal, so the flow opens on the next prompt and
 		// only ever shows one scale at a time.
 		expect(await screen.findByLabelText("Energy 3")).toBeTruthy();
 		expect(screen.queryByLabelText("Motivation 5")).toBeNull();

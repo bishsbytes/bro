@@ -94,7 +94,7 @@ describe("daily check-in flow", () => {
 		await act(async () => undefined);
 		await view.findByLabelText("Mood 4");
 
-		// The face tapped on Today opens the flow already holding that answer,
+		// The face tapped in the journal opens the flow already holding that answer,
 		// and each remaining score is asked on its own card.
 		await fireEvent.press(view.getByLabelText("Mood 4"));
 		await fireEvent.press(await view.findByLabelText("Energy 3"));
@@ -129,7 +129,7 @@ describe("daily check-in flow", () => {
 		]);
 
 		// Measurements are day-level and logged from the Log screen (covered by
-		// the body flow); seeding one here proves Today reads the day back.
+		// the body flow); seeding one here proves the journal reads the day back.
 		await observations.create({
 			metricSlug: "weight",
 			value: 172 * KILOGRAMS_PER_POUND,

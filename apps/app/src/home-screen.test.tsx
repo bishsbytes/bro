@@ -249,7 +249,7 @@ describe("home screen", () => {
 		).toBeTruthy();
 	});
 
-	it("marks a manual habit complete from Today", async () => {
+	it("marks a manual habit complete from the journal", async () => {
 		const completed = {
 			localDay: "2026-08-14",
 			hasHabits: true,
@@ -326,7 +326,7 @@ describe("home screen", () => {
 		await screen.findByLabelText("Mood 4");
 
 		// The optional scores belong to the flow; tapping a face must not grow
-		// the card the rest of Today is laid out under.
+		// the card the rest of the journal is laid out under.
 		expect(screen.queryByLabelText("Energy 3")).toBeNull();
 		await fireEvent.press(screen.getByLabelText("Mood 4"));
 		expect(screen.queryByLabelText("Energy 3")).toBeNull();
@@ -547,7 +547,7 @@ describe("home screen", () => {
 		expect(await screen.findByText("before the edit")).toBeTruthy();
 
 		// Standing in for the day being edited on the history screen while the
-		// Today tab is blurred.
+		// Journal tab is blurred.
 		note = "after the edit";
 		await act(async () => {
 			triggerFocus?.();
@@ -692,7 +692,7 @@ describe("home screen", () => {
 		);
 	});
 
-	it("returns to today when the active Today tab is pressed again", async () => {
+	it("returns to today when the active Journal tab is pressed again", async () => {
 		const screen = await render(
 			<TodayHeaderMonthProvider>
 				<HeaderMonthProbe />
@@ -822,7 +822,7 @@ describe("home screen", () => {
 			).not.toMatch(/check-in logged/),
 		);
 
-		// The check-in itself is written on the flow screen; Today learns about
+		// The check-in itself is written on the flow screen; the journal learns about
 		// it by refetching the days it is showing when it regains focus.
 		saved = true;
 		await act(async () => triggerFocus?.());

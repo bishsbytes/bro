@@ -1,7 +1,7 @@
 /** Titles for navigation headers and tab bars, keyed by route. */
 export const navigation = {
 	tabs: {
-		today: "Today",
+		journal: "Journal",
 		log: "Log",
 		insights: "Insights",
 		life: "Life",

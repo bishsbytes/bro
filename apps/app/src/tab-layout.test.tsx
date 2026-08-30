@@ -109,7 +109,7 @@ describe("TabLayout", () => {
 		expect(screen.queryByText(currentMonth)).toBeNull();
 	});
 
-	it("opens quick logging from Today and sends each choice to a focused screen", async () => {
+	it("opens quick logging from the journal and sends each choice to a focused screen", async () => {
 		const screen = await render(<TabLayout />);
 		const { router } = jest.requireMock("expo-router") as {
 			router: { push: jest.Mock };

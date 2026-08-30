@@ -24,7 +24,7 @@ import { StyleSheet } from "../../theme/unistyles";
 
 type CheckInScreenProps = {
 	store?: Pick<CheckInStore, "loadToday" | "saveCheckIn">;
-	/** Mood already chosen on Today, so the flow opens on the next prompt. */
+	/** Mood already chosen in the journal, so the flow opens on the next prompt. */
 	initialMood?: number;
 	/** Id of an existing check-in to rewrite rather than add to the day. */
 	entryId?: string;
@@ -53,7 +53,7 @@ export function CheckInScreen({
 	const [values, setValues] = useState<Record<string, number>>(
 		initialMood === undefined ? {} : { mood: initialMood },
 	);
-	// Mood is answered on Today when the flow is opened from a face, so the
+	// Mood is answered in the journal when the flow is opened from a face, so the
 	// first prompt the user sees here is the one they have not answered yet.
 	const [index, setIndex] = useState(initialMood === undefined ? 0 : 1);
 	const [saving, setSaving] = useState(false);

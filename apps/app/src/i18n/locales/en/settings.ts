@@ -169,7 +169,7 @@ export const settings = {
 		updateFailed: "Units could not be updated",
 		weekStartTitle: "Week starts on",
 		weekStartIntro:
-			"Used to order days in the Today week strip and day pickers.",
+			"Used to order days in the journal week strip and day pickers.",
 		weekStartA11y: "Start weeks on {{day}}",
 		monday: "Monday",
 		sunday: "Sunday",

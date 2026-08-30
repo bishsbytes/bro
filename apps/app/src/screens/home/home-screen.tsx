@@ -830,7 +830,7 @@ export function HomeScreen({
 				}
 			/>
 
-			{/* Today reads the day; the scores themselves are answered in the
+			{/* The journal reads the day; the scores themselves are answered in the
 			    check-in flow, so nothing here grows under the user's thumb. */}
 			<Card>
 				<AppText variant="label" style={styles.prompt}>

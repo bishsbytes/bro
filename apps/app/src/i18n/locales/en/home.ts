@@ -1,5 +1,5 @@
 export const home = {
-	loadFailed: "Today could not be loaded",
+	loadFailed: "Your journal could not be loaded",
 	checkIns: {
 		title: "Check-ins",
 		count_one: "{{count}} check-in",
@@ -54,7 +54,8 @@ export const home = {
 		undo: "Undo",
 		markDone: "Mark done",
 		emptyTitle: "Build a routine",
-		emptyBody: "Add a habit and Today will keep the next small action in view.",
+		emptyBody:
+			"Add a habit and your journal will keep the next small action in view.",
 		choose: "Choose a habit",
 	},
 	challenges: {

@@ -17,7 +17,7 @@ import { StyleSheet, useUnistyles } from "../../theme/unistyles";
 
 /** Values are keys in the `navigation` catalogue, not copy. */
 const TAB_TITLE_KEYS = {
-	"/": "tabs.today",
+	"/": "tabs.journal",
 	"/log": "tabs.log",
 	"/insights": "tabs.insights",
 	"/life": "tabs.life",
@@ -107,7 +107,7 @@ function TabShell() {
 					<Tabs.Screen
 						name="index"
 						options={{
-							title: t("tabs.today"),
+							title: t("tabs.journal"),
 							tabBarIcon: ({ color, size }) => (
 								<MaterialIcons name="wb-sunny" color={color} size={size} />
 							),
