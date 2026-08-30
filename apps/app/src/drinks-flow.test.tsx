@@ -122,9 +122,15 @@ describe("drink logging flow", () => {
 		await fireEvent.press(view.getByLabelText("Log a drink"));
 		await waitFor(() => expect(router.getPathname()).toBe("/drinks/log"));
 		expect(await view.findByText("Recent drinks")).toBeTruthy();
-		expect(view.getByText("Alcoholic")).toBeTruthy();
+		expect(view.getByText("Hydration")).toBeTruthy();
 		expect(view.getByText("Caffeinated")).toBeTruthy();
-		expect(view.getByText("Other")).toBeTruthy();
+		expect(view.getByText("Alcoholic")).toBeTruthy();
+		expect(view.queryByText("Your drinks")).toBeNull();
+		expect(
+			view.getByLabelText("Hydration").props.accessibilityState,
+		).toMatchObject({ selected: true });
+		expect(view.getByLabelText("Log Water")).toBeTruthy();
+		expect(view.queryByLabelText("Log Lager, 4.5%")).toBeNull();
 		expect(view.getByText("Can't find it?")).toBeTruthy();
 		await fireEvent.press(view.getByLabelText("Log a drink manually"));
 		expect(view.getByLabelText("Drink name")).toBeTruthy();
@@ -134,10 +140,17 @@ describe("drink logging flow", () => {
 		await fireEvent.press(view.getByText("Cancel"));
 		expect(view.queryByLabelText("Drink name")).toBeNull();
 		await fireEvent.changeText(view.getByLabelText("Drink search"), "lager");
+		expect(view.getByText("Search results")).toBeTruthy();
 		expect(view.queryByText("Water")).toBeNull();
 		expect(view.getByLabelText("Clear search")).toBeTruthy();
 		await fireEvent.press(view.getByLabelText("Clear search"));
 		expect(view.getByLabelText("Drink search").props.value).toBe("");
+		expect(view.getByLabelText("Log Water")).toBeTruthy();
+		expect(view.queryByLabelText("Log Lager, 4.5%")).toBeNull();
+		await fireEvent.press(view.getByText("Alcoholic"));
+		expect(
+			view.getByLabelText("Alcoholic").props.accessibilityState,
+		).toMatchObject({ selected: true });
 		expect(view.getByText("5 serving sizes")).toBeTruthy();
 		await fireEvent.press(view.getByLabelText("Log Lager, 4.5%"));
 		expect(view.getByText("Log Lager, 4.5%")).toBeTruthy();
@@ -145,6 +158,9 @@ describe("drink logging flow", () => {
 		await waitFor(() => expect(router.getPathname()).toBe("/drinks"));
 		expect(await view.findByText(/^1 × pint ·/)).toBeTruthy();
 		expect(view.getAllByText("2.6 units").length).toBeGreaterThan(0);
+		await act(async () => expoRouter.replace("/drinks/log"));
+		expect(await view.findByLabelText("Log Lager, 4.5% again")).toBeTruthy();
+		await act(async () => expoRouter.replace("/drinks"));
 		const [entry] = await new databaseApp.ConsumptionEntryRepository(
 			db,
 		).listAll();

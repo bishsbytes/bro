@@ -2,7 +2,7 @@ import { ETHANOL_DENSITY_G_PER_ML } from "../units/conversion";
 
 export { ETHANOL_DENSITY_G_PER_ML } from "../units/conversion";
 
-export type DrinkCatalogueKind = "alcoholic" | "caffeinated" | "other";
+export type DrinkCatalogueKind = "alcoholic" | "caffeinated" | "hydration";
 
 export type DrinkCatalogueServing = {
 	id: string;
@@ -353,7 +353,7 @@ export const DRINK_CATALOGUE = [
 	{
 		id: "drink:water",
 		label: "Water",
-		kind: "other",
+		kind: "hydration",
 		servings: [
 			{
 				id: "glass-250ml",

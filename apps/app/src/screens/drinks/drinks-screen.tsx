@@ -6,6 +6,7 @@ import { useCallback, useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
 import {
 	Keyboard,
+	ScrollView,
 	TextInput,
 	TouchableOpacity,
 	useWindowDimensions,
@@ -45,7 +46,9 @@ type DrinksScreenProps = {
 
 type AddMode = "catalogue" | "custom" | "free" | null;
 
-const CATALOGUE_KINDS = ["alcoholic", "caffeinated", "other"] as const;
+const CATALOGUE_KINDS = ["hydration", "caffeinated", "alcoholic"] as const;
+type CatalogueKind = (typeof CATALOGUE_KINDS)[number];
+type BrowseFilter = CatalogueKind | "custom" | null;
 
 function optionalNumber(value: string): number | null {
 	return value.trim() ? Number(value) : null;
@@ -237,6 +240,38 @@ function DrinkLogForm({
 	);
 }
 
+function DrinkBrowseRow({
+	label,
+	detail,
+	accessibilityLabel,
+	onPress,
+}: {
+	label: string;
+	detail: string;
+	accessibilityLabel: string;
+	onPress: () => void;
+}) {
+	const { theme } = useUnistyles();
+
+	return (
+		<TouchableOpacity
+			accessibilityRole="button"
+			accessibilityLabel={accessibilityLabel}
+			onPress={onPress}
+		>
+			<Card style={styles.browseResult}>
+				<View style={styles.grow}>
+					<AppText variant="label">{label}</AppText>
+					<AppText variant="caption" color="muted">
+						{detail}
+					</AppText>
+				</View>
+				<MaterialIcons name="add" color={theme.colors.textMuted} size={28} />
+			</Card>
+		</TouchableOpacity>
+	);
+}
+
 export function DrinksScreen({ view = "overview", store }: DrinksScreenProps) {
 	const { t } = useTranslation(["drinks", "common"]);
 	const { theme } = useUnistyles();
@@ -245,6 +280,7 @@ export function DrinksScreen({ view = "overview", store }: DrinksScreenProps) {
 	const drinks = useMemo(() => store ?? createDrinksStore(), [store]);
 	const [busy, setBusy] = useState(false);
 	const [searchQuery, setSearchQuery] = useState("");
+	const [browseFilter, setBrowseFilter] = useState<BrowseFilter>("hydration");
 	const [mode, setMode] = useState<AddMode>(null);
 	const [catalogueId, setCatalogueId] = useState("");
 	const [customId, setCustomId] = useState("");
@@ -512,24 +548,28 @@ export function DrinksScreen({ view = "overview", store }: DrinksScreenProps) {
 	const matchesQuery = (values: (string | null | undefined)[]) =>
 		query === "" ||
 		values.some((value) => value?.toLocaleLowerCase().includes(query));
-	const visibleRecents = snapshot.recents;
-	const visibleCustomDrinks = snapshot.customDrinks.filter((drink) =>
+	const searching = query !== "";
+	const searchCustomDrinks = snapshot.customDrinks.filter((drink) =>
 		matchesQuery([
 			drink.label,
 			drink.brand,
 			...drink.servings.map((serving) => serving.label),
 		]),
 	);
-	const visibleCatalogue = snapshot.catalogue.filter((drink) =>
+	const searchCatalogue = snapshot.catalogue.filter((drink) =>
 		matchesQuery([
 			drink.label,
 			...drink.servings.map((serving) => serving.label),
 		]),
 	);
 	const noBrowseResults =
-		query !== "" &&
-		visibleCustomDrinks.length === 0 &&
-		visibleCatalogue.length === 0;
+		searching &&
+		searchCustomDrinks.length === 0 &&
+		searchCatalogue.length === 0;
+	const filteredCatalogue =
+		browseFilter && browseFilter !== "custom"
+			? snapshot.catalogue.filter((drink) => drink.kind === browseFilter)
+			: [];
 	const freeValuesValid = [volumeMl, abv, caffeineMg, energyKcal].every(
 		isOptionalNonNegativeNumber,
 	);
@@ -791,130 +831,155 @@ export function DrinksScreen({ view = "overview", store }: DrinksScreenProps) {
 
 				{view === "log" ? (
 					<>
-						{query === "" ? (
-							<View style={styles.section}>
-								<SectionHeader title={t("browse.recentTitle")} />
-								{visibleRecents.length === 0 ? (
-									<AppText color="muted">{t("quickAdd.empty")}</AppText>
-								) : (
-									visibleRecents.map(({ entry, detail, contributions }) => (
-										<TouchableOpacity
-											key={entry.id}
-											accessibilityRole="button"
-											accessibilityLabel={t("browse.logRecentA11y", {
-												name: entry.label,
-											})}
-											disabled={busy}
-											onPress={() =>
-												void mutate(() => drinks.repeatEntry(entry.id))
-											}
+						{!searching ? (
+							<>
+								<View style={styles.section}>
+									<SectionHeader title={t("browse.recentTitle")} />
+									{snapshot.recents.length === 0 ? (
+										<AppText color="muted">{t("quickAdd.empty")}</AppText>
+									) : (
+										<ScrollView
+											horizontal
+											showsHorizontalScrollIndicator={false}
+											contentContainerStyle={styles.quickLogRow}
 										>
-											<Card style={styles.browseResult}>
-												<View style={styles.grow}>
-													<AppText variant="label">{entry.label}</AppText>
-													<AppText variant="caption" color="muted">
-														{detail}
-													</AppText>
-													{contributions ? (
-														<AppText variant="micro" color="subtle">
-															{contributions}
-														</AppText>
-													) : null}
-												</View>
-												<MaterialIcons
-													name="add"
-													color={theme.colors.textMuted}
-													size={28}
+											{snapshot.recents.map(({ entry }) => (
+												<Button
+													key={entry.id}
+													label={t("quickAdd.option", {
+														drink: entry.label,
+														serving: entry.servingLabel ?? t("defaultServing"),
+													})}
+													accessibilityLabel={t("browse.logRecentA11y", {
+														name: entry.label,
+													})}
+													variant="secondary"
+													disabled={busy}
+													style={styles.quickLogButton}
+													onPress={() =>
+														void mutate(() => drinks.repeatEntry(entry.id))
+													}
 												/>
-											</Card>
-										</TouchableOpacity>
-									))
-								)}
-							</View>
-						) : null}
+											))}
+										</ScrollView>
+									)}
+								</View>
 
-						{query === "" || visibleCustomDrinks.length > 0 ? (
-							<View style={styles.section}>
-								<SectionHeader title={t("browse.customTitle")} />
-								{visibleCustomDrinks.length === 0 ? (
-									<AppText color="muted">{t("browse.customEmpty")}</AppText>
-								) : (
-									visibleCustomDrinks.map((drink) => (
-										<TouchableOpacity
-											key={drink.id}
-											accessibilityRole="button"
-											accessibilityLabel={t("browse.logA11y", {
-												name: drink.label,
-											})}
-											onPress={() => selectCustom(drink.id)}
-										>
-											<Card style={styles.browseResult}>
-												<View style={styles.grow}>
-													<AppText variant="label">{drink.label}</AppText>
-													<AppText variant="caption" color="muted">
-														{drink.brand ??
-															drink.servings[0]?.label ??
-															t("defaultServing")}
-													</AppText>
-												</View>
-												<MaterialIcons
-													name="add"
-													color={theme.colors.textMuted}
-													size={28}
-												/>
-											</Card>
-										</TouchableOpacity>
-									))
-								)}
-							</View>
-						) : null}
+								<View style={styles.section}>
+									<SectionHeader title={t("browse.catalogueTitle")} />
+									<View style={styles.filterRow}>
+										{snapshot.customDrinks.length > 0 ? (
+											<Button
+												label={t("browse.customTitle")}
+												accessibilityState={{
+													selected: browseFilter === "custom",
+												}}
+												variant={
+													browseFilter === "custom" ? "primary" : "secondary"
+												}
+												style={styles.filterChip}
+												onPress={() =>
+													setBrowseFilter((current) =>
+														current === "custom" ? null : "custom",
+													)
+												}
+											/>
+										) : null}
+										{CATALOGUE_KINDS.map((kind) => (
+											<Button
+												key={kind}
+												label={t(`browse.categories.${kind}`)}
+												accessibilityState={{ selected: browseFilter === kind }}
+												variant={
+													browseFilter === kind ? "primary" : "secondary"
+												}
+												style={styles.filterChip}
+												onPress={() =>
+													setBrowseFilter((current) =>
+														current === kind ? null : kind,
+													)
+												}
+											/>
+										))}
+									</View>
 
-						{visibleCatalogue.length > 0 || query === "" ? (
-							<View style={styles.section}>
-								<SectionHeader title={t("browse.catalogueTitle")} />
-								{CATALOGUE_KINDS.map((kind) => {
-									const options = visibleCatalogue.filter(
-										(drink) => drink.kind === kind,
-									);
-									if (options.length === 0) return null;
-									return (
-										<View key={kind} style={styles.section}>
-											<SectionHeader title={t(`browse.categories.${kind}`)} />
-											{options.map((drink) => (
-												<TouchableOpacity
+									{browseFilter === null ? (
+										<AppText color="muted">
+											{t("browse.chooseCategory")}
+										</AppText>
+									) : browseFilter === "custom" ? (
+										<View style={styles.section}>
+											{snapshot.customDrinks.map((drink) => (
+												<DrinkBrowseRow
 													key={drink.id}
-													accessibilityRole="button"
+													label={drink.label}
+													detail={
+														drink.brand ??
+														drink.servings[0]?.label ??
+														t("defaultServing")
+													}
+													accessibilityLabel={t("browse.logA11y", {
+														name: drink.label,
+													})}
+													onPress={() => selectCustom(drink.id)}
+												/>
+											))}
+										</View>
+									) : (
+										<View style={styles.section}>
+											{filteredCatalogue.map((drink) => (
+												<DrinkBrowseRow
+													key={drink.id}
+													label={drink.label}
+													detail={t("browse.servings", {
+														count: drink.servings.length,
+													})}
 													accessibilityLabel={t("browse.logA11y", {
 														name: drink.label,
 													})}
 													onPress={() => selectCatalogue(drink.id)}
-												>
-													<Card style={styles.browseResult}>
-														<View style={styles.grow}>
-															<AppText variant="label">{drink.label}</AppText>
-															<AppText variant="caption" color="muted">
-																{t("browse.servings", {
-																	count: drink.servings.length,
-																})}
-															</AppText>
-														</View>
-														<MaterialIcons
-															name="add"
-															color={theme.colors.textMuted}
-															size={28}
-														/>
-													</Card>
-												</TouchableOpacity>
+												/>
 											))}
 										</View>
-									);
-								})}
+									)}
+								</View>
+							</>
+						) : (
+							<View style={styles.section}>
+								<SectionHeader title={t("browse.searchResultsTitle")} />
+								{searchCustomDrinks.map((drink) => (
+									<DrinkBrowseRow
+										key={drink.id}
+										label={drink.label}
+										detail={
+											drink.brand ??
+											drink.servings[0]?.label ??
+											t("defaultServing")
+										}
+										accessibilityLabel={t("browse.logA11y", {
+											name: drink.label,
+										})}
+										onPress={() => selectCustom(drink.id)}
+									/>
+								))}
+								{searchCatalogue.map((drink) => (
+									<DrinkBrowseRow
+										key={drink.id}
+										label={drink.label}
+										detail={t("browse.servings", {
+											count: drink.servings.length,
+										})}
+										accessibilityLabel={t("browse.logA11y", {
+											name: drink.label,
+										})}
+										onPress={() => selectCatalogue(drink.id)}
+									/>
+								))}
+								{noBrowseResults ? (
+									<AppText color="muted">{t("browse.noResults")}</AppText>
+								) : null}
 							</View>
-						) : null}
-
-						{noBrowseResults ? (
-							<AppText color="muted">{t("browse.noResults")}</AppText>
-						) : null}
+						)}
 
 						<View style={styles.section}>
 							<SectionHeader title={t("browse.manualTitle")} />
@@ -1152,6 +1217,18 @@ const styles = StyleSheet.create((theme) => ({
 		alignItems: "center",
 		gap: theme.spacing.md,
 	},
+	quickLogRow: { gap: theme.spacing.sm },
+	quickLogButton: {
+		minWidth: 168,
+		maxWidth: 240,
+		paddingHorizontal: theme.spacing.md,
+	},
+	filterRow: {
+		flexDirection: "row",
+		flexWrap: "wrap",
+		gap: theme.spacing.sm,
+	},
+	filterChip: { paddingHorizontal: theme.spacing.md },
 	headerSearch: {
 		height: 44,
 		flexDirection: "row",
