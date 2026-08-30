@@ -6,19 +6,21 @@ import { AppText } from "../../components/app-text";
 import { Button } from "../../components/button";
 import { Card } from "../../components/card";
 import { EmptyState } from "../../components/empty-state";
+import { Icon } from "../../components/icon";
 import { ScoreRow } from "../../components/score-row";
 import { LoadingScreen, FullScreen as Screen } from "../../components/screen";
 import { WheelChart } from "../../components/wheel-chart";
 import { playSelectionHaptic } from "../../feedback/selection-haptic";
 import { toMessage } from "../../lib/errors";
 import { useStoreLoad } from "../../lib/use-store-load";
+import { lifeAreaIconName } from "../../review/life-area-icons";
 import { formatScore } from "../../review/review-presentation";
 import {
 	createReviewStore,
 	type ReviewStore,
 	type WheelScore,
 } from "../../review/review-store";
-import { StyleSheet } from "../../theme/unistyles";
+import { StyleSheet, useUnistyles } from "../../theme/unistyles";
 
 const SCORES = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10] as const;
 
@@ -36,6 +38,7 @@ type NewReviewScreenProps = {
  */
 export function NewReviewScreen({ store }: NewReviewScreenProps) {
 	const { t } = useTranslation("review");
+	const { theme } = useUnistyles();
 	const navigation = useNavigation();
 	const reviews = useMemo(() => store ?? createReviewStore(), [store]);
 	const [scores, setScores] = useState<Record<string, number>>({});
@@ -226,7 +229,16 @@ export function NewReviewScreen({ store }: NewReviewScreenProps) {
 								<Card
 									style={[styles.focusCard, selected && styles.focusSelected]}
 								>
-									<AppText variant="label">{item.label}</AppText>
+									<Icon
+										name={lifeAreaIconName(item.slug)}
+										size={theme.control.focusIconSize}
+										color={
+											selected ? theme.colors.brand : theme.colors.textMuted
+										}
+									/>
+									<AppText variant="label" style={styles.focusLabel}>
+										{item.label}
+									</AppText>
 									{/* The score doubles as the way back to the area that set
 									    it, so a correction is one tap rather than a walk back
 									    through every area in between. */}
@@ -333,6 +345,13 @@ export function NewReviewScreen({ store }: NewReviewScreenProps) {
 
 			<View style={styles.body}>
 				<View style={styles.prompt}>
+					<View style={styles.promptIcon}>
+						<Icon
+							name={lifeAreaIconName(step.slug)}
+							size={theme.control.areaPromptIconSize}
+							color={theme.colors.textMuted}
+						/>
+					</View>
 					<AppText variant="display" style={styles.centredText}>
 						{step.label}
 					</AppText>
@@ -399,9 +418,12 @@ const styles = StyleSheet.create((theme) => ({
 		flexDirection: "row",
 		alignItems: "center",
 		justifyContent: "space-between",
+		gap: theme.spacing.md,
 		borderWidth: 1,
 		borderColor: theme.colors.border,
 	},
+	focusLabel: { flex: 1 },
+	promptIcon: { alignItems: "center" },
 	focusSelected: {
 		borderColor: theme.colors.brand,
 		backgroundColor: theme.colors.selected,

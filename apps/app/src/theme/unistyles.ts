@@ -75,6 +75,10 @@ const shared = {
 		noteMinHeight: 112,
 		avatarSize: 36,
 		avatarIconSize: 20,
+		/** Life-area icons, sized to match the ones ringing the wheel. */
+		focusIconSize: 20,
+		/** The same icons standing alone above an area's name, not beside it. */
+		areaPromptIconSize: 32,
 	},
 	opacity: {
 		disabled: 0.45,

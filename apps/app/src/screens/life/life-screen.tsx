@@ -7,6 +7,7 @@ import { AppText } from "../../components/app-text";
 import { Button } from "../../components/button";
 import { Card } from "../../components/card";
 import { EmptyState } from "../../components/empty-state";
+import { Icon } from "../../components/icon";
 import { ListRow } from "../../components/list-row";
 import { LoadingScreen, Screen } from "../../components/screen";
 import { SectionHeader } from "../../components/section-header";
@@ -17,6 +18,7 @@ import {
 	type TodayHabitsSnapshot,
 } from "../../habits/habits-store";
 import { useFocusStoreLoad } from "../../lib/use-store-load";
+import { lifeAreaIconName } from "../../review/life-area-icons";
 import { formatReviewDate } from "../../review/review-presentation";
 import {
 	createReviewStore,
@@ -24,7 +26,7 @@ import {
 	type ReviewResult,
 	type ReviewStore,
 } from "../../review/review-store";
-import { StyleSheet } from "../../theme/unistyles";
+import { StyleSheet, useUnistyles } from "../../theme/unistyles";
 
 type LifeScreenProps = {
 	reviewStore?: Pick<ReviewStore, "loadOverview" | "loadLatestWheel">;
@@ -40,6 +42,7 @@ type LifeSnapshot = {
 
 export function LifeScreen({ reviewStore, habitsStore, now }: LifeScreenProps) {
 	const { t } = useTranslation(["life", "common"]);
+	const { theme } = useUnistyles();
 	const reviews = useMemo(
 		() => reviewStore ?? createReviewStore(),
 		[reviewStore],
@@ -165,7 +168,14 @@ export function LifeScreen({ reviewStore, habitsStore, now }: LifeScreenProps) {
 					/>
 					{focusAreas.map((score) => (
 						<Card key={score.slug} style={styles.focusRow}>
-							<AppText variant="label">{score.label}</AppText>
+							<Icon
+								name={lifeAreaIconName(score.slug)}
+								size={theme.control.focusIconSize}
+								color={theme.colors.textMuted}
+							/>
+							<AppText variant="label" style={styles.grow}>
+								{score.label}
+							</AppText>
 							<AppText variant="score">
 								{t("focus.scoreOutOf", { value: score.value })}
 							</AppText>

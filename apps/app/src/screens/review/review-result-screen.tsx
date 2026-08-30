@@ -7,18 +7,20 @@ import { AppText } from "../../components/app-text";
 import { Button } from "../../components/button";
 import { Card } from "../../components/card";
 import { EmptyState } from "../../components/empty-state";
+import { Icon } from "../../components/icon";
 import { LoadingScreen, StackScreen as Screen } from "../../components/screen";
 import { SectionHeader } from "../../components/section-header";
 import { WheelChart } from "../../components/wheel-chart";
 import { challengeForArea, habitsForArea } from "../../content";
 import { useStoreLoad } from "../../lib/use-store-load";
+import { lifeAreaIconName } from "../../review/life-area-icons";
 import {
 	assessmentDate,
 	formatReviewDate,
 	formatScore,
 } from "../../review/review-presentation";
 import { createReviewStore, type ReviewStore } from "../../review/review-store";
-import { StyleSheet } from "../../theme/unistyles";
+import { StyleSheet, useUnistyles } from "../../theme/unistyles";
 
 type ReviewResultScreenProps = {
 	assessmentId: string;
@@ -37,6 +39,7 @@ export function ReviewResultScreen({
 	store,
 }: ReviewResultScreenProps) {
 	const { t } = useTranslation("review");
+	const { theme } = useUnistyles();
 	const reviews = useMemo(() => store ?? createReviewStore(), [store]);
 	const {
 		data: result,
@@ -104,6 +107,13 @@ export function ReviewResultScreen({
 				return (
 					<Card key={score.slug} style={styles.scoreCard}>
 						<View style={styles.scoreHeading}>
+							<Icon
+								name={lifeAreaIconName(score.slug)}
+								size={theme.control.focusIconSize}
+								color={
+									score.focused ? theme.colors.brand : theme.colors.textMuted
+								}
+							/>
 							<View style={styles.labelGroup}>
 								<AppText variant="label" style={styles.label}>
 									{score.label}

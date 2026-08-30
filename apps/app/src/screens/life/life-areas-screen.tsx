@@ -18,12 +18,14 @@ import { Button } from "../../components/button";
 import { Card } from "../../components/card";
 import { EmptyState } from "../../components/empty-state";
 import { FormField } from "../../components/form-field";
+import { Icon } from "../../components/icon";
 import { LoadingScreen, StackScreen as Screen } from "../../components/screen";
 import { ThemedSwitch } from "../../components/themed-switch";
 import { resolveLifeAreas } from "../../content";
 import { toMessage } from "../../lib/errors";
 import { useFocusStoreLoad } from "../../lib/use-store-load";
-import { StyleSheet } from "../../theme/unistyles";
+import { lifeAreaIconName } from "../../review/life-area-icons";
+import { StyleSheet, useUnistyles } from "../../theme/unistyles";
 
 type LifeAreaRepository = Pick<
 	TrackedMetricsRepository,
@@ -40,6 +42,7 @@ function createRepository(): LifeAreaRepository {
 
 export function LifeAreasScreen({ repository }: LifeAreasScreenProps) {
 	const { t } = useTranslation(["life", "common"]);
+	const { theme } = useUnistyles();
 	const areasRepository = useMemo(
 		() => repository ?? createRepository(),
 		[repository],
@@ -133,6 +136,11 @@ export function LifeAreasScreen({ repository }: LifeAreasScreenProps) {
 			{areas.map((area, index) => (
 				<Card key={area.slug} style={styles.areaCard}>
 					<View style={styles.heading}>
+						<Icon
+							name={lifeAreaIconName(area.slug)}
+							size={theme.control.focusIconSize}
+							color={theme.colors.textMuted}
+						/>
 						<View style={styles.headingCopy}>
 							<AppText variant="section">{area.label}</AppText>
 							{area.customLabel ? (

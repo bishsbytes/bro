@@ -10,7 +10,6 @@ import { Icon } from "./icon";
 const SIZE = 320;
 const CENTRE = SIZE / 2;
 const RADIUS = 112;
-const AXIS_ICON_SIZE = 20;
 /** Icon centres sit this far beyond the rim, clear of a full-score polygon. */
 const AXIS_ICON_RADIUS = RADIUS + 22;
 
@@ -102,15 +101,16 @@ export function WheelChart({ scores, previousScores = [] }: WheelChartProps) {
 				/>
 				{scores.map((score, index) => {
 					const centre = point(index, scores.length, AXIS_ICON_RADIUS);
+					const iconSize = theme.control.focusIconSize;
 					return (
 						<G
 							key={score.slug}
-							x={centre.x - AXIS_ICON_SIZE / 2}
-							y={centre.y - AXIS_ICON_SIZE / 2}
+							x={centre.x - iconSize / 2}
+							y={centre.y - iconSize / 2}
 						>
 							<Icon
 								name={lifeAreaIconName(score.slug)}
-								size={AXIS_ICON_SIZE}
+								size={iconSize}
 								color={theme.colors.textMuted}
 							/>
 						</G>
