@@ -1,10 +1,10 @@
-import MaterialIcons from "@expo/vector-icons/MaterialIcons";
 import { router } from "expo-router";
 import { useContext } from "react";
 import { useTranslation } from "react-i18next";
 import { Text, TouchableOpacity } from "react-native";
 import { StyleSheet, useUnistyles } from "../theme/unistyles";
 import { AvatarIdentityContext } from "./avatar-identity-context";
+import { Icon } from "./icon";
 
 type AvatarButtonProps = {
 	onPress?: () => void;
@@ -32,7 +32,7 @@ export function AvatarButton({
 			{initial ? (
 				<Text style={styles.initial}>{initial}</Text>
 			) : (
-				<MaterialIcons
+				<Icon
 					testID="account-header-icon"
 					name="person"
 					color={theme.colors.text}

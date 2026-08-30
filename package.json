@@ -42,7 +42,6 @@
 	"dependencies": {
 		"@expo/metro": "catalog:",
 		"@expo/metro-runtime": "catalog:",
-		"@expo/vector-icons": "catalog:",
 		"expo": "catalog:",
 		"expo-constants": "catalog:",
 		"expo-linking": "catalog:",

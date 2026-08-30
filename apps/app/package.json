@@ -46,6 +46,7 @@
 		"expo-web-browser": "catalog:",
 		"i18next": "catalog:",
 		"jest-expo": "catalog:",
+		"lucide-react-native": "catalog:",
 		"react": "catalog:",
 		"react-i18next": "catalog:",
 		"react-native": "catalog:",

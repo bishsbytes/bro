@@ -2,7 +2,6 @@ import { localDayOf } from "@bro/domain";
 import { fireEvent, render } from "@testing-library/react-native";
 import * as Haptics from "expo-haptics";
 import type { ReactNode } from "react";
-import { StyleSheet as NativeStyleSheet } from "react-native";
 import TabLayout from "./app/(tabs)/_layout";
 import { monthHeaderLabel } from "./components/today-header-month-context";
 import * as themeModule from "./theme/unistyles";
@@ -171,11 +170,7 @@ describe("TabLayout", () => {
 		const accountIcon = screen.getByTestId("account-header-icon");
 
 		expect(screenOptions.tabBarActiveTintColor).toBe("neutral-chrome");
-		expect(NativeStyleSheet.flatten(historyIcon.props.style).color).toBe(
-			"neutral-chrome",
-		);
-		expect(NativeStyleSheet.flatten(accountIcon.props.style).color).toBe(
-			"neutral-chrome",
-		);
+		expect(historyIcon.props.children.props.color).toBe("neutral-chrome");
+		expect(accountIcon.props.children.props.color).toBe("neutral-chrome");
 	});
 });

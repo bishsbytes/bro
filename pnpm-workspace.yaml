@@ -7,11 +7,11 @@ catalog:
   '@babel/runtime': ~7.27.6
   '@better-auth/expo': ^1.6.27
   '@biomejs/biome': ^2.5.7
+  '@expo/vector-icons': ~15.1.0
   '@gorhom/bottom-sheet': ^5.2.14
   '@expo/cli': ~56.1.14
   '@expo/metro': ~56.0.0
   '@expo/metro-runtime': ~56.0.14
-  '@expo/vector-icons': ~15.1.0
   '@hono/node-server': ^2.1.0
   '@kingstinct/react-native-healthkit': 14.0.2
   '@nx/esbuild': 23.1.1
@@ -58,6 +58,7 @@ catalog:
   i18next: ^26.4.0
   jest: ~30.3.0
   jest-expo: ~56.0.5
+  lucide-react-native: ^1.37.0
   nx: 23.1.1
   postgres: ^3.4.9
   react: 19.2.3

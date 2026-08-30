@@ -1,5 +1,4 @@
 import { useAuth } from "@bro/auth-app";
-import MaterialIcons from "@expo/vector-icons/MaterialIcons";
 import { router, Tabs, usePathname, useSegments } from "expo-router";
 import { useLayoutEffect, useRef } from "react";
 import { useTranslation } from "react-i18next";
@@ -7,6 +6,7 @@ import { TouchableOpacity, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { AppHeader } from "../../components/app-header";
 import { AvatarIdentityContext } from "../../components/avatar-identity-context";
+import { Icon } from "../../components/icon";
 import { QuickLogFab } from "../../components/quick-log-fab";
 import {
 	TodayHeaderMonthProvider,
@@ -65,9 +65,9 @@ function TabShell() {
 									style={styles.headerAction}
 									onPress={() => router.push("/history")}
 								>
-									<MaterialIcons
+									<Icon
 										testID="history-header-icon"
-										name="calendar-today"
+										name="calendar"
 										color={theme.colors.text}
 										size={theme.control.avatarIconSize}
 									/>
@@ -109,7 +109,7 @@ function TabShell() {
 						options={{
 							title: t("tabs.journal"),
 							tabBarIcon: ({ color, size }) => (
-								<MaterialIcons name="wb-sunny" color={color} size={size} />
+								<Icon name="journal" color={color} size={size} />
 							),
 						}}
 					/>
@@ -118,7 +118,7 @@ function TabShell() {
 						options={{
 							title: t("tabs.log"),
 							tabBarIcon: ({ color, size }) => (
-								<MaterialIcons name="edit-note" color={color} size={size} />
+								<Icon name="log" color={color} size={size} />
 							),
 						}}
 					/>
@@ -127,7 +127,7 @@ function TabShell() {
 						options={{
 							title: t("tabs.insights"),
 							tabBarIcon: ({ color, size }) => (
-								<MaterialIcons name="insights" color={color} size={size} />
+								<Icon name="insights" color={color} size={size} />
 							),
 						}}
 					/>
@@ -136,7 +136,7 @@ function TabShell() {
 						options={{
 							title: t("tabs.life"),
 							tabBarIcon: ({ color, size }) => (
-								<MaterialIcons name="explore" color={color} size={size} />
+								<Icon name="explore" color={color} size={size} />
 							),
 						}}
 					/>

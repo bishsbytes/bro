@@ -1,7 +1,7 @@
-import MaterialIcons from "@expo/vector-icons/MaterialIcons";
 import { router, Stack } from "expo-router";
 import { useTranslation } from "react-i18next";
 import { TouchableOpacity } from "react-native";
+import { Icon } from "../../components/icon";
 import {
 	StyleSheet,
 	stackScreenOptions,
@@ -29,7 +29,7 @@ export default function FoodLayout() {
 							style={styles.headerAction}
 							onPress={() => router.push("/food/log")}
 						>
-							<MaterialIcons name="add" color={theme.colors.text} size={24} />
+							<Icon name="add" color={theme.colors.text} size={24} />
 						</TouchableOpacity>
 					),
 				}}

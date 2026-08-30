@@ -1,6 +1,5 @@
 import { previousLocalDay } from "@bro/domain";
 import { ethanolKgFromVolumeAndAbv } from "@bro/domain/drink-catalogue";
-import MaterialIcons from "@expo/vector-icons/MaterialIcons";
 import { type Href, router, Stack } from "expo-router";
 import { useCallback, useMemo, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
@@ -17,6 +16,7 @@ import { Button } from "../../components/button";
 import { Card } from "../../components/card";
 import { EmptyState } from "../../components/empty-state";
 import { FormField } from "../../components/form-field";
+import { Icon } from "../../components/icon";
 import { ListRow } from "../../components/list-row";
 import { LogConfirmationToast } from "../../components/log-confirmation-toast";
 import { ModalSheet } from "../../components/modal-sheet";
@@ -267,7 +267,7 @@ function DrinkBrowseRow({
 						{detail}
 					</AppText>
 				</View>
-				<MaterialIcons name="add" color={theme.colors.textMuted} size={28} />
+				<Icon name="add" color={theme.colors.textMuted} size={28} />
 			</Card>
 		</TouchableOpacity>
 	);
@@ -607,11 +607,7 @@ export function DrinksScreen({ view = "overview", store }: DrinksScreenProps) {
 						headerTitleAlign: "left",
 						headerTitle: () => (
 							<View style={[styles.headerSearch, { width: headerSearchWidth }]}>
-								<MaterialIcons
-									name="search"
-									color={theme.colors.textMuted}
-									size={24}
-								/>
+								<Icon name="search" color={theme.colors.textMuted} size={24} />
 								<TextInput
 									accessibilityLabel={t("browse.fieldA11y")}
 									autoCapitalize="none"
@@ -631,7 +627,7 @@ export function DrinksScreen({ view = "overview", store }: DrinksScreenProps) {
 										style={styles.headerSearchClear}
 										onPress={() => setSearchQuery("")}
 									>
-										<MaterialIcons
+										<Icon
 											name="close"
 											color={theme.colors.textMuted}
 											size={24}
@@ -1010,11 +1006,7 @@ export function DrinksScreen({ view = "overview", store }: DrinksScreenProps) {
 											{t("browse.manualDetail")}
 										</AppText>
 									</View>
-									<MaterialIcons
-										name="add"
-										color={theme.colors.brand}
-										size={28}
-									/>
+									<Icon name="add" color={theme.colors.brand} size={28} />
 								</Card>
 							</TouchableOpacity>
 						</View>

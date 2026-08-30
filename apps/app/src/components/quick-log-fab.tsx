@@ -1,16 +1,14 @@
-import MaterialIcons from "@expo/vector-icons/MaterialIcons";
 import { type Href, router } from "expo-router";
 import { useState } from "react";
 import { useTranslation } from "react-i18next";
 import { TouchableOpacity, View } from "react-native";
 import { StyleSheet, useUnistyles } from "../theme/unistyles";
 import { AppText } from "./app-text";
+import { Icon, type IconName } from "./icon";
 import { ModalSheet } from "./modal-sheet";
 
-type MaterialIconName = React.ComponentProps<typeof MaterialIcons>["name"];
-
 type QuickLogActionProps = {
-	icon: MaterialIconName;
+	icon: IconName;
 	title: string;
 	detail: string;
 	onPress: () => void;
@@ -28,7 +26,7 @@ function QuickLogAction({ icon, title, detail, onPress }: QuickLogActionProps) {
 			onPress={onPress}
 		>
 			<View style={styles.actionIcon}>
-				<MaterialIcons name={icon} color={theme.colors.brand} size={24} />
+				<Icon name={icon} color={theme.colors.brand} size={24} />
 			</View>
 			<View style={styles.actionCopy}>
 				<AppText variant="label" style={styles.actionTitle}>
@@ -38,11 +36,7 @@ function QuickLogAction({ icon, title, detail, onPress }: QuickLogActionProps) {
 					{detail}
 				</AppText>
 			</View>
-			<MaterialIcons
-				name="chevron-right"
-				color={theme.colors.textSubtle}
-				size={24}
-			/>
+			<Icon name="chevron-right" color={theme.colors.textSubtle} size={24} />
 		</TouchableOpacity>
 	);
 }
@@ -66,7 +60,7 @@ export function QuickLogFab({ bottom }: { bottom: number }) {
 				style={[styles.fab, { bottom }]}
 				onPress={() => setOpen(true)}
 			>
-				<MaterialIcons name="add" color={theme.colors.onBrand} size={28} />
+				<Icon name="add" color={theme.colors.onBrand} size={28} />
 			</TouchableOpacity>
 
 			<ModalSheet
@@ -77,19 +71,19 @@ export function QuickLogFab({ bottom }: { bottom: number }) {
 				<AppText variant="section">{t("quickLog.title")}</AppText>
 				<View style={styles.actions}>
 					<QuickLogAction
-						icon="restaurant"
+						icon="food"
 						title={t("quickLog.food")}
 						detail={t("quickLog.foodDetail")}
 						onPress={() => choose("/food/log")}
 					/>
 					<QuickLogAction
-						icon="local-drink"
+						icon="drink"
 						title={t("quickLog.drink")}
 						detail={t("quickLog.drinkDetail")}
 						onPress={() => choose("/drinks/log")}
 					/>
 					<QuickLogAction
-						icon="sentiment-satisfied"
+						icon="check-in"
 						title={t("quickLog.checkIn")}
 						detail={t("quickLog.checkInDetail")}
 						onPress={() => choose("/check-in")}

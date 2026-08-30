@@ -1,9 +1,9 @@
 import type { AccentColor, ThemeMode } from "@bro/database-app";
-import MaterialIcons from "@expo/vector-icons/MaterialIcons";
 import { useTranslation } from "react-i18next";
 import { TouchableOpacity, View } from "react-native";
 import { AppText } from "../../components/app-text";
 import { Card } from "../../components/card";
+import { Icon, type IconName } from "../../components/icon";
 import { StackScreen as Screen } from "../../components/screen";
 import { SectionHeader } from "../../components/section-header";
 import { useDeviceSettings } from "../../providers/device-settings-provider";
@@ -21,25 +21,25 @@ const THEME_OPTIONS = [
 		value: "system",
 		labelKey: "appearance.themeSystem",
 		detailKey: "appearance.themeSystemDetail",
-		icon: "brightness-auto",
+		icon: "theme-system",
 	},
 	{
 		value: "light",
 		labelKey: "appearance.themeLight",
 		detailKey: "appearance.themeLightDetail",
-		icon: "light-mode",
+		icon: "theme-light",
 	},
 	{
 		value: "dark",
 		labelKey: "appearance.themeDark",
 		detailKey: "appearance.themeDarkDetail",
-		icon: "dark-mode",
+		icon: "theme-dark",
 	},
 ] as const satisfies readonly {
 	value: ThemeMode;
 	labelKey: string;
 	detailKey: string;
-	icon: keyof typeof MaterialIcons.glyphMap;
+	icon: IconName;
 }[];
 
 export function AppearanceScreen() {
@@ -80,7 +80,7 @@ export function AppearanceScreen() {
 								<View
 									style={[styles.themeIcon, selected && styles.selectedIcon]}
 								>
-									<MaterialIcons
+									<Icon
 										name={option.icon}
 										size={22}
 										color={
@@ -96,8 +96,8 @@ export function AppearanceScreen() {
 										{t(option.detailKey)}
 									</AppText>
 								</View>
-								<MaterialIcons
-									name={selected ? "check-circle" : "radio-button-unchecked"}
+								<Icon
+									name={selected ? "check-circle" : "circle"}
 									size={22}
 									color={selected ? theme.colors.brand : theme.colors.border}
 								/>
@@ -134,11 +134,7 @@ export function AppearanceScreen() {
 									style={[styles.swatch, { backgroundColor: preview.brand }]}
 								>
 									{selected ? (
-										<MaterialIcons
-											name="check"
-											size={24}
-											color={preview.onBrand}
-										/>
+										<Icon name="check" size={24} color={preview.onBrand} />
 									) : null}
 								</View>
 								<AppText variant="caption" style={styles.accentLabel}>

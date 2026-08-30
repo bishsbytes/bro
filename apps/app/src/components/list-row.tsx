@@ -1,8 +1,8 @@
-import MaterialIcons from "@expo/vector-icons/MaterialIcons";
 import type { ComponentProps, ReactNode } from "react";
 import { TouchableOpacity, View } from "react-native";
 import { StyleSheet, useUnistyles } from "../theme/unistyles";
 import { AppText } from "./app-text";
+import { Icon } from "./icon";
 
 type ListRowProps = Omit<
 	ComponentProps<typeof TouchableOpacity>,
@@ -52,11 +52,7 @@ export function ListRow({
 				{children}
 			</View>
 			{showChevron ? (
-				<MaterialIcons
-					name="chevron-right"
-					size={24}
-					color={theme.colors.textSubtle}
-				/>
+				<Icon name="chevron-right" size={24} color={theme.colors.textSubtle} />
 			) : null}
 		</TouchableOpacity>
 	);

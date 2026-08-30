@@ -1,7 +1,6 @@
 import type { CreateCustomConsumableComponent } from "@bro/database-app";
 import { previousLocalDay } from "@bro/domain";
 import type { FoodSearchResult } from "@bro/domain/food-search";
-import MaterialIcons from "@expo/vector-icons/MaterialIcons";
 import { type Href, router, Stack } from "expo-router";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
@@ -17,6 +16,7 @@ import { Button } from "../../components/button";
 import { Card } from "../../components/card";
 import { EmptyState } from "../../components/empty-state";
 import { FormField } from "../../components/form-field";
+import { Icon } from "../../components/icon";
 import { ListRow } from "../../components/list-row";
 import { LoadingIndicator } from "../../components/loading-indicator";
 import { LogConfirmationToast } from "../../components/log-confirmation-toast";
@@ -772,11 +772,7 @@ export function FoodScreen({
 						headerTitleAlign: "left",
 						headerTitle: () => (
 							<View style={[styles.headerSearch, { width: headerSearchWidth }]}>
-								<MaterialIcons
-									name="search"
-									color={theme.colors.textMuted}
-									size={24}
-								/>
+								<Icon name="search" color={theme.colors.textMuted} size={24} />
 								<TextInput
 									accessibilityLabel={t("search.fieldA11y")}
 									autoCapitalize="none"
@@ -797,7 +793,7 @@ export function FoodScreen({
 										style={styles.headerSearchClear}
 										onPress={clearSearch}
 									>
-										<MaterialIcons
+										<Icon
 											name="close"
 											color={theme.colors.textMuted}
 											size={24}
@@ -991,7 +987,7 @@ export function FoodScreen({
 														t("defaultServing")}
 												</AppText>
 											</View>
-											<MaterialIcons
+											<Icon
 												name="add"
 												color={theme.colors.textMuted}
 												size={28}
@@ -1006,11 +1002,7 @@ export function FoodScreen({
 								style={styles.customLogButton}
 								onPress={() => setMode("free")}
 							>
-								<MaterialIcons
-									name="add"
-									color={theme.colors.brand}
-									size={24}
-								/>
+								<Icon name="add" color={theme.colors.brand} size={24} />
 								<AppText variant="label" color="brand">
 									{t("search.customLog")}
 								</AppText>
@@ -1044,7 +1036,7 @@ export function FoodScreen({
 													</AppText>
 												) : null}
 											</View>
-											<MaterialIcons
+											<Icon
 												name="add"
 												color={theme.colors.textMuted}
 												size={28}

@@ -1,10 +1,10 @@
-import MaterialIcons from "@expo/vector-icons/MaterialIcons";
 import { useEffect } from "react";
 import { View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { StyleSheet, useUnistyles } from "../theme/unistyles";
 import { AppText } from "./app-text";
 import { Button } from "./button";
+import { Icon } from "./icon";
 
 const DISPLAY_DURATION_MS = 5_000;
 
@@ -36,11 +36,7 @@ export function LogConfirmationToast({
 			style={[styles.overlay, { bottom: insets.bottom + theme.spacing.lg }]}
 		>
 			<View accessibilityLiveRegion="polite" style={styles.toast}>
-				<MaterialIcons
-					name="check-circle"
-					color={theme.colors.brand}
-					size={24}
-				/>
+				<Icon name="check-circle" color={theme.colors.brand} size={24} />
 				<AppText style={styles.message}>{message}</AppText>
 				<Button
 					label={actionLabel}
