@@ -1,3 +1,5 @@
 {
-	"NSHealthShareUsageDescription": "Bro reads your sleep, steps, resting heart rate, weight and body fat from Apple Health to show your trends on this device."
+	"ios": {
+		"NSHealthShareUsageDescription": "bro reads your sleep, steps, resting heart rate, weight and body fat from Apple Health to show your trends on this device."
+	}
 }
