@@ -1,7 +1,9 @@
 import { getDb, TrackedMetricsRepository } from "@bro/database-app";
 import {
+	type CheckInSlotAssignment,
 	CONFIGURABLE_CHECK_IN_METRIC_SLUGS,
 	DEFAULT_TRACKED_METRICS,
+	isCheckInSlotAssignment,
 	type TagCategory,
 } from "@bro/domain/metric-registry";
 import type { SQLiteDatabase } from "expo-sqlite";
@@ -12,9 +14,14 @@ export type CheckInScoreSetting = {
 	label: string;
 	enabled: boolean;
 	sensitive: boolean;
+	/**
+	 * The sittings this score is asked in, already resolved against the registry
+	 * so the screen never has to know whether an override exists.
+	 */
+	checkInSlots: CheckInSlotAssignment;
 };
 
-export type CheckInTagSetting = CheckInScoreSetting & {
+export type CheckInTagSetting = Omit<CheckInScoreSetting, "checkInSlots"> & {
 	category: TagCategory;
 };
 
@@ -62,7 +69,10 @@ export class CheckInSettingsStore {
 				sensitive: metric.sensitive,
 			};
 			if (metric.kind === "scored") {
-				metrics.push(setting);
+				metrics.push({
+					...setting,
+					checkInSlots: overlay.checkInSlots ?? metric.defaultCheckInSlots,
+				});
 			} else if (metric.kind === "tag") {
 				tags.push({ ...setting, category: metric.category });
 			}
@@ -75,14 +85,39 @@ export class CheckInSettingsStore {
 		metricSlug: string,
 		enabled: boolean,
 	): Promise<CheckInSettingsSnapshot> {
+		const fallback = this.requireDefault(metricSlug);
+		await this.trackedMetrics.configure(metricSlug, fallback.position, enabled);
+		return await this.load();
+	}
+
+	/** Moves a scored prompt to the sittings that should ask it. */
+	async setCheckInSlots(
+		metricSlug: string,
+		checkInSlots: CheckInSlotAssignment,
+	): Promise<CheckInSettingsSnapshot> {
+		const fallback = this.requireDefault(metricSlug);
+		if (!isCheckInSlotAssignment(checkInSlots)) {
+			throw new TypeError(`Unknown check-in slots: ${checkInSlots}`);
+		}
+		const resolved = resolveMetric(metricSlug);
+		if (resolved.kind !== "known" || resolved.metric.kind !== "scored") {
+			throw new TypeError(`Not a scored check-in prompt: ${metricSlug}`);
+		}
+		await this.trackedMetrics.setCheckInSlots(metricSlug, checkInSlots, {
+			position: fallback.position,
+			enabled: fallback.enabled ?? true,
+		});
+		return await this.load();
+	}
+
+	private requireDefault(metricSlug: string) {
 		const fallback = configurableDefaults.find(
 			(metric) => metric.metricSlug === metricSlug,
 		);
 		if (!fallback) {
 			throw new TypeError(`Unknown check-in setting: ${metricSlug}`);
 		}
-		await this.trackedMetrics.configure(metricSlug, fallback.position, enabled);
-		return await this.load();
+		return fallback;
 	}
 }
 

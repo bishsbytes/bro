@@ -17,6 +17,7 @@ import type {
 	Habit,
 	HabitCompletion,
 	Observation,
+	Reminder,
 	TrackedMetric,
 	UnitPreference,
 } from "@bro/mobile-model";
@@ -47,6 +48,7 @@ const moodObservation: Observation = {
 	source: "user",
 	sourceRecordId: null,
 	assessmentId: null,
+	slot: "morning",
 	createdAt: 1_786_701_600_100,
 	updatedAt: 1_786_701_600_100,
 };
@@ -66,6 +68,17 @@ const trackedAlcohol: TrackedMetric = {
 	addedAt: null,
 	removedAt: 1_786_708_800_000,
 	customLabel: null,
+	checkInSlots: null,
+	createdAt: 1_786_708_800_000,
+	updatedAt: 1_786_708_800_000,
+};
+
+const eveningReminder: Reminder = {
+	id: "reminder-evening",
+	minuteOfDay: 20 * 60,
+	daysOfWeek: 0b111_1111,
+	slot: "evening",
+	enabled: true,
 	createdAt: 1_786_708_800_000,
 	updatedAt: 1_786_708_800_000,
 };
@@ -319,6 +332,7 @@ describe("check-in export", () => {
 			observations: [],
 			dayNotes: [],
 			trackedMetrics: [],
+			reminders: [],
 			assessments: [],
 			goals: [],
 			unitPreferences: [],
@@ -365,7 +379,10 @@ describe("check-in export", () => {
 			parseCheckInExport(
 				JSON.stringify({
 					...golden,
-					metadata: { ...golden.metadata, formatVersion: 2 },
+					metadata: {
+						...golden.metadata,
+						formatVersion: CHECK_IN_EXPORT_FORMAT_VERSION + 1,
+					},
 				}),
 			),
 		).toThrow(RangeError);
@@ -522,6 +539,7 @@ describe("check-in export", () => {
 			observations: [moodObservation, sensitiveObservation, unknownObservation],
 			dayNotes: [note],
 			trackedMetrics: [sensitiveOverlay, unknownOverlay],
+			reminders: [],
 			assessments: [sensitiveWheelAssessment],
 			goals: [sensitiveWheelGoal],
 			unitPreferences,
@@ -644,6 +662,7 @@ describe("check-in export", () => {
 			observations: [],
 			dayNotes: [],
 			trackedMetrics: [trackedAlcoholIntake, trackedCaffeine],
+			reminders: [],
 			assessments: [],
 			goals: [alcoholGoal, caffeineGoal],
 			unitPreferences: [],
@@ -696,6 +715,7 @@ describe("check-in export", () => {
 				observations: [],
 				dayNotes: [],
 				trackedMetrics: [],
+				reminders: [],
 				assessments: [],
 				goals: [],
 				unitPreferences: [],
@@ -721,6 +741,7 @@ describe("check-in export", () => {
 			observations: [],
 			dayNotes: [],
 			trackedMetrics: [],
+			reminders: [],
 			assessments: [],
 			goals: [],
 			unitPreferences: [],
@@ -734,5 +755,71 @@ describe("check-in export", () => {
 			customConsumableComponents: [],
 		});
 		expect(exported.registry.metrics).toHaveLength(1);
+	});
+
+	it("carries check-in slots, reminder slots, and slot overrides through a round-trip", () => {
+		const eveningMood: Observation = {
+			...moodObservation,
+			id: "observation-mood-evening",
+			slot: "evening",
+		};
+		const slotlessMood: Observation = {
+			...moodObservation,
+			id: "observation-mood-legacy",
+			slot: null,
+		};
+		const reslottedLibido: TrackedMetric = {
+			...trackedAlcohol,
+			id: "tracked-libido",
+			metricSlug: "libido",
+			checkInSlots: "morning",
+		};
+		const slotlessReminder: Reminder = {
+			...eveningReminder,
+			id: "reminder-legacy",
+			minuteOfDay: 8 * 60,
+			slot: null,
+		};
+		const input = {
+			observations: [moodObservation, eveningMood, slotlessMood],
+			dayNotes: [],
+			trackedMetrics: [trackedAlcohol, reslottedLibido],
+			reminders: [eveningReminder, slotlessReminder],
+			assessments: [],
+			goals: [],
+			unitPreferences: [],
+			dailyMetrics: [],
+			habits: [],
+			habitCompletions: [],
+			challengeEnrolments: [],
+			challengeProgress: [],
+			consumptionEntries: [],
+			customConsumables: [],
+			customConsumableComponents: [],
+			registry: [knownMetric("mood")],
+		};
+
+		const parsed = parseCheckInExport(
+			serializeCheckInExport(input, {
+				appVersion: "1.0.0",
+				exportedAt: 1_786_708_800_000,
+			}),
+		);
+
+		expect(parsed.observations.map(({ id, slot }) => [id, slot])).toEqual([
+			["observation-mood", "morning"],
+			["observation-mood-evening", "evening"],
+			["observation-mood-legacy", null],
+		]);
+		expect(
+			parsed.trackedMetrics.map(({ id, checkInSlots }) => [id, checkInSlots]),
+		).toEqual([
+			["tracked-alcohol", null],
+			["tracked-libido", "morning"],
+		]);
+		expect(parsed.reminders.map(({ id, slot }) => [id, slot])).toEqual([
+			["reminder-legacy", null],
+			["reminder-evening", "evening"],
+		]);
 	});
 });

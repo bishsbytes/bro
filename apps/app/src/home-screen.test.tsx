@@ -39,10 +39,12 @@ const FIXED_NOW = () => new Date(2026, 7, 14, 12);
 
 const emptyToday: TodayCheckIn = {
 	localDay: "2026-08-14",
-	entries: [] as CheckInEntry[],
-	availableOptionalScores: listScoredMetrics().filter(
-		(metric) => metric.slug === "energy",
-	),
+	sittings: { morning: null, evening: null },
+	slotlessEntries: [] as CheckInEntry[],
+	availableOptionalScores: {
+		morning: listScoredMetrics().filter((metric) => metric.slug === "energy"),
+		evening: [],
+	},
 	selectedTagSlugs: [],
 	availableTags: listTags(),
 	availableMeasurements: [],
@@ -108,6 +110,7 @@ function observation(metricSlug: string, value: number) {
 		source: "user",
 		sourceRecordId: null,
 		assessmentId: null,
+		slot: null,
 		createdAt: 1,
 		updatedAt: 1,
 	};
@@ -122,6 +125,7 @@ function historyDay(localDay: string) {
 			{
 				id: mood.id,
 				observedAt: mood.observedAt,
+				slot: null,
 				mood,
 				optionalScores: [energy],
 			},
@@ -202,7 +206,7 @@ describe("home screen", () => {
 			/>,
 		);
 
-		expect(await screen.findByLabelText("Mood 4")).toBeTruthy();
+		expect(await screen.findByText("Morning")).toBeTruthy();
 		expect(screen.queryByText("Measurements")).toBeNull();
 		expect(await screen.findByText("Build a routine")).toBeTruthy();
 		expect(
@@ -224,7 +228,7 @@ describe("home screen", () => {
 			/>,
 		);
 
-		await screen.findByLabelText("Mood 4");
+		await screen.findByText("Morning");
 		await waitFor(() =>
 			expect(screen.queryByText("Take stock of the bigger picture")).toBeNull(),
 		);
@@ -314,7 +318,7 @@ describe("home screen", () => {
 		expect(await screen.findByText(/4 day streak/)).toBeTruthy();
 	});
 
-	it("opens the check-in flow on the mood that was tapped", async () => {
+	it("opens the sitting whose card was tapped", async () => {
 		const store = checkInStore();
 		const screen = await render(
 			<HomeScreen
@@ -323,30 +327,37 @@ describe("home screen", () => {
 				store={store}
 			/>,
 		);
-		await screen.findByLabelText("Mood 4");
-		expect(screen.getByText("Very bad")).toBeTruthy();
-		expect(screen.getByText("Very good")).toBeTruthy();
+		expect(await screen.findByText("Morning")).toBeTruthy();
+		expect(screen.getByText("Evening")).toBeTruthy();
 
-		// The optional scores belong to the flow; tapping a face must not grow
-		// the card the rest of the journal is laid out under.
+		// The scores belong to the flow; tapping a card must not grow it under
+		// the rest of the journal.
 		expect(screen.queryByLabelText("Energy 3")).toBeNull();
-		await fireEvent.press(screen.getByLabelText("Mood 4"));
+		await fireEvent.press(screen.getByLabelText("Start Evening check-in"));
 		expect(screen.queryByLabelText("Energy 3")).toBeNull();
 
-		expect(router.push).toHaveBeenCalledWith("/check-in?mood=4");
+		expect(router.push).toHaveBeenCalledWith("/check-in?slot=evening");
 		expect(store.saveCheckIn).not.toHaveBeenCalled();
 	});
 
-	it("keeps the day's check-ins behind a count affordance", async () => {
-		const mood = { ...observation("mood", 2), localDay: "2026-08-14" };
+	it("shows a finished sitting's scores on its card and reopens it", async () => {
+		const mood = {
+			...observation("mood", 2),
+			localDay: "2026-08-14",
+			slot: "morning" as const,
+		};
 		const energy = { ...observation("energy", 3), localDay: "2026-08-14" };
 		const entry = {
 			id: mood.id,
 			observedAt: mood.observedAt,
+			slot: mood.slot,
 			mood,
 			optionalScores: [energy],
 		};
-		const store = checkInStore({ ...emptyToday, entries: [entry] });
+		const store = checkInStore({
+			...emptyToday,
+			sittings: { morning: entry, evening: null },
+		});
 		const screen = await render(
 			<HomeScreen
 				{...supportingProps()}
@@ -355,41 +366,30 @@ describe("home screen", () => {
 			/>,
 		);
 
-		// The mood row stays available for the next check-in either way.
-		expect(await screen.findByLabelText("Mood 4")).toBeTruthy();
-		expect(screen.getByText("1 check-in")).toBeTruthy();
-		expect(screen.queryByText("Mood 2 · Energy 3")).toBeNull();
+		// A done sitting says what it holds; the other still invites a check-in.
+		expect(await screen.findByText("Mood 2 · Energy 3")).toBeTruthy();
+		expect(screen.getByLabelText("Start Evening check-in")).toBeTruthy();
 
-		await fireEvent.press(screen.getByLabelText("Review check-ins"));
-		expect(screen.getByText("Mood 2 · Energy 3")).toBeTruthy();
-
-		await fireEvent.press(screen.getByLabelText("Hide check-ins"));
-		expect(screen.queryByText("Mood 2 · Energy 3")).toBeNull();
-	});
-
-	it("offers no count affordance before the first check-in", async () => {
-		const screen = await render(
-			<HomeScreen
-				{...supportingProps()}
-				habitsStore={habitsStore()}
-				store={checkInStore()}
-			/>,
+		await fireEvent.press(
+			screen.getByLabelText("Edit Morning check-in: Mood 2 · Energy 3"),
 		);
-
-		expect(await screen.findByLabelText("Mood 4")).toBeTruthy();
-		expect(screen.queryByLabelText("Review check-ins")).toBeNull();
+		expect(router.push).toHaveBeenCalledWith("/check-in?slot=morning");
+		expect(store.saveCheckIn).not.toHaveBeenCalled();
 	});
 
-	it("opens the check-in flow to edit an existing entry", async () => {
+	it("keeps a check-in written before slots visible on the day", async () => {
 		const mood = { ...observation("mood", 2), localDay: "2026-08-14" };
-		const energy = { ...observation("energy", 3), localDay: "2026-08-14" };
 		const entry = {
 			id: mood.id,
 			observedAt: mood.observedAt,
+			slot: null,
 			mood,
-			optionalScores: [energy],
+			optionalScores: [],
 		};
-		const store = checkInStore({ ...emptyToday, entries: [entry] });
+		const store = checkInStore({
+			...emptyToday,
+			slotlessEntries: [entry],
+		});
 		const screen = await render(
 			<HomeScreen
 				{...supportingProps()}
@@ -398,12 +398,10 @@ describe("home screen", () => {
 			/>,
 		);
 
-		// The entries live behind the count affordance in the Check-ins header.
-		await fireEvent.press(await screen.findByLabelText("Review check-ins"));
+		expect(await screen.findByText("Earlier today")).toBeTruthy();
+		expect(screen.getByText("Mood 2")).toBeTruthy();
 		await fireEvent.press(screen.getByText("Edit"));
-
-		expect(router.push).toHaveBeenCalledWith("/check-in?entry=mood-1");
-		expect(store.saveCheckIn).not.toHaveBeenCalled();
+		expect(router.push).toHaveBeenCalledWith("/history/2026-08-14");
 	});
 
 	it("persists a tag the moment it is toggled, without a check-in", async () => {
@@ -415,7 +413,7 @@ describe("home screen", () => {
 				store={store}
 			/>,
 		);
-		await screen.findByLabelText("Mood 4");
+		await screen.findByText("Morning");
 
 		await fireEvent.press(screen.getByLabelText("Training"));
 
@@ -434,7 +432,7 @@ describe("home screen", () => {
 				store={store}
 			/>,
 		);
-		await screen.findByLabelText("Mood 4");
+		await screen.findByText("Morning");
 
 		expect(screen.queryByText("Save note")).toBeNull();
 		await fireEvent.changeText(
@@ -457,7 +455,7 @@ describe("home screen", () => {
 				store={store}
 			/>,
 		);
-		await screen.findByLabelText("Mood 4");
+		await screen.findByText("Morning");
 		await fireEvent.changeText(
 			screen.getByLabelText("Note (optional)"),
 			"Half-typed thought",
@@ -513,7 +511,7 @@ describe("home screen", () => {
 		expect(screen.getByText("55 bpm")).toBeTruthy();
 		expect(screen.getByText("↑ 10%")).toBeTruthy();
 		expect(screen.getByText("5 bpm higher than previous day")).toBeTruthy();
-		expect(screen.queryByLabelText("Mood 4")).toBeNull();
+		expect(screen.queryByText("Morning")).toBeNull();
 		expect(screen.getByText("Edit this day")).toBeTruthy();
 		expect(historyStore.loadDay).toHaveBeenCalledWith("2026-08-13");
 	});
@@ -603,7 +601,7 @@ describe("home screen", () => {
 				store={checkInStore()}
 			/>,
 		);
-		await screen.findByLabelText("Mood 4");
+		await screen.findByText("Morning");
 
 		let pager = screen.getByTestId("today-day-pager");
 		expect(pager.props.initialPage).toBe(1);
@@ -650,7 +648,7 @@ describe("home screen", () => {
 			nativeEvent: { position: 2 },
 		});
 
-		expect(await screen.findByLabelText("Mood 4")).toBeTruthy();
+		expect(await screen.findByText("Morning")).toBeTruthy();
 		expect(Haptics.selectionAsync).toHaveBeenCalledTimes(2);
 
 		pager = screen.getByTestId("today-day-pager");
@@ -764,7 +762,7 @@ describe("home screen", () => {
 			).toBe(true),
 		);
 		expect(screen.queryByText("Yesterday")).toBeNull();
-		expect(await screen.findByLabelText("Mood 4")).toBeTruthy();
+		expect(await screen.findByText("Morning")).toBeTruthy();
 		expect(screen.getByTestId("header-month").props.children).toBe(
 			monthHeaderLabel("2026-08-13"),
 		);
@@ -844,7 +842,7 @@ describe("home screen", () => {
 				store={store}
 			/>,
 		);
-		await screen.findByLabelText("Mood 4");
+		await screen.findByText("Morning");
 		await waitFor(() =>
 			expect(
 				screen.getByTestId("week-strip-day-2026-08-14").props

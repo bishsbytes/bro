@@ -81,12 +81,18 @@ export const settings = {
 	checkIns: {
 		loadFailed: "Check-in settings could not be loaded",
 		intro:
-			"Mood is always included. Choose which optional scores you want available during check-ins.",
+			"Mood is asked in both check-ins. Choose which other scores you want, and which sitting asks each one.",
 		scored: "Scored from 1 to 5",
 		scoredSensitive: "Sensitive · scored from 1 to 5",
 		sensitive: "Sensitive",
 		addScore: "Add {{name}} from check-ins",
 		removeScore: "Remove {{name}} from check-ins",
+		slotChoice: {
+			morning: "Morning",
+			evening: "Evening",
+			both: "Both",
+		},
+		askIn: "Ask {{name}} in the {{when}} check-in",
 		scoresNote:
 			"Turning a score off does not delete anything you already logged.",
 		tagsTitle: "What happened",
@@ -189,6 +195,7 @@ export const settings = {
 		badTime: "Enter a time from 00:00 through 23:59.",
 		needDay: "Choose at least one day.",
 		editorTitle: "Reminder schedule",
+		slotLabel: "Reminds you to do the",
 		timeField: "Time (24-hour)",
 		timePlaceholder: "20:00",
 		addDay: "Add {{day}}",

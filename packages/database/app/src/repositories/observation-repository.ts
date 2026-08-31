@@ -1,3 +1,4 @@
+import { isCheckInSlot } from "@bro/domain/metric-registry";
 import type {
 	CreateObservation,
 	Observation,
@@ -23,13 +24,14 @@ type ObservationRow = {
 	source: string;
 	source_record_id: string | null;
 	assessment_id: string | null;
+	slot: string | null;
 	created_at: number;
 	updated_at: number;
 };
 
 const SELECT_COLUMNS = `
 	id, metric_slug, value, scale_min, scale_max, observed_at, local_day,
-	tz_offset_minutes, source, source_record_id, assessment_id, created_at,
+	tz_offset_minutes, source, source_record_id, assessment_id, slot, created_at,
 	updated_at
 `;
 
@@ -46,6 +48,9 @@ function toObservation(row: ObservationRow): Observation {
 		source: row.source,
 		sourceRecordId: row.source_record_id,
 		assessmentId: row.assessment_id,
+		// A slug this build does not know reads as no slot rather than being
+		// forced into one: a newer binary may write a sitting this one lacks.
+		slot: isCheckInSlot(row.slot) ? row.slot : null,
 		createdAt: row.created_at,
 		updatedAt: row.updated_at,
 	};
@@ -88,6 +93,7 @@ export class ObservationRepository extends BaseRepository {
 		const now = this.now();
 		const observation: Observation = {
 			...input,
+			slot: input.slot ?? null,
 			id: this.createId(now),
 			createdAt: now,
 			updatedAt: now,
@@ -96,9 +102,9 @@ export class ObservationRepository extends BaseRepository {
 		await this.run(
 			`INSERT INTO observations (
 				id, metric_slug, value, scale_min, scale_max, observed_at, local_day,
-				tz_offset_minutes, source, source_record_id, assessment_id, created_at,
-				updated_at
-			) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+				tz_offset_minutes, source, source_record_id, assessment_id, slot,
+				created_at, updated_at
+			) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
 			[
 				observation.id,
 				observation.metricSlug,
@@ -111,6 +117,7 @@ export class ObservationRepository extends BaseRepository {
 				observation.source,
 				observation.sourceRecordId,
 				observation.assessmentId,
+				observation.slot,
 				observation.createdAt,
 				observation.updatedAt,
 			],

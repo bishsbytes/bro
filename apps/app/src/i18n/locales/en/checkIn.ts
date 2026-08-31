@@ -1,5 +1,20 @@
 export const checkIn = {
 	loadFailed: "The check-in could not be opened",
+	/** The two sittings a day holds, named wherever one is shown or chosen. */
+	slots: {
+		morning: {
+			title: "Morning check-in",
+			name: "Morning",
+			tagline: "Start your day",
+			moodHint: "How you feel as the day starts.",
+		},
+		evening: {
+			title: "Evening check-in",
+			name: "Evening",
+			tagline: "Reflect and unwind",
+			moodHint: "How you feel as the day ends.",
+		},
+	},
 	/** Panel group headings shared by the check-in and its settings screen. */
 	tagCategories: {
 		body: "Body",
@@ -10,7 +25,6 @@ export const checkIn = {
 	},
 	steps: {
 		moodLabel: "Mood",
-		moodHint: "How you feel right now, not how the day should have gone.",
 		/** Meaning and endpoints for each optional check-in score. */
 		ratings: {
 			fallbackDescription: "How this feels for you right now.",
@@ -37,6 +51,17 @@ export const checkIn = {
 				maximum: "Strong desire",
 			},
 		},
+	},
+	/** Today's two sitting cards. */
+	sittings: {
+		title: "Check-ins",
+		done: "Done",
+		start: "Check in",
+		editA11y: "Edit {{sitting}} check-in: {{summary}}",
+		startA11y: "Start {{sitting}} check-in",
+		earlier: "Earlier today",
+		/** An entry recorded before the day had named sittings. */
+		unslotted: "Recorded before morning and evening check-ins",
 	},
 	nav: {
 		back: "Back",

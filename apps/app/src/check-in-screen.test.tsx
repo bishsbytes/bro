@@ -10,12 +10,26 @@ jest.mock("expo-router", () => ({
 
 const OPTIONAL_SLUGS = ["energy", "motivation", "productivity", "libido"];
 
+function scoresFor(slugs: readonly string[]) {
+	return listScoredMetrics().filter((metric) => slugs.includes(metric.slug));
+}
+
+/** A snapshot whose morning sitting asks the given scores. */
+function morningAsking(...slugs: readonly string[]): TodayCheckIn {
+	return {
+		...today,
+		availableOptionalScores: { morning: scoresFor(slugs), evening: [] },
+	};
+}
+
 const today: TodayCheckIn = {
 	localDay: "2026-08-14",
-	entries: [],
-	availableOptionalScores: listScoredMetrics().filter((metric) =>
-		OPTIONAL_SLUGS.includes(metric.slug),
-	),
+	sittings: { morning: null, evening: null },
+	slotlessEntries: [],
+	availableOptionalScores: {
+		morning: scoresFor(OPTIONAL_SLUGS),
+		evening: [],
+	},
 	selectedTagSlugs: [],
 	availableTags: [],
 	availableMeasurements: [],
@@ -41,16 +55,18 @@ function observation(
 		source: "user",
 		sourceRecordId: null,
 		assessmentId: null,
+		slot: null,
 		createdAt: 1,
 		updatedAt: 1,
 	};
 }
 
 function entryOf(mood: number, optional: readonly [string, number][]) {
-	const moodRow = observation("mood", mood);
+	const moodRow = { ...observation("mood", mood), slot: "morning" as const };
 	return {
 		id: moodRow.id,
 		observedAt: moodRow.observedAt,
+		slot: moodRow.slot,
 		mood: moodRow,
 		optionalScores: optional.map(([slug, value]) => observation(slug, value)),
 	} satisfies CheckInEntry;
@@ -71,7 +87,7 @@ describe("check-in screen", () => {
 	it("asks one score at a time and writes them in a single save", async () => {
 		const store = checkInStore();
 		const screen = await render(
-			<CheckInScreen store={store} initialMood={4} />,
+			<CheckInScreen store={store} slot="morning" initialMood={4} />,
 		);
 
 		// Mood was answered in the journal, so the flow opens on the next prompt and
@@ -116,6 +132,7 @@ describe("check-in screen", () => {
 		// Answering the last prompt is the save; there is no save button.
 		await waitFor(() =>
 			expect(store.saveCheckIn).toHaveBeenCalledWith(
+				"morning",
 				{
 					mood: 4,
 					optional: {
@@ -141,13 +158,8 @@ describe("check-in screen", () => {
 	});
 
 	it("starts on Mood when the flow is opened without one", async () => {
-		const store = checkInStore({
-			...today,
-			availableOptionalScores: listScoredMetrics().filter(
-				(metric) => metric.slug === "energy",
-			),
-		});
-		const screen = await render(<CheckInScreen store={store} />);
+		const store = checkInStore(morningAsking("energy"));
+		const screen = await render(<CheckInScreen store={store} slot="morning" />);
 
 		expect(await screen.findByText("1 of 2")).toBeTruthy();
 		expect(screen.getByText("Very bad")).toBeTruthy();
@@ -157,6 +169,7 @@ describe("check-in screen", () => {
 
 		await waitFor(() =>
 			expect(store.saveCheckIn).toHaveBeenCalledWith(
+				"morning",
 				{ mood: 5, optional: { energy: 4 } },
 				null,
 			),
@@ -164,14 +177,9 @@ describe("check-in screen", () => {
 	});
 
 	it("leaves a skipped score out of the check-in", async () => {
-		const store = checkInStore({
-			...today,
-			availableOptionalScores: listScoredMetrics().filter((metric) =>
-				["energy", "motivation"].includes(metric.slug),
-			),
-		});
+		const store = checkInStore(morningAsking("energy", "motivation"));
 		const screen = await render(
-			<CheckInScreen store={store} initialMood={3} />,
+			<CheckInScreen store={store} slot="morning" initialMood={3} />,
 		);
 
 		await fireEvent.press(await screen.findByText("Skip"));
@@ -179,6 +187,7 @@ describe("check-in screen", () => {
 
 		await waitFor(() =>
 			expect(store.saveCheckIn).toHaveBeenCalledWith(
+				"morning",
 				{ mood: 3, optional: { motivation: 2 } },
 				null,
 			),
@@ -188,7 +197,7 @@ describe("check-in screen", () => {
 	it("saves what was answered when the flow is closed early", async () => {
 		const store = checkInStore();
 		const screen = await render(
-			<CheckInScreen store={store} initialMood={2} />,
+			<CheckInScreen store={store} slot="morning" initialMood={2} />,
 		);
 
 		await fireEvent.press(await screen.findByLabelText("Energy 1"));
@@ -196,6 +205,7 @@ describe("check-in screen", () => {
 
 		await waitFor(() =>
 			expect(store.saveCheckIn).toHaveBeenCalledWith(
+				"morning",
 				{ mood: 2, optional: { energy: 1 } },
 				null,
 			),
@@ -208,14 +218,11 @@ describe("check-in screen", () => {
 	it("rewrites the entry it was opened on instead of adding another", async () => {
 		const entry = entryOf(2, [["energy", 3]]);
 		const store = checkInStore({
-			...today,
-			entries: [entry],
-			availableOptionalScores: listScoredMetrics().filter(
-				(metric) => metric.slug === "energy",
-			),
+			...morningAsking("energy"),
+			sittings: { morning: entry, evening: null },
 		});
 		const screen = await render(
-			<CheckInScreen store={store} entryId={entry.id} />,
+			<CheckInScreen store={store} slot="morning" entryId={entry.id} />,
 		);
 
 		// The existing scores are seeded, so an untouched prompt keeps its value.
@@ -229,6 +236,7 @@ describe("check-in screen", () => {
 
 		await waitFor(() =>
 			expect(store.saveCheckIn).toHaveBeenCalledWith(
+				"morning",
 				{ mood: 5, optional: { energy: 4 } },
 				entry,
 			),
@@ -238,18 +246,13 @@ describe("check-in screen", () => {
 
 	it("does not add a second check-in when an answer is changed after saving", async () => {
 		const created = entryOf(4, [["energy", 3]]);
-		const store = checkInStore({
-			...today,
-			availableOptionalScores: listScoredMetrics().filter(
-				(metric) => metric.slug === "energy",
-			),
-		});
+		const store = checkInStore(morningAsking("energy"));
 		store.saveCheckIn.mockImplementation(async () => ({
 			...today,
-			entries: [created],
+			sittings: { morning: created, evening: null },
 		}));
 		const screen = await render(
-			<CheckInScreen store={store} initialMood={4} />,
+			<CheckInScreen store={store} slot="morning" initialMood={4} />,
 		);
 
 		await fireEvent.press(await screen.findByLabelText("Energy 3"));
@@ -259,21 +262,17 @@ describe("check-in screen", () => {
 		await waitFor(() => expect(store.saveCheckIn).toHaveBeenCalledTimes(2));
 		// The second save edits the entry the first one created.
 		expect(store.saveCheckIn).toHaveBeenLastCalledWith(
+			"morning",
 			{ mood: 4, optional: { energy: 5 } },
 			created,
 		);
 	});
 
 	it("keeps the answers on screen when the save fails", async () => {
-		const store = checkInStore({
-			...today,
-			availableOptionalScores: listScoredMetrics().filter(
-				(metric) => metric.slug === "energy",
-			),
-		});
+		const store = checkInStore(morningAsking("energy"));
 		store.saveCheckIn.mockRejectedValueOnce(new Error("Disk is full"));
 		const screen = await render(
-			<CheckInScreen store={store} initialMood={4} />,
+			<CheckInScreen store={store} slot="morning" initialMood={4} />,
 		);
 
 		await fireEvent.press(await screen.findByLabelText("Energy 3"));

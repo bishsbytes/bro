@@ -52,8 +52,9 @@ function statementsOf(migration: Migration): string[] {
  * generator rewrites `CREATE …` to `CREATE … IF NOT EXISTS`; SQLite has no
  * equivalent for `ADD COLUMN`, so that one case is guarded here instead.
  *
- * No shipped migration adds a column today — the flattened schema creates every
- * table whole — but the first one that does depends on this.
+ * A data migration carries its own replay safety in its SQL — the reminder-slot
+ * backfill only ever fills a null — because nothing here can know what a second
+ * run of an arbitrary statement would mean.
  */
 const ADD_COLUMN_STATEMENT =
 	/^ALTER TABLE [`"]?([A-Za-z_][A-Za-z0-9_]*)[`"]? ADD(?: COLUMN)? [`"]?([A-Za-z_][A-Za-z0-9_]*)[`"]?/i;

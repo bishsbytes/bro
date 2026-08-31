@@ -15,8 +15,11 @@ import {
 	systemLocale,
 } from "@bro/domain";
 import {
+	assignmentIncludesSlot,
+	type CheckInSlot,
 	CONFIGURABLE_CHECK_IN_METRIC_SLUGS,
 	DEFAULT_TRACKED_METRICS,
+	isCheckInSlot,
 	type ScoredMetricDefinition,
 	TAG_PRESENCE_VALUE,
 	type TagMetricDefinition,
@@ -38,14 +41,24 @@ import { unitWords } from "../units/unit-words";
 export type CheckInEntry = {
 	id: string;
 	observedAt: number;
+	slot: CheckInSlot | null;
 	mood: Observation;
 	optionalScores: Observation[];
 };
 
 export type TodayCheckIn = {
 	localDay: string;
-	entries: CheckInEntry[];
-	availableOptionalScores: ScoredMetricDefinition[];
+	/** The day's two sittings; null where one has not been answered yet. */
+	sittings: Record<CheckInSlot, CheckInEntry | null>;
+	/**
+	 * Check-ins on this day that name no sitting — written before slots existed
+	 * or by a device that does not record them. Kept outside the slotted flow and
+	 * visible here so an upgrade does not appear to lose the day's entry; edits
+	 * belong to the history editor, which does not pretend the row has a sitting.
+	 */
+	slotlessEntries: CheckInEntry[];
+	/** The scored prompts each sitting asks, after settings and the registry. */
+	availableOptionalScores: Record<CheckInSlot, ScoredMetricDefinition[]>;
 	selectedTagSlugs: string[];
 	availableTags: TagMetricDefinition[];
 	availableMeasurements: CheckInMeasurement[];
@@ -88,12 +101,49 @@ function groupCheckIns(observations: readonly Observation[]): CheckInEntry[] {
 				mood.observedAt,
 				...optionalScores.map((score) => score.observedAt),
 			),
+			slot: mood.slot,
 			mood,
 			optionalScores,
 		});
 	}
 
 	return entries.reverse();
+}
+
+/**
+ * The one sitting a slot shows when the day holds more than one — which sync
+ * can produce, because two offline devices may each write the same sitting and
+ * both rows have to survive. The most recently written wins, and the id breaks
+ * a tie so every device picks the same one.
+ */
+function canonicalSitting(
+	entries: readonly CheckInEntry[],
+): CheckInEntry | null {
+	let canonical: CheckInEntry | null = null;
+	for (const entry of entries) {
+		if (
+			canonical === null ||
+			entry.mood.updatedAt > canonical.mood.updatedAt ||
+			(entry.mood.updatedAt === canonical.mood.updatedAt &&
+				entry.id.localeCompare(canonical.id) > 0)
+		) {
+			canonical = entry;
+		}
+	}
+	return canonical;
+}
+
+function sittingsBySlot(
+	entries: readonly CheckInEntry[],
+): Record<CheckInSlot, CheckInEntry | null> {
+	return {
+		morning: canonicalSitting(
+			entries.filter((entry) => entry.slot === "morning"),
+		),
+		evening: canonicalSitting(
+			entries.filter((entry) => entry.slot === "evening"),
+		),
+	};
 }
 
 function latestObservation(
@@ -182,15 +232,28 @@ export class CheckInStore {
 				.filter((metric) => metric.enabled)
 				.map((metric) => metric.metricSlug),
 		);
-		const availableOptionalScores = CONFIGURABLE_CHECK_IN_METRIC_SLUGS.flatMap(
-			(slug) => {
+		const slotOverrides = new Map(
+			tracked.map((metric) => [metric.metricSlug, metric.checkInSlots]),
+		);
+		const scoresForSlot = (slot: CheckInSlot): ScoredMetricDefinition[] =>
+			CONFIGURABLE_CHECK_IN_METRIC_SLUGS.flatMap((slug) => {
 				if (!enabledSlugs.has(slug)) return [];
 				const resolved = resolveMetric(slug);
-				return resolved.kind === "known" && resolved.metric.kind === "scored"
+				if (resolved.kind !== "known" || resolved.metric.kind !== "scored") {
+					return [];
+				}
+				// The user's override wins; without one the prompt follows the
+				// registry, so a catalogue change reaches anyone who never re-slotted.
+				const assignment =
+					slotOverrides.get(slug) ?? resolved.metric.defaultCheckInSlots;
+				return assignmentIncludesSlot(assignment, slot)
 					? [resolved.metric]
 					: [];
-			},
-		);
+			});
+		const availableOptionalScores = {
+			morning: scoresForSlot("morning"),
+			evening: scoresForSlot("evening"),
+		};
 		// A tag an active habit already records is tapped in Habits, not here:
 		// showing both tags would ask the same question twice a day.
 		const covered = coveredTagSlugs(activeHabits);
@@ -251,9 +314,12 @@ export class CheckInStore {
 			},
 		);
 
+		const entries = groupCheckIns(observations);
+
 		return {
 			localDay,
-			entries: groupCheckIns(observations),
+			sittings: sittingsBySlot(entries),
+			slotlessEntries: entries.filter((entry) => entry.slot === null),
 			availableOptionalScores,
 			selectedTagSlugs: [
 				...new Set(
@@ -291,37 +357,60 @@ export class CheckInStore {
 	}
 
 	/**
-	 * Records one check-in rooted in Mood, plus whichever configurable scores
-	 * are active. The rows are written together and the reminder schedule is
-	 * refreshed afterwards because Mood marks the day as checked in.
+	 * Records one sitting rooted in Mood, plus whichever configurable scores
+	 * that sitting asks. The rows are written together and the reminder schedule
+	 * is refreshed afterwards because Mood marks the sitting as done.
+	 *
+	 * A slot holds one sitting: saving into a slot that already has one rewrites
+	 * it rather than appending, so a day can never accumulate three mornings.
+	 * That is enforced here rather than by a unique index, because two offline
+	 * devices writing the same sitting must both keep their rows.
 	 */
 	async saveCheckIn(
+		slot: CheckInSlot,
 		draft: CheckInScores,
 		entry: CheckInEntry | null = null,
 	): Promise<TodayCheckIn> {
 		assertScores(draft);
+		if (!isCheckInSlot(slot)) {
+			throw new TypeError(`Unknown check-in slot: ${slot}`);
+		}
+		if (entry && entry.slot !== slot) {
+			throw new TypeError(
+				`Check-in entry ${entry.id} does not belong to the ${slot} slot.`,
+			);
+		}
 		const capturedAt = this.now();
 		const observedAt = capturedAt.getTime();
 		const localDay = localDayOf(capturedAt);
 		const tzOffsetMinutes = capturedAt.getTimezoneOffset();
-
 		await this.db.withTransactionAsync(async () => {
-			if (entry) {
-				// An edit rewrites the value, never the row's scale snapshot: rows
-				// recorded under an older scale must keep the bounds they were
-				// scored on.
-				await this.observations.update(entry.mood.id, {
+			// An edit names its own row; otherwise whatever already fills the slot
+			// is what gets rewritten. Read inside the transaction so the slot cannot
+			// be filled between deciding to insert and inserting. The row's own slot
+			// is never touched — like its scale bounds, it records the sitting it
+			// was answered in.
+			const target =
+				entry ??
+				sittingsBySlot(
+					groupCheckIns(await this.observations.listByDay(localDay)),
+				)[slot];
+
+			if (target) {
+				// A rewrite keeps the value's scale snapshot: rows recorded under an
+				// older scale must keep the bounds they were scored on.
+				await this.observations.update(target.mood.id, {
 					value: draft.mood,
-					scaleMin: entry.mood.scaleMin,
-					scaleMax: entry.mood.scaleMax,
-					observedAt: entry.mood.observedAt,
-					localDay: entry.mood.localDay,
-					tzOffsetMinutes: entry.mood.tzOffsetMinutes,
+					scaleMin: target.mood.scaleMin,
+					scaleMax: target.mood.scaleMax,
+					observedAt: target.mood.observedAt,
+					localDay: target.mood.localDay,
+					tzOffsetMinutes: target.mood.tzOffsetMinutes,
 				});
 				for (const [metricSlug, value] of Object.entries(
 					draft.optional ?? {},
 				)) {
-					const existing = entry.optionalScores.find(
+					const existing = target.optionalScores.find(
 						(row) => row.metricSlug === metricSlug,
 					);
 					if (existing) {
@@ -339,12 +428,13 @@ export class CheckInStore {
 							value,
 							scaleMin: 1,
 							scaleMax: 5,
-							observedAt: entry.mood.observedAt,
-							localDay: entry.mood.localDay,
-							tzOffsetMinutes: entry.mood.tzOffsetMinutes,
+							observedAt: target.mood.observedAt,
+							localDay: target.mood.localDay,
+							tzOffsetMinutes: target.mood.tzOffsetMinutes,
 							source: "user",
-							sourceRecordId: entry.id,
+							sourceRecordId: target.id,
 							assessmentId: null,
+							slot: target.slot,
 						});
 					}
 				}
@@ -361,6 +451,7 @@ export class CheckInStore {
 				source: "user",
 				sourceRecordId: null,
 				assessmentId: null,
+				slot,
 			});
 			for (const [metricSlug, value] of Object.entries(draft.optional ?? {})) {
 				await this.observations.create({
@@ -374,6 +465,7 @@ export class CheckInStore {
 					source: "user",
 					sourceRecordId: mood.id,
 					assessmentId: null,
+					slot,
 				});
 			}
 		});

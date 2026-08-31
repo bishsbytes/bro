@@ -35,6 +35,9 @@ export const observations = sqliteTable(
 		source: text("source").notNull(),
 		sourceRecordId: text("source_record_id"),
 		assessmentId: text("assessment_id"),
+		// Written by the check-in, never derived from observed_at; null on every
+		// other kind of observation and on check-ins that predate slots.
+		slot: text("slot"),
 		createdAt: integer("created_at").notNull(),
 		updatedAt: integer("updated_at").notNull(),
 	},
@@ -63,6 +66,8 @@ export const trackedMetrics = sqliteTable(PRODUCT_TABLE_NAMES.trackedMetrics, {
 	addedAt: integer("added_at"),
 	removedAt: integer("removed_at"),
 	customLabel: text("custom_label"),
+	// Slot override for a scored check-in prompt; null follows the registry.
+	checkInSlots: text("check_in_slots"),
 	createdAt: integer("created_at").notNull(),
 	updatedAt: integer("updated_at").notNull(),
 });
@@ -71,6 +76,9 @@ export const reminders = sqliteTable(PRODUCT_TABLE_NAMES.reminders, {
 	id: text("id").primaryKey(),
 	minuteOfDay: integer("minute_of_day").notNull(),
 	daysOfWeek: integer("days_of_week").notNull(),
+	// Which sitting this reminder nags for; null on rows from a device that
+	// predates slots.
+	slot: text("slot"),
 	enabled: integer("enabled").notNull(),
 	createdAt: integer("created_at").notNull(),
 	updatedAt: integer("updated_at").notNull(),

@@ -14,6 +14,7 @@ function reminder(overrides: Partial<Reminder> = {}): Reminder {
 		id: "reminder-1",
 		minuteOfDay: 20 * 60,
 		daysOfWeek: 0b111_1111,
+		slot: null,
 		enabled: true,
 		createdAt: 1,
 		updatedAt: 1,
@@ -73,6 +74,8 @@ describe("reminders screen", () => {
 			expect(store.create).toHaveBeenCalledWith({
 				minuteOfDay: 1_200,
 				daysOfWeek: 0b111_1111,
+				// 20:00 with no slot chosen yet is an evening reminder.
+				slot: "evening",
 			}),
 		);
 		await waitFor(() => expect(view.getByText("Every day")).toBeTruthy());

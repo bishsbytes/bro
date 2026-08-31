@@ -1,3 +1,4 @@
+import type { CheckInSlot } from "@bro/domain/metric-registry";
 import { router } from "expo-router";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
@@ -25,6 +26,8 @@ import { StyleSheet } from "../../theme/unistyles";
 
 type CheckInScreenProps = {
 	store?: Pick<CheckInStore, "loadToday" | "saveCheckIn">;
+	/** Which sitting is being answered. */
+	slot: CheckInSlot;
 	/** Mood already chosen in the journal, so the flow opens on the next prompt. */
 	initialMood?: number;
 	/** Id of an existing check-in to rewrite rather than add to the day. */
@@ -45,6 +48,7 @@ const MOOD_SLUG = "mood";
 
 export function CheckInScreen({
 	store,
+	slot,
 	initialMood,
 	entryId,
 }: CheckInScreenProps) {
@@ -63,9 +67,10 @@ export function CheckInScreen({
 	const [saveError, setSaveError] = useState<string | null>(null);
 
 	// `editing` is set once the first save lands so a revisit rewrites that
-	// entry, which is not the same question as whether the flow was opened to
-	// edit one — only the latter changes what the screen calls itself.
-	const openedOnEntry = entryId !== undefined;
+	// entry, which is not the same question as whether the flow opened onto one
+	// that already existed — only the latter changes what the screen calls
+	// itself, and a filled sitting counts whether or not it was named in the URL.
+	const [openedOnEntry, setOpenedOnEntry] = useState(false);
 
 	const steps = useMemo<CheckInStep[]>(() => {
 		if (!today) return [];
@@ -112,19 +117,19 @@ export function CheckInScreen({
 				slug: MOOD_SLUG,
 				label: t("steps.moodLabel"),
 				faces: MOOD_FACES,
-				description: t("steps.moodHint"),
+				description: t(`slots.${slot}.moodHint`),
 				endLabels: {
 					minimum: t("common:ratingEnds.veryBad"),
 					maximum: t("common:ratingEnds.veryGood"),
 				},
 			},
-			...today.availableOptionalScores.map((metric) => ({
+			...today.availableOptionalScores[slot].map((metric) => ({
 				slug: metric.slug,
 				label: metric.label,
 				...(optionalCopy[metric.slug] ?? fallback),
 			})),
 		];
-	}, [today, t]);
+	}, [today, t, slot]);
 
 	// The commit runs from an effect and from unmount, both of which see the
 	// values as they were when they were captured — a ref keeps them current
@@ -133,13 +138,11 @@ export function CheckInScreen({
 		values,
 		editing,
 		activeSlugs: [] as string[],
-		knownEntryIds: new Set<string>(),
 	});
 	draft.current = {
 		values,
 		editing,
 		activeSlugs: steps.map((step) => step.slug),
-		knownEntryIds: new Set(today?.entries.map((entry) => entry.id) ?? []),
 	};
 	const committed = useRef(false);
 
@@ -150,13 +153,15 @@ export function CheckInScreen({
 			.then((loaded) => {
 				if (!active) return;
 				setToday(loaded);
-				const entry = entryId
-					? (loaded.entries.find((candidate) => candidate.id === entryId) ??
-						null)
-					: null;
+				// A specific id is only valid inside the sitting named by the route.
+				// Legacy slotless entries use the history editor, where they cannot be
+				// mistaken for whichever sitting the current clock happens to suggest.
+				const sitting = loaded.sittings[slot];
+				const entry = entryId && sitting?.id !== entryId ? null : sitting;
 				if (!entry) return;
 				setEditing(entry);
-				setValues({
+				setOpenedOnEntry(true);
+				setValues((current) => ({
 					mood: entry.mood.value,
 					...Object.fromEntries(
 						entry.optionalScores.map((score) => [
@@ -164,7 +169,9 @@ export function CheckInScreen({
 							score.value,
 						]),
 					),
-				});
+					// A mood tapped on the way in is the answer being changed.
+					...current,
+				}));
 			})
 			.catch((caught: unknown) => {
 				if (!active) return;
@@ -173,7 +180,7 @@ export function CheckInScreen({
 		return () => {
 			active = false;
 		};
-	}, [checkIns, entryId]);
+	}, [checkIns, entryId, slot]);
 
 	/**
 	 * Writes the whole check-in in one transaction, exactly as the single-form
@@ -182,12 +189,7 @@ export function CheckInScreen({
 	 */
 	const commit = useCallback(async () => {
 		if (committed.current) return true;
-		const {
-			values: answered,
-			editing: entry,
-			activeSlugs,
-			knownEntryIds,
-		} = draft.current;
+		const { values: answered, editing: entry, activeSlugs } = draft.current;
 		const mood = answered.mood;
 		if (mood === undefined) return true;
 		committed.current = true;
@@ -202,19 +204,18 @@ export function CheckInScreen({
 				),
 			);
 			const saved = await checkIns.saveCheckIn(
+				slot,
 				{
 					mood,
 					...(Object.keys(optional).length > 0 ? { optional } : {}),
 				},
 				entry,
 			);
-			// A revisit from the confirmation must rewrite the entry this save
-			// created rather than append a second one to the day.
+			// A revisit from the confirmation rewrites the sitting this save just
+			// filled. The store would find it by slot anyway; holding it here keeps
+			// the screen's own edit path explicit.
 			if (!entry) {
-				const created = saved.entries.find(
-					(candidate) => !knownEntryIds.has(candidate.id),
-				);
-				if (created) setEditing(created);
+				setEditing(saved.sittings[slot]);
 			}
 			return true;
 		} catch (caught) {
@@ -224,7 +225,7 @@ export function CheckInScreen({
 		} finally {
 			setSaving(false);
 		}
-	}, [checkIns]);
+	}, [checkIns, slot]);
 
 	const done = index >= steps.length && steps.length > 0;
 
@@ -375,6 +376,11 @@ export function CheckInScreen({
 
 			<View style={styles.body}>
 				<View style={styles.prompt}>
+					{/* Which sitting is being answered, so the prompts are never
+					    ambiguous about the half of the day they are asking about. */}
+					<AppText variant="caption" color="subtle" style={styles.centredText}>
+						{t(`slots.${slot}.name`)}
+					</AppText>
 					<AppText variant="display" style={styles.centredText}>
 						{step.label}
 					</AppText>

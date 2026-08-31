@@ -10,6 +10,7 @@ function reminder(overrides: Partial<Reminder> = {}): Reminder {
 		id: "reminder-1",
 		minuteOfDay: 20 * 60,
 		daysOfWeek: EVERY_DAY_MASK,
+		slot: null,
 		enabled: true,
 		createdAt: 1,
 		updatedAt: 1,
@@ -29,6 +30,7 @@ describe("reminder planner", () => {
 			schedules,
 			now,
 			"2026-08-14",
+			new Set(),
 			false,
 		);
 		expect(
@@ -40,6 +42,7 @@ describe("reminder planner", () => {
 			schedules,
 			now,
 			"2026-08-14",
+			new Set(),
 			true,
 		);
 		expect(checkedIn.every(({ localDay }) => localDay !== "2026-08-14")).toBe(
@@ -55,6 +58,7 @@ describe("reminder planner", () => {
 			[reminder({ minuteOfDay: 9 * 60 })],
 			new Date(2026, 7, 14, 10),
 			"2026-08-14",
+			new Set(),
 			false,
 		);
 		expect(planned[0]?.localDay).toBe("2026-08-15");
@@ -68,6 +72,7 @@ describe("reminder planner", () => {
 			schedules,
 			new Date(2026, 7, 14, 10),
 			"2026-08-14",
+			new Set(),
 			false,
 		);
 		expect(planned).toHaveLength(55);
@@ -83,6 +88,7 @@ describe("reminder planner", () => {
 				[reminder({ minuteOfDay: 90 })],
 				new Date(2026, 9, 24, 12),
 				"2026-10-24",
+				new Set(),
 				false,
 			);
 			const fallBackDay = planned.filter(
@@ -103,6 +109,7 @@ describe("reminder planner", () => {
 				[reminder({ minuteOfDay: 90 })],
 				new Date(2026, 2, 28, 12),
 				"2026-03-28",
+				new Set(),
 				false,
 			);
 			const springDay = planned.filter(
@@ -113,5 +120,66 @@ describe("reminder planner", () => {
 		} finally {
 			process.env.TZ = previousTimezone;
 		}
+	});
+
+	it("silences only the sitting that has been answered", () => {
+		// Both fire later today, so nothing is dropped for being in the past.
+		const morning = reminder({
+			id: "morning",
+			slot: "morning",
+			minuteOfDay: 8 * 60,
+		});
+		const evening = reminder({
+			id: "evening",
+			slot: "evening",
+			minuteOfDay: 20 * 60,
+		});
+		const todayFor = (completed: readonly ("morning" | "evening")[]) =>
+			planReminderNotifications(
+				[morning, evening],
+				new Date(2026, 7, 14, 7),
+				"2026-08-14",
+				new Set(completed),
+				completed.length > 0,
+			)
+				.filter(({ localDay }) => localDay === "2026-08-14")
+				.map(({ reminderId }) => reminderId);
+
+		expect(todayFor([])).toEqual(["morning", "evening"]);
+		expect(todayFor(["morning"])).toEqual(["evening"]);
+		expect(todayFor(["evening"])).toEqual(["morning"]);
+		expect(todayFor(["morning", "evening"])).toEqual([]);
+
+		// Tomorrow is untouched by what today holds.
+		expect(
+			planReminderNotifications(
+				[morning, evening],
+				new Date(2026, 7, 14, 7),
+				"2026-08-14",
+				new Set(["morning", "evening"] as const),
+				true,
+			).some(({ localDay }) => localDay === "2026-08-15"),
+		).toBe(true);
+	});
+
+	it("keeps a slotless reminder silenced by any check-in", () => {
+		const legacy = reminder({ id: "legacy", minuteOfDay: 20 * 60 });
+		const todayFor = (
+			completed: readonly ("morning" | "evening")[],
+			anyCheckIn: boolean,
+		) =>
+			planReminderNotifications(
+				[legacy],
+				new Date(2026, 7, 14, 7),
+				"2026-08-14",
+				new Set(completed),
+				anyCheckIn,
+			).filter(({ localDay }) => localDay === "2026-08-14");
+
+		expect(todayFor([], false)).toHaveLength(1);
+		// One sitting done is a check-in, and that is all a slotless row knows.
+		expect(todayFor(["morning"], true)).toHaveLength(0);
+		// A check-in that names no sitting still counts for it.
+		expect(todayFor([], true)).toHaveLength(0);
 	});
 });

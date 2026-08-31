@@ -17,7 +17,11 @@ import {
 	UnitPreferenceRepository,
 } from "@bro/database-app";
 import { previousLocalDay } from "@bro/domain";
-import { CONFIGURABLE_CHECK_IN_METRIC_SLUGS } from "@bro/domain/metric-registry";
+import {
+	CHECK_IN_SLOTS,
+	type CheckInSlot,
+	CONFIGURABLE_CHECK_IN_METRIC_SLUGS,
+} from "@bro/domain/metric-registry";
 import {
 	formatMetricDelta,
 	formatMetricValue,
@@ -57,6 +61,8 @@ export type HistoryMeasurementChange =
 export type HistoricalCheckIn = {
 	id: string;
 	observedAt: number;
+	/** The sitting it was answered in; null on a check-in written before slots. */
+	slot: CheckInSlot | null;
 	mood: Observation;
 	optionalScores: Observation[];
 };
@@ -134,12 +140,24 @@ function groupCheckIns(
 				mood.observedAt,
 				...optionalScores.map((score) => score.observedAt),
 			),
+			slot: mood.slot,
 			mood,
 			optionalScores,
 		});
 	}
 
-	return checkIns;
+	// The day reads in the order it was lived: morning, evening, then whatever
+	// named no sitting.
+	const slotOrder = (checkIn: HistoricalCheckIn) =>
+		checkIn.slot === null
+			? CHECK_IN_SLOTS.length
+			: CHECK_IN_SLOTS.indexOf(checkIn.slot);
+	return checkIns.sort(
+		(left, right) =>
+			slotOrder(left) - slotOrder(right) ||
+			left.observedAt - right.observedAt ||
+			left.id.localeCompare(right.id),
+	);
 }
 
 /**

@@ -15,6 +15,20 @@
       "when": 1787171388690,
       "tag": "0001_bored_giant_man",
       "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "6",
+      "when": 1788171652054,
+      "tag": "0002_petite_zzzax",
+      "breakpoints": true
+    },
+    {
+      "idx": 3,
+      "version": "6",
+      "when": 1788171660495,
+      "tag": "0003_backfill_reminder_slots",
+      "breakpoints": true
     }
   ]
 }

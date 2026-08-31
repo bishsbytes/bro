@@ -1,5 +1,9 @@
 import { localDayOf, shiftLocalDay, type WeekStartDay } from "@bro/domain";
-import type { TagCategory } from "@bro/domain/metric-registry";
+import {
+	CHECK_IN_SLOTS,
+	type CheckInSlot,
+	type TagCategory,
+} from "@bro/domain/metric-registry";
 import { formatLocalDayLabel, isWheelReviewDue } from "@bro/logic";
 import { type Href, router, useFocusEffect, useScrollToTop } from "expo-router";
 import type { TFunction } from "i18next";
@@ -8,7 +12,6 @@ import { useTranslation } from "react-i18next";
 import { TouchableOpacity, View } from "react-native";
 import {
 	checkInScoreSummary,
-	MOOD_FACES,
 	metricLabel,
 } from "../../check-in/check-in-presentation";
 import {
@@ -23,7 +26,6 @@ import { Card } from "../../components/card";
 import { DayPager } from "../../components/day-pager";
 import { FormField } from "../../components/form-field";
 import { LoadingIndicator } from "../../components/loading-indicator";
-import { ScoreRow } from "../../components/score-row";
 import { LoadingScreen, Screen } from "../../components/screen";
 import { SectionHeader } from "../../components/section-header";
 import { useSetTodayHeaderVisibleMonthDay } from "../../components/today-header-month-context";
@@ -434,7 +436,6 @@ export function HomeScreen({
 	// check-in commits would otherwise put the day back as it was.
 	const todayWriteRef = useRef(0);
 	const [savingNote, setSavingNote] = useState(false);
-	const [reviewingCheckIns, setReviewingCheckIns] = useState(false);
 	const noteDirty = note !== savedNoteRef.current;
 
 	const load = useCallback(async () => {
@@ -761,9 +762,9 @@ export function HomeScreen({
 		}
 	}
 
-	function startCheckIn(moodScore: number) {
+	function openSitting(slot: CheckInSlot) {
 		playSelectionHaptic();
-		router.push(`/check-in?mood=${moodScore}` as Href);
+		router.push(`/check-in?slot=${slot}` as Href);
 	}
 
 	async function saveNote() {
@@ -813,62 +814,57 @@ export function HomeScreen({
 			tags: today.availableTags.filter((tag) => tag.category === category),
 		}),
 	);
-	const checkInCount = today.entries.length;
-	const latestCheckIn = today.entries[0] ?? null;
 	const checkInsSection = (
 		<View style={styles.section}>
-			<SectionHeader
-				title={t("checkIns.title")}
-				action={
-					checkInCount > 0 ? (
+			<SectionHeader title={t("checkIn:sittings.title")} />
+
+			{/* Two sittings, each either open or done. Neither card changes height
+			    when tapped: the scores are answered in the check-in flow. */}
+			<View style={styles.sittings}>
+				{CHECK_IN_SLOTS.map((slot) => {
+					const sitting = today.sittings[slot];
+					const name = t(`checkIn:slots.${slot}.name`);
+					const summary = sitting ? checkInScoreSummary(sitting) : null;
+					return (
 						<TouchableOpacity
+							key={slot}
+							style={styles.sittingCardWrapper}
 							accessibilityRole="button"
 							accessibilityLabel={
-								reviewingCheckIns ? t("checkIns.hide") : t("checkIns.review")
+								summary
+									? t("checkIn:sittings.editA11y", { sitting: name, summary })
+									: t("checkIn:sittings.startA11y", { sitting: name })
 							}
-							accessibilityState={{ expanded: reviewingCheckIns }}
-							onPress={() => setReviewingCheckIns((open) => !open)}
+							onPress={() => openSitting(slot)}
 						>
-							<AppText variant="label" color="brand">
-								{t("checkIns.count", { count: checkInCount })}
-							</AppText>
+							<Card style={styles.sittingCard}>
+								<AppText variant="label">{name}</AppText>
+								<AppText variant="caption" color="subtle">
+									{t(`checkIn:slots.${slot}.tagline`)}
+								</AppText>
+								<AppText
+									variant="caption"
+									color={summary ? "brand" : "muted"}
+									style={styles.sittingStatus}
+								>
+									{summary ?? t("checkIn:sittings.start")}
+								</AppText>
+							</Card>
 						</TouchableOpacity>
-					) : null
-				}
-			/>
+					);
+				})}
+			</View>
+			{error ? <AppText color="danger">{error}</AppText> : null}
 
-			{/* The journal reads the day; the scores themselves are answered in the
-			    check-in flow, so nothing here grows under the user's thumb. */}
-			<Card>
-				<AppText variant="label" style={styles.prompt}>
-					{checkInCount === 0
-						? t("checkIns.promptFirst")
-						: t("checkIns.promptAgain")}
-				</AppText>
-				<ScoreRow
-					accessibilityPrefix={t("checkIns.moodPrefix")}
-					selected={null}
-					onSelect={startCheckIn}
-					faces={MOOD_FACES}
-					endLabels={{
-						minimum: t("common:ratingEnds.veryBad"),
-						maximum: t("common:ratingEnds.veryGood"),
-					}}
-				/>
-				<AppText variant="caption" color="subtle" style={styles.hint}>
-					{latestCheckIn
-						? t("checkIns.last", {
-								summary: checkInScoreSummary(latestCheckIn),
-							})
-						: today.availableOptionalScores.length > 0
-							? t("checkIns.hintWithOptional")
-							: t("checkIns.hint")}
-				</AppText>
-				{error ? <AppText color="danger">{error}</AppText> : null}
-			</Card>
-
-			{reviewingCheckIns
-				? today.entries.map((entry) => (
+			{/* Check-ins from before the day had named sittings still belong to it,
+			    so an upgrade mid-day does not appear to lose one. Their edit action
+			    opens history instead of assigning a sitting from the current clock. */}
+			{today.slotlessEntries.length > 0 ? (
+				<>
+					<AppText variant="caption" color="subtle">
+						{t("checkIn:sittings.earlier")}
+					</AppText>
+					{today.slotlessEntries.map((entry) => (
 						<Card key={entry.id} style={styles.entryCard}>
 							<View>
 								<AppText variant="label">{checkInScoreSummary(entry)}</AppText>
@@ -885,7 +881,7 @@ export function HomeScreen({
 									summary: checkInScoreSummary(entry),
 								})}
 								onPress={() =>
-									router.push(`/check-in?entry=${entry.id}` as Href)
+									router.push(`/history/${today.localDay}` as Href)
 								}
 							>
 								<AppText variant="label" color="brand">
@@ -893,8 +889,9 @@ export function HomeScreen({
 								</AppText>
 							</TouchableOpacity>
 						</Card>
-					))
-				: null}
+					))}
+				</>
+			) : null}
 		</View>
 	);
 
@@ -1189,6 +1186,11 @@ const styles = StyleSheet.create((theme) => ({
 		justifyContent: "space-between",
 		alignItems: "center",
 	},
+	/** The two sittings sit side by side and share the row evenly. */
+	sittings: { flexDirection: "row", gap: theme.spacing.md },
+	sittingCardWrapper: { flex: 1 },
+	sittingCard: { flex: 1, gap: theme.spacing.xs },
+	sittingStatus: { marginTop: theme.spacing.sm },
 	prompt: {
 		fontWeight: "600",
 		marginBottom: theme.spacing.sm,

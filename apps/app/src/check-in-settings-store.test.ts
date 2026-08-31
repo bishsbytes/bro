@@ -39,24 +39,28 @@ describe("check-in settings store", () => {
 				label: "Energy",
 				enabled: true,
 				sensitive: false,
+				checkInSlots: "morning",
 			},
 			{
 				metricSlug: "motivation",
 				label: "Motivation",
 				enabled: true,
 				sensitive: false,
+				checkInSlots: "morning",
 			},
 			{
 				metricSlug: "productivity",
 				label: "Productivity",
 				enabled: true,
 				sensitive: false,
+				checkInSlots: "evening",
 			},
 			{
 				metricSlug: "libido",
 				label: "Libido",
 				enabled: true,
 				sensitive: true,
+				checkInSlots: "evening",
 			},
 		]);
 
@@ -92,5 +96,28 @@ describe("check-in settings store", () => {
 		expect(
 			toggled.tags.find((tag) => tag.metricSlug === "masturbation")?.enabled,
 		).toBe(false);
+	});
+
+	it("moves a score between sittings without disturbing its other settings", async () => {
+		const store = new CheckInSettingsStore(db);
+		await store.setEnabled("energy", false);
+
+		const moved = await store.setCheckInSlots("energy", "both");
+		expect(moved.metrics.find((m) => m.metricSlug === "energy")).toEqual({
+			metricSlug: "energy",
+			label: "Energy",
+			// Re-slotting says nothing about whether the prompt is asked at all.
+			enabled: false,
+			sensitive: false,
+			checkInSlots: "both",
+		});
+
+		// Only scored prompts have sittings, and only assignments it can store.
+		await expect(store.setCheckInSlots("training", "morning")).rejects.toThrow(
+			"Not a scored check-in prompt: training",
+		);
+		await expect(store.setCheckInSlots("mood", "morning")).rejects.toThrow(
+			"Unknown check-in setting: mood",
+		);
 	});
 });

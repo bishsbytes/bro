@@ -14,4 +14,12 @@ export const migrations: Migration[] = [
 		id: "0001_bored_giant_man",
 		sql: "ALTER TABLE `habits` ADD `area_slug` text;",
 	},
+	{
+		id: "0002_petite_zzzax",
+		sql: "ALTER TABLE `observations` ADD `slot` text;--> statement-breakpoint\nALTER TABLE `reminders` ADD `slot` text;--> statement-breakpoint\nALTER TABLE `tracked_metrics` ADD `check_in_slots` text;",
+	},
+	{
+		id: "0003_backfill_reminder_slots",
+		sql: "-- Assigns every existing reminder to the sitting its time suggests, so a\n-- device upgrading into slots keeps reminding at the times it already did\n-- without nagging past a completed check-in. Only ever fills a null, so a\n-- replay after an unobserved marker write cannot overwrite a user's choice.\nUPDATE `reminders`\nSET `slot` = CASE WHEN `minute_of_day` < 720 THEN 'morning' ELSE 'evening' END\nWHERE `slot` IS NULL;\n",
+	},
 ];

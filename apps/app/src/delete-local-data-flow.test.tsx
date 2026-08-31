@@ -112,7 +112,11 @@ describe("delete local data", () => {
 		});
 		await notes.create("2026-08-14", "Delete me");
 		await trackedMetrics.configure("alcohol", 6, false);
-		await reminders.create({ minuteOfDay: 1_200, daysOfWeek: 0b111_1111 });
+		await reminders.create({
+			minuteOfDay: 1_200,
+			daysOfWeek: 0b111_1111,
+			slot: "evening",
+		});
 		await assessments.createWithObservations({
 			templateSlug: "wheel-of-life",
 			templateVersion: 1,
@@ -324,7 +328,7 @@ describe("delete local data", () => {
 
 		await fireEvent.press(view.getByText("Back to today"));
 		await waitFor(() => expect(router.getPathname()).toBe("/"));
-		expect(await view.findByLabelText("Mood 4")).toBeTruthy();
+		expect(await view.findByText("Morning")).toBeTruthy();
 		expect(view.queryByText("Logged today")).toBeNull();
 
 		await fireEvent.press(view.getByLabelText("Settings"));

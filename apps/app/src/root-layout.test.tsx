@@ -29,8 +29,9 @@ jest.mock("./check-in/check-in-store", () => ({
 	createCheckInStore: () => ({
 		loadToday: async () => ({
 			localDay: "2026-08-14",
-			entries: [],
-			availableOptionalScores: [],
+			sittings: { morning: null, evening: null },
+			slotlessEntries: [],
+			availableOptionalScores: { morning: [], evening: [] },
 			selectedTagSlugs: [],
 			availableTags: [],
 			availableMeasurements: [],
@@ -175,7 +176,7 @@ describe("startup", () => {
 		expect(mockRunMigrations).toHaveBeenCalledWith({ handle: true });
 		expect(mockInitLocalDb).toHaveBeenCalledWith();
 		expect(mockRunLocalMigrations).toHaveBeenCalledWith({ localHandle: true });
-		expect(await view.findByLabelText("Mood 4")).toBeTruthy();
+		expect(await view.findByText("Morning")).toBeTruthy();
 	});
 
 	it("issues no session request and no network call for a local-only start", async () => {
@@ -205,11 +206,11 @@ describe("startup", () => {
 
 		expect(view.getByText("Local storage is unavailable")).toBeTruthy();
 		expect(view.getByText("disk unavailable")).toBeTruthy();
-		expect(view.queryByLabelText("Mood 4")).toBeNull();
+		expect(view.queryByText("Morning")).toBeNull();
 
 		await fireEvent.press(view.getByText("Try again"));
 
-		expect(await view.findByLabelText("Mood 4")).toBeTruthy();
+		expect(await view.findByText("Morning")).toBeTruthy();
 		// Both handles must be released, or the retry reopens against a half-known
 		// schema rather than a clean one.
 		expect(mockCloseDb).toHaveBeenCalledTimes(1);
@@ -228,7 +229,7 @@ describe("startup", () => {
 
 		await fireEvent.press(view.getByText("Try again"));
 
-		expect(await view.findByLabelText("Mood 4")).toBeTruthy();
+		expect(await view.findByText("Morning")).toBeTruthy();
 	});
 
 	it("never lets an auth failure reach the startup screen", async () => {
@@ -245,6 +246,6 @@ describe("startup", () => {
 		});
 
 		expect(view.queryByText("Local storage is unavailable")).toBeNull();
-		expect(await view.findByLabelText("Mood 4")).toBeTruthy();
+		expect(await view.findByText("Morning")).toBeTruthy();
 	});
 });

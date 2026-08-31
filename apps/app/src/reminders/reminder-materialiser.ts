@@ -4,7 +4,10 @@ import {
 	ReminderRepository,
 } from "@bro/database-app";
 import { localDayOf } from "@bro/domain";
-import { hasCompletedCheckIn } from "@bro/domain/metric-registry";
+import {
+	completedCheckInSlots,
+	hasCompletedCheckIn,
+} from "@bro/domain/metric-registry";
 import {
 	planReminderNotifications,
 	REMINDER_NOTIFICATION_PREFIX,
@@ -49,6 +52,7 @@ export async function materialiseReminderNotifications({
 		reminders,
 		now,
 		localDay,
+		completedCheckInSlots(todayObservations),
 		hasCompletedCheckIn(todayObservations),
 	);
 	const plannedIds = new Set(plan.map(({ identifier }) => identifier));

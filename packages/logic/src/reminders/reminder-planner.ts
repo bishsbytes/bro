@@ -1,4 +1,5 @@
 import { localDayOf } from "@bro/domain";
+import type { CheckInSlot } from "@bro/domain/metric-registry";
 import type { Reminder } from "@bro/mobile-model";
 import { includesWeekday, isoWeekdayIndex } from "./day-bitmask";
 
@@ -36,6 +37,24 @@ function comparePlanned(
 }
 
 /**
+ * Whether today's reminder has already been answered. A slotted reminder is
+ * silenced only by its own sitting, so finishing the morning leaves the evening
+ * nudge standing. A reminder with no slot — written before sittings existed, or
+ * by a device that does not record them — keeps its old behaviour of being
+ * silenced by any check-in, so an unmigrated row never nags more than it used
+ * to.
+ */
+function answeredToday(
+	reminder: Reminder,
+	completedSlots: ReadonlySet<CheckInSlot>,
+	anyCheckInToday: boolean,
+): boolean {
+	return reminder.slot === null
+		? anyCheckInToday
+		: completedSlots.has(reminder.slot);
+}
+
+/**
  * Turns replicated wall-clock schedules into a bounded set of install-local,
  * one-shot notifications. The cap is applied at a day boundary, so a busy day
  * is never partially scheduled.
@@ -44,7 +63,8 @@ export function planReminderNotifications(
 	reminders: readonly Reminder[],
 	now: Date,
 	todayLocalDay: string,
-	todayHasCheckIn: boolean,
+	completedSlots: ReadonlySet<CheckInSlot>,
+	anyCheckInToday: boolean,
 ): PlannedNotification[] {
 	const startOfToday = new Date(
 		now.getFullYear(),
@@ -64,7 +84,12 @@ export function planReminderNotifications(
 		const dayPlan = reminders
 			.filter(
 				(reminder) =>
-					reminder.enabled && includesWeekday(reminder.daysOfWeek, weekday),
+					reminder.enabled &&
+					includesWeekday(reminder.daysOfWeek, weekday) &&
+					!(
+						localDay === todayLocalDay &&
+						answeredToday(reminder, completedSlots, anyCheckInToday)
+					),
 			)
 			.map((reminder): PlannedNotification => {
 				const fireAt = dateAtMinute(day, reminder.minuteOfDay);
@@ -75,11 +100,7 @@ export function planReminderNotifications(
 					fireAt,
 				};
 			})
-			.filter(
-				(notification) =>
-					notification.fireAt.getTime() > now.getTime() &&
-					!(todayHasCheckIn && notification.localDay === todayLocalDay),
-			)
+			.filter((notification) => notification.fireAt.getTime() > now.getTime())
 			.sort(comparePlanned);
 
 		if (planned.length + dayPlan.length > MAX_PLANNED_NOTIFICATIONS) {

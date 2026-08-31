@@ -152,6 +152,7 @@ describe("consumption-derived daily totals", () => {
 			source: "user",
 			sourceRecordId: null,
 			assessmentId: null,
+			slot: null,
 			createdAt: 1,
 			updatedAt: 1,
 		};

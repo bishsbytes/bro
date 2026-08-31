@@ -8,6 +8,12 @@ taps plus save with no intermediate screens" contract recorded in
 [step-1-check-in.md](step-1-check-in.md#check-in), which was written when the
 check-in was Mood and Energy alone.
 
+**Amended by [morning-evening-check-ins.md](morning-evening-check-ins.md).**
+The flow below is unchanged in shape — one prompt at a time, buffered, written
+in one transaction — but it now answers a named sitting: `/check-in?slot=…`,
+asking the scores that sitting is configured for. Today's mood-faces card and
+its "check in again" affordance are replaced by one card per sitting.
+
 ## The problem
 
 Today rendered the check-in as a live form inside the feed. Choosing a mood

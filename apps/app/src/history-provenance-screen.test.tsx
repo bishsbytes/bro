@@ -16,6 +16,7 @@ function userWeight(): Observation {
 		source: "user",
 		sourceRecordId: null,
 		assessmentId: null,
+		slot: null,
 		createdAt: 1,
 		updatedAt: 1,
 	};

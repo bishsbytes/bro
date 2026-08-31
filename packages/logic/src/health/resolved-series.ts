@@ -35,6 +35,7 @@ function importedObservation(
 		source: row.source,
 		sourceRecordId: row.id,
 		assessmentId: null,
+		slot: null,
 		createdAt: row.createdAt,
 		updatedAt: row.updatedAt,
 		resolvedDay: day,
@@ -94,6 +95,7 @@ function consumptionObservation(
 		source: "consumption",
 		sourceRecordId: null,
 		assessmentId: null,
+		slot: null,
 		createdAt: latest.createdAt,
 		updatedAt: Math.max(...selected.entries.map((entry) => entry.updatedAt)),
 		resolvedDay: day,
@@ -164,6 +166,7 @@ export function importedDailyMetricAsObservation(
 		source: row.source,
 		sourceRecordId: row.id,
 		assessmentId: null,
+		slot: null,
 		createdAt: row.createdAt,
 		updatedAt: row.updatedAt,
 	};

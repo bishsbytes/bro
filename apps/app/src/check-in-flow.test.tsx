@@ -92,32 +92,56 @@ describe("daily check-in flow", () => {
 		let router = renderRouter("src/app", { initialUrl: "/" });
 		let view = await router;
 		await act(async () => undefined);
-		await view.findByLabelText("Mood 4");
+		await view.findByText("Morning");
 
-		// The face tapped in the journal opens the flow already holding that answer,
-		// and each remaining score is asked on its own card.
-		await fireEvent.press(view.getByLabelText("Mood 4"));
+		// The card tapped in the journal opens that sitting, and each score it
+		// asks is put on its own page.
+		await fireEvent.press(view.getByLabelText("Start Morning check-in"));
+		await fireEvent.press(await view.findByLabelText("Mood 4"));
 		await fireEvent.press(await view.findByLabelText("Energy 3"));
 		await fireEvent.press(await view.findByLabelText("Motivation 5"));
+		expect(await view.findByText("Checked in")).toBeTruthy();
+		await fireEvent.press(view.getByText("Done"));
+
+		// The finished sitting reports itself on the card that opened it.
+		expect(
+			await view.findByText("Mood 4 · Energy 3 · Motivation 5"),
+		).toBeTruthy();
+
+		// The evening asks its own scores and is a separate sitting entirely.
+		await fireEvent.press(view.getByLabelText("Start Evening check-in"));
+		await fireEvent.press(await view.findByLabelText("Mood 3"));
 		await fireEvent.press(await view.findByLabelText("Productivity 4"));
 		await fireEvent.press(await view.findByLabelText("Libido 2"));
 		expect(await view.findByText("Checked in")).toBeTruthy();
 		await fireEvent.press(view.getByText("Done"));
+		expect(
+			await view.findByText("Mood 3 · Productivity 4 · Libido 2"),
+		).toBeTruthy();
 
-		expect(await view.findByText("1 check-in")).toBeTruthy();
 		const observations = new databaseApp.ObservationRepository(db);
 		const notes = new databaseApp.DayNoteRepository(db);
 		const localDay = (await new CheckInStore(db).loadToday()).localDay;
 		expect(
-			(await observations.listByDay(localDay)).map((r) => r.metricSlug),
-		).toEqual(["mood", "energy", "motivation", "productivity", "libido"]);
-		// Every enabled score is written in one transaction.
-		expect(transaction).toHaveBeenCalledTimes(1);
+			(await observations.listByDay(localDay)).map((r) => [
+				r.metricSlug,
+				r.slot,
+			]),
+		).toEqual([
+			["mood", "morning"],
+			["energy", "morning"],
+			["motivation", "morning"],
+			["mood", "evening"],
+			["productivity", "evening"],
+			["libido", "evening"],
+		]);
+		// Each sitting is written whole, in one transaction of its own.
+		expect(transaction).toHaveBeenCalledTimes(2);
 
 		// Tags and the note describe the day, and each save its own write.
 		await fireEvent.press(view.getByLabelText("Outdoors"));
 		await act(async () => undefined);
-		expect(transaction).toHaveBeenCalledTimes(2);
+		expect(transaction).toHaveBeenCalledTimes(3);
 		await fireEvent.changeText(
 			view.getByPlaceholderText("Anything worth remembering?"),
 			"Strong finish",
@@ -148,22 +172,30 @@ describe("daily check-in flow", () => {
 			"energy",
 			"libido",
 			"mood",
+			"mood",
 			"motivation",
 			"outdoors",
 			"productivity",
 			"weight",
 		]);
 
-		await fireEvent.press(view.getByLabelText("Mood 5"));
+		// Reopening a finished sitting rewrites it: a slot holds one check-in, so
+		// answering the morning again must not leave the day with two of them.
+		await fireEvent.press(
+			view.getByLabelText(
+				"Edit Morning check-in: Mood 4 · Energy 3 · Motivation 5",
+			),
+		);
+		await fireEvent.press(await view.findByLabelText("Mood 5"));
 		await fireEvent.press(await view.findByLabelText("Energy 4"));
 		await fireEvent.press(await view.findByLabelText("Motivation 4"));
-		await fireEvent.press(await view.findByLabelText("Productivity 3"));
-		await fireEvent.press(await view.findByLabelText("Libido 1"));
 		await fireEvent.press(await view.findByText("Done"));
-		expect(await view.findByText("2 check-ins")).toBeTruthy();
+		expect(
+			await view.findByText("Mood 5 · Energy 4 · Motivation 4"),
+		).toBeTruthy();
 
 		// Tags belong to the day, so deselecting clears it for the day rather
-		// than for the newest check-in only.
+		// than for one sitting only.
 		await fireEvent.press(view.getByLabelText("Outdoors"));
 		await act(async () => undefined);
 		await fireEvent.press(view.getByLabelText("Training"));
@@ -176,11 +208,12 @@ describe("daily check-in flow", () => {
 		expect(
 			secondDay.filter((row) => row.metricSlug === "training"),
 		).toHaveLength(1);
+		// One mood per sitting, still — the rewrite added nothing.
 		expect(secondDay.filter((row) => row.metricSlug === "mood")).toHaveLength(
 			2,
 		);
 		expect(secondDay.filter((row) => row.metricSlug === "energy")).toHaveLength(
-			2,
+			1,
 		);
 		expect(secondDay.filter((row) => row.metricSlug === "weight")).toHaveLength(
 			1,
@@ -193,7 +226,12 @@ describe("daily check-in flow", () => {
 		view = await router;
 		await act(async () => undefined);
 
-		expect(await view.findByText("2 check-ins")).toBeTruthy();
+		expect(
+			await view.findByText("Mood 5 · Energy 4 · Motivation 4"),
+		).toBeTruthy();
+		expect(
+			await view.findByText("Mood 3 · Productivity 4 · Libido 2"),
+		).toBeTruthy();
 		// Two product opens across the cold relaunch plus one local-store open.
 		expect(mockSqlite.openDatabaseAsync).toHaveBeenCalledTimes(3);
 		expect(mockedUseSession).not.toHaveBeenCalled();

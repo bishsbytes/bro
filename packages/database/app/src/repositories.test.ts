@@ -41,6 +41,7 @@ function observation(
 		source: "user",
 		sourceRecordId: null,
 		assessmentId: null,
+		slot: null,
 		...overrides,
 	};
 }
@@ -93,7 +94,47 @@ describe("product repositories", () => {
 		expect(created).toMatchObject({
 			localDay: "2026-08-14",
 			tzOffsetMinutes: 120,
+			slot: null,
 		});
+	});
+
+	it("round-trips a check-in's sitting and leaves other rows slotless", async () => {
+		let nextId = 0;
+		const repository = new databaseApp.ObservationRepository(db, {
+			now: () => 10_000,
+			createId: () => {
+				nextId += 1;
+				return `observation-${nextId}`;
+			},
+		});
+
+		const morning = await repository.create(
+			observation({ slot: "morning" as const }),
+		);
+		// A body measurement never names a sitting, and must not have to.
+		const weight = await repository.create(
+			observation({
+				metricSlug: "weight",
+				value: 80,
+				scaleMin: null,
+				scaleMax: null,
+			}),
+		);
+
+		expect(morning.slot).toBe("morning");
+		expect(weight.slot).toBe(null);
+		expect(await repository.findById(morning.id)).toEqual(morning);
+
+		// An edit rewrites the value and leaves the sitting where it was.
+		const edited = await repository.update(morning.id, {
+			value: 2,
+			scaleMin: morning.scaleMin,
+			scaleMax: morning.scaleMax,
+			observedAt: morning.observedAt,
+			localDay: morning.localDay,
+			tzOffsetMinutes: morning.tzOffsetMinutes,
+		});
+		expect(edited).toMatchObject({ value: 2, slot: "morning" });
 	});
 
 	it("queries a metric by inclusive local-day range and bumps updatedAt", async () => {
@@ -558,6 +599,48 @@ describe("product repositories", () => {
 		expect(listActiveLifeAreas(overlays)).toHaveLength(7);
 	});
 
+	it("overrides and clears which sittings ask a scored prompt", async () => {
+		let now = 1_000;
+		const repository = new databaseApp.TrackedMetricsRepository(db, {
+			now: () => now,
+			createId: () => "tracked-libido",
+		});
+
+		// The first write materialises the overlay; the metric stays enabled and
+		// keeps the position it was given.
+		await expect(
+			repository.setCheckInSlots("libido", "morning", { position: 4 }),
+		).resolves.toMatchObject({
+			metricSlug: "libido",
+			position: 4,
+			removedAt: null,
+			checkInSlots: "morning",
+		});
+
+		now = 2_000;
+		await repository.configure("libido", 9, false);
+		expect(
+			(
+				await repository.listResolved([{ metricSlug: "libido", position: 4 }])
+			)[0],
+		).toMatchObject({
+			position: 9,
+			enabled: false,
+			// Disabling a prompt must not forget where the user had put it.
+			checkInSlots: "morning",
+		});
+
+		now = 3_000;
+		await expect(
+			repository.setCheckInSlots("libido", null, { position: 4 }),
+		).resolves.toMatchObject({
+			position: 9,
+			removedAt: 2_000,
+			checkInSlots: null,
+			updatedAt: 3_000,
+		});
+	});
+
 	it("saves an assessment and all of its observations atomically", async () => {
 		let nextId = 0;
 		const repository = new databaseApp.AssessmentRepository(db, {
@@ -772,6 +855,7 @@ describe("product repositories", () => {
 		const created = await repository.create({
 			minuteOfDay: 20 * 60,
 			daysOfWeek: 0b111_1111,
+			slot: "evening",
 		});
 		expect(await repository.listAll()).toEqual([created]);
 
@@ -780,11 +864,13 @@ describe("product repositories", () => {
 			repository.update(created.id, {
 				minuteOfDay: 8 * 60 + 30,
 				daysOfWeek: 0b001_1111,
+				slot: "morning",
 			}),
 		).resolves.toMatchObject({
 			id: "reminder-1",
 			minuteOfDay: 510,
 			daysOfWeek: 0b001_1111,
+			slot: "morning",
 			createdAt: 1_000,
 			updatedAt: 2_000,
 		});

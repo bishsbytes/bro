@@ -46,6 +46,7 @@ describe("export flow", () => {
 
 	it("round-trips food data and applies the sensitive toggle", async () => {
 		const observations = new databaseApp.ObservationRepository(db);
+		const reminders = new databaseApp.ReminderRepository(db);
 		const consumptionEntries = new databaseApp.ConsumptionEntryRepository(db);
 		const customConsumables = new databaseApp.CustomConsumableRepository(db);
 		const base = {
@@ -69,6 +70,11 @@ describe("export flow", () => {
 			value: 80,
 			scaleMin: null,
 			scaleMax: null,
+		});
+		await reminders.create({
+			minuteOfDay: 20 * 60,
+			daysOfWeek: 0b111_1111,
+			slot: "evening",
 		});
 		await consumptionEntries.create({
 			kind: "drink",
@@ -162,6 +168,10 @@ describe("export flow", () => {
 			"mood",
 			"weight",
 		]);
+		expect(withoutSensitive.reminders).toMatchObject([
+			{ minuteOfDay: 20 * 60, slot: "evening" },
+		]);
+		expect(withSensitive.reminders).toEqual(withoutSensitive.reminders);
 		expect(
 			withoutSensitive.consumptionEntries.map((entry) => entry.label),
 		).toEqual(["Coffee", "Chicken and rice"]);

@@ -1,4 +1,8 @@
 import type { ResolvedTrackedMetric, TrackedMetricDefault } from "@bro/domain";
+import {
+	type CheckInSlotAssignment,
+	isCheckInSlotAssignment,
+} from "@bro/domain/metric-registry";
 import type {
 	TrackedMetric,
 	TrackedMetricConfiguration,
@@ -21,9 +25,15 @@ type TrackedMetricRow = {
 	added_at: number | null;
 	removed_at: number | null;
 	custom_label: string | null;
+	check_in_slots: string | null;
 	created_at: number;
 	updated_at: number;
 };
+
+const SELECT_COLUMNS = `
+	id, metric_slug, position, added_at, removed_at, custom_label,
+	check_in_slots, created_at, updated_at
+`;
 
 function assertPosition(position: number): void {
 	if (!Number.isInteger(position) || position < 0) {
@@ -41,6 +51,11 @@ function toTrackedMetric(row: TrackedMetricRow): TrackedMetric {
 		addedAt: row.added_at,
 		removedAt: row.removed_at,
 		customLabel: row.custom_label,
+		// An assignment this build cannot read falls back to the registry default
+		// rather than dropping the prompt out of both sittings.
+		checkInSlots: isCheckInSlotAssignment(row.check_in_slots)
+			? row.check_in_slots
+			: null,
 		createdAt: row.created_at,
 		updatedAt: row.updated_at,
 	};
@@ -49,8 +64,7 @@ function toTrackedMetric(row: TrackedMetricRow): TrackedMetric {
 export class TrackedMetricsRepository extends BaseRepository {
 	async listAll(): Promise<TrackedMetric[]> {
 		const rows = await this.all<TrackedMetricRow>(
-			`SELECT id, metric_slug, position, added_at, removed_at, custom_label,
-				created_at, updated_at
+			`SELECT ${SELECT_COLUMNS}
 			 FROM tracked_metrics
 			 ORDER BY updated_at DESC, id DESC`,
 		);
@@ -80,6 +94,7 @@ export class TrackedMetricsRepository extends BaseRepository {
 					addedAt: overlay?.addedAt ?? null,
 					removedAt: overlay?.removedAt ?? null,
 					customLabel: overlay?.customLabel ?? null,
+					checkInSlots: overlay?.checkInSlots ?? null,
 				};
 			})
 			.sort(
@@ -122,18 +137,45 @@ export class TrackedMetricsRepository extends BaseRepository {
 		});
 	}
 
+	/** The row `listResolved` would overlay for this metric, if there is one. */
+	private async findLatestOverlay(
+		metricSlug: string,
+	): Promise<TrackedMetricRow | null> {
+		return await this.first<TrackedMetricRow>(
+			`SELECT ${SELECT_COLUMNS}
+			 FROM tracked_metrics WHERE metric_slug = ?
+			 ORDER BY updated_at DESC, id DESC LIMIT 1`,
+			[metricSlug],
+		);
+	}
+
+	private async insertOverlay(tracked: TrackedMetric): Promise<TrackedMetric> {
+		await this.run(
+			`INSERT INTO tracked_metrics (
+				id, metric_slug, position, added_at, removed_at, custom_label,
+				check_in_slots, created_at, updated_at
+			) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+			[
+				tracked.id,
+				tracked.metricSlug,
+				tracked.position,
+				tracked.addedAt,
+				tracked.removedAt,
+				tracked.customLabel,
+				tracked.checkInSlots,
+				tracked.createdAt,
+				tracked.updatedAt,
+			],
+		);
+		return tracked;
+	}
+
 	private async configureWithin(
 		metricSlug: string,
 		position: number,
 		enabled: boolean,
 	): Promise<TrackedMetric> {
-		const existing = await this.first<TrackedMetricRow>(
-			`SELECT id, metric_slug, position, added_at, removed_at, custom_label,
-				created_at, updated_at
-			 FROM tracked_metrics WHERE metric_slug = ?
-			 ORDER BY updated_at DESC, id DESC LIMIT 1`,
-			[metricSlug],
-		);
+		const existing = await this.findLatestOverlay(metricSlug);
 		const now = this.now();
 
 		if (existing) {
@@ -158,33 +200,17 @@ export class TrackedMetricsRepository extends BaseRepository {
 			});
 		}
 
-		const tracked: TrackedMetric = {
+		return await this.insertOverlay({
 			id: this.createId(now),
 			metricSlug,
 			position,
 			addedAt: enabled ? now : null,
 			removedAt: enabled ? null : now,
 			customLabel: null,
+			checkInSlots: null,
 			createdAt: now,
 			updatedAt: now,
-		};
-		await this.run(
-			`INSERT INTO tracked_metrics (
-				id, metric_slug, position, added_at, removed_at, custom_label, created_at,
-				updated_at
-			) VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
-			[
-				tracked.id,
-				tracked.metricSlug,
-				tracked.position,
-				tracked.addedAt,
-				tracked.removedAt,
-				tracked.customLabel,
-				tracked.createdAt,
-				tracked.updatedAt,
-			],
-		);
-		return tracked;
+		});
 	}
 
 	/**
@@ -202,13 +228,7 @@ export class TrackedMetricsRepository extends BaseRepository {
 		const normalizedLabel = customLabel?.trim() || null;
 
 		return await this.transaction(async () => {
-			const existing = await this.first<TrackedMetricRow>(
-				`SELECT id, metric_slug, position, added_at, removed_at, custom_label,
-					created_at, updated_at
-				 FROM tracked_metrics WHERE metric_slug = ?
-				 ORDER BY updated_at DESC, id DESC LIMIT 1`,
-				[metricSlug],
-			);
+			const existing = await this.findLatestOverlay(metricSlug);
 			const now = this.now();
 
 			if (existing) {
@@ -225,33 +245,62 @@ export class TrackedMetricsRepository extends BaseRepository {
 				});
 			}
 
-			const tracked: TrackedMetric = {
+			return await this.insertOverlay({
 				id: this.createId(now),
 				metricSlug,
 				position,
 				addedAt: enabled ? now : null,
 				removedAt: enabled ? null : now,
 				customLabel: normalizedLabel,
+				checkInSlots: null,
 				createdAt: now,
 				updatedAt: now,
-			};
-			await this.run(
-				`INSERT INTO tracked_metrics (
-					id, metric_slug, position, added_at, removed_at, custom_label, created_at,
-					updated_at
-				) VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
-				[
-					tracked.id,
-					tracked.metricSlug,
-					tracked.position,
-					tracked.addedAt,
-					tracked.removedAt,
-					tracked.customLabel,
-					tracked.createdAt,
-					tracked.updatedAt,
-				],
-			);
-			return tracked;
+			});
+		});
+	}
+
+	/**
+	 * Sets or clears which sittings ask a scored prompt. Like `relabel`, an
+	 * existing overlay keeps its position and enabled state; clearing the
+	 * override returns the metric to whatever the registry says next.
+	 */
+	async setCheckInSlots(
+		metricSlug: string,
+		checkInSlots: CheckInSlotAssignment | null,
+		fallback: { position: number; enabled?: boolean },
+	): Promise<TrackedMetric> {
+		const { position, enabled = true } = fallback;
+		assertPosition(position);
+
+		return await this.transaction(async () => {
+			const existing = await this.findLatestOverlay(metricSlug);
+			const now = this.now();
+
+			if (existing) {
+				await this.run(
+					`UPDATE tracked_metrics
+					 SET check_in_slots = ?, updated_at = ?
+					 WHERE id = ?`,
+					[checkInSlots, now, existing.id],
+				);
+				return toTrackedMetric({
+					...existing,
+					check_in_slots: checkInSlots,
+					updated_at: now,
+				});
+			}
+
+			return await this.insertOverlay({
+				id: this.createId(now),
+				metricSlug,
+				position,
+				addedAt: enabled ? now : null,
+				removedAt: enabled ? null : now,
+				customLabel: null,
+				checkInSlots,
+				createdAt: now,
+				updatedAt: now,
+			});
 		});
 	}
 }

@@ -1,6 +1,6 @@
 {
   "metadata": {
-    "formatVersion": 1,
+    "formatVersion": 2,
     "exportedAt": "2026-08-14T12:00:00.000Z",
     "appVersion": "1.0.0"
   },
@@ -10,6 +10,7 @@
   "observations": [],
   "dayNotes": [],
   "trackedMetrics": [],
+  "reminders": [],
   "assessments": [],
   "goals": [],
   "unitPreferences": [],

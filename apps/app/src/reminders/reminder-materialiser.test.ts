@@ -68,7 +68,11 @@ describe("reminder notification materialisation", () => {
 		const reminders = new databaseApp.ReminderRepository(db, {
 			createId: () => "reminder-1",
 		});
-		await reminders.create({ minuteOfDay: 20 * 60, daysOfWeek: 0b111_1111 });
+		await reminders.create({
+			minuteOfDay: 20 * 60,
+			daysOfWeek: 0b111_1111,
+			slot: "evening",
+		});
 		const now = new Date(2026, 7, 14, 10);
 
 		const first = await reminderMaterialiser.materialiseReminderNotifications({
@@ -91,6 +95,8 @@ describe("reminder notification materialisation", () => {
 		expect(gateway.schedule).not.toHaveBeenCalled();
 		expect(gateway.cancel).not.toHaveBeenCalled();
 
+		// The reminder nudges for the evening, so it takes an evening sitting to
+		// silence it.
 		await new databaseApp.ObservationRepository(db, {
 			createId: () => "observation-1",
 		}).create({
@@ -104,6 +110,7 @@ describe("reminder notification materialisation", () => {
 			source: "user",
 			sourceRecordId: null,
 			assessmentId: null,
+			slot: "evening",
 		});
 		await new databaseApp.ObservationRepository(db, {
 			createId: () => "observation-2",
@@ -118,6 +125,7 @@ describe("reminder notification materialisation", () => {
 			source: "user",
 			sourceRecordId: null,
 			assessmentId: null,
+			slot: "evening",
 		});
 		const afterCheckIn =
 			await reminderMaterialiser.materialiseReminderNotifications({
@@ -138,7 +146,11 @@ describe("reminder notification materialisation", () => {
 		const reminders = new databaseApp.ReminderRepository(db, {
 			createId: () => "reminder-1",
 		});
-		await reminders.create({ minuteOfDay: 20 * 60, daysOfWeek: 0b111_1111 });
+		await reminders.create({
+			minuteOfDay: 20 * 60,
+			daysOfWeek: 0b111_1111,
+			slot: "evening",
+		});
 		const now = new Date(2026, 7, 14, 10);
 		await reminderMaterialiser.materialiseReminderNotifications({
 			db,

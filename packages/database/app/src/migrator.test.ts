@@ -5,8 +5,18 @@ import { createNodeSqliteMock } from "./test-support/node-sqlite";
 const mockSqlite = createNodeSqliteMock();
 let activeDatabaseApp: typeof DatabaseApp | undefined;
 
-const MIGRATION_IDS = ["0000_initial_schema", "0001_bored_giant_man"] as const;
+const MIGRATION_IDS = [
+	"0000_initial_schema",
+	"0001_bored_giant_man",
+	"0002_petite_zzzax",
+	"0003_backfill_reminder_slots",
+] as const;
 const LOCAL_MIGRATION_IDS = ["L000_local_store"] as const;
+
+/** Every migration but the one a replay test deliberately unmarks. */
+function allExcept(id: (typeof MIGRATION_IDS)[number]): string[] {
+	return MIGRATION_IDS.filter((candidate) => candidate !== id);
+}
 
 jest.mock("expo-sqlite", () => ({
 	openDatabaseSync: mockSqlite.openDatabaseSync,
@@ -167,7 +177,7 @@ describe("product database migrations", () => {
 
 		await expect(databaseApp.runMigrations(db)).resolves.toEqual({
 			applied: ["0000_initial_schema"],
-			skipped: ["0001_bored_giant_man"],
+			skipped: allExcept("0000_initial_schema"),
 		});
 		expect(
 			await db.getFirstAsync<{ name: string }>(
@@ -186,7 +196,7 @@ describe("product database migrations", () => {
 
 		await expect(databaseApp.runMigrations(db)).resolves.toEqual({
 			applied: ["0001_bored_giant_man"],
-			skipped: ["0000_initial_schema"],
+			skipped: allExcept("0001_bored_giant_man"),
 		});
 		expect(
 			await db.getAllAsync<{ name: string }>(
@@ -194,6 +204,34 @@ describe("product database migrations", () => {
 				 WHERE name = 'area_slug'`,
 			),
 		).toEqual([{ name: "area_slug" }]);
+	});
+
+	it("slots existing reminders by time and leaves chosen slots alone on replay", async () => {
+		const { databaseApp, db } = await migratedDatabase("reminder-slots.db");
+		await databaseApp.runMigrations(db);
+		// Two rows as an upgrading device holds them — no slot yet — plus one the
+		// user has since moved to a sitting its time would not have picked.
+		await db.execAsync(`
+			INSERT INTO reminders (id, minute_of_day, days_of_week, slot, enabled, created_at, updated_at)
+			VALUES ('morning-row', 480, 127, NULL, 1, 1, 1),
+			       ('evening-row', 1200, 127, NULL, 1, 1, 1),
+			       ('chosen-row', 1200, 127, 'morning', 1, 1, 1);
+			DELETE FROM __app_migrations WHERE id = '0003_backfill_reminder_slots';
+		`);
+
+		await expect(databaseApp.runMigrations(db)).resolves.toEqual({
+			applied: ["0003_backfill_reminder_slots"],
+			skipped: allExcept("0003_backfill_reminder_slots"),
+		});
+		expect(
+			await db.getAllAsync<{ id: string; slot: string }>(
+				"SELECT id, slot FROM reminders ORDER BY id",
+			),
+		).toEqual([
+			{ id: "chosen-row", slot: "morning" },
+			{ id: "evening-row", slot: "evening" },
+			{ id: "morning-row", slot: "morning" },
+		]);
 	});
 
 	it("creates and safely re-runs the independent local-store manifest", async () => {

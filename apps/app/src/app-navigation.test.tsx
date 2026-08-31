@@ -35,8 +35,9 @@ jest.mock("./check-in/check-in-store", () => ({
 	createCheckInStore: () => ({
 		loadToday: async () => ({
 			localDay: "2026-08-14",
-			entries: [],
-			availableOptionalScores: [],
+			sittings: { morning: null, evening: null },
+			slotlessEntries: [],
+			availableOptionalScores: { morning: [], evening: [] },
 			selectedTagSlugs: [],
 			availableTags: [],
 			availableMeasurements: [],
@@ -223,7 +224,7 @@ describe("app entry", () => {
 		const { router, view } = await launch({ onboardingComplete: true });
 
 		expect(router.getPathname()).toBe("/");
-		expect(await view.findByLabelText("Mood 4")).toBeTruthy();
+		expect(await view.findByText("Morning")).toBeTruthy();
 		expect(
 			await view.findByText("Take stock of the bigger picture"),
 		).toBeTruthy();
@@ -253,7 +254,7 @@ describe("app entry", () => {
 		// The journal pane carries the title "Journal" too, so address the tab itself.
 		await fireEvent.press(view.getByLabelText(/^Journal, tab/));
 		await waitFor(() => expect(router.getPathname()).toBe("/"));
-		expect(await view.findByLabelText("Mood 4")).toBeTruthy();
+		expect(await view.findByText("Morning")).toBeTruthy();
 	});
 
 	it("walks onboarding through to the app without a backend request", async () => {
@@ -271,7 +272,7 @@ describe("app entry", () => {
 
 		expect(mockSetOnboardingComplete).toHaveBeenCalledWith(true);
 		expect(router.getPathname()).toBe("/");
-		expect(await view.findByLabelText("Mood 4")).toBeTruthy();
+		expect(await view.findByText("Morning")).toBeTruthy();
 		// The whole first run, end to end, touches nothing of ours over the network.
 		expect(globalThis.fetch).not.toHaveBeenCalled();
 	});
@@ -454,6 +455,6 @@ describe("app entry", () => {
 		// rather than stacking a second copy of it under the first.
 		await act(async () => expoRouter.back());
 		await waitFor(() => expect(router.getPathname()).toBe("/"));
-		expect(await view.findByLabelText("Mood 4")).toBeTruthy();
+		expect(await view.findByText("Morning")).toBeTruthy();
 	});
 });

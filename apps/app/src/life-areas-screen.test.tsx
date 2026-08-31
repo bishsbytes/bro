@@ -18,6 +18,7 @@ function trackedMetric(row: ResolvedTrackedMetric): TrackedMetric {
 		addedAt: row.enabled ? 1 : null,
 		removedAt: row.enabled ? null : 1,
 		customLabel: row.customLabel,
+		checkInSlots: row.checkInSlots,
 		createdAt: 1,
 		updatedAt: 1,
 	};
@@ -33,6 +34,7 @@ describe("life areas screen", () => {
 				addedAt: null,
 				removedAt: null,
 				customLabel: null,
+				checkInSlots: null,
 			}),
 		);
 		const repository = {
@@ -161,6 +163,7 @@ describe("life areas screen", () => {
 				addedAt: null,
 				removedAt: null,
 				customLabel: null,
+				checkInSlots: null,
 			}),
 		);
 		const repository = {

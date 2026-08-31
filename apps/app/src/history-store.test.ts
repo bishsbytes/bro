@@ -29,6 +29,7 @@ function observation(
 		source: "user",
 		sourceRecordId: null,
 		assessmentId,
+		slot: null,
 		createdAt: 1_000,
 		updatedAt: 1_000,
 	};

@@ -1,4 +1,8 @@
 import type { HabitDirection } from "@bro/domain";
+import type {
+	CheckInSlot,
+	CheckInSlotAssignment,
+} from "@bro/domain/metric-registry";
 
 export type AssessmentItemSnapshot = {
 	slug: string;
@@ -271,14 +275,24 @@ export type Observation = {
 	source: string;
 	sourceRecordId: string | null;
 	assessmentId: string | null;
+	/**
+	 * The sitting a check-in row was recorded in. Null on everything that is not
+	 * a check-in, and on check-ins written before slots existed.
+	 */
+	slot: CheckInSlot | null;
 	createdAt: number;
 	updatedAt: number;
 };
 
+/**
+ * Only the check-in names a sitting, so `slot` is optional here and defaults
+ * to null — a body measurement or an imported sample never has to say it has
+ * no sitting.
+ */
 export type CreateObservation = Omit<
 	Observation,
-	"id" | "createdAt" | "updatedAt"
->;
+	"id" | "createdAt" | "updatedAt" | "slot"
+> & { slot?: CheckInSlot | null };
 
 export type UpdateObservation = Pick<
 	Observation,
@@ -330,12 +344,21 @@ export type Reminder = {
 	id: string;
 	minuteOfDay: number;
 	daysOfWeek: number;
+	/**
+	 * The sitting this reminder nags for, so completing one does not silence the
+	 * other. Null on a reminder from a device that predates slots, which is
+	 * silenced by any check-in as it always was.
+	 */
+	slot: CheckInSlot | null;
 	enabled: boolean;
 	createdAt: number;
 	updatedAt: number;
 };
 
-export type ReminderSchedule = Pick<Reminder, "minuteOfDay" | "daysOfWeek">;
+export type ReminderSchedule = Pick<
+	Reminder,
+	"minuteOfDay" | "daysOfWeek" | "slot"
+>;
 
 export type TrackedMetric = {
 	id: string;
@@ -344,6 +367,12 @@ export type TrackedMetric = {
 	addedAt: number | null;
 	removedAt: number | null;
 	customLabel: string | null;
+	/**
+	 * Overrides which sittings ask this score. Null falls back to the registry
+	 * default, so a metric the user has never re-slotted follows the catalogue
+	 * as it changes.
+	 */
+	checkInSlots: CheckInSlotAssignment | null;
 	createdAt: number;
 	updatedAt: number;
 };

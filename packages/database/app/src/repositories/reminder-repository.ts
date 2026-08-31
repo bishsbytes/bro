@@ -1,3 +1,4 @@
+import { isCheckInSlot } from "@bro/domain/metric-registry";
 import type { Reminder, ReminderSchedule } from "@bro/mobile-model";
 import { BaseRepository } from "./base-repository";
 
@@ -7,13 +8,14 @@ type ReminderRow = {
 	id: string;
 	minute_of_day: number;
 	days_of_week: number;
+	slot: string | null;
 	enabled: number;
 	created_at: number;
 	updated_at: number;
 };
 
 const SELECT_COLUMNS =
-	"id, minute_of_day, days_of_week, enabled, created_at, updated_at";
+	"id, minute_of_day, days_of_week, slot, enabled, created_at, updated_at";
 
 function assertSchedule(schedule: ReminderSchedule): void {
 	if (
@@ -30,6 +32,9 @@ function assertSchedule(schedule: ReminderSchedule): void {
 	) {
 		throw new RangeError("Reminder daysOfWeek must select at least one day.");
 	}
+	if (schedule.slot !== null && !isCheckInSlot(schedule.slot)) {
+		throw new TypeError("Reminder slot must be a check-in sitting or null.");
+	}
 }
 
 function toReminder(row: ReminderRow): Reminder {
@@ -37,6 +42,9 @@ function toReminder(row: ReminderRow): Reminder {
 		id: row.id,
 		minuteOfDay: row.minute_of_day,
 		daysOfWeek: row.days_of_week,
+		// An unreadable slot behaves as the pre-slot rows do: silenced by any
+		// check-in rather than tied to a sitting this build cannot name.
+		slot: isCheckInSlot(row.slot) ? row.slot : null,
 		enabled: row.enabled === 1,
 		createdAt: row.created_at,
 		updatedAt: row.updated_at,
@@ -73,12 +81,13 @@ export class ReminderRepository extends BaseRepository {
 
 		await this.run(
 			`INSERT INTO reminders (
-				id, minute_of_day, days_of_week, enabled, created_at, updated_at
-			) VALUES (?, ?, ?, ?, ?, ?)`,
+				id, minute_of_day, days_of_week, slot, enabled, created_at, updated_at
+			) VALUES (?, ?, ?, ?, ?, ?, ?)`,
 			[
 				reminder.id,
 				reminder.minuteOfDay,
 				reminder.daysOfWeek,
+				reminder.slot,
 				reminder.enabled ? 1 : 0,
 				reminder.createdAt,
 				reminder.updatedAt,
@@ -94,9 +103,15 @@ export class ReminderRepository extends BaseRepository {
 		assertSchedule(schedule);
 		await this.run(
 			`UPDATE reminders
-			 SET minute_of_day = ?, days_of_week = ?, updated_at = ?
+			 SET minute_of_day = ?, days_of_week = ?, slot = ?, updated_at = ?
 			 WHERE id = ?`,
-			[schedule.minuteOfDay, schedule.daysOfWeek, this.now(), id],
+			[
+				schedule.minuteOfDay,
+				schedule.daysOfWeek,
+				schedule.slot,
+				this.now(),
+				id,
+			],
 		);
 		return await this.findById(id);
 	}

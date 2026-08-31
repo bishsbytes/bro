@@ -1,6 +1,11 @@
 import type { Reminder, ReminderSchedule } from "@bro/database-app";
 import type { WeekStartDay } from "@bro/domain";
 import {
+	CHECK_IN_SLOTS,
+	type CheckInSlot,
+	checkInSlotForMinuteOfDay,
+} from "@bro/domain/metric-registry";
+import {
 	EVERY_DAY_MASK,
 	ISO_WEEKDAYS,
 	type IsoWeekdayIndex,
@@ -72,9 +77,14 @@ function ReminderEditor({
 	onCancel(): void;
 	onSave(schedule: ReminderSchedule): Promise<void>;
 }) {
-	const { t } = useTranslation("settings");
+	const { t } = useTranslation(["settings", "checkIn"]);
 	const [time, setTime] = useState(formatTime(initial.minuteOfDay));
 	const [daysOfWeek, setDaysOfWeek] = useState(initial.daysOfWeek);
+	// A reminder the user has never slotted takes the sitting its time
+	// suggests; one that already has a sitting opens on it.
+	const [slot, setSlot] = useState<CheckInSlot>(
+		initial.slot ?? checkInSlotForMinuteOfDay(initial.minuteOfDay),
+	);
 	const [error, setError] = useState<string | null>(null);
 	const weekdays = useMemo(() => orderedIsoWeekdays(weekStart), [weekStart]);
 
@@ -93,7 +103,7 @@ function ReminderEditor({
 			return;
 		}
 		setError(null);
-		await onSave({ minuteOfDay, daysOfWeek });
+		await onSave({ minuteOfDay, daysOfWeek, slot });
 	}
 
 	return (
@@ -127,6 +137,23 @@ function ReminderEditor({
 					);
 				})}
 			</View>
+			{/* Which sitting this nudges for, so finishing one does not silence
+			    the other. */}
+			<AppText variant="caption" color="subtle">
+				{t("reminders.slotLabel")}
+			</AppText>
+			<View style={styles.days}>
+				{CHECK_IN_SLOTS.map((candidate) => (
+					<Button
+						key={candidate}
+						label={t(`checkIn:slots.${candidate}.name`)}
+						accessibilityState={{ selected: candidate === slot }}
+						variant={candidate === slot ? "primary" : "secondary"}
+						style={styles.dayButton}
+						onPress={() => setSlot(candidate)}
+					/>
+				))}
+			</View>
 			{error ? <AppText color="danger">{error}</AppText> : null}
 			<Button
 				label={t("reminders.save")}
@@ -147,7 +174,7 @@ export function RemindersScreen({
 	store,
 	unitSettingsStore,
 }: RemindersScreenProps) {
-	const { t } = useTranslation(["settings", "common"]);
+	const { t } = useTranslation(["settings", "common", "checkIn"]);
 	const remindersStore = useMemo(() => store ?? createReminderStore(), [store]);
 	const unitSettings = useMemo(
 		() => unitSettingsStore ?? createUnitSettingsStore(),
@@ -230,6 +257,13 @@ export function RemindersScreen({
 							<AppText color="muted">
 								{formatDays(t, reminder.daysOfWeek)}
 							</AppText>
+							{/* A reminder from before sittings names none, and is still
+							    silenced by any check-in — so it claims neither. */}
+							{reminder.slot ? (
+								<AppText variant="caption" color="subtle">
+									{t(`checkIn:slots.${reminder.slot}.name`)}
+								</AppText>
+							) : null}
 						</View>
 						<ThemedSwitch
 							accessibilityLabel={
@@ -277,7 +311,11 @@ export function RemindersScreen({
 					key={editing === "new" ? "new" : editing.id}
 					initial={
 						editing === "new"
-							? { minuteOfDay: 20 * 60, daysOfWeek: EVERY_DAY_MASK }
+							? {
+									minuteOfDay: 20 * 60,
+									daysOfWeek: EVERY_DAY_MASK,
+									slot: null,
+								}
 							: editing
 					}
 					busy={busy}

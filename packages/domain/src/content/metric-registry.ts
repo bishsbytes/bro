@@ -9,6 +9,21 @@ import { LIFE_AREA_CATALOGUE, type LifeAreaSlug } from "./life-area-catalogue";
 
 export type MetricKind = "scored" | "tag" | "assessment" | "measurement";
 export type MetricAggregation = "mean" | "presence" | "last" | "sum";
+
+/**
+ * The two sittings a day holds. A check-in records which one it belongs to
+ * rather than deriving it from the clock, so a late morning check-in stays the
+ * morning one and an edit never moves it.
+ */
+export type CheckInSlot = "morning" | "evening";
+
+export const CHECK_IN_SLOTS = [
+	"morning",
+	"evening",
+] as const satisfies readonly CheckInSlot[];
+
+/** Which sittings a scored prompt is asked in. */
+export type CheckInSlotAssignment = CheckInSlot | "both";
 export type TagCategory = "body" | "lifestyle" | "mind" | "social" | "sexual";
 export type TagSlug =
 	| "training"
@@ -71,6 +86,12 @@ export type ScoredMetricDefinition = MetricDefinitionBase & {
 	scaleMax: number;
 	category: null;
 	dimension: null;
+	/**
+	 * Which sittings ask this score before the user changes their settings. A
+	 * score assigned to one slot is sampled at the same time every day, which is
+	 * what makes its trend comparable across days.
+	 */
+	defaultCheckInSlots: CheckInSlotAssignment;
 };
 
 export type TagMetricDefinition = MetricDefinitionBase & {
@@ -161,7 +182,10 @@ const scored = (
 	slug: string,
 	label: string,
 	defaultPosition: number,
-	sensitive = false,
+	options: {
+		sensitive?: boolean;
+		defaultCheckInSlots?: CheckInSlotAssignment;
+	} = {},
 ): ScoredMetricDefinition => ({
 	slug,
 	label,
@@ -170,11 +194,12 @@ const scored = (
 	scaleMax: 5,
 	category: null,
 	aggregation: "mean",
-	sensitive,
+	sensitive: options.sensitive ?? false,
 	userEnterable: true,
 	deprecated: false,
 	defaultPosition,
 	dimension: null,
+	defaultCheckInSlots: options.defaultCheckInSlots ?? "both",
 });
 
 const tag = (
@@ -292,11 +317,16 @@ const importedMeasurement = (
  * evolve, but a slug remains resolvable after it has been written.
  */
 export const METRIC_REGISTRY = [
+	// Mood anchors both sittings; the rest default to the sitting that asks
+	// them at the most telling time of day.
 	scored("mood", "Mood", 0),
-	scored("energy", "Energy", 1),
-	scored("motivation", "Motivation", 2),
-	scored("productivity", "Productivity", 3),
-	scored("libido", "Libido", 4, true),
+	scored("energy", "Energy", 1, { defaultCheckInSlots: "morning" }),
+	scored("motivation", "Motivation", 2, { defaultCheckInSlots: "morning" }),
+	scored("productivity", "Productivity", 3, { defaultCheckInSlots: "evening" }),
+	scored("libido", "Libido", 4, {
+		sensitive: true,
+		defaultCheckInSlots: "evening",
+	}),
 	tag("training", "Training", "body", 2),
 	tag("illness", "Illness", "body", 3),
 	tag("poor_sleep_environment", "Poor sleep environment", "lifestyle", 4),
@@ -411,6 +441,72 @@ export function hasCompletedCheckIn(
 	return CHECK_IN_METRIC_SLUGS.every((slug) =>
 		observations.some((observation) => observation.metricSlug === slug),
 	);
+}
+
+/**
+ * Which of the day's sittings are done. A check-in written before slots
+ * existed, or by a device that does not record them, carries no slot and so
+ * completes neither — `hasCompletedCheckIn` is what still counts it as a
+ * check-in day.
+ */
+export function completedCheckInSlots(
+	observations: readonly {
+		readonly metricSlug: string;
+		readonly slot: CheckInSlot | null;
+	}[],
+): Set<CheckInSlot> {
+	const completed = new Set<CheckInSlot>();
+	for (const slot of CHECK_IN_SLOTS) {
+		const done = CHECK_IN_METRIC_SLUGS.every((slug) =>
+			observations.some(
+				(observation) =>
+					observation.metricSlug === slug && observation.slot === slot,
+			),
+		);
+		if (done) {
+			completed.add(slot);
+		}
+	}
+	return completed;
+}
+
+export function isCheckInSlot(value: unknown): value is CheckInSlot {
+	return CHECK_IN_SLOTS.some((slot) => slot === value);
+}
+
+export function isCheckInSlotAssignment(
+	value: unknown,
+): value is CheckInSlotAssignment {
+	return value === "both" || isCheckInSlot(value);
+}
+
+/** Whether a prompt assigned this way is asked in the given sitting. */
+export function assignmentIncludesSlot(
+	assignment: CheckInSlotAssignment,
+	slot: CheckInSlot,
+): boolean {
+	return assignment === "both" || assignment === slot;
+}
+
+/** Minute of day the morning stops being the obvious sitting. */
+const MIDDAY_MINUTE = 12 * 60;
+
+/**
+ * The sitting a time belongs to when nobody has said. Used to seed a new
+ * reminder and to suggest a card, never to classify a saved check-in — and it
+ * is the same rule the reminder backfill migration applies.
+ */
+export function checkInSlotForMinuteOfDay(minuteOfDay: number): CheckInSlot {
+	return minuteOfDay < MIDDAY_MINUTE ? "morning" : "evening";
+}
+
+/**
+ * The sitting a check-in defaults to when the user opens the flow without
+ * naming one. Only a suggestion — the slot that gets written is whichever
+ * card was tapped.
+ */
+export function suggestedCheckInSlot(at: Date): CheckInSlot {
+	return checkInSlotForMinuteOfDay(at.getHours() * 60 + at.getMinutes());
 }
 
 export function resolveMetric(slug: string): MetricResolution {

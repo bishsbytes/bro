@@ -48,7 +48,7 @@ function CheckInEditor({
 	) => void;
 	onDelete: (checkIn: HistoricalCheckIn) => void;
 }) {
-	const { t } = useTranslation(["history", "common"]);
+	const { t } = useTranslation(["history", "common", "checkIn"]);
 	const [mood, setMood] = useState(checkIn.mood.value);
 	const [optional, setOptional] = useState<Record<string, number>>(
 		Object.fromEntries(
@@ -58,6 +58,13 @@ function CheckInEditor({
 
 	return (
 		<Card style={styles.card}>
+			{/* Which sitting this was; a check-in from before sittings existed
+			    says so rather than being filed under one it never named. */}
+			<AppText variant="caption" color="subtle">
+				{checkIn.slot
+					? t(`checkIn:slots.${checkIn.slot}.name`)
+					: t("checkIn:sittings.unslotted")}
+			</AppText>
 			<AppText variant="score">
 				{new Date(checkIn.observedAt).toLocaleTimeString([], {
 					hour: "2-digit",

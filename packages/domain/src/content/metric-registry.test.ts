@@ -1,8 +1,15 @@
 import {
+	assignmentIncludesSlot,
 	CHECK_IN_METRIC_SLUGS,
+	CHECK_IN_SLOTS,
+	type CheckInSlotAssignment,
 	CONFIGURABLE_CHECK_IN_METRIC_SLUGS,
+	checkInSlotForMinuteOfDay,
+	completedCheckInSlots,
 	DEFAULT_TRACKED_METRICS,
 	hasCompletedCheckIn,
+	isCheckInSlot,
+	isCheckInSlotAssignment,
 	listAssessmentMetrics,
 	listConsumptionDerivedMeasurements,
 	listImportedOnlyMeasurements,
@@ -12,6 +19,7 @@ import {
 	listUserEnterableMeasurements,
 	METRIC_REGISTRY,
 	resolveMetric,
+	suggestedCheckInSlot,
 } from "./metric-registry";
 
 describe("metric registry", () => {
@@ -349,5 +357,66 @@ describe("metric registry", () => {
 		expect(
 			hasCompletedCheckIn([{ metricSlug: "mood" }, { metricSlug: "energy" }]),
 		).toBe(true);
+	});
+
+	it("completes only the sittings a Mood was actually recorded in", () => {
+		expect([...completedCheckInSlots([])]).toEqual([]);
+		expect([
+			...completedCheckInSlots([{ metricSlug: "mood", slot: "morning" }]),
+		]).toEqual(["morning"]);
+		expect([
+			...completedCheckInSlots([
+				{ metricSlug: "mood", slot: "evening" },
+				{ metricSlug: "mood", slot: "morning" },
+			]),
+		]).toEqual(["morning", "evening"]);
+		// A configurable score alone does not complete a sitting, and a check-in
+		// from before slots existed completes neither.
+		expect([
+			...completedCheckInSlots([
+				{ metricSlug: "energy", slot: "morning" },
+				{ metricSlug: "mood", slot: null },
+			]),
+		]).toEqual([]);
+	});
+
+	it("assigns every scored prompt to a sitting, with Mood in both", () => {
+		const bySlug = new Map(
+			listScoredMetrics().map((metric) => [
+				metric.slug,
+				metric.defaultCheckInSlots,
+			]),
+		);
+
+		expect(bySlug.get("mood")).toBe("both");
+		for (const slug of CONFIGURABLE_CHECK_IN_METRIC_SLUGS) {
+			const assignment = bySlug.get(slug);
+			expect(isCheckInSlotAssignment(assignment)).toBe(true);
+			// Every configurable prompt is asked somewhere; none is stranded.
+			expect(
+				CHECK_IN_SLOTS.some((slot) =>
+					assignmentIncludesSlot(assignment as CheckInSlotAssignment, slot),
+				),
+			).toBe(true);
+		}
+	});
+
+	it("reads a time's sitting the same way the reminder backfill does", () => {
+		expect(checkInSlotForMinuteOfDay(0)).toBe("morning");
+		expect(checkInSlotForMinuteOfDay(11 * 60 + 59)).toBe("morning");
+		expect(checkInSlotForMinuteOfDay(12 * 60)).toBe("evening");
+		expect(checkInSlotForMinuteOfDay(23 * 60 + 59)).toBe("evening");
+		expect(suggestedCheckInSlot(new Date(2026, 7, 31, 9, 30))).toBe("morning");
+		expect(suggestedCheckInSlot(new Date(2026, 7, 31, 20, 0))).toBe("evening");
+	});
+
+	it("rejects slot values it did not write", () => {
+		expect(isCheckInSlot("morning")).toBe(true);
+		expect(isCheckInSlot("afternoon")).toBe(false);
+		expect(isCheckInSlot(null)).toBe(false);
+		expect(isCheckInSlotAssignment("both")).toBe(true);
+		expect(isCheckInSlotAssignment("neither")).toBe(false);
+		expect(assignmentIncludesSlot("both", "evening")).toBe(true);
+		expect(assignmentIncludesSlot("morning", "evening")).toBe(false);
 	});
 });

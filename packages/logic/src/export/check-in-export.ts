@@ -14,16 +14,22 @@ import type {
 	Habit,
 	HabitCompletion,
 	Observation,
+	Reminder,
 	TrackedMetric,
 	UnitPreference,
 } from "@bro/mobile-model";
 
-export const CHECK_IN_EXPORT_FORMAT_VERSION = 1 as const;
+/**
+ * 2 adds the check-in slot to observations and reminders, and the slot
+ * override to tracked metrics.
+ */
+export const CHECK_IN_EXPORT_FORMAT_VERSION = 2 as const;
 
 export type CheckInExportInput = {
 	observations: readonly Observation[];
 	dayNotes: readonly DayNote[];
 	trackedMetrics: readonly TrackedMetric[];
+	reminders: readonly Reminder[];
 	assessments: readonly Assessment[];
 	goals: readonly Goal[];
 	unitPreferences: readonly UnitPreference[];
@@ -56,6 +62,7 @@ export type CheckInExport = {
 	observations: Observation[];
 	dayNotes: DayNote[];
 	trackedMetrics: TrackedMetric[];
+	reminders: Reminder[];
 	assessments: Assessment[];
 	goals: Goal[];
 	unitPreferences: UnitPreference[];
@@ -93,6 +100,7 @@ function copyObservation(row: Observation): Observation {
 		source: row.source,
 		sourceRecordId: row.sourceRecordId,
 		assessmentId: row.assessmentId,
+		slot: row.slot,
 		createdAt: row.createdAt,
 		updatedAt: row.updatedAt,
 	};
@@ -116,8 +124,21 @@ function copyTrackedMetric(metric: TrackedMetric): TrackedMetric {
 		addedAt: metric.addedAt,
 		removedAt: metric.removedAt,
 		customLabel: metric.customLabel,
+		checkInSlots: metric.checkInSlots,
 		createdAt: metric.createdAt,
 		updatedAt: metric.updatedAt,
+	};
+}
+
+function copyReminder(reminder: Reminder): Reminder {
+	return {
+		id: reminder.id,
+		minuteOfDay: reminder.minuteOfDay,
+		daysOfWeek: reminder.daysOfWeek,
+		slot: reminder.slot,
+		enabled: reminder.enabled,
+		createdAt: reminder.createdAt,
+		updatedAt: reminder.updatedAt,
 	};
 }
 
@@ -382,6 +403,13 @@ export function buildCheckInExport(
 					left.createdAt - right.createdAt ||
 					compareText(left.id, right.id),
 			),
+		reminders: input.reminders
+			.map(copyReminder)
+			.sort(
+				(left, right) =>
+					left.minuteOfDay - right.minuteOfDay ||
+					compareText(left.id, right.id),
+			),
 		assessments: input.assessments
 			.map(copyAssessment)
 			.map((assessment) => {
@@ -520,6 +548,7 @@ const EXPORT_COLLECTIONS = [
 	"observations",
 	"dayNotes",
 	"trackedMetrics",
+	"reminders",
 	"assessments",
 	"goals",
 	"unitPreferences",

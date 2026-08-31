@@ -31,6 +31,7 @@ function defaultOverlays(): ResolvedTrackedMetric[] {
 		addedAt: null,
 		removedAt: null,
 		customLabel: null,
+		checkInSlots: null,
 	}));
 }
 
@@ -78,6 +79,7 @@ describe("life-area catalogue", () => {
 			addedAt: 1,
 			removedAt: null,
 			customLabel: "Future area",
+			checkInSlots: null,
 		});
 		overlays.push({
 			metricSlug: "weight",
@@ -87,6 +89,7 @@ describe("life-area catalogue", () => {
 			addedAt: 1,
 			removedAt: null,
 			customLabel: null,
+			checkInSlots: null,
 		});
 
 		const resolved = resolveLifeAreas(overlays);

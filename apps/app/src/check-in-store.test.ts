@@ -76,17 +76,23 @@ describe("check-in store", () => {
 
 	it("preserves a row's scale snapshot when an entry is edited", async () => {
 		const observations = new databaseApp.ObservationRepository(db);
-		const mood = await observations.create(scoredObservation("mood", 7, 0, 10));
-		const energy = await observations.create(
-			scoredObservation("energy", 2, 0, 10),
-		);
+		const mood = await observations.create({
+			...scoredObservation("mood", 7, 0, 10),
+			slot: "morning",
+		});
+		const energy = await observations.create({
+			...scoredObservation("energy", 2, 0, 10),
+			slot: "morning",
+		});
 		const store = new CheckInStore(db, () => CAPTURED_AT);
 
 		await store.saveCheckIn(
+			"morning",
 			{ mood: 4, optional: { energy: 3 } },
 			{
 				id: mood.id,
 				observedAt: mood.observedAt,
+				slot: "morning",
 				mood,
 				optionalScores: [energy],
 			},
@@ -102,6 +108,102 @@ describe("check-in store", () => {
 			scaleMin: 0,
 			scaleMax: 10,
 		});
+	});
+
+	it("rejects editing an entry through a different sitting", async () => {
+		const observations = new databaseApp.ObservationRepository(db);
+		const mood = await observations.create(scoredObservation("mood", 3, 1, 5));
+		const store = new CheckInStore(db, () => CAPTURED_AT);
+
+		await expect(
+			store.saveCheckIn(
+				"morning",
+				{ mood: 4 },
+				{
+					id: mood.id,
+					observedAt: mood.observedAt,
+					slot: null,
+					mood,
+					optionalScores: [],
+				},
+			),
+		).rejects.toThrow("does not belong to the morning slot");
+		expect(await observations.findById(mood.id)).toMatchObject({ value: 3 });
+	});
+
+	it("rewrites the slot's sitting instead of adding a second one", async () => {
+		const observations = new databaseApp.ObservationRepository(db);
+		const store = new CheckInStore(db, () => CAPTURED_AT);
+
+		await store.saveCheckIn("morning", { mood: 4, optional: { energy: 3 } });
+		// No entry is handed in: the store finds what already fills the slot.
+		const saved = await store.saveCheckIn("morning", {
+			mood: 2,
+			optional: { energy: 1 },
+		});
+
+		expect(saved.sittings.morning).toMatchObject({
+			mood: { value: 2 },
+			optionalScores: [{ metricSlug: "energy", value: 1 }],
+		});
+		expect(
+			(await observations.listByDay(LOCAL_DAY)).map((row) => [
+				row.metricSlug,
+				row.value,
+			]),
+		).toEqual([
+			["mood", 2],
+			["energy", 1],
+		]);
+
+		// The other sitting is untouched by any of it.
+		await store.saveCheckIn("evening", { mood: 5 });
+		const both = await store.loadToday();
+		expect(both.sittings.morning?.mood.value).toBe(2);
+		expect(both.sittings.evening?.mood.value).toBe(5);
+	});
+
+	it("shows one sitting per slot when sync leaves two, and hides neither", async () => {
+		const observations = new databaseApp.ObservationRepository(db);
+		const store = new CheckInStore(db, () => CAPTURED_AT);
+
+		// Two devices each wrote the morning offline; both rows have to survive.
+		const older = await observations.create({
+			...scoredObservation("mood", 3, 1, 5),
+			slot: "morning",
+		});
+		const newer = await observations.create({
+			...scoredObservation("mood", 5, 1, 5),
+			observedAt: CAPTURED_AT.getTime() + 1,
+			slot: "morning",
+		});
+
+		const today = await store.loadToday();
+		// The most recently written wins the card.
+		expect(today.sittings.morning?.id).toBe(newer.id);
+		expect(today.sittings.morning?.mood.value).toBe(5);
+		expect(today.slotlessEntries).toEqual([]);
+		// Neither row was deleted, and the day still counts as checked in.
+		expect(
+			(await observations.listByDay(LOCAL_DAY)).map((row) => row.id).sort(),
+		).toEqual([older.id, newer.id].sort());
+	});
+
+	it("keeps a check-in written before slots out of both sittings", async () => {
+		const observations = new databaseApp.ObservationRepository(db);
+		const store = new CheckInStore(db, () => CAPTURED_AT);
+		const legacy = await observations.create(
+			scoredObservation("mood", 3, 1, 5),
+		);
+
+		const today = await store.loadToday();
+		expect(today.sittings).toEqual({ morning: null, evening: null });
+		expect(today.slotlessEntries.map((entry) => entry.id)).toEqual([legacy.id]);
+
+		// Answering the morning adds a sitting rather than adopting the old row.
+		const saved = await store.saveCheckIn("morning", { mood: 4 });
+		expect(saved.sittings.morning?.id).not.toBe(legacy.id);
+		expect(saved.slotlessEntries.map((entry) => entry.id)).toEqual([legacy.id]);
 	});
 
 	it("loads the distinct days with a mood observation in an inclusive range", async () => {
@@ -155,7 +257,7 @@ describe("check-in store", () => {
 		const transaction = jest.spyOn(db, "withTransactionAsync");
 		const store = new CheckInStore(db, () => CAPTURED_AT);
 
-		const saved = await store.saveCheckIn({
+		const saved = await store.saveCheckIn("morning", {
 			mood: 4,
 			optional: { energy: 3 },
 		});
@@ -165,12 +267,12 @@ describe("check-in store", () => {
 			{ metricSlug: "mood", value: 4, scaleMin: 1, scaleMax: 5 },
 			{ metricSlug: "energy", value: 3, scaleMin: 1, scaleMax: 5 },
 		]);
-		expect(saved.entries).toMatchObject([
-			{
-				mood: { value: 4 },
-				optionalScores: [{ metricSlug: "energy", value: 3 }],
-			},
-		]);
+		expect(saved.sittings.morning).toMatchObject({
+			slot: "morning",
+			mood: { value: 4 },
+			optionalScores: [{ metricSlug: "energy", value: 3 }],
+		});
+		expect(saved.sittings.evening).toBeNull();
 		expect(saved.selectedTagSlugs).toEqual([]);
 		expect(saved.note).toBe("");
 		transaction.mockRestore();
@@ -180,19 +282,24 @@ describe("check-in store", () => {
 		const observations = new databaseApp.ObservationRepository(db);
 		const store = new CheckInStore(db, () => CAPTURED_AT);
 
-		expect(
-			(await store.loadToday()).availableOptionalScores.map(
-				(metric) => metric.slug,
-			),
-		).toEqual(["energy", "motivation", "productivity", "libido"]);
-		const saved = await store.saveCheckIn({ mood: 4 });
+		const available = (await store.loadToday()).availableOptionalScores;
+		expect(available.morning.map((metric) => metric.slug)).toEqual([
+			"energy",
+			"motivation",
+		]);
+		expect(available.evening.map((metric) => metric.slug)).toEqual([
+			"productivity",
+			"libido",
+		]);
+		const saved = await store.saveCheckIn("morning", { mood: 4 });
 
 		expect(await observations.listByDay(LOCAL_DAY)).toMatchObject([
 			{ metricSlug: "mood", value: 4, scaleMin: 1, scaleMax: 5 },
 		]);
-		expect(saved.entries).toMatchObject([
-			{ mood: { value: 4 }, optionalScores: [] },
-		]);
+		expect(saved.sittings.morning).toMatchObject({
+			mood: { value: 4 },
+			optionalScores: [],
+		});
 		expect(hasCompletedCheckIn(await observations.listByDay(LOCAL_DAY))).toBe(
 			true,
 		);
@@ -206,12 +313,18 @@ describe("check-in store", () => {
 		await tracked.configure("libido", 4, true);
 		const store = new CheckInStore(db, () => CAPTURED_AT);
 
-		expect(
-			(await store.loadToday()).availableOptionalScores.map(
-				(metric) => metric.slug,
-			),
-		).toEqual(["energy", "motivation", "productivity", "libido"]);
-		const saved = await store.saveCheckIn({
+		const available = (await store.loadToday()).availableOptionalScores;
+		expect(available.morning.map((metric) => metric.slug)).toEqual([
+			"energy",
+			"motivation",
+		]);
+		expect(available.evening.map((metric) => metric.slug)).toEqual([
+			"productivity",
+			"libido",
+		]);
+		// The slot decides what a sitting asks, not what may be recorded in it:
+		// a score handed to the store is written whatever slot it lands in.
+		const saved = await store.saveCheckIn("morning", {
 			mood: 4,
 			optional: {
 				energy: 3,
@@ -233,15 +346,16 @@ describe("check-in store", () => {
 			["productivity", 4],
 			["libido", 2],
 		]);
-		expect(saved.entries[0]?.optionalScores).toMatchObject([
+		expect(saved.sittings.morning?.optionalScores).toMatchObject([
 			{ metricSlug: "energy", value: 3 },
 			{ metricSlug: "motivation", value: 5 },
 			{ metricSlug: "productivity", value: 4 },
 			{ metricSlug: "libido", value: 2 },
 		]);
-		const entry = saved.entries[0];
+		const entry = saved.sittings.morning;
 		if (!entry) throw new Error("Expected the saved check-in.");
 		await store.saveCheckIn(
+			"morning",
 			{
 				mood: 3,
 				optional: {
@@ -264,9 +378,9 @@ describe("check-in store", () => {
 		await tracked.configure("libido", 4, false);
 		const reloaded = await store.loadToday();
 		expect(
-			reloaded.availableOptionalScores.map((metric) => metric.slug),
-		).toEqual(["energy", "motivation", "productivity"]);
-		expect(reloaded.entries[0]?.optionalScores).toHaveLength(4);
+			reloaded.availableOptionalScores.evening.map((metric) => metric.slug),
+		).toEqual(["productivity"]);
+		expect(reloaded.sittings.morning?.optionalScores).toHaveLength(4);
 	});
 
 	it("rejects a score outside the scale without writing anything", async () => {
@@ -274,13 +388,13 @@ describe("check-in store", () => {
 		const store = new CheckInStore(db, () => CAPTURED_AT);
 
 		await expect(
-			store.saveCheckIn({ mood: 0, optional: { energy: 3 } }),
+			store.saveCheckIn("morning", { mood: 0, optional: { energy: 3 } }),
 		).rejects.toThrow("Mood must be a whole number from 1 to 5.");
 		await expect(
-			store.saveCheckIn({ mood: 4, optional: { energy: 6 } }),
+			store.saveCheckIn("morning", { mood: 4, optional: { energy: 6 } }),
 		).rejects.toThrow("Energy must be a whole number from 1 to 5.");
 		await expect(
-			store.saveCheckIn({
+			store.saveCheckIn("morning", {
 				mood: 4,
 				optional: { energy: 3, libido: 0 },
 			}),
@@ -540,7 +654,7 @@ describe("check-in store", () => {
 		});
 		const store = new CheckInStore(db, () => CAPTURED_AT, undefined, refresh);
 
-		await store.saveCheckIn({ mood: 4, optional: { energy: 3 } });
+		await store.saveCheckIn("morning", { mood: 4, optional: { energy: 3 } });
 
 		expect(refresh).toHaveBeenCalledTimes(1);
 		// The refresh is what cancels today's nudge, so it has to run after the
@@ -564,12 +678,12 @@ describe("check-in store", () => {
 			() => Promise.reject(new Error("no notification permission")),
 		);
 
-		const saved = await store.saveCheckIn({
+		const saved = await store.saveCheckIn("morning", {
 			mood: 4,
 			optional: { energy: 3 },
 		});
 
-		expect(saved.entries).toHaveLength(1);
+		expect(saved.sittings.morning).not.toBeNull();
 		expect(await observations.listByDay(LOCAL_DAY)).toHaveLength(2);
 		expect(warn).toHaveBeenCalled();
 		warn.mockRestore();
