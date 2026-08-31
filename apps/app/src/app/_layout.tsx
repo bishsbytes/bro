@@ -126,7 +126,6 @@ function RootNavigator() {
 					name="insights/[id]"
 					options={{ title: t("root.insight") }}
 				/>
-				<Stack.Screen name="account" options={{ headerShown: false }} />
 			</Stack.Protected>
 			<Stack.Screen name="sign-in" options={{ title: t("root.signIn") }} />
 			<Stack.Screen name="sign-up" options={{ title: t("root.signUp") }} />

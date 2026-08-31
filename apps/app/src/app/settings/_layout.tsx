@@ -31,9 +31,6 @@ export default function SettingsLayout() {
 			<Stack.Screen name="food" options={{ title: t("settings.food") }} />
 			<Stack.Screen name="health" options={{ title: t("settings.health") }} />
 			<Stack.Screen name="data" options={{ headerShown: false }} />
-			<Stack.Screen name="privacy" options={{ headerShown: false }} />
-			<Stack.Screen name="licences" options={{ headerShown: false }} />
-			<Stack.Screen name="export" options={{ headerShown: false }} />
 		</Stack>
 	);
 }
