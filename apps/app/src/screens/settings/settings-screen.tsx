@@ -17,6 +17,7 @@ import { toMessage } from "../../lib/errors";
 import { useDeviceSettings } from "../../providers/device-settings-provider";
 import { cancelAllReminderNotifications } from "../../reminders/reminder-materialiser";
 import { ACCENT_OPTIONS, StyleSheet } from "../../theme/unistyles";
+import { AccountSection } from "./account-screen";
 
 function themeSuffix(themeMode: ThemeMode): "System" | "Light" | "Dark" {
 	return themeMode === "system"
@@ -103,7 +104,7 @@ export function SettingsScreen({
 	}
 
 	return (
-		<Screen scroll padded gap="md">
+		<Screen scroll padded gap="md" keyboardShouldPersistTaps="handled">
 			<ListRow
 				title={t("index.appearance")}
 				detail={t("index.appearanceDetail")}
@@ -163,6 +164,10 @@ export function SettingsScreen({
 				accessibilityLabel={t("index.exportA11y")}
 				onPress={() => router.push("/settings/export" as Href)}
 			/>
+			<View style={styles.section}>
+				<SectionHeader title={t("account.sectionTitle")} />
+				<AccountSection />
+			</View>
 			<Card style={styles.section}>
 				<SectionHeader title={t("localData.title")} />
 				{deleteStep === "idle" ? (

@@ -1,3 +1,6 @@
-import { AccountScreen } from "../screens/settings/account-screen";
+import { Redirect } from "expo-router";
 
-export default AccountScreen;
+/** Preserve old account deep links after Account moved into Settings. */
+export default function LegacyAccountRoute() {
+	return <Redirect href="/settings" />;
+}

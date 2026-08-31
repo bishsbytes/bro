@@ -11,7 +11,6 @@ export const navigation = {
 		lifeAreas: "Life areas",
 		measurement: "Measurement",
 		insight: "Insight",
-		account: "Account",
 		signIn: "Sign in",
 		signUp: "Create account",
 	},

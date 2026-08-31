@@ -1,5 +1,5 @@
 import { router, useLocalSearchParams } from "expo-router";
-import { leaveAccountFlow } from "../navigation/account-flow";
+import { leaveSettingsFlow } from "../navigation/settings-flow";
 import { useDeviceSettings } from "../providers/device-settings-provider";
 import { SignUpScreen } from "../screens/auth/sign-up-screen";
 
@@ -11,7 +11,7 @@ export default function SignUpRoute() {
 		if (!settings.onboardingComplete) {
 			completeOnboarding();
 		}
-		leaveAccountFlow(returnTo, settings.onboardingComplete);
+		leaveSettingsFlow(returnTo, settings.onboardingComplete);
 	};
 
 	return (

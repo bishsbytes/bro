@@ -15,8 +15,7 @@ export const common = {
 	},
 	/** Screen-reader labels for the shared components. */
 	a11y: {
-		account: "Account",
-		accountFor: "Account for {{name}}",
+		settings: "Settings",
 		wheelChart: "Wheel of life chart",
 		/** Legend entries on the wheel chart. */
 		wheelThisReview: "This review",

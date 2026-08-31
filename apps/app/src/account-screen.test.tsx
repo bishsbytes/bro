@@ -5,7 +5,7 @@ import {
 	DeviceSettingsProvider,
 	useDeviceSettings,
 } from "./providers/device-settings-provider";
-import { AccountScreen } from "./screens/settings/account-screen";
+import { AccountSection } from "./screens/settings/account-screen";
 
 const mockBack = jest.fn();
 const mockPush = jest.fn();
@@ -57,7 +57,7 @@ function WiredAccount() {
 			onRemoteSessionStored={markRemoteSessionStored}
 			onRemoteSessionCleared={clearRemoteSession}
 		>
-			<AccountScreen />
+			<AccountSection />
 		</AuthProvider>
 	);
 }
@@ -84,7 +84,7 @@ function registeredSession() {
 	};
 }
 
-describe("AccountScreen", () => {
+describe("AccountSection", () => {
 	beforeEach(() => {
 		jest.clearAllMocks();
 	});

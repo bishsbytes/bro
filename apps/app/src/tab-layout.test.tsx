@@ -138,8 +138,8 @@ describe("TabLayout", () => {
 		const screen = await render(<TabLayout />);
 		const currentMonth = monthHeaderLabel(localDayOf(new Date()));
 
-		mockPathname = "/account";
-		mockSegments = ["account"];
+		mockPathname = "/settings";
+		mockSegments = ["settings"];
 		await screen.rerender(<TabLayout />);
 
 		expect(screen.getByText(currentMonth)).toBeTruthy();
@@ -167,10 +167,10 @@ describe("TabLayout", () => {
 			tabBarActiveTintColor: string;
 		};
 		const historyIcon = screen.getByTestId("history-header-icon");
-		const accountIcon = screen.getByTestId("account-header-icon");
+		const settingsIcon = screen.getByTestId("settings-header-icon");
 
 		expect(screenOptions.tabBarActiveTintColor).toBe("neutral-chrome");
 		expect(historyIcon.props.children.props.color).toBe("neutral-chrome");
-		expect(accountIcon.props.children.props.color).toBe("neutral-chrome");
+		expect(settingsIcon.props.children.props.color).toBe("neutral-chrome");
 	});
 });

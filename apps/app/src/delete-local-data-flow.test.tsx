@@ -325,7 +325,7 @@ describe("delete local data", () => {
 		expect(await view.findByLabelText("Mood 4")).toBeTruthy();
 		expect(view.queryByText("Logged today")).toBeNull();
 
-		await fireEvent.press(view.getByLabelText(/^Account/));
+		await fireEvent.press(view.getByLabelText("Settings"));
 		expect(await view.findByText("ada@example.com")).toBeTruthy();
 		expect(mockedAuthClient.useSession).toHaveBeenCalled();
 		expect(databaseApp.readDeviceSettings()).toEqual(settingsBefore);

@@ -257,9 +257,7 @@ export const settings = {
 		attribution: "Source: Open Food Facts · Licence: ODbL-1.0",
 	},
 	account: {
-		row: "Settings",
-		rowDetail: "Reminders, health data, units, and local data.",
-		rowA11y: "Open settings",
+		sectionTitle: "Account",
 		signedOut: "Signed out on this device.",
 		signedOutPending:
 			"Signed out on this device. The server could not be reached.",

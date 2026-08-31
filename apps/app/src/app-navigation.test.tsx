@@ -190,13 +190,13 @@ async function press(
 	await fireEvent.press(view.getByText(label));
 }
 
-async function openAccount(
+async function openSettings(
 	router: Awaited<ReturnType<typeof launch>>["router"],
 	view: Awaited<ReturnType<typeof launch>>["view"],
 ) {
 	await waitFor(() => expect(router.getPathname()).toBe("/"));
-	await fireEvent.press(await view.findByLabelText(/^Account/));
-	await waitFor(() => expect(router.getPathname()).toBe("/account"));
+	await fireEvent.press(await view.findByLabelText("Settings"));
+	await waitFor(() => expect(router.getPathname()).toBe("/settings"));
 }
 
 describe("app entry", () => {
@@ -231,24 +231,24 @@ describe("app entry", () => {
 
 	it("moves between the four human-domain tabs", async () => {
 		const { router, view } = await launch({ onboardingComplete: true });
-		expect(view.getByLabelText("Account")).toBeTruthy();
+		expect(view.getByLabelText("Settings")).toBeTruthy();
 
 		await fireEvent.press(view.getByLabelText(/^Log, tab/));
 		await waitFor(() => expect(router.getPathname()).toBe("/log"));
 		expect(await view.findByText("No body metrics tracked")).toBeTruthy();
-		expect(view.getByLabelText("Account")).toBeTruthy();
+		expect(view.getByLabelText("Settings")).toBeTruthy();
 
 		await press(view, "Insights");
 		await waitFor(() => expect(router.getPathname()).toBe("/insights"));
 		expect(
 			await view.findByText("Your patterns start with check-ins"),
 		).toBeTruthy();
-		expect(view.getByLabelText("Account")).toBeTruthy();
+		expect(view.getByLabelText("Settings")).toBeTruthy();
 
 		await press(view, "Life");
 		await waitFor(() => expect(router.getPathname()).toBe("/life"));
 		expect(await view.findByText("WHEEL OF LIFE")).toBeTruthy();
-		expect(view.getByLabelText("Account")).toBeTruthy();
+		expect(view.getByLabelText("Settings")).toBeTruthy();
 
 		// The journal pane carries the title "Journal" too, so address the tab itself.
 		await fireEvent.press(view.getByLabelText(/^Journal, tab/));
@@ -289,19 +289,17 @@ describe("app entry", () => {
 		expect(mockSetOnboardingComplete).not.toHaveBeenCalled();
 	});
 
-	it("keeps account routes reachable from the app, with sign-up offered there", async () => {
+	it("combines settings and account controls, with sign-up offered there", async () => {
 		const { router, view } = await launch({ onboardingComplete: true });
 
-		await openAccount(router, view);
-		expect(router.getPathname()).toBe("/account");
+		await openSettings(router, view);
+		expect(router.getPathname()).toBe("/settings");
 		expect(view.getByText("Using bro without an account")).toBeTruthy();
-		// Opening Account without a stored session is still a local-only act.
+		expect(view.getByText("Data on this device")).toBeTruthy();
+		// Opening Settings without a stored session is still a local-only act.
 		expect(mockedAuthClient.useSession).not.toHaveBeenCalled();
 		expect(globalThis.fetch).not.toHaveBeenCalled();
 
-		await press(view, "Settings");
-		await waitFor(() => expect(router.getPathname()).toBe("/settings"));
-		expect(await view.findByText("Data on this device")).toBeTruthy();
 		await press(view, "Appearance");
 		await waitFor(() =>
 			expect(router.getPathname()).toBe("/settings/appearance"),
@@ -315,8 +313,6 @@ describe("app entry", () => {
 		expect(view.getByText("Optional sync")).toBeTruthy();
 		await act(async () => expoRouter.back());
 		await waitFor(() => expect(router.getPathname()).toBe("/settings"));
-		await act(async () => expoRouter.back());
-		await waitFor(() => expect(router.getPathname()).toBe("/account"));
 
 		await press(view, "Sign in");
 
@@ -399,7 +395,7 @@ describe("app entry", () => {
 			lastRemoteUserId: "user-a",
 		});
 
-		await openAccount(router, view);
+		await openSettings(router, view);
 		expect(await view.findByText("ada@example.com")).toBeTruthy();
 		await press(view, "Sign out");
 		await press(view, "Sign out");
@@ -416,7 +412,7 @@ describe("app entry", () => {
 		);
 		await press(view, "Sign in");
 
-		expect(router.getPathname()).toBe("/account");
+		expect(router.getPathname()).toBe("/settings");
 		expect(await view.findByText("bea@example.com")).toBeTruthy();
 		expect(mockInitDb).toHaveBeenCalledTimes(1);
 		expect(mockCloseDb).not.toHaveBeenCalled();
@@ -442,9 +438,9 @@ describe("app entry", () => {
 		expect(mockCloseDeviceSettings).not.toHaveBeenCalled();
 		expect(mockSetOnboardingComplete).not.toHaveBeenCalled();
 		expect(mockReadDeviceSettings).toHaveBeenCalledTimes(1);
-		expect(router.getPathname()).toBe("/account");
+		expect(router.getPathname()).toBe("/settings");
 
-		// Returning from a sign-in entered here dismisses back onto Account
+		// Returning from a sign-in entered here dismisses back onto Settings
 		// rather than stacking a second copy of it under the first.
 		await act(async () => expoRouter.back());
 		await waitFor(() => expect(router.getPathname()).toBe("/"));

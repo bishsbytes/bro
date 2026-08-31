@@ -2,15 +2,15 @@ import type { ReactNode } from "react";
 import { Text, View } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { StyleSheet } from "../theme/unistyles";
-import { AvatarButton } from "./avatar-button";
+import { SettingsButton } from "./settings-button";
 
 type AppHeaderProps = {
 	title: string;
 	leading?: ReactNode;
 	actions?: ReactNode;
 	centerTitle?: boolean;
-	showAvatar?: boolean;
-	onAvatarPress?: () => void;
+	showSettings?: boolean;
+	onSettingsPress?: () => void;
 };
 
 export function AppHeader({
@@ -18,8 +18,8 @@ export function AppHeader({
 	leading,
 	actions,
 	centerTitle = false,
-	showAvatar = true,
-	onAvatarPress,
+	showSettings = true,
+	onSettingsPress,
 }: AppHeaderProps) {
 	return (
 		<SafeAreaView style={styles.safeArea} edges={["top"]}>
@@ -36,7 +36,7 @@ export function AppHeader({
 				</View>
 				<View style={styles.actions}>
 					{actions}
-					{showAvatar ? <AvatarButton onPress={onAvatarPress} /> : null}
+					{showSettings ? <SettingsButton onPress={onSettingsPress} /> : null}
 				</View>
 			</View>
 		</SafeAreaView>

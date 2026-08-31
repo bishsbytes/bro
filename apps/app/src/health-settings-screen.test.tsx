@@ -19,6 +19,18 @@ jest.mock("./providers/device-settings-provider", () => ({
 	}),
 }));
 
+jest.mock("@bro/auth-app", () => ({
+	useAuth: () => ({
+		remoteIdentity: { kind: "local-only" },
+		user: null,
+		isPending: false,
+		error: null,
+		signOut: jest.fn(),
+		refreshRemoteIdentity: jest.fn(),
+		deleteAccount: jest.fn(),
+	}),
+}));
+
 const disconnected: HealthSettingsSnapshot = {
 	availability: { available: true, platform: "health_connect" },
 	platform: "health_connect",

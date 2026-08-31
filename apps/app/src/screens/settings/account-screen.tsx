@@ -7,9 +7,7 @@ import { AppText } from "../../components/app-text";
 import { Button } from "../../components/button";
 import { Card } from "../../components/card";
 import { FormField } from "../../components/form-field";
-import { ListRow } from "../../components/list-row";
 import { LoadingIndicator } from "../../components/loading-indicator";
-import { StackScreen as Screen } from "../../components/screen";
 import { SectionHeader } from "../../components/section-header";
 import { toMessage } from "../../lib/errors";
 import { useDeviceSettings } from "../../providers/device-settings-provider";
@@ -17,7 +15,7 @@ import { StyleSheet } from "../../theme/unistyles";
 
 type Confirmation = "sign-out" | "delete-account" | null;
 
-export function AccountScreen() {
+export function AccountSection() {
 	const { t } = useTranslation(["settings", "common"]);
 	const {
 		remoteIdentity,
@@ -84,19 +82,7 @@ export function AccountScreen() {
 	const isResolving = hasStoredSession && !isRegistered && !error && !isPending;
 
 	return (
-		<Screen
-			scroll
-			padded
-			contentContainerStyle={styles.container}
-			keyboardShouldPersistTaps="handled"
-		>
-			<ListRow
-				title={t("account.row")}
-				detail={t("account.rowDetail")}
-				accessibilityLabel={t("account.rowA11y")}
-				onPress={() => router.push("/settings")}
-			/>
-
+		<View style={styles.container}>
 			{notice ? (
 				<AppText variant="caption" color="muted" style={styles.notice}>
 					{notice}
@@ -117,7 +103,7 @@ export function AccountScreen() {
 						onPress={() =>
 							router.push({
 								pathname: "/sign-in",
-								params: { returnTo: "account" },
+								params: { returnTo: "settings" },
 							})
 						}
 					/>
@@ -128,7 +114,7 @@ export function AccountScreen() {
 						onPress={() =>
 							router.push({
 								pathname: "/sign-up",
-								params: { returnTo: "account" },
+								params: { returnTo: "settings" },
 							})
 						}
 					/>
@@ -276,13 +262,13 @@ export function AccountScreen() {
 					/>
 				</Card>
 			) : null}
-		</Screen>
+		</View>
 	);
 }
 
 const styles = StyleSheet.create((theme) => ({
 	container: {
-		paddingVertical: theme.spacing.xs,
+		paddingBottom: theme.spacing.xs,
 	},
 	stateTitle: {
 		fontWeight: "600",

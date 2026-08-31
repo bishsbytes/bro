@@ -82,7 +82,7 @@ The auth tables in [`database/api/src/schema/auth.ts`](packages/database/api/src
 
 When custom `user`/`session` fields are added, the client will need `inferAdditionalFields<typeof auth>()` to know about them — a type-only generic, so it doesn't bundle server code.
 
-Accounts are optional and never gate local app entry. The in-app Account route owns sign-in, registration, local-first sign-out, retrying a stored session, account switching, and password-confirmed deletion. Deletion is server-first: a failed request preserves the session marker and all local data; success removes the Better Auth user/account/session rows, clears the supported Expo auth cache, and leaves `bro.db` open.
+Accounts are optional and never gate local app entry. The header cog opens Settings, where the account controls sit alongside the app's configuration. This screen owns sign-in, registration, local-first sign-out, retrying a stored session, account switching, and password-confirmed deletion. Deletion is server-first: a failed request preserves the session marker and all local data; success removes the Better Auth user/account/session rows, clears the supported Expo auth cache, and leaves `bro.db` open.
 
 ### Auth integration tests
 

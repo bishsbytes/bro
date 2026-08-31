@@ -24,6 +24,7 @@ import NotebookPen from "lucide-react-native/icons/notebook-pen";
 import PartyPopper from "lucide-react-native/icons/party-popper";
 import Plus from "lucide-react-native/icons/plus";
 import Search from "lucide-react-native/icons/search";
+import Settings from "lucide-react-native/icons/settings";
 import Signpost from "lucide-react-native/icons/signpost";
 import Sparkles from "lucide-react-native/icons/sparkles";
 import Sprout from "lucide-react-native/icons/sprout";
@@ -75,6 +76,7 @@ const ICONS = {
 	"mood-neutral": FaceNeutral,
 	person: User,
 	search: Search,
+	settings: Settings,
 	"theme-dark": Moon,
 	"theme-light": Sun,
 	"theme-system": SunMoon,
