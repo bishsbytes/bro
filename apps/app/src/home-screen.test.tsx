@@ -324,6 +324,8 @@ describe("home screen", () => {
 			/>,
 		);
 		await screen.findByLabelText("Mood 4");
+		expect(screen.getByText("Very bad")).toBeTruthy();
+		expect(screen.getByText("Very good")).toBeTruthy();
 
 		// The optional scores belong to the flow; tapping a face must not grow
 		// the card the rest of the journal is laid out under.

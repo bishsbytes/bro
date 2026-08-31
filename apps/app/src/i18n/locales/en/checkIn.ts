@@ -11,8 +11,32 @@ export const checkIn = {
 	steps: {
 		moodLabel: "Mood",
 		moodHint: "How you feel right now, not how the day should have gone.",
-		/** Shown under every optional scale so a 1 and a 5 mean the same daily. */
-		optionalHint: "1 is as low as it gets, 5 is as good as it gets.",
+		/** Meaning and endpoints for each optional check-in score. */
+		ratings: {
+			fallbackDescription: "How this feels for you right now.",
+			energy: {
+				description:
+					"How physically and mentally energised you feel right now.",
+				minimum: "Drained",
+				maximum: "Full of energy",
+			},
+			motivation: {
+				description:
+					"How much drive you feel to start or keep going with what matters.",
+				minimum: "No motivation",
+				maximum: "Highly motivated",
+			},
+			productivity: {
+				description: "How effectively you have been getting things done today.",
+				minimum: "Not productive",
+				maximum: "Very productive",
+			},
+			libido: {
+				description: "Your level of sexual desire right now.",
+				minimum: "No desire",
+				maximum: "Strong desire",
+			},
+		},
 	},
 	nav: {
 		back: "Back",

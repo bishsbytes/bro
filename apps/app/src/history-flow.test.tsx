@@ -155,6 +155,9 @@ describe("history and day view", () => {
 		expect(view.getByText("Source: future-sync")).toBeTruthy();
 		expect(view.getByDisplayValue("First synced note")).toBeTruthy();
 		expect(view.getByDisplayValue("Second synced note")).toBeTruthy();
+		expect(view.getByText("Very bad")).toBeTruthy();
+		expect(view.getAllByText("Very low")).toHaveLength(2);
+		expect(view.getAllByText("Very good")).toHaveLength(3);
 
 		await fireEvent.press(view.getByLabelText("Mood 5"));
 		await fireEvent.press(view.getByLabelText("Energy 4"));

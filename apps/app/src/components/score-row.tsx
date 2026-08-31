@@ -18,6 +18,8 @@ type ScoreRowProps = {
 	scores?: readonly number[];
 	/** One face icon per score; when given, it replaces the visible numeral. */
 	faces?: readonly IconName[];
+	/** Visible meanings for the two ends of the scale. */
+	endLabels?: Readonly<{ minimum: string; maximum: string }>;
 	disabled?: boolean;
 };
 
@@ -27,6 +29,7 @@ export function ScoreRow({
 	onSelect,
 	scores = DEFAULT_SCORES,
 	faces,
+	endLabels,
 	disabled = false,
 }: ScoreRowProps) {
 	const { t } = useTranslation("common");
@@ -36,63 +39,81 @@ export function ScoreRow({
 		rows.push([...scores.slice(start, start + MAX_PER_ROW)]);
 	}
 	return (
-		<View style={styles.rows}>
-			{rows.map((row, rowIndex) => (
-				<View key={row[0]} style={styles.row}>
-					{row.map((score, column) => {
-						const index = rowIndex * MAX_PER_ROW + column;
-						const isSelected = selected === score;
-						const face = faces?.[index];
-						return (
-							<TouchableOpacity
-								key={score}
-								accessibilityRole="button"
-								accessibilityLabel={t("a11y.score", {
-									prefix: accessibilityPrefix,
-									score,
-								})}
-								accessibilityState={{ selected: isSelected, disabled }}
-								disabled={disabled}
-								style={[
-									styles.button,
-									isSelected && styles.selected,
-									disabled && styles.disabled,
-								]}
-								onPress={() => onSelect(score)}
-							>
-								{face ? (
-									<Icon
-										testID={`score-face-${score}`}
-										name={face}
-										size={theme.typography.face.fontSize}
-										color={
-											isSelected ? theme.colors.brand : theme.colors.textMuted
-										}
-									/>
-								) : (
-									<AppText
-										variant="score"
-										style={[isSelected && styles.selectedText]}
-									>
-										{score}
-									</AppText>
-								)}
-							</TouchableOpacity>
-						);
-					})}
-					{/* A short final row keeps the button width of the rows above it. */}
-					{Array.from({ length: MAX_PER_ROW - row.length }, (_, gap) => (
-						<View key={`gap-${gap}`} style={styles.gap} />
-					))}
+		<View style={styles.container}>
+			<View style={styles.rows}>
+				{rows.map((row, rowIndex) => (
+					<View key={row[0]} style={styles.row}>
+						{row.map((score, column) => {
+							const index = rowIndex * MAX_PER_ROW + column;
+							const isSelected = selected === score;
+							const face = faces?.[index];
+							return (
+								<TouchableOpacity
+									key={score}
+									accessibilityRole="button"
+									accessibilityLabel={t("a11y.score", {
+										prefix: accessibilityPrefix,
+										score,
+									})}
+									accessibilityState={{ selected: isSelected, disabled }}
+									disabled={disabled}
+									style={[
+										styles.button,
+										isSelected && styles.selected,
+										disabled && styles.disabled,
+									]}
+									onPress={() => onSelect(score)}
+								>
+									{face ? (
+										<Icon
+											testID={`score-face-${score}`}
+											name={face}
+											size={theme.typography.face.fontSize}
+											color={
+												isSelected ? theme.colors.brand : theme.colors.textMuted
+											}
+										/>
+									) : (
+										<AppText
+											variant="score"
+											style={[isSelected && styles.selectedText]}
+										>
+											{score}
+										</AppText>
+									)}
+								</TouchableOpacity>
+							);
+						})}
+						{/* A short final row keeps the button width of the rows above it. */}
+						{Array.from({ length: MAX_PER_ROW - row.length }, (_, gap) => (
+							<View key={`gap-${gap}`} style={styles.gap} />
+						))}
+					</View>
+				))}
+			</View>
+			{endLabels ? (
+				<View style={styles.endLabels}>
+					<AppText variant="micro" color="subtle">
+						{endLabels.minimum}
+					</AppText>
+					<AppText variant="micro" color="subtle">
+						{endLabels.maximum}
+					</AppText>
 				</View>
-			))}
+			) : null}
 		</View>
 	);
 }
 
 const styles = StyleSheet.create((theme) => ({
+	container: { gap: theme.spacing.xs },
 	rows: { gap: theme.spacing.sm },
 	row: { flexDirection: "row", gap: theme.spacing.sm },
+	endLabels: {
+		flexDirection: "row",
+		alignItems: "center",
+		justifyContent: "space-between",
+	},
 	button: {
 		flex: 1,
 		minHeight: theme.control.scoreMinHeight,

@@ -63,6 +63,8 @@ describe("take stock screen", () => {
 		expect(await screen.findByText("1 of 3")).toBeTruthy();
 		expect(screen.getByText("Work & career")).toBeTruthy();
 		expect(screen.queryByText("Health")).toBeNull();
+		expect(screen.getByText("Very low")).toBeTruthy();
+		expect(screen.getByText("Very good")).toBeTruthy();
 
 		await fireEvent.press(screen.getByLabelText("Work & career 6"));
 		expect(await screen.findByText("2 of 3")).toBeTruthy();

@@ -35,9 +35,11 @@ type CheckInStep = {
 	slug: string;
 	label: string;
 	faces?: readonly IconName[];
-	/** Shown under the scale so a 1 and a 5 mean the same thing every day. */
-	hint: string;
+	description: string;
+	endLabels: Readonly<{ minimum: string; maximum: string }>;
 };
+
+type OptionalRatingCopy = Pick<CheckInStep, "description" | "endLabels">;
 
 const MOOD_SLUG = "mood";
 
@@ -65,25 +67,64 @@ export function CheckInScreen({
 	// edit one — only the latter changes what the screen calls itself.
 	const openedOnEntry = entryId !== undefined;
 
-	const steps = useMemo<CheckInStep[]>(
-		() =>
-			today
-				? [
-						{
-							slug: MOOD_SLUG,
-							label: t("steps.moodLabel"),
-							faces: MOOD_FACES,
-							hint: t("steps.moodHint"),
-						},
-						...today.availableOptionalScores.map((metric) => ({
-							slug: metric.slug,
-							label: metric.label,
-							hint: t("steps.optionalHint"),
-						})),
-					]
-				: [],
-		[today, t],
-	);
+	const steps = useMemo<CheckInStep[]>(() => {
+		if (!today) return [];
+		const fallback: OptionalRatingCopy = {
+			description: t("steps.ratings.fallbackDescription"),
+			endLabels: {
+				minimum: t("common:ratingEnds.veryLow"),
+				maximum: t("common:ratingEnds.veryGood"),
+			},
+		};
+		const optionalCopy: Record<string, OptionalRatingCopy> = {
+			energy: {
+				description: t("steps.ratings.energy.description"),
+				endLabels: {
+					minimum: t("steps.ratings.energy.minimum"),
+					maximum: t("steps.ratings.energy.maximum"),
+				},
+			},
+			motivation: {
+				description: t("steps.ratings.motivation.description"),
+				endLabels: {
+					minimum: t("steps.ratings.motivation.minimum"),
+					maximum: t("steps.ratings.motivation.maximum"),
+				},
+			},
+			productivity: {
+				description: t("steps.ratings.productivity.description"),
+				endLabels: {
+					minimum: t("steps.ratings.productivity.minimum"),
+					maximum: t("steps.ratings.productivity.maximum"),
+				},
+			},
+			libido: {
+				description: t("steps.ratings.libido.description"),
+				endLabels: {
+					minimum: t("steps.ratings.libido.minimum"),
+					maximum: t("steps.ratings.libido.maximum"),
+				},
+			},
+		};
+
+		return [
+			{
+				slug: MOOD_SLUG,
+				label: t("steps.moodLabel"),
+				faces: MOOD_FACES,
+				description: t("steps.moodHint"),
+				endLabels: {
+					minimum: t("common:ratingEnds.veryBad"),
+					maximum: t("common:ratingEnds.veryGood"),
+				},
+			},
+			...today.availableOptionalScores.map((metric) => ({
+				slug: metric.slug,
+				label: metric.label,
+				...(optionalCopy[metric.slug] ?? fallback),
+			})),
+		];
+	}, [today, t]);
 
 	// The commit runs from an effect and from unmount, both of which see the
 	// values as they were when they were captured — a ref keeps them current
@@ -338,7 +379,7 @@ export function CheckInScreen({
 						{step.label}
 					</AppText>
 					<AppText color="muted" style={styles.centredText}>
-						{step.hint}
+						{step.description}
 					</AppText>
 				</View>
 				<ScoreRow
@@ -346,6 +387,7 @@ export function CheckInScreen({
 					selected={values[step.slug] ?? null}
 					onSelect={(score) => answer(step.slug, score)}
 					faces={step.faces}
+					endLabels={step.endLabels}
 				/>
 			</View>
 

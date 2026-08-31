@@ -7,6 +7,11 @@ export const common = {
 		tryAgain: "Try again",
 		viewLog: "View log",
 	},
+	ratingEnds: {
+		veryBad: "Very bad",
+		veryLow: "Very low",
+		veryGood: "Very good",
+	},
 	/** Stands in for a value that has not been recorded. */
 	emDash: "—",
 	/** Shown when the local database cannot be opened at startup. */

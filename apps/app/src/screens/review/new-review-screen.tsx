@@ -37,7 +37,7 @@ type NewReviewScreenProps = {
  * until the focus step, and leaving before that has to be deliberate.
  */
 export function NewReviewScreen({ store }: NewReviewScreenProps) {
-	const { t } = useTranslation("review");
+	const { t } = useTranslation(["review", "common"]);
 	const { theme } = useUnistyles();
 	const navigation = useNavigation();
 	const reviews = useMemo(() => store ?? createReviewStore(), [store]);
@@ -375,6 +375,10 @@ export function NewReviewScreen({ store }: NewReviewScreenProps) {
 					scores={SCORES}
 					selected={scores[step.slug] ?? null}
 					onSelect={(score) => answer(step.slug, score)}
+					endLabels={{
+						minimum: t("common:ratingEnds.veryLow"),
+						maximum: t("common:ratingEnds.veryGood"),
+					}}
 				/>
 			</View>
 

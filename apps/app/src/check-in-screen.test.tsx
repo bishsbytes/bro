@@ -79,12 +79,38 @@ describe("check-in screen", () => {
 		expect(await screen.findByLabelText("Energy 3")).toBeTruthy();
 		expect(screen.queryByLabelText("Motivation 5")).toBeNull();
 		expect(screen.getByText("2 of 5")).toBeTruthy();
+		expect(
+			screen.getByText(
+				"How physically and mentally energised you feel right now.",
+			),
+		).toBeTruthy();
+		expect(screen.getByText("Drained")).toBeTruthy();
+		expect(screen.getByText("Full of energy")).toBeTruthy();
 
 		await fireEvent.press(screen.getByLabelText("Energy 3"));
 		expect(screen.queryByLabelText("Energy 3")).toBeNull();
+		expect(
+			screen.getByText(
+				"How much drive you feel to start or keep going with what matters.",
+			),
+		).toBeTruthy();
+		expect(screen.getByText("No motivation")).toBeTruthy();
+		expect(screen.getByText("Highly motivated")).toBeTruthy();
 		await fireEvent.press(await screen.findByLabelText("Motivation 5"));
+		expect(
+			screen.getByText(
+				"How effectively you have been getting things done today.",
+			),
+		).toBeTruthy();
+		expect(screen.getByText("Not productive")).toBeTruthy();
+		expect(screen.getByText("Very productive")).toBeTruthy();
 		await fireEvent.press(await screen.findByLabelText("Productivity 4"));
 		expect(store.saveCheckIn).not.toHaveBeenCalled();
+		expect(
+			screen.getByText("Your level of sexual desire right now."),
+		).toBeTruthy();
+		expect(screen.getByText("No desire")).toBeTruthy();
+		expect(screen.getByText("Strong desire")).toBeTruthy();
 		await fireEvent.press(await screen.findByLabelText("Libido 2"));
 
 		// Answering the last prompt is the save; there is no save button.
@@ -124,6 +150,8 @@ describe("check-in screen", () => {
 		const screen = await render(<CheckInScreen store={store} />);
 
 		expect(await screen.findByText("1 of 2")).toBeTruthy();
+		expect(screen.getByText("Very bad")).toBeTruthy();
+		expect(screen.getByText("Very good")).toBeTruthy();
 		await fireEvent.press(screen.getByLabelText("Mood 5"));
 		await fireEvent.press(await screen.findByLabelText("Energy 4"));
 

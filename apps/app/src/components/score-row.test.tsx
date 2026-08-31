@@ -51,6 +51,20 @@ describe("ScoreRow", () => {
 		expect(view.queryByText("5")).toBeNull();
 	});
 
+	it("shows what the two ends of the scale mean", async () => {
+		const view = await render(
+			<ScoreRow
+				accessibilityPrefix="Mood"
+				selected={null}
+				onSelect={jest.fn()}
+				endLabels={{ minimum: "Very bad", maximum: "Very good" }}
+			/>,
+		);
+
+		expect(view.getByText("Very bad")).toBeTruthy();
+		expect(view.getByText("Very good")).toBeTruthy();
+	});
+
 	it("ignores presses while disabled", async () => {
 		const onSelect = jest.fn();
 		const view = await render(

@@ -850,6 +850,10 @@ export function HomeScreen({
 					selected={null}
 					onSelect={startCheckIn}
 					faces={MOOD_FACES}
+					endLabels={{
+						minimum: t("common:ratingEnds.veryBad"),
+						maximum: t("common:ratingEnds.veryGood"),
+					}}
 				/>
 				<AppText variant="caption" color="subtle" style={styles.hint}>
 					{latestCheckIn

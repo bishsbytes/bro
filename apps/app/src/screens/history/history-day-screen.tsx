@@ -48,7 +48,7 @@ function CheckInEditor({
 	) => void;
 	onDelete: (checkIn: HistoricalCheckIn) => void;
 }) {
-	const { t } = useTranslation("history");
+	const { t } = useTranslation(["history", "common"]);
 	const [mood, setMood] = useState(checkIn.mood.value);
 	const [optional, setOptional] = useState<Record<string, number>>(
 		Object.fromEntries(
@@ -74,6 +74,10 @@ function CheckInEditor({
 				accessibilityPrefix={t("day.mood")}
 				selected={mood}
 				onSelect={setMood}
+				endLabels={{
+					minimum: t("common:ratingEnds.veryBad"),
+					maximum: t("common:ratingEnds.veryGood"),
+				}}
 			/>
 			{checkIn.optionalScores.map((score) => {
 				const resolved = resolveMetric(score.metricSlug);
@@ -93,6 +97,10 @@ function CheckInEditor({
 									[score.metricSlug]: value,
 								}))
 							}
+							endLabels={{
+								minimum: t("common:ratingEnds.veryLow"),
+								maximum: t("common:ratingEnds.veryGood"),
+							}}
 						/>
 					</View>
 				);
