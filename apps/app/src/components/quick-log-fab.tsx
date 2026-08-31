@@ -105,7 +105,6 @@ const styles = StyleSheet.create((theme) => ({
 		justifyContent: "center",
 		borderRadius: theme.radius.pill,
 		backgroundColor: theme.colors.brand,
-		elevation: 8,
 	},
 	actions: { gap: theme.spacing.sm },
 	actionRow: {

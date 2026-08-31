@@ -26,6 +26,7 @@ import {
 	useDeviceSettings,
 } from "../providers/device-settings-provider";
 import { ReminderNotificationEffects } from "../reminders/reminder-notification-effects";
+import { useBaselineFonts } from "../theme/fonts";
 import {
 	applyAppearance,
 	StyleSheet,
@@ -135,6 +136,7 @@ function RootNavigator() {
 
 export default function RootLayout() {
 	const [startup, setStartup] = useState<StartupState>({ kind: "loading" });
+	const [fontsLoaded, fontError] = useBaselineFonts();
 	const { rt } = useUnistyles();
 
 	const start = useCallback(async () => {
@@ -146,7 +148,11 @@ export default function RootLayout() {
 			// the stores in sequence because expo-sqlite's web VFS initialization is
 			// not safe when distinct databases perform their first open concurrently.
 			const settings = readDeviceSettings();
-			applyAppearance(settings.themeMode, settings.accentColor);
+			applyAppearance(
+				settings.themeMode,
+				settings.accentHue,
+				settings.accentChroma,
+			);
 			const db = await initDb();
 			const localDb = await initLocalDb();
 			await Promise.all([runMigrations(db), runLocalMigrations(localDb)]);
@@ -156,14 +162,18 @@ export default function RootLayout() {
 				kind: "error",
 				error: caught instanceof Error ? caught : new Error(String(caught)),
 			});
-		} finally {
-			await SplashScreen.hideAsync();
 		}
 	}, []);
 
 	useEffect(() => {
 		void start();
 	}, [start]);
+
+	useEffect(() => {
+		if ((fontsLoaded || fontError) && startup.kind !== "loading") {
+			void SplashScreen.hideAsync();
+		}
+	}, [fontError, fontsLoaded, startup.kind]);
 
 	const retry = useCallback(() => {
 		void (async () => {
@@ -186,11 +196,13 @@ export default function RootLayout() {
 	return (
 		<View style={styles.container}>
 			<SystemBars style={rt.themeName === "dark" ? "light" : "dark"} />
-			{startup.kind === "loading" ? <Loading /> : null}
+			{startup.kind === "loading" || (!fontsLoaded && !fontError) ? (
+				<Loading />
+			) : null}
 			{startup.kind === "error" ? (
 				<StorageError error={startup.error} onRetry={retry} />
 			) : null}
-			{startup.kind === "ready" ? (
+			{startup.kind === "ready" && (fontsLoaded || fontError) ? (
 				<DeviceSettingsProvider initialSettings={startup.settings}>
 					<AppProviders />
 				</DeviceSettingsProvider>
@@ -211,13 +223,12 @@ const styles = StyleSheet.create((theme) => ({
 		paddingHorizontal: theme.spacing.xl,
 	},
 	errorTitle: {
-		fontSize: 20,
-		fontWeight: "600",
+		...theme.typography.section,
 		color: theme.colors.text,
 		marginBottom: theme.spacing.sm,
 	},
 	errorDetail: {
-		fontSize: 15,
+		...theme.typography.body,
 		color: theme.colors.textSubtle,
 		textAlign: "center",
 	},
@@ -230,7 +241,6 @@ const styles = StyleSheet.create((theme) => ({
 	},
 	retryButtonText: {
 		color: theme.colors.onBrand,
-		fontSize: theme.typography.label.fontSize,
-		fontWeight: "500",
+		...theme.typography.label,
 	},
 }));

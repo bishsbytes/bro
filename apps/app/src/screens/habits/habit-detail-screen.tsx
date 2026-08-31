@@ -99,20 +99,21 @@ const styles = StyleSheet.create((theme) => ({
 		borderWidth: 1,
 	},
 	done: {
-		backgroundColor: theme.colors.brand,
-		borderColor: theme.colors.brand,
+		backgroundColor: theme.colors.body,
+		borderColor: theme.colors.body,
 	},
 	missed: {
-		backgroundColor: theme.colors.onDanger,
-		borderColor: theme.colors.danger,
+		borderColor: theme.colors.lineStrong,
+		borderStyle: "dashed",
 	},
 	unscheduled: {
-		backgroundColor: theme.colors.selected,
-		borderColor: theme.colors.border,
+		backgroundColor: theme.colors.surfaceSunk,
+		borderColor: theme.colors.line,
 	},
 	"no-data": {
 		backgroundColor: theme.colors.surface,
-		borderColor: theme.colors.textSubtle,
+		borderColor: theme.colors.lineStrong,
+		borderStyle: "dashed",
 	},
 	legend: { flexDirection: "row", flexWrap: "wrap", gap: theme.spacing.lg },
 	legendItem: {

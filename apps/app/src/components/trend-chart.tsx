@@ -3,15 +3,35 @@ import { useTranslation } from "react-i18next";
 import Svg, { Circle, Line, Polyline } from "react-native-svg";
 import { useUnistyles } from "../theme/unistyles";
 
+export type DataDomain = "mind" | "body" | "sleep" | "load";
+
+function inferDomain(metricSlug: string): DataDomain {
+	if (metricSlug.includes("sleep")) return "sleep";
+	if (
+		["mood", "stress", "energy", "motivation", "productivity", "libido"].some(
+			(slug) => metricSlug.includes(slug),
+		)
+	) {
+		return "mind";
+	}
+	if (metricSlug.includes("training") || metricSlug.includes("strain")) {
+		return "load";
+	}
+	return "body";
+}
+
 export function TrendChart({
 	series,
 	height = 150,
+	domain,
 }: {
 	series: TrendSeries;
 	height?: number;
+	domain?: DataDomain;
 }) {
 	const { theme } = useUnistyles();
 	const { t } = useTranslation("common");
+	const dataColor = theme.colors[domain ?? inferDomain(series.metricSlug)];
 	return (
 		<Svg
 			accessibilityLabel={t("a11y.trendChart", { metric: series.metricSlug })}
@@ -27,7 +47,7 @@ export function TrendChart({
 					key={points}
 					points={points}
 					fill="none"
-					stroke={theme.colors.brand}
+					stroke={dataColor}
 					strokeWidth="4"
 					strokeLinecap="round"
 					strokeLinejoin="round"
@@ -39,7 +59,7 @@ export function TrendChart({
 					cx={marker.x}
 					cy={marker.y}
 					r="4"
-					fill={theme.colors.brand}
+					fill={dataColor}
 				/>
 			))}
 		</Svg>

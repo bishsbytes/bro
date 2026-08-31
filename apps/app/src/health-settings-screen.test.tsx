@@ -15,7 +15,11 @@ jest.mock("expo-router", () => ({
 
 jest.mock("./providers/device-settings-provider", () => ({
 	useDeviceSettings: () => ({
-		settings: { themeMode: "system", accentColor: "neutral" },
+		settings: {
+			themeMode: "system",
+			accentHue: 235,
+			accentChroma: 0.055,
+		},
 	}),
 }));
 

@@ -17,7 +17,8 @@ const settings: DeviceSettingsSnapshot = {
 	appLockEnabled: false,
 	appLockTimeoutSeconds: null,
 	themeMode: "system",
-	accentColor: "neutral",
+	accentHue: 235,
+	accentChroma: 0.055,
 	hasStoredRemoteSession: false,
 	lastRemoteUserId: null,
 };
@@ -38,24 +39,24 @@ describe("appearance screen", () => {
 			view.getByLabelText("System theme").props.accessibilityState,
 		).toEqual(expect.objectContaining({ selected: true }));
 		expect(
-			view.getByLabelText("Neutral accent").props.accessibilityState,
+			view.getByLabelText("Harbour accent").props.accessibilityState,
 		).toEqual(expect.objectContaining({ selected: true }));
 
 		await fireEvent.press(view.getByLabelText("Dark theme"));
 		await waitFor(() =>
-			expect(mockSetAppearance).toHaveBeenLastCalledWith("dark", "neutral"),
+			expect(mockSetAppearance).toHaveBeenLastCalledWith("dark", 235, 0.055),
 		);
 		expect(view.getByLabelText("Dark theme").props.accessibilityState).toEqual(
 			expect.objectContaining({ selected: true }),
 		);
 
-		await fireEvent.press(view.getByLabelText("Emerald accent"));
+		await fireEvent.press(view.getByLabelText("Moss accent"));
 		await waitFor(() =>
-			expect(mockSetAppearance).toHaveBeenLastCalledWith("dark", "emerald"),
+			expect(mockSetAppearance).toHaveBeenLastCalledWith("dark", 145, 0.055),
 		);
-		expect(
-			view.getByLabelText("Emerald accent").props.accessibilityState,
-		).toEqual(expect.objectContaining({ selected: true }));
+		expect(view.getByLabelText("Moss accent").props.accessibilityState).toEqual(
+			expect.objectContaining({ selected: true }),
+		);
 		expect(globalThis.fetch).not.toHaveBeenCalled();
 	});
 });

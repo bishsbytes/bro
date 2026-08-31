@@ -283,8 +283,8 @@ export function WeekStrip({
 										style={[
 											styles.checkIn,
 											indicator.hasCheckIn && {
-												backgroundColor: theme.colors.brand,
-												borderColor: theme.colors.brand,
+												backgroundColor: theme.colors.mind,
+												borderColor: theme.colors.mind,
 											},
 										]}
 									/>
@@ -297,7 +297,8 @@ export function WeekStrip({
 													borderColor: theme.colors.textMuted,
 												},
 												adherence === "complete" && {
-													borderColor: theme.colors.brand,
+													backgroundColor: theme.colors.body,
+													borderColor: theme.colors.body,
 												},
 											]}
 										/>
@@ -345,14 +346,16 @@ const styles = StyleSheet.create((theme) => ({
 		width: 5,
 		height: 5,
 		borderWidth: 1,
-		borderColor: theme.colors.border,
+		borderColor: theme.colors.lineStrong,
+		borderStyle: "dashed",
 		borderRadius: theme.radius.pill,
 	},
 	adherence: {
 		width: 6,
 		height: 6,
 		borderWidth: 1.5,
-		borderColor: theme.colors.border,
+		borderColor: theme.colors.lineStrong,
+		borderStyle: "dashed",
 		borderRadius: theme.radius.pill,
 	},
 }));

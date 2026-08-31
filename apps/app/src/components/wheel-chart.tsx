@@ -93,9 +93,9 @@ export function WheelChart({ scores, previousScores = [] }: WheelChartProps) {
 				) : null}
 				<Polygon
 					points={polygonPoints(scores.map((score) => score.value))}
-					fill={theme.colors.selected}
+					fill={theme.colors.mindTint}
 					fillOpacity={0.65}
-					stroke={theme.colors.brand}
+					stroke={theme.colors.mind}
 					strokeWidth="4"
 					strokeLinejoin="round"
 				/>
@@ -149,6 +149,6 @@ const styles = StyleSheet.create((theme) => ({
 		gap: theme.spacing.sm,
 	},
 	swatch: { width: 24, height: 3 },
-	current: { backgroundColor: theme.colors.brand },
+	current: { backgroundColor: theme.colors.mind },
 	previous: { backgroundColor: theme.colors.textMuted },
 }));

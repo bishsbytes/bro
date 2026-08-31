@@ -132,7 +132,8 @@ export function ReviewResultScreen({
 							<View>
 								<AppText
 									variant="caption"
-									color={comparison.delta === 0 ? "muted" : "brand"}
+									color="muted"
+									style={comparison.delta === 0 ? undefined : styles.comparison}
 								>
 									{t("result.delta", {
 										delta: formatDelta(t, comparison.delta),
@@ -231,5 +232,6 @@ const styles = StyleSheet.create((theme) => ({
 	},
 	labelGroup: { flex: 1, gap: theme.spacing.xs },
 	label: { fontWeight: "600" },
+	comparison: { color: theme.colors.mind },
 	nextActions: { gap: theme.spacing.sm, marginTop: theme.spacing.sm },
 }));

@@ -42,7 +42,8 @@ describe("device-local settings", () => {
 			appLockEnabled: false,
 			appLockTimeoutSeconds: null,
 			themeMode: "system",
-			accentColor: "neutral",
+			accentHue: 235,
+			accentChroma: 0.055,
 			hasStoredRemoteSession: false,
 			lastRemoteUserId: null,
 		});
@@ -83,7 +84,7 @@ describe("device-local settings", () => {
 
 		deviceSettings.setOnboardingComplete(true);
 		deviceSettings.setAppLock(true, 120);
-		deviceSettings.setAppearance("dark", "emerald");
+		deviceSettings.setAppearance("dark", 145, 0.055);
 		deviceSettings.setRemoteSessionMarker(true, "user-a");
 		deviceSettings.closeDeviceSettings();
 
@@ -93,7 +94,8 @@ describe("device-local settings", () => {
 			appLockEnabled: true,
 			appLockTimeoutSeconds: 120,
 			themeMode: "dark",
-			accentColor: "emerald",
+			accentHue: 145,
+			accentChroma: 0.055,
 			hasStoredRemoteSession: true,
 			lastRemoteUserId: "user-a",
 		});
@@ -114,7 +116,7 @@ describe("device-local settings", () => {
 
 	it("refuses settings written by a newer app version", () => {
 		const seed = new mockSqlite.SQLiteStorage("bro-device.db");
-		seed.setItemSync("schemaVersion", "2");
+		seed.setItemSync("schemaVersion", "3");
 		seed.setItemSync("installationId", "from-the-future");
 		seed.closeSync();
 
@@ -125,19 +127,38 @@ describe("device-local settings", () => {
 		);
 	});
 
-	it("falls back safely when a stored appearance value is unknown", () => {
+	it("migrates a version-one named accent to its Baseline hue", () => {
 		const seed = new mockSqlite.SQLiteStorage("bro-device.db");
 		seed.setItemSync("schemaVersion", "1");
 		seed.setItemSync("installationId", "install-1");
+		seed.setItemSync("themeMode", "dark");
+		seed.setItemSync("accentColor", "emerald");
+		seed.closeSync();
+
+		const deviceSettings = relaunch();
+
+		expect(deviceSettings.readDeviceSettings()).toMatchObject({
+			themeMode: "dark",
+			accentHue: 145,
+			accentChroma: 0.055,
+		});
+	});
+
+	it("normalizes invalid stored appearance values", () => {
+		const seed = new mockSqlite.SQLiteStorage("bro-device.db");
+		seed.setItemSync("schemaVersion", "2");
+		seed.setItemSync("installationId", "install-1");
 		seed.setItemSync("themeMode", "sepia");
-		seed.setItemSync("accentColor", "ultraviolet");
+		seed.setItemSync("accentHue", "ultraviolet");
+		seed.setItemSync("accentChroma", "1");
 		seed.closeSync();
 
 		const deviceSettings = relaunch();
 
 		expect(deviceSettings.readDeviceSettings()).toMatchObject({
 			themeMode: "system",
-			accentColor: "neutral",
+			accentHue: 235,
+			accentChroma: 0.055,
 		});
 	});
 });

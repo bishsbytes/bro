@@ -36,6 +36,12 @@ The scheduled OpenWiki GitHub Actions workflow refreshes the repository wiki. Do
 
 <!-- OPENWIKI:END -->
 
+## Design
+
+- Before UI work, read `design/DESIGN.md`; it overrides framework defaults.
+- For the Expo app, also read `design/REACT_NATIVE.md` for the native token,
+  typography, interaction, and asset mapping.
+
 ## Verifying a change
 
 - `pnpm biome check .` is part of verification, alongside the relevant `nx` test/typecheck/lint targets. It is repo-wide, not project-scoped, and covers what `lint` does not: formatting and import ordering.

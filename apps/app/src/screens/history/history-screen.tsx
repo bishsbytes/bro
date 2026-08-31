@@ -98,7 +98,9 @@ export function HistoryScreen({ store }: HistoryScreenProps) {
 							</AppText>
 						) : null}
 						{day.noteBodies.map((body, index) => (
-							<AppText key={`${day.localDay}-note-${index}`}>{body}</AppText>
+							<AppText variant="lead" key={`${day.localDay}-note-${index}`}>
+								{body}
+							</AppText>
 						))}
 					</ListRow>
 				);

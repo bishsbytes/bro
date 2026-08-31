@@ -36,7 +36,7 @@ export function LogConfirmationToast({
 			style={[styles.overlay, { bottom: insets.bottom + theme.spacing.lg }]}
 		>
 			<View accessibilityLiveRegion="polite" style={styles.toast}>
-				<Icon name="check-circle" color={theme.colors.brand} size={24} />
+				<Icon name="check-circle" color={theme.colors.ink2} size={24} />
 				<AppText style={styles.message}>{message}</AppText>
 				<Button
 					label={actionLabel}
@@ -58,7 +58,6 @@ const styles = StyleSheet.create((theme) => ({
 		left: theme.spacing.lg,
 		right: theme.spacing.lg,
 		zIndex: 20,
-		elevation: 10,
 	},
 	toast: {
 		minHeight: 64,
@@ -69,8 +68,8 @@ const styles = StyleSheet.create((theme) => ({
 		paddingRight: theme.spacing.xs,
 		paddingVertical: theme.spacing.xs,
 		borderWidth: 1,
-		borderColor: theme.colors.border,
-		borderRadius: theme.radius.md,
+		borderColor: theme.colors.line,
+		borderRadius: theme.radius.lg,
 		backgroundColor: theme.colors.surface,
 	},
 	message: { flex: 1 },

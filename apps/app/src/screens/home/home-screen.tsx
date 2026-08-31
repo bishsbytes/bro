@@ -123,10 +123,7 @@ function habitStatus(
 	t: TFunction<"home">,
 	item: TodayHabitsSnapshot["habits"][number],
 ): string {
-	const status = item.completed ? t("habits.doneToday") : t("habits.stillToDo");
-	return item.streak > 0
-		? t("habits.withStreak", { status, days: item.streak })
-		: status;
+	return item.completed ? t("habits.doneToday") : t("habits.stillToDo");
 }
 
 type PastDaySectionProps = {
@@ -265,7 +262,9 @@ function PastDaySection({
 							<SectionHeader title={t("notes.title")} />
 							{day.notes.map((note) => (
 								<Card key={note.id}>
-									<AppText color="muted">{note.body}</AppText>
+									<AppText variant="lead" color="muted">
+										{note.body}
+									</AppText>
 								</Card>
 							))}
 						</View>
@@ -1134,10 +1133,10 @@ const styles = StyleSheet.create((theme) => ({
 	measurementDeltaBadge: {
 		paddingVertical: theme.spacing.xs,
 		paddingHorizontal: theme.spacing.sm,
-		borderRadius: theme.radius.pill,
-		backgroundColor: theme.colors.selected,
+		borderRadius: theme.radius.xs,
+		backgroundColor: theme.colors.bodyTint,
 	},
-	measurementDeltaText: { fontWeight: "600" },
+	measurementDeltaText: { color: theme.colors.body },
 	habitCard: {
 		flexDirection: "row",
 		alignItems: "center",

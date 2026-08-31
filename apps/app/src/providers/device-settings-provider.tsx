@@ -1,5 +1,4 @@
 import {
-	type AccentColor,
 	type DeviceSettingsSnapshot,
 	setAppearance,
 	setOnboardingComplete,
@@ -19,7 +18,11 @@ import { applyAppearance } from "../theme/unistyles";
 type DeviceSettingsContextValue = {
 	settings: DeviceSettingsSnapshot;
 	completeOnboarding: () => void;
-	updateAppearance: (themeMode: ThemeMode, accentColor: AccentColor) => void;
+	updateAppearance: (
+		themeMode: ThemeMode,
+		accentHue: number,
+		accentChroma: number,
+	) => void;
 	markRemoteSessionStored: (userId: string | null) => Promise<void>;
 	clearRemoteSession: () => Promise<void>;
 };
@@ -43,13 +46,14 @@ export function DeviceSettingsProvider({
 	}, []);
 
 	const updateAppearance = useCallback(
-		(themeMode: ThemeMode, accentColor: AccentColor) => {
-			setAppearance(themeMode, accentColor);
-			applyAppearance(themeMode, accentColor);
+		(themeMode: ThemeMode, accentHue: number, accentChroma: number) => {
+			setAppearance(themeMode, accentHue, accentChroma);
+			applyAppearance(themeMode, accentHue, accentChroma);
 			setSettings((current) => ({
 				...current,
 				themeMode,
-				accentColor,
+				accentHue,
+				accentChroma,
 			}));
 		},
 		[],

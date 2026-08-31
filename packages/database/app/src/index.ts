@@ -6,10 +6,13 @@ export {
 } from "./connection";
 export { deleteLocalProductData } from "./delete-local-product-data";
 export {
-	type AccentColor,
 	closeDeviceSettings,
+	DEFAULT_ACCENT_CHROMA,
+	DEFAULT_ACCENT_HUE,
 	DEVICE_SETTINGS_DATABASE_NAME,
 	type DeviceSettingsSnapshot,
+	GRAPHITE_ACCENT_CHROMA,
+	normalizeAccentHue,
 	readDeviceSettings,
 	setAppearance,
 	setAppLock,

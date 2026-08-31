@@ -42,6 +42,8 @@ const styles = StyleSheet.create((theme) => ({
 		alignItems: "center",
 		gap: theme.spacing.md,
 		paddingVertical: theme.spacing.xxl,
+		borderStyle: "dashed",
+		borderColor: theme.colors.lineStrong,
 	},
 	copy: { textAlign: "center" },
 }));

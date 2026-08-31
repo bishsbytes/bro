@@ -103,13 +103,15 @@ const styles = StyleSheet.create((theme) => ({
 	sheetBackground: {
 		borderTopLeftRadius: theme.radius.lg,
 		borderTopRightRadius: theme.radius.lg,
-		backgroundColor: theme.colors.background,
+		borderWidth: 1,
+		borderColor: theme.colors.line,
+		backgroundColor: theme.colors.surface,
 	},
 	handle: {
 		width: 40,
 		height: 4,
 		borderRadius: theme.radius.pill,
-		backgroundColor: theme.colors.border,
+		backgroundColor: theme.colors.lineStrong,
 	},
 	content: {
 		gap: theme.spacing.lg,

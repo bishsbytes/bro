@@ -34,11 +34,6 @@ export const home = {
 		stillToDo: "Still to do",
 		doneOnDay: "Done on this day",
 		notDone: "Not done",
-		/**
-		 * Appends the run of consecutive completed days to the status above.
-		 * "day streak" is a fixed idiom here and does not inflect with the count.
-		 */
-		withStreak: "{{status}} · {{days}} day streak",
 		undo: "Undo",
 		markDone: "Mark done",
 		emptyTitle: "Build a routine",

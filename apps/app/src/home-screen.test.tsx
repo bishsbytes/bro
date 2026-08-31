@@ -308,13 +308,13 @@ describe("home screen", () => {
 		);
 
 		expect(await screen.findByText("Read")).toBeTruthy();
-		expect(screen.getByText(/3 day streak/)).toBeTruthy();
+		expect(screen.getByText("Still to do")).toBeTruthy();
 		await fireEvent.press(screen.getByText("Mark done"));
 
 		await waitFor(() =>
 			expect(toggleManual).toHaveBeenCalledWith("habit-1", "2026-08-14"),
 		);
-		expect(await screen.findByText(/4 day streak/)).toBeTruthy();
+		expect(await screen.findByText("Done today")).toBeTruthy();
 	});
 
 	it("opens the sitting whose card was tapped", async () => {

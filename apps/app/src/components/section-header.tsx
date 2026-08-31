@@ -46,9 +46,7 @@ const styles = StyleSheet.create((theme) => ({
 	},
 	copy: { flex: 1 },
 	eyebrow: {
-		fontWeight: "600",
-		letterSpacing: theme.typography.eyebrow.letterSpacing,
 		marginBottom: theme.spacing.xs,
 	},
-	title: { fontWeight: "600" },
+	title: {},
 }));

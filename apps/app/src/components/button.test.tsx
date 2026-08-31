@@ -36,13 +36,13 @@ describe("Button", () => {
 		expect(onPress).not.toHaveBeenCalled();
 	});
 
-	it("keeps secondary copy neutral while text actions may use the accent", async () => {
+	it("keeps secondary and quiet copy neutral", async () => {
 		const themed = {
 			...themeModule.lightTheme,
 			colors: {
 				...themeModule.lightTheme.colors,
-				text: "neutral-text",
-				brand: "accent-colour",
+				ink: "neutral-text",
+				ink2: "quiet-text",
 			},
 		} as unknown as typeof themeModule.lightTheme;
 		mockThemeOverride = themed;
@@ -59,7 +59,7 @@ describe("Button", () => {
 		).toBe("neutral-text");
 		expect(
 			NativeStyleSheet.flatten(screen.getByText("Text").props.style).color,
-		).toBe("accent-colour");
+		).toBe("quiet-text");
 	});
 
 	it("lets translated labels shrink and wrap within the control", async () => {

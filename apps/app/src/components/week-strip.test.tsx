@@ -95,6 +95,7 @@ describe("WeekStrip", () => {
 				...themeModule.lightTheme.colors,
 				text: "neutral-text",
 				brand: "accent-colour",
+				accent: "accent-colour",
 			},
 		} as unknown as typeof themeModule.lightTheme;
 		mockThemeOverride = themed;

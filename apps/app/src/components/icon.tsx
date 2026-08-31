@@ -10,11 +10,6 @@ import CircleCheck from "lucide-react-native/icons/circle-check";
 import CircleDashed from "lucide-react-native/icons/circle-dashed";
 import Compass from "lucide-react-native/icons/compass";
 import CupSoda from "lucide-react-native/icons/cup-soda";
-import FaceAngry from "lucide-react-native/icons/face-angry";
-import FaceGrinning from "lucide-react-native/icons/face-grinning";
-import FaceNeutral from "lucide-react-native/icons/face-neutral";
-import FaceSlightlyFrowning from "lucide-react-native/icons/face-slightly-frowning";
-import FaceSlightlySmiling from "lucide-react-native/icons/face-slightly-smiling";
 import Heart from "lucide-react-native/icons/heart";
 import HeartPulse from "lucide-react-native/icons/heart-pulse";
 import House from "lucide-react-native/icons/house";
@@ -45,7 +40,7 @@ const ICONS = {
 	calendar: Calendar,
 	check: Check,
 	"check-circle": CircleCheck,
-	"check-in": FaceSlightlySmiling,
+	"check-in": NotebookPen,
 	"chevron-right": ChevronRight,
 	circle: Circle,
 	close: X,
@@ -69,11 +64,6 @@ const ICONS = {
 	"life-purpose": Signpost,
 	"life-sobriety": WineOff,
 	log: NotebookPen,
-	"mood-high": FaceSlightlySmiling,
-	"mood-highest": FaceGrinning,
-	"mood-low": FaceSlightlyFrowning,
-	"mood-lowest": FaceAngry,
-	"mood-neutral": FaceNeutral,
 	person: User,
 	search: Search,
 	settings: Settings,

@@ -9,6 +9,7 @@ it from the repo's CLAUDE.md / AGENTS.md) so it loads for every UI task.
 design/
 ├── README.md                  this file
 ├── DESIGN.md                  the rulebook — read before any UI work
+├── REACT_NATIVE.md            Expo/React Native delivery mapping
 ├── tokens/
 │   ├── tokens.css             runtime tokens (light, dark, accent derivation)
 │   ├── tokens.json            canonical machine-readable tokens
@@ -52,6 +53,10 @@ Archivo (400/500/600/700) and Source Serif 4 (400/500), e.g.:
 ```
 
 Self-host for production.
+
+For the Expo app, fonts, semantic theme values, native-state handling, and
+asset delivery are documented in `REACT_NATIVE.md`. The canonical values still
+come from `tokens.json`; the native theme is their platform adapter.
 
 ## The three color jobs (the rule most likely to be broken)
 

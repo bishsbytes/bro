@@ -1,4 +1,4 @@
-import type { AccentColor, ThemeMode } from "@bro/database-app";
+import type { ThemeMode } from "@bro/database-app";
 import { type Href, router } from "expo-router";
 import { useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
@@ -10,7 +10,7 @@ import type { HealthGatewayAvailability } from "../../health/gateway";
 import { healthImportEngine } from "../../health/import-service";
 import { healthPlatformLabel } from "../../health/platform-label";
 import { useDeviceSettings } from "../../providers/device-settings-provider";
-import { ACCENT_OPTIONS, StyleSheet } from "../../theme/unistyles";
+import { matchingAccentOption, StyleSheet } from "../../theme/unistyles";
 import { AccountSection } from "./account-screen";
 
 function themeSuffix(themeMode: ThemeMode): "System" | "Light" | "Dark" {
@@ -21,9 +21,9 @@ function themeSuffix(themeMode: ThemeMode): "System" | "Light" | "Dark" {
 			: "Dark";
 }
 
-function accentLabelKey(accentColor: AccentColor) {
-	const option = ACCENT_OPTIONS.find(({ value }) => value === accentColor);
-	return option?.labelKey ?? "appearance.accentNeutral";
+function accentLabelKey(hue: number, chroma: number) {
+	const option = matchingAccentOption(hue, chroma);
+	return option?.labelKey ?? "appearance.accentHarbour";
 }
 
 type SettingsScreenProps = {
@@ -81,7 +81,7 @@ export function SettingsScreen({
 				detail={t("index.appearanceDetail")}
 				value={t("index.appearanceValue", {
 					theme: t(`appearance.theme${themeSuffix(settings.themeMode)}`),
-					accent: t(accentLabelKey(settings.accentColor)),
+					accent: t(accentLabelKey(settings.accentHue, settings.accentChroma)),
 				})}
 				accessibilityLabel={t("index.appearanceA11y")}
 				onPress={() => router.push("/settings/appearance" as Href)}

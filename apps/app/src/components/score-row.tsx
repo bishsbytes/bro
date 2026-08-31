@@ -1,8 +1,7 @@
 import { useTranslation } from "react-i18next";
 import { TouchableOpacity, View } from "react-native";
-import { StyleSheet, useUnistyles } from "../theme/unistyles";
+import { StyleSheet } from "../theme/unistyles";
 import { AppText } from "./app-text";
-import { Icon, type IconName } from "./icon";
 
 const DEFAULT_SCORES = [1, 2, 3, 4, 5] as const;
 
@@ -16,8 +15,10 @@ type ScoreRowProps = {
 	onSelect: (score: number) => void;
 	/** The scale on offer, lowest first; defaults to the daily five-point one. */
 	scores?: readonly number[];
-	/** One face icon per score; when given, it replaces the visible numeral. */
-	faces?: readonly IconName[];
+	/** Visible meanings for each point, used by the Baseline mood scale. */
+	labels?: readonly string[];
+	/** Encodes the scale by shape as well as copy, from 52 through 108px. */
+	varyHeight?: boolean;
 	/** Visible meanings for the two ends of the scale. */
 	endLabels?: Readonly<{ minimum: string; maximum: string }>;
 	disabled?: boolean;
@@ -28,12 +29,12 @@ export function ScoreRow({
 	selected,
 	onSelect,
 	scores = DEFAULT_SCORES,
-	faces,
+	labels,
+	varyHeight = false,
 	endLabels,
 	disabled = false,
 }: ScoreRowProps) {
 	const { t } = useTranslation("common");
-	const { theme } = useUnistyles();
 	const rows: number[][] = [];
 	for (let start = 0; start < scores.length; start += MAX_PER_ROW) {
 		rows.push([...scores.slice(start, start + MAX_PER_ROW)]);
@@ -46,7 +47,7 @@ export function ScoreRow({
 						{row.map((score, column) => {
 							const index = rowIndex * MAX_PER_ROW + column;
 							const isSelected = selected === score;
-							const face = faces?.[index];
+							const label = labels?.[index];
 							return (
 								<TouchableOpacity
 									key={score}
@@ -59,28 +60,23 @@ export function ScoreRow({
 									disabled={disabled}
 									style={[
 										styles.button,
+										varyHeight && {
+											height: [52, 64, 80, 96, 108][index] ?? 52,
+										},
 										isSelected && styles.selected,
 										disabled && styles.disabled,
 									]}
 									onPress={() => onSelect(score)}
 								>
-									{face ? (
-										<Icon
-											testID={`score-face-${score}`}
-											name={face}
-											size={theme.typography.face.fontSize}
-											color={
-												isSelected ? theme.colors.brand : theme.colors.textMuted
-											}
-										/>
-									) : (
-										<AppText
-											variant="score"
-											style={[isSelected && styles.selectedText]}
-										>
-											{score}
-										</AppText>
-									)}
+									<AppText
+										variant={label ? "caption" : "score"}
+										style={[
+											styles.buttonLabel,
+											isSelected && styles.selectedText,
+										]}
+									>
+										{label ?? score}
+									</AppText>
 								</TouchableOpacity>
 							);
 						})}
@@ -108,7 +104,7 @@ export function ScoreRow({
 const styles = StyleSheet.create((theme) => ({
 	container: { gap: theme.spacing.xs },
 	rows: { gap: theme.spacing.sm },
-	row: { flexDirection: "row", gap: theme.spacing.sm },
+	row: { flexDirection: "row", alignItems: "flex-end", gap: theme.spacing.sm },
 	endLabels: {
 		flexDirection: "row",
 		alignItems: "center",
@@ -120,15 +116,16 @@ const styles = StyleSheet.create((theme) => ({
 		alignItems: "center",
 		justifyContent: "center",
 		borderWidth: 1,
-		borderColor: theme.colors.border,
+		borderColor: theme.colors.lineStrong,
 		borderRadius: theme.radius.md,
 		backgroundColor: theme.colors.surface,
 	},
+	buttonLabel: { textAlign: "center" },
 	gap: { flex: 1 },
 	selected: {
-		borderColor: theme.colors.brand,
-		backgroundColor: theme.colors.selected,
+		borderColor: theme.colors.accent,
+		backgroundColor: theme.colors.accentTint,
 	},
-	selectedText: { color: theme.colors.onSelected },
+	selectedText: { color: theme.colors.ink },
 	disabled: { opacity: theme.opacity.disabled },
 }));

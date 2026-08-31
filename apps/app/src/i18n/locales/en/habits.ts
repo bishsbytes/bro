@@ -1,8 +1,7 @@
 export const habits = {
 	loadFailed: "Habits could not be loaded",
 	loadFailedBody: "Try again.",
-	intro:
-		"Choose the days that matter. Unscheduled days never count against a streak.",
+	intro: "Choose the days that matter. Unscheduled days are shown separately.",
 	progress: {
 		/** Current and target for a metric whose unit is already in each value. */
 		ratio: "{{current}} / {{target}}",

@@ -1,4 +1,4 @@
-import type { AccentColor, ThemeMode } from "@bro/database-app";
+import type { ThemeMode } from "@bro/database-app";
 import { useTranslation } from "react-i18next";
 import { TouchableOpacity, View } from "react-native";
 import { AppText } from "../../components/app-text";
@@ -49,11 +49,11 @@ export function AppearanceScreen() {
 	const activeScheme = rt.themeName === "dark" ? "dark" : "light";
 
 	function chooseTheme(themeMode: ThemeMode) {
-		updateAppearance(themeMode, settings.accentColor);
+		updateAppearance(themeMode, settings.accentHue, settings.accentChroma);
 	}
 
-	function chooseAccent(accentColor: AccentColor) {
-		updateAppearance(settings.themeMode, accentColor);
+	function chooseAccent(hue: number, chroma: number) {
+		updateAppearance(settings.themeMode, hue, chroma);
 	}
 
 	return (
@@ -112,8 +112,14 @@ export function AppearanceScreen() {
 				<AppText color="muted">{t("appearance.accentIntro")}</AppText>
 				<View accessibilityRole="radiogroup" style={styles.accents}>
 					{ACCENT_OPTIONS.map((option) => {
-						const selected = option.value === settings.accentColor;
-						const preview = createTheme(activeScheme, option.value).colors;
+						const selected =
+							option.hue === settings.accentHue &&
+							option.chroma === settings.accentChroma;
+						const preview = createTheme(
+							activeScheme,
+							option.hue,
+							option.chroma,
+						).colors;
 						return (
 							<TouchableOpacity
 								key={option.value}
@@ -128,13 +134,13 @@ export function AppearanceScreen() {
 									selected && styles.selectedOption,
 									selected && styles.selectedAccent,
 								]}
-								onPress={() => chooseAccent(option.value)}
+								onPress={() => chooseAccent(option.hue, option.chroma)}
 							>
 								<View
-									style={[styles.swatch, { backgroundColor: preview.brand }]}
+									style={[styles.swatch, { backgroundColor: preview.accent }]}
 								>
 									{selected ? (
-										<Icon name="check" size={24} color={preview.onBrand} />
+										<Icon name="check" size={24} color={preview.onAccent} />
 									) : null}
 								</View>
 								<AppText variant="caption" style={styles.accentLabel}>
@@ -160,18 +166,18 @@ const styles = StyleSheet.create((theme) => ({
 		padding: theme.spacing.md,
 		borderRadius: theme.radius.sm,
 		borderWidth: 1,
-		borderColor: theme.colors.border,
+		borderColor: theme.colors.lineStrong,
 	},
 	selectedOption: {
-		borderColor: theme.colors.brand,
-		backgroundColor: theme.colors.selected,
+		borderColor: theme.colors.accent,
+		backgroundColor: theme.colors.accentTint,
 	},
 	themeIcon: {
 		width: 40,
 		height: 40,
 		alignItems: "center",
 		justifyContent: "center",
-		borderRadius: theme.radius.pill,
+		borderRadius: theme.radius.md,
 		backgroundColor: theme.colors.background,
 	},
 	selectedIcon: { backgroundColor: theme.colors.surface },
@@ -189,7 +195,7 @@ const styles = StyleSheet.create((theme) => ({
 		gap: theme.spacing.sm,
 		paddingHorizontal: theme.spacing.xs,
 		paddingVertical: theme.spacing.md,
-		borderRadius: theme.radius.md,
+		borderRadius: theme.radius.lg,
 	},
 	selectedAccent: { borderWidth: 1 },
 	swatch: {
@@ -197,7 +203,7 @@ const styles = StyleSheet.create((theme) => ({
 		height: 52,
 		alignItems: "center",
 		justifyContent: "center",
-		borderRadius: theme.radius.pill,
+		borderRadius: theme.radius.md,
 	},
 	accentLabel: { fontWeight: "600", textAlign: "center" },
 }));

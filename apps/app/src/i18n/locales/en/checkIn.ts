@@ -1,5 +1,12 @@
 export const checkIn = {
 	loadFailed: "The check-in could not be opened",
+	mood: {
+		low: "Low",
+		flat: "Flat",
+		okay: "Okay",
+		good: "Good",
+		sharp: "Sharp",
+	},
 	/** The two sittings a day holds, named wherever one is shown or chosen. */
 	slots: {
 		morning: {

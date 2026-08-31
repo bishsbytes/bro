@@ -2,16 +2,29 @@ packages:
   - "packages/*"
   - "packages/*/*"
   - "apps/*"
-catalogMode: strict
+allowBuilds:
+  # Optional drizzle-kit drivers we do not use (we use postgres.js and expo-sqlite).
+  '@prisma/client': false
+  better-sqlite3: false
+  # Testcontainers' local Docker path does not need these transitive build scripts.
+  cpu-features: false
+  esbuild: true
+  nx: true
+  protobufjs: false
+  ssh2: false
+  unrs-resolver: true
+autoInstallPeers: true
 catalog:
   '@babel/runtime': ~7.27.6
   '@better-auth/expo': ^1.6.27
   '@biomejs/biome': ^2.5.7
-  '@expo/vector-icons': ~15.1.0
-  '@gorhom/bottom-sheet': ^5.2.14
+  '@expo-google-fonts/archivo': ^0.4.2
+  '@expo-google-fonts/source-serif-4': ^0.4.1
   '@expo/cli': ~56.1.14
   '@expo/metro': ~56.0.0
   '@expo/metro-runtime': ~56.0.14
+  '@expo/vector-icons': ~15.1.0
+  '@gorhom/bottom-sheet': ^5.2.14
   '@hono/node-server': ^2.1.0
   '@kingstinct/react-native-healthkit': 14.0.2
   '@nx/esbuild': 23.1.1
@@ -42,6 +55,7 @@ catalog:
   expo-constants: ~56.0.23
   expo-crypto: ~56.0.4
   expo-file-system: ~56.0.9
+  expo-font: ~56.0.7
   expo-haptics: ~56.0.3
   expo-linking: ~56.0.16
   expo-localization: ~56.0.6
@@ -85,24 +99,10 @@ catalog:
   vite: ^8.0.0
   vitest: ~4.1.10
   zod: ^4.4.3
+catalogMode: strict
 catalogs:
   expo-jest:
     jest: ~29.7.0
-overrides:
-  react-native-reanimated: 'catalog:'
-  react-native-worklets: 'catalog:'
-autoInstallPeers: true
-allowBuilds:
-  # Optional drizzle-kit drivers we do not use (we use postgres.js and expo-sqlite).
-  '@prisma/client': false
-  better-sqlite3: false
-  # Testcontainers' local Docker path does not need these transitive build scripts.
-  cpu-features: false
-  esbuild: true
-  nx: true
-  protobufjs: false
-  ssh2: false
-  unrs-resolver: true
 minimumReleaseAgeExclude:
   - '@better-auth/core@1.6.27'
   - '@better-auth/drizzle-adapter@1.6.27'
@@ -114,3 +114,6 @@ minimumReleaseAgeExclude:
   - '@better-auth/telemetry@1.6.27'
   - better-auth@1.6.27
   - auth@1.6.27
+overrides:
+  react-native-reanimated: 'catalog:'
+  react-native-worklets: 'catalog:'

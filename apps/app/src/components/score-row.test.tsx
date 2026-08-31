@@ -1,5 +1,4 @@
 import { fireEvent, render } from "@testing-library/react-native";
-import { MOOD_FACES } from "../check-in/check-in-presentation";
 import { ScoreRow } from "./score-row";
 
 describe("ScoreRow", () => {
@@ -36,17 +35,19 @@ describe("ScoreRow", () => {
 		expect(onSelect).toHaveBeenCalledWith(4);
 	});
 
-	it("renders a face per score when given faces", async () => {
+	it("renders the word and height encoded Baseline mood scale", async () => {
 		const view = await render(
 			<ScoreRow
 				accessibilityPrefix="Mood"
 				selected={null}
 				onSelect={jest.fn()}
-				faces={MOOD_FACES}
+				labels={["Low", "Flat", "Okay", "Good", "Sharp"]}
+				varyHeight
 			/>,
 		);
 
-		expect(view.getAllByTestId(/^score-face-/)).toHaveLength(MOOD_FACES.length);
+		expect(view.getByText("Low")).toBeTruthy();
+		expect(view.getByText("Sharp")).toBeTruthy();
 		expect(view.getByLabelText("Mood 5")).toBeTruthy();
 		expect(view.queryByText("5")).toBeNull();
 	});

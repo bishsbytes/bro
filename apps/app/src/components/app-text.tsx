@@ -3,10 +3,12 @@ import { Text } from "react-native";
 import { useUnistyles } from "../theme/unistyles";
 
 type TextVariant =
+	| "metric"
 	| "display"
 	| "title"
 	| "section"
 	| "score"
+	| "lead"
 	| "body"
 	| "label"
 	| "caption"
@@ -18,6 +20,10 @@ type TextColor =
 	| "subtle"
 	| "brand"
 	| "danger"
+	| "mind"
+	| "body"
+	| "sleep"
+	| "load"
 	| "onBrand";
 
 type AppTextProps = ComponentProps<typeof Text> & {
@@ -33,12 +39,16 @@ export function AppText({
 }: AppTextProps) {
 	const { theme } = useUnistyles();
 	const colors = {
-		default: theme.colors.text,
-		muted: theme.colors.textMuted,
-		subtle: theme.colors.textSubtle,
-		brand: theme.colors.brand,
-		danger: theme.colors.danger,
-		onBrand: theme.colors.onBrand,
+		default: theme.colors.ink,
+		muted: theme.colors.ink2,
+		subtle: theme.colors.ink3,
+		brand: theme.colors.accent,
+		danger: theme.colors.alert,
+		mind: theme.colors.mind,
+		body: theme.colors.body,
+		sleep: theme.colors.sleep,
+		load: theme.colors.load,
+		onBrand: theme.colors.onAccent,
 	};
 
 	return (

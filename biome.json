@@ -9,10 +9,15 @@
 		"ignoreUnknown": false,
 		"includes": [
 			"**",
+			"!.agents",
+			"!.codex",
 			"!**/__fixtures__",
 			"!**/drizzle/meta",
 			"!apps/app/ios",
-			"!apps/app/android"
+			"!apps/app/android",
+			"!design/reference",
+			"!design/tokens/*.css",
+			"!design/tokens/*.json"
 		]
 	},
 	"formatter": {

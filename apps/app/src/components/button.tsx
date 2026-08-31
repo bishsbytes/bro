@@ -29,14 +29,14 @@ export function Button({
 	const dangerTone = tone === "danger" || variant === "danger";
 	const foreground =
 		variant === "primary"
-			? theme.colors.onBrand
+			? theme.colors.onAccent
 			: variant === "danger"
-				? theme.colors.onDanger
+				? theme.colors.alert
 				: dangerTone
-					? theme.colors.danger
+					? theme.colors.alert
 					: variant === "secondary"
-						? theme.colors.text
-						: theme.colors.brand;
+						? theme.colors.ink
+						: theme.colors.ink2;
 
 	return (
 		<TouchableOpacity
@@ -76,14 +76,18 @@ const styles = StyleSheet.create((theme) => ({
 		paddingHorizontal: theme.spacing.lg,
 		paddingVertical: theme.spacing.md,
 	},
-	primary: { backgroundColor: theme.colors.brand },
+	primary: { backgroundColor: theme.colors.accent },
 	secondary: {
 		borderWidth: 1,
-		borderColor: theme.colors.border,
-		backgroundColor: theme.colors.surface,
+		borderColor: theme.colors.lineStrong,
+		backgroundColor: "transparent",
 	},
-	danger: { backgroundColor: theme.colors.danger },
-	dangerOutline: { borderColor: theme.colors.danger },
+	danger: {
+		borderWidth: 1,
+		borderColor: theme.colors.alert,
+		backgroundColor: "transparent",
+	},
+	dangerOutline: { borderColor: theme.colors.alert },
 	disabled: { opacity: theme.opacity.disabled },
-	label: { flexShrink: 1, textAlign: "center", fontWeight: "700" },
+	label: { flexShrink: 1, textAlign: "center" },
 }));

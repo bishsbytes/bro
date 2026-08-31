@@ -64,7 +64,9 @@ const styles = StyleSheet.create((theme) => ({
 		alignItems: "center",
 		gap: theme.spacing.md,
 		padding: theme.spacing.lg,
-		borderRadius: theme.radius.md,
+		borderWidth: 1,
+		borderColor: theme.colors.line,
+		borderRadius: theme.radius.lg,
 		backgroundColor: theme.colors.surface,
 	},
 	content: { flex: 1, gap: theme.spacing.xs },
@@ -74,5 +76,5 @@ const styles = StyleSheet.create((theme) => ({
 		justifyContent: "space-between",
 		gap: theme.spacing.md,
 	},
-	title: { fontWeight: "600" },
+	title: {},
 }));

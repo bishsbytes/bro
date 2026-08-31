@@ -260,7 +260,7 @@ export function BodyMetricScreen({ metricSlug, store }: BodyMetricScreenProps) {
 		<Screen scroll padded gap="lg" keyboardShouldPersistTaps="handled">
 			<Card style={styles.summaryCard}>
 				<SectionHeader title={detail.label} eyebrow={t("latestEyebrow")} />
-				<AppText variant="display">
+				<AppText variant="metric">
 					{detail.latestFormatted ?? t("common:emDash")}
 				</AppText>
 				<AppText color="muted">

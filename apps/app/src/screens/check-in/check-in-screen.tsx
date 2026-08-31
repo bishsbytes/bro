@@ -3,10 +3,7 @@ import { router } from "expo-router";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { TouchableOpacity, View } from "react-native";
-import {
-	checkInScoreSummary,
-	MOOD_FACES,
-} from "../../check-in/check-in-presentation";
+import { checkInScoreSummary } from "../../check-in/check-in-presentation";
 import {
 	type CheckInEntry,
 	type CheckInStore,
@@ -16,7 +13,6 @@ import {
 import { AppText } from "../../components/app-text";
 import { Button } from "../../components/button";
 import { EmptyState } from "../../components/empty-state";
-import type { IconName } from "../../components/icon";
 import { LoadingIndicator } from "../../components/loading-indicator";
 import { ScoreRow } from "../../components/score-row";
 import { LoadingScreen, FullScreen as Screen } from "../../components/screen";
@@ -37,7 +33,7 @@ type CheckInScreenProps = {
 type CheckInStep = {
 	slug: string;
 	label: string;
-	faces?: readonly IconName[];
+	labels?: readonly string[];
 	description: string;
 	endLabels: Readonly<{ minimum: string; maximum: string }>;
 };
@@ -116,7 +112,13 @@ export function CheckInScreen({
 			{
 				slug: MOOD_SLUG,
 				label: t("steps.moodLabel"),
-				faces: MOOD_FACES,
+				labels: [
+					t("mood.low"),
+					t("mood.flat"),
+					t("mood.okay"),
+					t("mood.good"),
+					t("mood.sharp"),
+				],
 				description: t(`slots.${slot}.moodHint`),
 				endLabels: {
 					minimum: t("common:ratingEnds.veryBad"),
@@ -296,7 +298,7 @@ export function CheckInScreen({
 							? t("confirmation.updated")
 							: t("confirmation.saved")}
 					</AppText>
-					<AppText color="muted" style={styles.centredText}>
+					<AppText variant="lead" color="muted" style={styles.centredText}>
 						{summary}
 					</AppText>
 				</View>
@@ -390,7 +392,8 @@ export function CheckInScreen({
 					accessibilityPrefix={step.label}
 					selected={values[step.slug] ?? null}
 					onSelect={(score) => answer(step.slug, score)}
-					faces={step.faces}
+					labels={step.labels}
+					varyHeight={step.slug === MOOD_SLUG}
 					endLabels={step.endLabels}
 				/>
 			</View>
