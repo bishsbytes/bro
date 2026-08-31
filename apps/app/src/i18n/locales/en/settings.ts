@@ -26,6 +26,9 @@ export const settings = {
 		reminders: "Reminders",
 		remindersDetail: "Choose when this device nudges you to check in.",
 		remindersA11y: "Manage reminders",
+		data: "Data",
+		dataDetail: "Privacy, licences, exports, and data stored on this device.",
+		dataA11y: "Manage data",
 		privacy: "Privacy",
 		privacyDetail: "See what stays local and when data can leave this device.",
 		privacyA11y: "Privacy information",
@@ -41,6 +44,7 @@ export const settings = {
 		intro:
 			"Delete your check-ins, notes, and metric preferences from this device.",
 		delete: "Delete local data",
+		deleteA11y: "Manage local data deletion",
 		confirmTitle: "Delete local data?",
 		confirmBody:
 			"This permanently deletes data stored by bro on this device. It does not delete your account or data stored elsewhere.",

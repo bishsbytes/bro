@@ -291,7 +291,7 @@ describe("food logging flow", () => {
 			),
 		);
 		await waitFor(() =>
-			expect(router.getPathname()).toBe("/settings/licences"),
+			expect(router.getPathname()).toBe("/settings/data/licences"),
 		);
 		expect(
 			await view.findByText("Source: Open Food Facts · Licence: ODbL-1.0"),

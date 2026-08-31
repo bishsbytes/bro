@@ -249,7 +249,9 @@ describe("delete local data", () => {
 		const transaction = jest.spyOn(db, "withTransactionAsync");
 		const localTransaction = jest.spyOn(localDb, "withTransactionAsync");
 
-		const router = renderRouter("src/app", { initialUrl: "/settings" });
+		const router = renderRouter("src/app", {
+			initialUrl: "/settings/data/delete",
+		});
 		const view = await router;
 		await act(async () => undefined);
 		expect(await view.findByText("Data on this device")).toBeTruthy();

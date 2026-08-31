@@ -1,5 +1,5 @@
-import { ExportScreen } from "../../screens/settings/export-screen";
+import { type Href, Redirect } from "expo-router";
 
-export default function ExportRoute() {
-	return <ExportScreen />;
+export default function LegacyExportRoute() {
+	return <Redirect href={"/settings/data/export" as Href} />;
 }

@@ -68,6 +68,8 @@ export const navigation = {
 		drinks: "Drink settings",
 		food: "Food settings",
 		health: "Health data",
+		data: "Data",
+		deleteLocalData: "Delete local data",
 		privacy: "Privacy",
 		licences: "Data licences",
 		export: "Export your data",

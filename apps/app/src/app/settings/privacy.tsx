@@ -1,10 +1,5 @@
-import { StackScreen as Screen } from "../../components/screen";
-import { PrivacyContent } from "../../screens/privacy/privacy-content";
+import { type Href, Redirect } from "expo-router";
 
-export default function PrivacyRoute() {
-	return (
-		<Screen scroll padded>
-			<PrivacyContent />
-		</Screen>
-	);
+export default function LegacyPrivacyRoute() {
+	return <Redirect href={"/settings/data/privacy" as Href} />;
 }

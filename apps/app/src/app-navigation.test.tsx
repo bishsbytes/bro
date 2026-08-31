@@ -295,7 +295,8 @@ describe("app entry", () => {
 		await openSettings(router, view);
 		expect(router.getPathname()).toBe("/settings");
 		expect(view.getByText("Using bro without an account")).toBeTruthy();
-		expect(view.getByText("Data on this device")).toBeTruthy();
+		expect(view.getByText("Data")).toBeTruthy();
+		expect(view.queryByText("Privacy")).toBeNull();
 		// Opening Settings without a stored session is still a local-only act.
 		expect(mockedAuthClient.useSession).not.toHaveBeenCalled();
 		expect(globalThis.fetch).not.toHaveBeenCalled();
@@ -307,10 +308,19 @@ describe("app entry", () => {
 		expect(view.getByText("Accent colour")).toBeTruthy();
 		await act(async () => expoRouter.back());
 		await waitFor(() => expect(router.getPathname()).toBe("/settings"));
+		await press(view, "Data");
+		await waitFor(() => expect(router.getPathname()).toBe("/settings/data"));
+		expect(view.getByText("Data licences")).toBeTruthy();
+		expect(view.getByText("Export your data")).toBeTruthy();
+		expect(view.getByText("Delete local data")).toBeTruthy();
 		await press(view, "Privacy");
-		await waitFor(() => expect(router.getPathname()).toBe("/settings/privacy"));
+		await waitFor(() =>
+			expect(router.getPathname()).toBe("/settings/data/privacy"),
+		);
 		expect(view.getByText("Where your data lives")).toBeTruthy();
 		expect(view.getByText("Optional sync")).toBeTruthy();
+		await act(async () => expoRouter.back());
+		await waitFor(() => expect(router.getPathname()).toBe("/settings/data"));
 		await act(async () => expoRouter.back());
 		await waitFor(() => expect(router.getPathname()).toBe("/settings"));
 

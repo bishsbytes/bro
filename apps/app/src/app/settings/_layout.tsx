@@ -30,12 +30,10 @@ export default function SettingsLayout() {
 			<Stack.Screen name="drinks" options={{ title: t("settings.drinks") }} />
 			<Stack.Screen name="food" options={{ title: t("settings.food") }} />
 			<Stack.Screen name="health" options={{ title: t("settings.health") }} />
-			<Stack.Screen name="privacy" options={{ title: t("settings.privacy") }} />
-			<Stack.Screen
-				name="licences"
-				options={{ title: t("settings.licences") }}
-			/>
-			<Stack.Screen name="export" options={{ title: t("settings.export") }} />
+			<Stack.Screen name="data" options={{ headerShown: false }} />
+			<Stack.Screen name="privacy" options={{ headerShown: false }} />
+			<Stack.Screen name="licences" options={{ headerShown: false }} />
+			<Stack.Screen name="export" options={{ headerShown: false }} />
 		</Stack>
 	);
 }

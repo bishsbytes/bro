@@ -1093,7 +1093,7 @@ export function FoodScreen({
 						))}
 						<TouchableOpacity
 							accessibilityRole="button"
-							onPress={() => router.push("/settings/licences" as Href)}
+							onPress={() => router.push("/settings/data/licences" as Href)}
 						>
 							<AppText variant="caption" color="brand">
 								{t("search.licenceNotice")}
