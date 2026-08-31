@@ -1,0 +1,22 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 400 252" width="400" height="252" role="img" aria-label="bro">
+  <g transform="translate(20,60)" fill="none" stroke="#23282B" stroke-width="24" stroke-linecap="round">
+    <path d="M12,-26 L12,88"/>
+    <circle cx="50" cy="50" r="38"/>
+    <path d="M132,88 L132,34 C132,16 146,12 166,12"/>
+    <circle cx="260" cy="50" r="38"/>
+  </g>
+  <rect x="256" y="204" width="88" height="24" fill="#4E6473" opacity=".07"/>
+  <g stroke="#B9BCB2" stroke-width="1">
+    <line x1="20" y1="228" x2="380" y2="228"/>
+    <line x1="20" y1="221" x2="20" y2="228"/><line x1="65" y1="221" x2="65" y2="228"/>
+    <line x1="110" y1="221" x2="110" y2="228"/><line x1="155" y1="221" x2="155" y2="228"/>
+    <line x1="200" y1="221" x2="200" y2="228"/><line x1="245" y1="221" x2="245" y2="228"/>
+    <line x1="290" y1="221" x2="290" y2="228"/><line x1="335" y1="221" x2="335" y2="228"/>
+    <line x1="380" y1="221" x2="380" y2="228"/>
+  </g>
+  <g stroke="#4E6473" stroke-width="1.5">
+    <line x1="256" y1="204" x2="256" y2="228"/>
+    <line x1="344" y1="204" x2="344" y2="228"/>
+  </g>
+  <circle cx="300" cy="216" r="12" fill="#4E6473"/>
+</svg>

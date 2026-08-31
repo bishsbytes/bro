@@ -1,0 +1,504 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>bro. — identity</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Archivo:wght@400;500;600;700&family=Source+Serif+4:opsz,wght@8..60,400&display=swap" rel="stylesheet">
+<style>
+:root {
+  --canvas:#E9E9E4; --surface:#F5F5F1; --surface-sunk:#E1E2DC;
+  --line:#D3D5CD; --line-strong:#B9BCB2;
+  --ink:#23282B; --ink-2:#5C6469; --ink-3:#8B9297; --ink-invert:#F5F5F1;
+  --alert:#93564A;
+  --accent-h:235; --accent-c:0.055;
+  --accent: oklch(48% var(--accent-c) var(--accent-h));
+  --accent-strong: oklch(41% var(--accent-c) var(--accent-h));
+  --accent-tint: oklch(92% calc(var(--accent-c) * .42) var(--accent-h));
+  --on-accent: oklch(97% calc(var(--accent-c) * .15) var(--accent-h));
+  --sans:'Archivo',-apple-system,BlinkMacSystemFont,sans-serif;
+  --serif:'Source Serif 4',Georgia,serif;
+  --t-caption:.75rem; --t-small:.8125rem; --t-body:.9375rem; --t-lead:1.0625rem;
+  --t-h3:1.3125rem; --t-h2:1.6875rem; --t-h1:2.5rem;
+  --s1:4px; --s2:8px; --s3:12px; --s4:16px; --s5:24px; --s6:32px; --s7:48px; --s8:64px; --s9:96px;
+  --r-sm:3px; --r-md:6px; --r-lg:10px; --r-pill:999px;
+}
+[data-theme="dark"] {
+  --canvas:#191C1E; --surface:#212528; --surface-sunk:#141719;
+  --line:#313739; --line-strong:#454C4F;
+  --ink:#E4E5E1; --ink-2:#A0A7AA; --ink-3:#767D81; --ink-invert:#191C1E;
+  --alert:#C08375;
+  --accent: oklch(78% calc(var(--accent-c) * 1.15) var(--accent-h));
+  --accent-strong: oklch(85% calc(var(--accent-c) * 1.15) var(--accent-h));
+  --accent-tint: oklch(30% calc(var(--accent-c) * .75) var(--accent-h));
+  --on-accent: oklch(18% calc(var(--accent-c) * .3) var(--accent-h));
+}
+* { box-sizing:border-box; }
+body { margin:0; background:var(--canvas); color:var(--ink); font-family:var(--sans); font-size:var(--t-body); line-height:1.55; -webkit-font-smoothing:antialiased; }
+h1,h2,h3,h4 { margin:0; font-weight:600; letter-spacing:-.015em; line-height:1.18; }
+p { margin:0; }
+:focus-visible { outline:2px solid var(--accent); outline-offset:2px; }
+.wrap { max-width:1080px; margin:0 auto; padding:0 var(--s5); }
+
+.topbar { position:sticky; top:0; z-index:20; background:color-mix(in srgb, var(--canvas) 88%, transparent); backdrop-filter:blur(8px); border-bottom:1px solid var(--line); }
+.topbar__in { max-width:1080px; margin:0 auto; padding:var(--s3) var(--s5); display:flex; align-items:center; gap:var(--s4); }
+.wordmark { font-weight:700; letter-spacing:-.03em; font-size:var(--t-lead); }
+.wordmark span { color:var(--ink-3); font-weight:400; }
+.themetoggle { border:1px solid var(--line-strong); background:transparent; border-radius:var(--r-pill); padding:5px var(--s3); font-size:var(--t-small); cursor:pointer; color:var(--ink-2); }
+
+.swatchrow { display:flex; gap:var(--s2); margin-left:auto; }
+.swatchrow button { width:18px; height:18px; border-radius:50%; padding:0; cursor:pointer; border:1px solid var(--line-strong); background:oklch(48% var(--sc) var(--sh)); position:relative; }
+[data-theme="dark"] .swatchrow button { background:oklch(78% calc(var(--sc)*1.15) var(--sh)); }
+.swatchrow button[aria-pressed="true"]::after { content:""; position:absolute; inset:-4px; border:1px solid var(--ink-3); border-radius:50%; }
+
+section { padding:var(--s9) 0 0; }
+.sec-head { display:flex; align-items:baseline; gap:var(--s3); margin-bottom:var(--s5); padding-bottom:var(--s3); border-bottom:1px solid var(--line); }
+.sec-head h2 { font-size:var(--t-h2); }
+.sec-head p { color:var(--ink-3); font-size:var(--t-small); margin-left:auto; }
+.note { color:var(--ink-2); font-size:var(--t-small); max-width:64ch; }
+.lede { font-family:var(--serif); font-size:var(--t-lead); line-height:1.6; color:var(--ink-2); max-width:54ch; }
+
+.panel { background:var(--surface); border:1px solid var(--line); border-radius:var(--r-lg); padding:var(--s5); }
+.grid2 { display:grid; grid-template-columns:1fr 1fr; gap:var(--s5) var(--s7); }
+@media (max-width:760px){ .grid2 { grid-template-columns:1fr; } }
+
+/* icon frames */
+.icon { border-radius:22.37%; display:block; } /* squircle approximation */
+.icon--sm { border-radius:22.37%; }
+.iconrow { display:flex; align-items:flex-end; gap:var(--s5); flex-wrap:wrap; }
+.iconrow figure { margin:0; display:grid; gap:var(--s2); justify-items:center; }
+.iconrow figcaption { font-size:var(--t-caption); color:var(--ink-3); font-variant-numeric:tabular-nums; }
+
+.concept { display:grid; gap:var(--s4); }
+.concept h3 { font-size:var(--t-h3); }
+.concept .verdict { font-size:var(--t-small); color:var(--ink-2); max-width:52ch; }
+.tag { display:inline-flex; align-items:center; gap:var(--s2); font-size:var(--t-caption); border-radius:var(--r-sm); padding:2px var(--s2); background:var(--accent-tint); color:var(--accent); }
+.tag--off { background:var(--surface-sunk); color:var(--ink-3); }
+
+.homescreen { background:var(--surface-sunk); border:1px solid var(--line); border-radius:var(--r-lg); padding:var(--s5); display:grid; grid-template-columns:repeat(4,1fr); gap:var(--s4) var(--s3); max-width:340px; }
+.homescreen figure { margin:0; display:grid; gap:6px; justify-items:center; }
+.homescreen figcaption { font-size:10px; color:var(--ink-2); }
+.homescreen .fake { width:56px; height:56px; border-radius:22.37%; background:var(--line); }
+
+.voice { display:grid; grid-template-columns:1fr 1fr; border:1px solid var(--line); border-radius:var(--r-md); overflow:hidden; }
+.voice > div { padding:var(--s3) var(--s4); border-bottom:1px solid var(--line); font-size:var(--t-small); }
+.voice > div:nth-child(odd) { border-right:1px solid var(--line); }
+.voice .no { color:var(--ink-3); text-decoration:line-through; text-decoration-color:var(--line-strong); }
+.voice__h { font-weight:500; background:var(--surface-sunk); color:var(--ink-2)!important; text-decoration:none!important; }
+
+.rule { display:grid; grid-template-columns:22px 1fr; gap:var(--s2) var(--s3); font-size:var(--t-small); }
+.rule dt { color:var(--ink-3); }
+.rule dd { margin:0; color:var(--ink-2); }
+.rule dd b { color:var(--ink); font-weight:500; }
+
+footer { margin-top:var(--s9); padding:var(--s6) 0 var(--s8); border-top:1px solid var(--line); color:var(--ink-3); font-size:var(--t-small); }
+@media (prefers-reduced-motion:reduce){ *{transition-duration:.01ms!important} }
+</style>
+</head>
+<body>
+
+<!-- ============ SVG DEFINITIONS ============ -->
+<svg width="0" height="0" style="position:absolute" aria-hidden="true">
+  <defs>
+    <!-- full "bro" wordmark, local coords: x 0–360, y -38–100, baseline y=100 -->
+    <g id="mark-bro" fill="none" stroke="currentColor" stroke-width="24" stroke-linecap="round">
+      <path d="M12,-26 L12,88"/>
+      <circle cx="50" cy="50" r="38"/>
+      <path d="M132,88 L132,34 C132,16 146,12 166,12"/>
+      <circle cx="260" cy="50" r="38"/>
+    </g>
+    <circle id="mark-dot" cx="348" cy="88" r="12"/>
+
+    <!-- "b" monogram, local coords: x 0–100, y -38–100 -->
+    <g id="mark-b" fill="none" stroke="currentColor" stroke-width="24" stroke-linecap="round">
+      <path d="M12,-26 L12,88"/>
+      <circle cx="50" cy="50" r="38"/>
+    </g>
+    <circle id="mark-b-dot" cx="138" cy="88" r="12"/>
+  </defs>
+</svg>
+
+<div class="topbar">
+  <div class="topbar__in">
+    <div class="wordmark">bro. <span>identity</span></div>
+    <div class="swatchrow accents" role="group" aria-label="Accent colour"></div>
+    <button class="themetoggle" id="themeBtn" aria-pressed="false">Dark</button>
+  </div>
+</div>
+
+<div class="wrap">
+
+  <!-- ============ ANSWERS ============ -->
+  <section style="padding-top:var(--s8)">
+    <h1 style="font-size:var(--t-h1); max-width:20ch">The full stop is the accent.</h1>
+    <p class="lede" style="margin-top:var(--s4)">
+      Lowercase: yes, without hesitation. The full stop: yes, but only because it can
+      do a job no other character can — it is the one mark that carries the colour the
+      user chose. Punctuation as a decorative flourish would be a tic. Punctuation as
+      the hook for the personalisation system is an idea.
+    </p>
+
+    <div class="iconrow" style="margin-top:var(--s7); align-items:center">
+      <figure>
+        <svg class="icon" width="200" height="200" viewBox="0 0 1024 1024" role="img" aria-label="bro app icon">
+          <rect width="1024" height="1024" rx="0" fill="var(--surface)"/>
+          <g transform="translate(89,439) scale(2.35)">
+            <use href="#mark-bro" style="color:var(--ink)"/>
+            <use href="#mark-dot" fill="var(--accent)"/>
+          </g>
+        </svg>
+        <figcaption>1024px</figcaption>
+      </figure>
+      <figure>
+        <svg class="icon" width="120" height="120" viewBox="0 0 1024 1024" aria-hidden="true">
+          <rect width="1024" height="1024" fill="var(--surface)"/>
+          <g transform="translate(89,439) scale(2.35)">
+            <use href="#mark-bro" style="color:var(--ink)"/>
+            <use href="#mark-dot" fill="var(--accent)"/>
+          </g>
+        </svg>
+        <figcaption>120px</figcaption>
+      </figure>
+      <figure>
+        <svg class="icon" width="60" height="60" viewBox="0 0 1024 1024" aria-hidden="true">
+          <rect width="1024" height="1024" fill="var(--surface)"/>
+          <g transform="translate(89,439) scale(2.35)">
+            <use href="#mark-bro" style="color:var(--ink)"/>
+            <use href="#mark-dot" fill="var(--accent)"/>
+          </g>
+        </svg>
+        <figcaption>60px</figcaption>
+      </figure>
+      <figure>
+        <svg class="icon" width="40" height="40" viewBox="0 0 1024 1024" aria-hidden="true">
+          <rect width="1024" height="1024" fill="var(--surface)"/>
+          <g transform="translate(89,439) scale(2.35)">
+            <use href="#mark-bro" style="color:var(--ink)"/>
+            <use href="#mark-dot" fill="var(--accent)"/>
+          </g>
+        </svg>
+        <figcaption>40px</figcaption>
+      </figure>
+      <figure>
+        <svg class="icon" width="28" height="28" viewBox="0 0 1024 1024" aria-hidden="true">
+          <rect width="1024" height="1024" fill="var(--surface)"/>
+          <g transform="translate(89,439) scale(2.35)">
+            <use href="#mark-bro" style="color:var(--ink)"/>
+            <use href="#mark-dot" fill="var(--accent)"/>
+          </g>
+        </svg>
+        <figcaption>28px</figcaption>
+      </figure>
+    </div>
+    <p class="note" style="margin-top:var(--s4)">
+      Change the accent in the top bar. The letterforms are drawn from the same geometry
+      as the interface — 24-unit strokes, circular bowls, round caps — so the mark is
+      built rather than typeset, and it holds at 28px where a set typeface would fill in.
+    </p>
+  </section>
+
+  <!-- ============ THE TWO QUESTIONS ============ -->
+  <section>
+    <div class="sec-head"><h2>Your two questions</h2><p>Answered plainly</p></div>
+    <div class="grid2">
+      <div>
+        <h3 style="font-size:var(--t-h3); margin-bottom:var(--s3)">Lowercase</h3>
+        <p class="note">
+          Yes. <b>BRO</b> in capitals is a shout, and it puts you in the supplement aisle
+          next to the pre-workout tubs. The entire premise of this product is a level
+          voice — an app that describes rather than motivates. Lowercase is that voice
+          rendered as a letterform. It also reads the way the word is actually used
+          between men: quietly, in a text message, at eleven at night.
+        </p>
+        <p class="note" style="margin-top:var(--s3)">
+          Hold it in lowercase everywhere, including at the start of a sentence and in the
+          App Store listing. A name that switches case depending on position isn't a name,
+          it's a suggestion.
+        </p>
+      </div>
+      <div>
+        <h3 style="font-size:var(--t-h3); margin-bottom:var(--s3)">The full stop</h3>
+        <p class="note">
+          Yes in the logotype, no in the name. A trailing full stop is a common startup
+          tic and on its own it means nothing. Here it earns its place by becoming the
+          accent — the single element that takes the user's chosen hue. The mark is
+          otherwise entirely monochrome, so the dot is the whole of the colour, and a
+          person who picks brass sees their own app icon.
+        </p>
+        <p class="note" style="margin-top:var(--s3)">
+          But register the product as <b>bro</b>, unpunctuated. Store search, URLs, support
+          emails and legal filings all handle punctuation badly, and you don't want people
+          typing a full stop to find you. The dot is a graphic device, not part of the name.
+        </p>
+      </div>
+    </div>
+
+    <div class="voice" style="margin-top:var(--s6)">
+      <div class="voice__h">Set it like this</div>
+      <div class="voice__h">Not like this</div>
+      <div>bro</div>
+      <div class="no">Bro / BRO / bRo</div>
+      <div>bro. <span style="color:var(--ink-3)">(logotype and icon only)</span></div>
+      <div class="no">bro. <span style="color:var(--ink-3)">(in body copy and legal text)</span></div>
+      <div>Open bro to log today.</div>
+      <div class="no">Open Bro. to log today.</div>
+      <div>bro — daily health check-in <span style="color:var(--ink-3)">(store subtitle)</span></div>
+      <div class="no">BRO: Ultimate Men's Health Tracker</div>
+    </div>
+  </section>
+
+  <!-- ============ CONCEPTS ============ -->
+  <section>
+    <div class="sec-head"><h2>Three marks</h2><p>One recommendation</p></div>
+
+    <div class="grid2" style="gap:var(--s8) var(--s7)">
+
+      <div class="concept">
+        <div>
+          <span class="tag">Recommended</span>
+          <h3 style="margin-top:var(--s2)">A — full wordmark</h3>
+        </div>
+        <div class="iconrow">
+          <svg class="icon" width="132" height="132" viewBox="0 0 1024 1024" role="img" aria-label="Concept A">
+            <rect width="1024" height="1024" fill="var(--surface)"/>
+            <g transform="translate(89,439) scale(2.35)">
+              <use href="#mark-bro" style="color:var(--ink)"/><use href="#mark-dot" fill="var(--accent)"/>
+            </g>
+          </svg>
+          <svg class="icon" width="44" height="44" viewBox="0 0 1024 1024" aria-hidden="true">
+            <rect width="1024" height="1024" fill="var(--surface)"/>
+            <g transform="translate(89,439) scale(2.35)">
+              <use href="#mark-bro" style="color:var(--ink)"/><use href="#mark-dot" fill="var(--accent)"/>
+            </g>
+          </svg>
+        </div>
+        <p class="verdict">
+          Three short letters survive the shrink, so there's no reason to abstract the
+          name away. The dot sits on the baseline at the far right, which is exactly
+          where the eye finishes — the colour is the last thing you read.
+        </p>
+      </div>
+
+      <div class="concept">
+        <div>
+          <span class="tag tag--off">Secondary</span>
+          <h3 style="margin-top:var(--s2)">B — b. monogram</h3>
+        </div>
+        <div class="iconrow">
+          <svg class="icon" width="132" height="132" viewBox="0 0 1024 1024" role="img" aria-label="Concept B">
+            <rect width="1024" height="1024" fill="var(--surface)"/>
+            <g transform="translate(222,392) scale(3.87)">
+              <use href="#mark-b" style="color:var(--ink)"/><use href="#mark-b-dot" fill="var(--accent)"/>
+            </g>
+          </svg>
+          <svg class="icon" width="44" height="44" viewBox="0 0 1024 1024" aria-hidden="true">
+            <rect width="1024" height="1024" fill="var(--surface)"/>
+            <g transform="translate(222,392) scale(3.87)">
+              <use href="#mark-b" style="color:var(--ink)"/><use href="#mark-b-dot" fill="var(--accent)"/>
+            </g>
+          </svg>
+        </div>
+        <p class="verdict">
+          Bigger and calmer, but it gives up the name, and "b." belongs to nobody in
+          particular. Keep it for the favicon, the watch complication, and the
+          notification glyph where the canvas is round and tiny.
+        </p>
+      </div>
+
+      <div class="concept">
+        <div>
+          <span class="tag tag--off">Marketing only</span>
+          <h3 style="margin-top:var(--s2)">C — the dot as a marker</h3>
+        </div>
+        <div class="panel" style="padding:var(--s6) var(--s5)">
+          <svg width="100%" viewBox="0 0 400 252" style="max-width:400px; height:auto; display:block; margin:0 auto" role="img" aria-label="Concept C">
+            <g transform="translate(20,60)">
+              <use href="#mark-bro" style="color:var(--ink)"/>
+            </g>
+            <rect x="256" y="204" width="88" height="24" fill="var(--accent)" opacity=".07"/>
+            <g stroke="var(--line-strong)" stroke-width="1">
+              <line x1="20" y1="228" x2="380" y2="228"/>
+              <line x1="20"  y1="221" x2="20"  y2="228"/>
+              <line x1="65"  y1="221" x2="65"  y2="228"/>
+              <line x1="110" y1="221" x2="110" y2="228"/>
+              <line x1="155" y1="221" x2="155" y2="228"/>
+              <line x1="200" y1="221" x2="200" y2="228"/>
+              <line x1="245" y1="221" x2="245" y2="228"/>
+              <line x1="290" y1="221" x2="290" y2="228"/>
+              <line x1="335" y1="221" x2="335" y2="228"/>
+              <line x1="380" y1="221" x2="380" y2="228"/>
+            </g>
+            <g stroke="var(--accent)" stroke-width="1.5">
+              <line x1="256" y1="204" x2="256" y2="228"/>
+              <line x1="344" y1="204" x2="344" y2="228"/>
+            </g>
+            <circle cx="300" cy="216" r="12" fill="var(--accent)"/>
+          </svg>
+        </div>
+        <p class="verdict">
+          The full stop drops off the baseline and becomes the gauge marker from the
+          product, sitting inside its band. It says what the app does in one move. Too
+          fine for an icon — reserve it for the launch screen, the website header, and
+          the App Store hero.
+        </p>
+      </div>
+
+      <div class="concept">
+        <div>
+          <span class="tag tag--off">Required variants</span>
+          <h3 style="margin-top:var(--s2)">Monochrome</h3>
+        </div>
+        <div class="iconrow">
+          <figure>
+            <svg class="icon" width="96" height="96" viewBox="0 0 1024 1024" role="img" aria-label="Dark icon">
+              <rect width="1024" height="1024" fill="#191C1E"/>
+              <g transform="translate(89,439) scale(2.35)">
+                <use href="#mark-bro" style="color:#E4E5E1"/><use href="#mark-dot" fill="var(--accent)"/>
+              </g>
+            </svg>
+            <figcaption>Dark</figcaption>
+          </figure>
+          <figure>
+            <svg class="icon" width="96" height="96" viewBox="0 0 1024 1024" role="img" aria-label="Tinted icon">
+              <rect width="1024" height="1024" fill="#141719"/>
+              <g transform="translate(89,439) scale(2.35)">
+                <use href="#mark-bro" style="color:#9AA0A3"/><use href="#mark-dot" fill="#E4E5E1"/>
+              </g>
+            </svg>
+            <figcaption>Tinted</figcaption>
+          </figure>
+          <figure>
+            <svg width="96" height="96" viewBox="0 0 1024 1024" role="img" aria-label="Notification glyph">
+              <circle cx="512" cy="512" r="512" fill="var(--ink)"/>
+              <g transform="translate(222,392) scale(3.87)">
+                <use href="#mark-b" style="color:var(--canvas)"/><use href="#mark-b-dot" fill="var(--canvas)"/>
+              </g>
+            </svg>
+            <figcaption>Glyph</figcaption>
+          </figure>
+        </div>
+        <p class="verdict">
+          iOS tinted mode and Android monochrome strip your colour, so the dot must still
+          read as a distinct element by value alone — it sits lighter than the letters,
+          not the same weight.
+        </p>
+      </div>
+
+    </div>
+  </section>
+
+  <!-- ============ IN CONTEXT ============ -->
+  <section>
+    <div class="sec-head"><h2>On a home screen</h2><p>Where every icon competes</p></div>
+    <p class="note" style="margin-bottom:var(--s5)">
+      Almost every health app on a phone is a saturated gradient with a white glyph. A
+      bone-grey square with three black letters is the only quiet thing on the screen,
+      which is how it gets noticed. This is the one place where being muted is a
+      competitive act rather than a preference.
+    </p>
+    <div class="homescreen">
+      <figure>
+        <svg width="56" height="56" viewBox="0 0 1024 1024" class="icon" role="img" aria-label="bro">
+          <rect width="1024" height="1024" fill="var(--surface)"/>
+          <g transform="translate(89,439) scale(2.35)">
+            <use href="#mark-bro" style="color:var(--ink)"/><use href="#mark-dot" fill="var(--accent)"/>
+          </g>
+        </svg>
+        <figcaption>bro</figcaption>
+      </figure>
+      <figure><div class="fake" style="background:linear-gradient(140deg,#3ecf6a,#0a9d4a)"></div><figcaption>Fitness</figcaption></figure>
+      <figure><div class="fake" style="background:linear-gradient(140deg,#ff5f6d,#ffc371)"></div><figcaption>Calories</figcaption></figure>
+      <figure><div class="fake" style="background:linear-gradient(140deg,#7b5cff,#3b2fd4)"></div><figcaption>Sleep</figcaption></figure>
+      <figure><div class="fake" style="background:linear-gradient(140deg,#00d4ff,#0077ff)"></div><figcaption>Mind</figcaption></figure>
+      <figure><div class="fake" style="background:#111"></div><figcaption>Strain</figcaption></figure>
+      <figure><div class="fake" style="background:linear-gradient(140deg,#ffb300,#ff6f00)"></div><figcaption>Steps</figcaption></figure>
+      <figure><div class="fake" style="background:linear-gradient(140deg,#f857a6,#ff5858)"></div><figcaption>Habits</figcaption></figure>
+    </div>
+  </section>
+
+  <!-- ============ CONSTRUCTION ============ -->
+  <section>
+    <div class="sec-head"><h2>Construction and use</h2><p>So it stays consistent</p></div>
+    <div class="grid2">
+      <dl class="rule">
+        <dt>1</dt><dd><b>Stroke 24, x-height 100, ascender 138.</b> Bowls are true circles; the b's bowl meets the stem edge exactly at the left margin.</dd>
+        <dt>2</dt><dd><b>Round caps.</b> The only soft thing in the system. It keeps three heavy letters from reading as a warning label.</dd>
+        <dt>3</dt><dd><b>Clear space</b> equals one bowl width — 100 units — on all four sides. Nothing sits inside it.</dd>
+        <dt>4</dt><dd><b>The mark occupies 83%</b> of the icon canvas width, optically centred. Draw on a plain square; let the OS apply the corner shape.</dd>
+      </dl>
+      <dl class="rule">
+        <dt>No</dt><dd>Never <b>recolour the letters</b>. The accent lives in the dot and nowhere else in the mark.</dd>
+        <dt>No</dt><dd>Never set the name in <b>Archivo as-is</b> in place of the drawn mark — the spacing is bespoke.</dd>
+        <dt>No</dt><dd>Never add a <b>tagline inside the icon</b>, an outline, a shadow, or a gradient.</dd>
+        <dt>No</dt><dd>Never use the <b>alert red</b> as an accent, in the mark or anywhere else.</dd>
+      </dl>
+    </div>
+  </section>
+
+  <!-- ============ RISK ============ -->
+  <section>
+    <div class="sec-head"><h2>Worth saying out loud</h2><p>About the name itself</p></div>
+    <div class="grid2">
+      <div>
+        <p class="note">
+          There is a real tension between calling it <b>bro</b> and building an interface
+          whose first principle is "a quiet instrument, not a coach". That tension can be
+          the best thing about the product — the name is how a man gets his mate to
+          download it, the interface is what keeps him using it after week three. But it
+          only works if the name is the <em>only</em> loud thing. The moment the copy
+          starts saying "let's go" the joke collapses and it becomes the app it was
+          parodying.
+        </p>
+      </div>
+      <div>
+        <p class="note">
+          Two practical checks before you commit. <b>Trademark:</b> "bro" is a dictionary
+          word, which makes a registration hard to defend and may already be claimed in
+          your class — worth a search before the icon goes anywhere near a store.
+          <b>Audience:</b> the name reads very differently at 24 and at 52. If you want
+          men in their forties and fifties, put it in front of them before you spend
+          another week on it.
+        </p>
+      </div>
+    </div>
+  </section>
+
+  <footer>Three marks, size tests, monochrome variants and construction rules for bro. Accent switcher above; the dot follows the user's chosen hue.</footer>
+</div>
+
+<script>
+  const root = document.documentElement;
+  const btn = document.getElementById('themeBtn');
+  btn.addEventListener('click', () => {
+    const dark = root.getAttribute('data-theme') === 'dark';
+    root.setAttribute('data-theme', dark ? 'light' : 'dark');
+    btn.textContent = dark ? 'Dark' : 'Light';
+    btn.setAttribute('aria-pressed', String(!dark));
+  });
+
+  const PRESETS = [
+    { name:'Harbour', h:235, c:0.055 }, { name:'Moss', h:145, c:0.055 },
+    { name:'Brass', h:85, c:0.055 },    { name:'Clay', h:40, c:0.055 },
+    { name:'Plum', h:318, c:0.055 },    { name:'Teal', h:195, c:0.055 },
+    { name:'Graphite', h:250, c:0.006 }
+  ];
+  document.querySelectorAll('.accents').forEach(row => {
+    PRESETS.forEach(p => {
+      const b = document.createElement('button');
+      b.style.setProperty('--sh', p.h); b.style.setProperty('--sc', p.c);
+      b.setAttribute('aria-pressed', String(p.h === 235 && p.c === 0.055));
+      b.setAttribute('aria-label', p.name); b.title = p.name;
+      b.addEventListener('click', () => {
+        root.style.setProperty('--accent-h', p.h);
+        root.style.setProperty('--accent-c', p.c);
+        row.querySelectorAll('button').forEach(x => x.setAttribute('aria-pressed','false'));
+        b.setAttribute('aria-pressed','true');
+      });
+      row.appendChild(b);
+    });
+  });
+</script>
+</body>
+</html>

@@ -1,0 +1,1162 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Baseline — design system</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Archivo:wght@400;500;600;700&family=Source+Serif+4:opsz,wght@8..60,400;8..60,500&display=swap" rel="stylesheet">
+<style>
+/* ============================================================
+   TOKENS
+   ============================================================ */
+:root {
+  /* --- Light: bone, slate and worn brass --- */
+  --canvas:      #E9E9E4;
+  --surface:     #F5F5F1;
+  --surface-sunk:#E1E2DC;
+  --line:        #D3D5CD;
+  --line-strong: #B9BCB2;
+
+  --ink:         #23282B;
+  --ink-2:       #5C6469;
+  --ink-3:       #8B9297;
+  --ink-invert:  #F5F5F1;
+
+  /* Domain colours — one per thing the app tracks */
+  --mind:        #4E6473;
+  --body:        #667F5B;
+  --sleep:       #6F6A85;
+  --load:        #A0803F;
+  --alert:       #93564A;
+
+  /* Tints for fills behind text */
+  --mind-tint:   #DDE4E8;
+  --body-tint:   #E0E6DC;
+  --sleep-tint:  #E2E0E8;
+  --load-tint:   #EBE4D3;
+  --alert-tint:  #EEDFDB;
+
+  /* --- Accent: the one colour the user owns ---
+     Only hue and a clamped chroma are variable. Lightness is fixed by the
+     system, so no choice can break contrast or leave the muted range. --- */
+  --accent-h: 235;
+  --accent-c: 0.055;
+
+  --accent:        oklch(48% var(--accent-c) var(--accent-h));
+  --accent-strong: oklch(41% var(--accent-c) var(--accent-h));
+  --accent-tint:   oklch(92% calc(var(--accent-c) * 0.42) var(--accent-h));
+  --accent-line:   oklch(78% calc(var(--accent-c) * 0.7) var(--accent-h));
+  --on-accent:     oklch(97% calc(var(--accent-c) * 0.15) var(--accent-h));
+
+  --focus: var(--accent);
+
+  /* Type */
+  --sans: 'Archivo', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+  --serif: 'Source Serif 4', Georgia, serif;
+
+  --t-caption: 0.75rem;   /* 12 — units, axis labels */
+  --t-small:   0.8125rem; /* 13 — meta, helper */
+  --t-body:    0.9375rem; /* 15 — interface default */
+  --t-lead:    1.0625rem; /* 17 — reflection text */
+  --t-h3:      1.3125rem; /* 21 */
+  --t-h2:      1.6875rem; /* 27 */
+  --t-h1:      2.5rem;    /* 40 */
+  --t-metric:  3.5rem;    /* 56 — the one big number per screen */
+
+  /* Space — 4px base */
+  --s1: 4px;  --s2: 8px;  --s3: 12px; --s4: 16px;
+  --s5: 24px; --s6: 32px; --s7: 48px; --s8: 64px; --s9: 96px;
+
+  /* Radius — restrained, and hierarchical */
+  --r-sm: 3px;   /* chips, ticks, inputs */
+  --r-md: 6px;   /* buttons, fields */
+  --r-lg: 10px;  /* panels */
+  --r-pill: 999px;
+
+  --dur: 160ms;
+  --ease: cubic-bezier(.2, .6, .3, 1);
+}
+
+[data-theme="dark"] {
+  --canvas:      #191C1E;
+  --surface:     #212528;
+  --surface-sunk:#141719;
+  --line:        #313739;
+  --line-strong: #454C4F;
+
+  --ink:         #E4E5E1;
+  --ink-2:       #A0A7AA;
+  --ink-3:       #767D81;
+  --ink-invert:  #191C1E;
+
+  --mind:        #86A3B5;
+  --body:        #98AF8B;
+  --sleep:       #A29BBB;
+  --load:        #C7A96C;
+  --alert:       #C08375;
+
+  --mind-tint:   #26333A;
+  --body-tint:   #2A332A;
+  --sleep-tint:  #2E2C39;
+  --load-tint:   #332E22;
+  --alert-tint:  #382723;
+
+  --accent:        oklch(78% calc(var(--accent-c) * 1.15) var(--accent-h));
+  --accent-strong: oklch(85% calc(var(--accent-c) * 1.15) var(--accent-h));
+  --accent-tint:   oklch(30% calc(var(--accent-c) * 0.75) var(--accent-h));
+  --accent-line:   oklch(45% calc(var(--accent-c) * 0.9) var(--accent-h));
+  --on-accent:     oklch(18% calc(var(--accent-c) * 0.3) var(--accent-h));
+
+  --focus: var(--accent);
+}
+
+/* Fallback for engines without oklch() — a fixed harbour blue. */
+@supports not (color: oklch(50% 0.05 235)) {
+  :root { --accent: #4E6473; --accent-strong: #3D5060; --accent-tint: #DDE4E8; --accent-line: #A8BAC4; --on-accent: #F5F5F1; }
+  [data-theme="dark"] { --accent: #86A3B5; --accent-strong: #A2BACA; --accent-tint: #26333A; --accent-line: #46596640; --on-accent: #191C1E; }
+  .accentpicker__slider { display: none; }
+}
+
+/* ============================================================
+   BASE
+   ============================================================ */
+* { box-sizing: border-box; }
+html { -webkit-text-size-adjust: 100%; }
+body {
+  margin: 0;
+  background: var(--canvas);
+  color: var(--ink);
+  font-family: var(--sans);
+  font-size: var(--t-body);
+  line-height: 1.55;
+  font-feature-settings: "ss01";
+  -webkit-font-smoothing: antialiased;
+}
+h1, h2, h3, h4 { margin: 0; font-weight: 600; letter-spacing: -0.015em; line-height: 1.18; }
+p { margin: 0; }
+a { color: inherit; }
+button { font: inherit; color: inherit; }
+:focus-visible {
+  outline: 2px solid var(--focus);
+  outline-offset: 2px;
+  border-radius: var(--r-sm);
+}
+.num { font-variant-numeric: tabular-nums; }
+
+/* ============================================================
+   PAGE SHELL
+   ============================================================ */
+.wrap { max-width: 1080px; margin: 0 auto; padding: 0 var(--s5); }
+
+.topbar {
+  position: sticky; top: 0; z-index: 20;
+  background: color-mix(in srgb, var(--canvas) 88%, transparent);
+  backdrop-filter: blur(8px);
+  border-bottom: 1px solid var(--line);
+}
+.topbar__in {
+  max-width: 1080px; margin: 0 auto; padding: var(--s3) var(--s5);
+  display: flex; align-items: center; gap: var(--s4);
+}
+.wordmark { font-weight: 700; letter-spacing: -0.03em; font-size: var(--t-lead); }
+.wordmark span { color: var(--ink-3); font-weight: 400; }
+.topbar__nav { margin-left: auto; display: flex; gap: var(--s4); font-size: var(--t-small); }
+.topbar__nav a { color: var(--ink-2); text-decoration: none; }
+.topbar__nav a:hover { color: var(--ink); }
+@media (max-width: 720px) { .topbar__nav, .topbar .swatchrow--mini { display: none; } }
+.topbar .swatchrow--mini { margin-left: auto; }
+@media (min-width: 721px) { .topbar .swatchrow--mini { margin-left: 0; } }
+
+.themetoggle {
+  border: 1px solid var(--line-strong); background: transparent;
+  border-radius: var(--r-pill); padding: 5px var(--s3);
+  font-size: var(--t-small); cursor: pointer; color: var(--ink-2);
+}
+.themetoggle:hover { color: var(--ink); border-color: var(--ink-3); }
+
+section { padding: var(--s9) 0 0; }
+.sec-head { display: flex; align-items: baseline; gap: var(--s3); margin-bottom: var(--s5); padding-bottom: var(--s3); border-bottom: 1px solid var(--line); }
+.sec-head h2 { font-size: var(--t-h2); }
+.sec-head p { color: var(--ink-3); font-size: var(--t-small); margin-left: auto; }
+.note { color: var(--ink-2); font-size: var(--t-small); max-width: 62ch; }
+.stack { display: grid; gap: var(--s5); }
+
+/* ============================================================
+   HERO — leads with the signature element
+   ============================================================ */
+.hero { padding: var(--s9) 0 var(--s8); }
+.hero__lede {
+  font-family: var(--serif);
+  font-size: var(--t-lead); line-height: 1.6; color: var(--ink-2);
+  max-width: 52ch; margin-top: var(--s4);
+}
+.hero h1 { font-size: var(--t-h1); max-width: 18ch; }
+.hero__panel {
+  margin-top: var(--s7);
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: var(--r-lg);
+  padding: var(--s6);
+}
+.hero__grid { display: grid; grid-template-columns: 1fr 1fr; gap: var(--s7); align-items: end; }
+@media (max-width: 760px) { .hero__grid { grid-template-columns: 1fr; gap: var(--s5); } }
+
+/* ============================================================
+   SIGNATURE: THE BASELINE GAUGE
+   A reading is never good or bad. It sits inside or outside
+   the band that is normal for you.
+   ============================================================ */
+.gauge { --gc: var(--mind); display: block; }
+.gauge--body  { --gc: var(--body); }
+.gauge--sleep { --gc: var(--sleep); }
+.gauge--load  { --gc: var(--load); }
+.gauge--alert { --gc: var(--alert); }
+
+.gauge__value { display: flex; align-items: baseline; gap: var(--s2); }
+.gauge__value b {
+  font-size: var(--t-metric); font-weight: 600; letter-spacing: -0.035em;
+  line-height: 1; font-variant-numeric: tabular-nums;
+}
+.gauge__unit { font-size: var(--t-body); color: var(--ink-3); }
+.gauge__label { font-size: var(--t-small); color: var(--ink-2); margin-bottom: var(--s3); }
+
+.gauge__rail {
+  position: relative; height: 26px; margin-top: var(--s4);
+  border-bottom: 1px solid var(--line-strong);
+}
+.gauge__ticks {
+  position: absolute; inset: auto 0 0 0; height: 7px;
+  background-image: repeating-linear-gradient(to right, var(--line-strong) 0 1px, transparent 1px 10%);
+  opacity: .8;
+}
+.gauge__band {
+  position: absolute; bottom: 0; height: 100%;
+  background: var(--gc); opacity: .16;
+  border-left: 1px solid var(--gc); border-right: 1px solid var(--gc);
+}
+.gauge__marker {
+  position: absolute; bottom: -1px; width: 2px; height: 26px;
+  background: var(--gc); transform: translateX(-1px);
+}
+.gauge__marker::after {
+  content: ""; position: absolute; top: -5px; left: 50%;
+  width: 9px; height: 9px; background: var(--gc);
+  transform: translateX(-50%) rotate(45deg);
+}
+.gauge__scale {
+  display: flex; justify-content: space-between;
+  font-size: var(--t-caption); color: var(--ink-3);
+  font-variant-numeric: tabular-nums; margin-top: var(--s2);
+}
+.gauge__read { font-size: var(--t-small); color: var(--ink-2); margin-top: var(--s3); }
+.gauge__read em { font-style: normal; color: var(--gc); font-weight: 500; }
+
+.gauge--sm .gauge__value b { font-size: var(--t-h2); }
+.gauge--sm .gauge__rail { height: 16px; margin-top: var(--s3); }
+.gauge--sm .gauge__marker { height: 16px; }
+
+/* ============================================================
+   COLOUR
+   ============================================================ */
+.swatches { display: grid; grid-template-columns: repeat(5, 1fr); gap: var(--s3); }
+@media (max-width: 760px) { .swatches { grid-template-columns: repeat(2, 1fr); } }
+.sw { border: 1px solid var(--line); border-radius: var(--r-md); overflow: hidden; background: var(--surface); }
+.sw__chip { height: 68px; }
+.sw__meta { padding: var(--s3); }
+.sw__meta strong { display: block; font-size: var(--t-small); font-weight: 500; }
+.sw__meta span { font-size: var(--t-caption); color: var(--ink-3); font-variant-numeric: tabular-nums; }
+.sw__use { font-size: var(--t-caption); color: var(--ink-2); display: block; margin-top: 2px; }
+
+.ramp { display: grid; grid-template-columns: repeat(6, 1fr); gap: 0; border: 1px solid var(--line); border-radius: var(--r-md); overflow: hidden; }
+@media (max-width: 760px) { .ramp { grid-template-columns: repeat(3, 1fr); } }
+.ramp div { padding: var(--s4) var(--s3); font-size: var(--t-caption); }
+
+/* ============================================================
+   TYPE SPECIMEN
+   ============================================================ */
+.spec { display: grid; grid-template-columns: 128px 1fr; gap: var(--s4) var(--s5); align-items: baseline; }
+@media (max-width: 620px) { .spec { grid-template-columns: 1fr; gap: var(--s1) 0; } }
+.spec dt { font-size: var(--t-caption); color: var(--ink-3); font-variant-numeric: tabular-nums; }
+.spec dd { margin: 0; }
+.spec dd + dt { border-top: 1px solid var(--line); padding-top: var(--s4); }
+@media (min-width: 621px) { .spec dt + dd { border-top: 0; } }
+
+/* ============================================================
+   PANELS + ROWS
+   ============================================================ */
+.panel { background: var(--surface); border: 1px solid var(--line); border-radius: var(--r-lg); }
+.panel__head { padding: var(--s4) var(--s4) var(--s3); display: flex; align-items: baseline; gap: var(--s3); }
+.panel__head h4 { font-size: var(--t-body); font-weight: 600; }
+.panel__head time { margin-left: auto; font-size: var(--t-caption); color: var(--ink-3); }
+.panel__body { padding: var(--s4); }
+
+.rows { border-top: 1px solid var(--line); }
+.row {
+  display: flex; align-items: center; gap: var(--s3);
+  padding: var(--s3) var(--s4);
+  border-bottom: 1px solid var(--line);
+  background: none; border-left: 0; border-right: 0; border-top: 0;
+  width: 100%; text-align: left; cursor: pointer;
+}
+.row:last-child { border-bottom: 0; }
+.row:hover { background: var(--surface-sunk); }
+.row__dot { width: 3px; height: 22px; border-radius: var(--r-pill); background: var(--ink-3); flex: none; }
+.row__name { font-size: var(--t-body); }
+.row__meta { font-size: var(--t-small); color: var(--ink-3); }
+.row__val { margin-left: auto; font-variant-numeric: tabular-nums; font-size: var(--t-body); }
+.row__val span { color: var(--ink-3); font-size: var(--t-small); }
+
+/* ============================================================
+   BUTTONS
+   ============================================================ */
+.btn {
+  display: inline-flex; align-items: center; justify-content: center; gap: var(--s2);
+  border-radius: var(--r-md); padding: 10px var(--s4);
+  font-size: var(--t-body); font-weight: 500; cursor: pointer;
+  border: 1px solid transparent; background: transparent;
+  transition: background var(--dur) var(--ease), border-color var(--dur) var(--ease);
+}
+.btn--primary { background: var(--accent); color: var(--on-accent); }
+.btn--primary:hover { background: var(--accent-strong); }
+.btn--ink { background: var(--ink); color: var(--ink-invert); }
+.btn--ink:hover { background: color-mix(in srgb, var(--ink) 86%, var(--canvas)); }
+.btn--secondary { border-color: var(--line-strong); color: var(--ink); }
+.btn--secondary:hover { border-color: var(--ink-3); background: var(--surface); }
+.btn--quiet { color: var(--ink-2); padding-left: var(--s2); padding-right: var(--s2); }
+.btn--quiet:hover { color: var(--ink); }
+.btn--danger { border-color: var(--alert); color: var(--alert); }
+.btn--danger:hover { background: var(--alert-tint); }
+.btn:disabled { opacity: .4; cursor: not-allowed; }
+.btn--full { width: 100%; }
+
+/* ============================================================
+   FIELDS
+   ============================================================ */
+.field { display: grid; gap: var(--s2); max-width: 340px; }
+.field label { font-size: var(--t-small); color: var(--ink-2); }
+.field input, .field textarea, .field select {
+  font: inherit; color: var(--ink);
+  background: var(--surface); border: 1px solid var(--line-strong);
+  border-radius: var(--r-md); padding: 10px var(--s3); width: 100%;
+}
+.field textarea { font-family: var(--serif); font-size: var(--t-lead); line-height: 1.6; min-height: 96px; resize: vertical; }
+.field input:focus, .field textarea:focus { border-color: var(--focus); outline: none; box-shadow: 0 0 0 3px color-mix(in srgb, var(--focus) 18%, transparent); }
+.field .help { font-size: var(--t-caption); color: var(--ink-3); }
+.field--error input { border-color: var(--alert); }
+.field--error .help { color: var(--alert); }
+
+/* Segmented control */
+.seg { display: inline-flex; border: 1px solid var(--line-strong); border-radius: var(--r-md); overflow: hidden; }
+.seg button { padding: 7px var(--s4); font-size: var(--t-small); background: transparent; border: 0; border-right: 1px solid var(--line-strong); cursor: pointer; color: var(--ink-2); }
+.seg button:last-child { border-right: 0; }
+.seg button[aria-pressed="true"] { background: var(--accent); color: var(--on-accent); }
+
+/* Chips */
+.chips { display: flex; flex-wrap: wrap; gap: var(--s2); }
+.chip {
+  border: 1px solid var(--line-strong); border-radius: var(--r-pill);
+  padding: 5px var(--s3); font-size: var(--t-small); background: transparent; cursor: pointer; color: var(--ink-2);
+}
+.chip[aria-pressed="true"] { background: var(--accent-tint); border-color: var(--accent-line); color: var(--accent); }
+
+/* ============================================================
+   ACCENT PICKER
+   ============================================================ */
+.accentpicker { display: grid; gap: var(--s4); }
+.swatchrow { display: flex; flex-wrap: wrap; gap: var(--s3); }
+.swatchrow button {
+  width: 34px; height: 34px; border-radius: 50%; cursor: pointer; padding: 0;
+  border: 1px solid var(--line-strong);
+  background: oklch(48% var(--sc) var(--sh));
+  position: relative;
+}
+[data-theme="dark"] .swatchrow button { background: oklch(78% calc(var(--sc) * 1.15) var(--sh)); }
+.swatchrow button[aria-pressed="true"]::after {
+  content: ""; position: absolute; inset: -4px;
+  border: 1px solid var(--ink-3); border-radius: 50%;
+}
+.swatchrow--mini button { width: 18px; height: 18px; }
+.swatchrow--mini { gap: var(--s2); }
+
+.accentpicker__slider { display: grid; gap: var(--s2); max-width: 420px; }
+.accentpicker__slider input[type="range"] {
+  -webkit-appearance: none; appearance: none; width: 100%; height: 10px;
+  border-radius: var(--r-sm); border: 1px solid var(--line-strong);
+  background: linear-gradient(to right,
+    oklch(48% .055 0), oklch(48% .055 60), oklch(48% .055 120), oklch(48% .055 180),
+    oklch(48% .055 240), oklch(48% .055 300), oklch(48% .055 360));
+}
+[data-theme="dark"] .accentpicker__slider input[type="range"] {
+  background: linear-gradient(to right,
+    oklch(78% .063 0), oklch(78% .063 60), oklch(78% .063 120), oklch(78% .063 180),
+    oklch(78% .063 240), oklch(78% .063 300), oklch(78% .063 360));
+}
+.accentpicker__slider input[type="range"]::-webkit-slider-thumb {
+  -webkit-appearance: none; width: 16px; height: 20px; border-radius: var(--r-sm);
+  background: var(--surface); border: 1px solid var(--ink); cursor: grab;
+}
+.accentpicker__slider input[type="range"]::-moz-range-thumb {
+  width: 16px; height: 20px; border-radius: var(--r-sm);
+  background: var(--surface); border: 1px solid var(--ink); cursor: grab;
+}
+.accentpicker__read { font-size: var(--t-caption); color: var(--ink-3); font-variant-numeric: tabular-nums; }
+
+.rule { display: grid; grid-template-columns: 20px 1fr; gap: var(--s2) var(--s3); align-items: start; font-size: var(--t-small); }
+.rule dt { color: var(--ink-3); }
+.rule dd { margin: 0; color: var(--ink-2); }
+.rule dd b { color: var(--ink); font-weight: 500; }
+
+/* ============================================================
+   MOOD SCALE — height encodes value, colour only reinforces
+   ============================================================ */
+.mood { display: flex; align-items: flex-end; gap: var(--s2); }
+.mood button {
+  flex: 1; border: 1px solid var(--line-strong); border-bottom-width: 2px;
+  border-radius: var(--r-sm); background: transparent; cursor: pointer;
+  display: flex; flex-direction: column; justify-content: flex-end; align-items: center;
+  padding: var(--s2) 0 var(--s2);
+  color: var(--ink-3); font-size: var(--t-caption);
+  transition: background var(--dur) var(--ease);
+}
+.mood button:nth-child(1) { height: 52px; }
+.mood button:nth-child(2) { height: 66px; }
+.mood button:nth-child(3) { height: 80px; }
+.mood button:nth-child(4) { height: 94px; }
+.mood button:nth-child(5) { height: 108px; }
+.mood button:hover { background: var(--surface-sunk); }
+.mood button[aria-pressed="true"] { background: var(--accent-tint); border-color: var(--accent); color: var(--accent); }
+
+/* ============================================================
+   WEEK STRIP — 7 days, no streaks, no shaming
+   ============================================================ */
+.week { display: grid; grid-template-columns: repeat(7, 1fr); gap: var(--s2); }
+.week div { text-align: center; font-size: var(--t-caption); color: var(--ink-3); }
+.week .bar { height: 48px; border-radius: var(--r-sm); background: var(--surface-sunk); display: flex; align-items: flex-end; margin-bottom: var(--s1); }
+.week .bar i { display: block; width: 100%; background: var(--sleep); border-radius: var(--r-sm); }
+.week .bar--empty { border: 1px dashed var(--line-strong); background: transparent; }
+
+/* ============================================================
+   STATUS + EMPTY
+   ============================================================ */
+.status { display: inline-flex; align-items: center; gap: var(--s2); font-size: var(--t-small); border-radius: var(--r-sm); padding: 3px var(--s2); }
+.status i { width: 6px; height: 6px; border-radius: 50%; background: currentColor; flex: none; }
+.status--mind { background: var(--mind-tint); color: var(--mind); }
+.status--body { background: var(--body-tint); color: var(--body); }
+.status--load { background: var(--load-tint); color: var(--load); }
+.status--alert { background: var(--alert-tint); color: var(--alert); }
+[data-theme="dark"] .status { color: var(--ink); }
+[data-theme="dark"] .status i { opacity: .9; }
+
+.empty { border: 1px dashed var(--line-strong); border-radius: var(--r-lg); padding: var(--s6) var(--s5); text-align: center; }
+.empty h4 { font-size: var(--t-body); margin-bottom: var(--s1); }
+.empty p { color: var(--ink-2); font-size: var(--t-small); max-width: 34ch; margin: 0 auto var(--s4); }
+
+.callout { border-left: 2px solid var(--alert); background: var(--alert-tint); padding: var(--s3) var(--s4); border-radius: 0 var(--r-md) var(--r-md) 0; font-size: var(--t-small); }
+.callout strong { display: block; font-weight: 600; }
+
+/* ============================================================
+   PHONE MOCKS
+   ============================================================ */
+.mocks { display: grid; grid-template-columns: repeat(2, minmax(0, 340px)); gap: var(--s6); }
+@media (max-width: 760px) { .mocks { grid-template-columns: 1fr; } }
+.phone {
+  border: 1px solid var(--line-strong); border-radius: 22px; background: var(--canvas);
+  padding: var(--s4) var(--s4) 0; overflow: hidden; display: flex; flex-direction: column; min-height: 560px;
+}
+.phone__top { display: flex; align-items: baseline; gap: var(--s2); padding-bottom: var(--s4); }
+.phone__top h5 { margin: 0; font-size: var(--t-h3); font-weight: 600; letter-spacing: -0.02em; }
+.phone__top span { margin-left: auto; font-size: var(--t-caption); color: var(--ink-3); }
+.phone__body { display: grid; gap: var(--s4); flex: 1; align-content: start; }
+.tabbar {
+  display: grid; grid-template-columns: repeat(4, 1fr); gap: var(--s2);
+  margin: var(--s4) calc(var(--s4) * -1) 0; padding: var(--s3) var(--s4) var(--s4);
+  border-top: 1px solid var(--line); font-size: var(--t-caption); text-align: center; color: var(--ink-3);
+}
+.tabbar b { font-weight: 500; color: var(--accent); }
+.reflect { font-family: var(--serif); font-size: var(--t-lead); line-height: 1.6; }
+.reflect + .reflect__meta { font-size: var(--t-caption); color: var(--ink-3); margin-top: var(--s2); }
+
+/* ============================================================
+   PRINCIPLES + VOICE
+   ============================================================ */
+.pcols { display: grid; grid-template-columns: repeat(2, 1fr); gap: var(--s5) var(--s7); }
+@media (max-width: 760px) { .pcols { grid-template-columns: 1fr; } }
+.p h4 { font-size: var(--t-body); margin-bottom: var(--s1); }
+.p p { color: var(--ink-2); font-size: var(--t-small); max-width: 46ch; }
+
+.voice { display: grid; grid-template-columns: 1fr 1fr; gap: 0; border: 1px solid var(--line); border-radius: var(--r-md); overflow: hidden; }
+.voice > div { padding: var(--s3) var(--s4); border-bottom: 1px solid var(--line); font-size: var(--t-small); }
+.voice > div:nth-child(odd) { border-right: 1px solid var(--line); }
+.voice .yes { color: var(--ink); }
+.voice .no { color: var(--ink-3); text-decoration: line-through; text-decoration-color: var(--line-strong); }
+.voice__h { font-weight: 500; background: var(--surface-sunk); color: var(--ink-2) !important; text-decoration: none !important; }
+
+footer { margin-top: var(--s9); padding: var(--s6) 0 var(--s8); border-top: 1px solid var(--line); color: var(--ink-3); font-size: var(--t-small); }
+
+@media (prefers-reduced-motion: reduce) {
+  * { transition-duration: 0.01ms !important; animation-duration: 0.01ms !important; }
+}
+</style>
+</head>
+<body>
+
+<div class="topbar">
+  <div class="topbar__in">
+    <div class="wordmark">Baseline <span>design system</span></div>
+    <nav class="topbar__nav">
+      <a href="#colour">Colour</a>
+      <a href="#accent">Accent</a>
+      <a href="#type">Type</a>
+      <a href="#components">Components</a>
+      <a href="#screens">Screens</a>
+    </nav>
+    <div class="swatchrow swatchrow--mini accents" role="group" aria-label="Accent colour"></div>
+    <button class="themetoggle" id="themeBtn" aria-pressed="false">Dark</button>
+  </div>
+</div>
+
+<div class="wrap">
+
+  <!-- ===================== HERO ===================== -->
+  <header class="hero">
+    <h1>A quiet instrument, not a coach.</h1>
+    <p class="hero__lede">
+      Baseline is the design language for a health tracker built for men who
+      won't be shouted at. Every reading is shown against the range that is
+      normal for you — never against a target, a rival, or a streak.
+    </p>
+
+    <div class="hero__panel">
+      <div class="hero__grid">
+        <div class="gauge gauge--body">
+          <div class="gauge__label">Resting heart rate</div>
+          <div class="gauge__value"><b class="num">54</b><span class="gauge__unit">bpm</span></div>
+          <div class="gauge__rail">
+            <div class="gauge__ticks"></div>
+            <div class="gauge__band" style="left:30%; width:34%"></div>
+            <div class="gauge__marker" style="left:44%"></div>
+          </div>
+          <div class="gauge__scale"><span>44</span><span>72</span></div>
+          <p class="gauge__read">Inside your usual range of <em>50–60</em> for the last 90 days.</p>
+        </div>
+
+        <div class="gauge gauge--load">
+          <div class="gauge__label">Training load, 7 days</div>
+          <div class="gauge__value"><b class="num">412</b><span class="gauge__unit">units</span></div>
+          <div class="gauge__rail">
+            <div class="gauge__ticks"></div>
+            <div class="gauge__band" style="left:22%; width:40%"></div>
+            <div class="gauge__marker" style="left:78%"></div>
+          </div>
+          <div class="gauge__scale"><span>0</span><span>500</span></div>
+          <p class="gauge__read">Above your usual range. <em>Two hard days</em> back to back.</p>
+        </div>
+      </div>
+    </div>
+  </header>
+
+  <!-- ===================== PRINCIPLES ===================== -->
+  <section id="principles">
+    <div class="sec-head"><h2>Principles</h2><p>Six rules that settle most arguments</p></div>
+    <div class="pcols">
+      <div class="p">
+        <h4>Show the band, not the verdict</h4>
+        <p>Health data is only meaningful relative to a person's own history. The
+          gauge is the system's signature component and the default way to show any
+          number. Avoid grades, scores out of 100, and traffic lights.</p>
+      </div>
+      <div class="p">
+        <h4>One big number per screen</h4>
+        <p>At 56px, the metric type size is a scarce resource. If two things compete
+          for it, the screen is doing two jobs and should be two screens.</p>
+      </div>
+      <div class="p">
+        <h4>Colour names a domain, never a judgement</h4>
+        <p>Green means body, not good. Amber means load, not warning. The user's accent
+          means you touched this. Three separate jobs, three separate sets of colour,
+          never mixed — which is what lets the palette stay muted.</p>
+      </div>
+      <div class="p">
+        <h4>Logging takes one tap or it doesn't happen</h4>
+        <p>Men under-report. Every input has a default, nothing is required, and a
+          half-finished entry is still saved. Never block on a missing field.</p>
+      </div>
+      <div class="p">
+        <h4>Lines before shadows</h4>
+        <p>Depth comes from hairlines and a single raised surface. No drop shadows,
+          no gradient washes, no glassmorphism. The interface should read as printed.</p>
+      </div>
+      <div class="p">
+        <h4>Serif for their words, sans for our numbers</h4>
+        <p>Anything a person writes or reads reflectively is set in the serif. Anything
+          measured is set in the grotesque. The split is a promise about who is talking.</p>
+      </div>
+    </div>
+  </section>
+
+  <!-- ===================== COLOUR ===================== -->
+  <section id="colour">
+    <div class="sec-head"><h2>Colour</h2><p>Bone, slate, and worn brass</p></div>
+    <p class="note" style="margin-bottom:var(--s5)">
+      Five domain colours, all held to roughly the same low chroma so no one of them
+      dominates a chart. They are identity, not status — a domain keeps its colour
+      whether the reading is high or low.
+    </p>
+
+    <div class="swatches">
+      <div class="sw"><div class="sw__chip" style="background:#4E6473"></div><div class="sw__meta"><strong>Mind</strong><span>#4E6473</span><span class="sw__use">Mood, stress, check-ins</span></div></div>
+      <div class="sw"><div class="sw__chip" style="background:#667F5B"></div><div class="sw__meta"><strong>Body</strong><span>#667F5B</span><span class="sw__use">Heart, weight, movement</span></div></div>
+      <div class="sw"><div class="sw__chip" style="background:#6F6A85"></div><div class="sw__meta"><strong>Sleep</strong><span>#6F6A85</span><span class="sw__use">Duration, timing, quality</span></div></div>
+      <div class="sw"><div class="sw__chip" style="background:#A0803F"></div><div class="sw__meta"><strong>Load</strong><span>#A0803F</span><span class="sw__use">Training volume, strain</span></div></div>
+      <div class="sw"><div class="sw__chip" style="background:#93564A"></div><div class="sw__meta"><strong>Alert</strong><span>#93564A</span><span class="sw__use">Only for real risk</span></div></div>
+    </div>
+
+    <h3 style="font-size:var(--t-h3); margin:var(--s7) 0 var(--s3)">Neutrals</h3>
+    <div class="ramp">
+      <div style="background:#E9E9E4; color:#23282B">Canvas<br><span class="num">#E9E9E4</span></div>
+      <div style="background:#F5F5F1; color:#23282B">Surface<br><span class="num">#F5F5F1</span></div>
+      <div style="background:#D3D5CD; color:#23282B">Line<br><span class="num">#D3D5CD</span></div>
+      <div style="background:#8B9297; color:#F5F5F1">Ink 3<br><span class="num">#8B9297</span></div>
+      <div style="background:#5C6469; color:#F5F5F1">Ink 2<br><span class="num">#5C6469</span></div>
+      <div style="background:#23282B; color:#F5F5F1">Ink<br><span class="num">#23282B</span></div>
+    </div>
+    <p class="note" style="margin-top:var(--s3)">
+      The canvas is a bone grey, not white and not cream. Pure white and pure black
+      never appear in the interface. In dark mode the base is #191C1E — dark enough
+      to read in bed, warm enough not to look like a terminal.
+    </p>
+
+    <h3 style="font-size:var(--t-h3); margin:var(--s7) 0 var(--s3)">Dark mode</h3>
+    <div class="ramp">
+      <div style="background:#191C1E; color:#E4E5E1">Canvas<br><span class="num">#191C1E</span></div>
+      <div style="background:#212528; color:#E4E5E1">Surface<br><span class="num">#212528</span></div>
+      <div style="background:#86A3B5; color:#191C1E">Mind<br><span class="num">#86A3B5</span></div>
+      <div style="background:#98AF8B; color:#191C1E">Body<br><span class="num">#98AF8B</span></div>
+      <div style="background:#A29BBB; color:#191C1E">Sleep<br><span class="num">#A29BBB</span></div>
+      <div style="background:#C7A96C; color:#191C1E">Load<br><span class="num">#C7A96C</span></div>
+    </div>
+  </section>
+
+  <!-- ===================== ACCENT ===================== -->
+  <section id="accent">
+    <div class="sec-head"><h2>Accent</h2><p>The one colour the user owns</p></div>
+    <p class="note" style="margin-bottom:var(--s5)">
+      Personal accents usually break a muted system, because people pick saturated
+      colours and the palette stops being quiet. Baseline avoids that by letting the
+      user choose <b>hue only</b>. Lightness and chroma are fixed by the system, so
+      every possible choice lands inside the same muted range and passes contrast in
+      both themes. There is no wrong answer available.
+    </p>
+
+    <div class="panel"><div class="panel__body">
+      <div class="accentpicker">
+        <div>
+          <p style="font-size:var(--t-small); color:var(--ink-2); margin-bottom:var(--s3)">Accent colour</p>
+          <div class="swatchrow accents" role="group" aria-label="Accent colour"></div>
+        </div>
+        <div class="accentpicker__slider">
+          <label for="hue" style="font-size:var(--t-small); color:var(--ink-2)">Or anywhere on the wheel</label>
+          <input type="range" id="hue" min="0" max="360" value="235" step="1" aria-label="Accent hue">
+          <span class="accentpicker__read" id="hueRead">Hue 235 · lightness and chroma fixed by the system</span>
+        </div>
+        <div style="display:flex; flex-wrap:wrap; gap:var(--s3); align-items:center; padding-top:var(--s2); border-top:1px solid var(--line)">
+          <button class="btn btn--primary">Save entry</button>
+          <button class="btn btn--secondary">Add a note</button>
+          <span class="chip" aria-pressed="true" role="button" tabindex="0">Work stress</span>
+          <div class="seg" role="group" aria-label="Range">
+            <button aria-pressed="true">Week</button>
+            <button aria-pressed="false">Month</button>
+          </div>
+        </div>
+      </div>
+    </div></div>
+
+    <h3 style="font-size:var(--t-h3); margin:var(--s7) 0 var(--s3)">How the tokens derive</h3>
+    <p class="note" style="margin-bottom:var(--s4)">
+      One input, five outputs. Everything is computed in OKLCH so perceived lightness
+      stays constant across hues — a yellow accent is exactly as dark as a blue one,
+      which is not true in HSL.
+    </p>
+    <div class="ramp" style="grid-template-columns:repeat(5,1fr)">
+      <div style="background:var(--accent); color:var(--on-accent)">accent<br><span style="opacity:.75">Primary action</span></div>
+      <div style="background:var(--accent-strong); color:var(--on-accent)">accent-strong<br><span style="opacity:.75">Hover, pressed</span></div>
+      <div style="background:var(--accent-line); color:var(--ink)">accent-line<br><span style="color:var(--ink-2)">Selected borders</span></div>
+      <div style="background:var(--accent-tint); color:var(--accent)">accent-tint<br><span style="color:var(--ink-2)">Selected fills</span></div>
+      <div style="background:var(--surface); color:var(--accent)">on tint / text<br><span style="color:var(--ink-2)">Links, active tab</span></div>
+    </div>
+
+    <h3 style="font-size:var(--t-h3); margin:var(--s7) 0 var(--s3)">Where it may and may not go</h3>
+    <p class="note" style="margin-bottom:var(--s4)">
+      This is the rule that keeps the system coherent. Accent means <b>you touched
+      this</b>. Domain colour means <b>what this measures</b>. The two never appear in
+      the same role, so a user who picks a green accent still reads the moss marker as
+      "body" and never as "selected".
+    </p>
+    <div class="pcols">
+      <dl class="rule">
+        <dt>Yes</dt><dd><b>Primary buttons</b> and the active tab.</dd>
+        <dt>Yes</dt><dd><b>Selected states</b> — chips, segments, the mood scale, list selection.</dd>
+        <dt>Yes</dt><dd><b>Focus rings</b>, links, and text cursors.</dd>
+        <dt>Yes</dt><dd>The <b>app icon</b> and onboarding, where it does the work of a brand colour.</dd>
+      </dl>
+      <dl class="rule">
+        <dt>No</dt><dd><b>Any data.</b> Gauges, bands, charts and row markers keep their domain colour, always.</dd>
+        <dt>No</dt><dd><b>Alert.</b> Risk stays brick red so it cannot be personalised into invisibility.</dd>
+        <dt>No</dt><dd><b>Body text or surfaces.</b> The accent never becomes a background wash or a tinted page.</dd>
+        <dt>No</dt><dd><b>Two accents.</b> One hue per person; there is no secondary.</dd>
+      </dl>
+    </div>
+
+    <h3 style="font-size:var(--t-h3); margin:var(--s7) 0 var(--s3)">Implementation</h3>
+    <p class="note">
+      Store a single integer, <span class="num">accentHue</span> 0–360, on the user
+      record — not a hex value. Hex would freeze one theme's rendering and break dark
+      mode. Set it as a custom property on the root element and let CSS derive the
+      rest; changing themes or adding a token later needs no migration. Default is 235,
+      the harbour blue, so a user who never opens settings gets a considered choice
+      rather than a random one. If you need to support engines without OKLCH, ship the
+      seven presets as static hex and hide the slider.
+    </p>
+  </section>
+
+  <!-- ===================== TYPE ===================== -->
+  <section id="type">
+    <div class="sec-head"><h2>Type</h2><p>Archivo + Source Serif 4</p></div>
+    <p class="note" style="margin-bottom:var(--s6)">
+      Archivo is a low-contrast grotesque that holds its shape at 56px and stays
+      legible at 12px, with tabular figures for every metric. Source Serif carries
+      anything written by or for the person: journal entries, reflections, the
+      results of a check-in. Two families, one clean division of labour.
+    </p>
+
+    <dl class="spec">
+      <dt>56 / 600 / -3.5%</dt>
+      <dd><span class="num" style="font-size:var(--t-metric); font-weight:600; letter-spacing:-0.035em; line-height:1">7h 42m</span></dd>
+
+      <dt>40 / 600</dt>
+      <dd><span style="font-size:var(--t-h1); font-weight:600; letter-spacing:-0.02em">Three weeks steady</span></dd>
+
+      <dt>27 / 600</dt>
+      <dd><span style="font-size:var(--t-h2); font-weight:600; letter-spacing:-0.015em">This week</span></dd>
+
+      <dt>21 / 600</dt>
+      <dd><span style="font-size:var(--t-h3); font-weight:600">Wednesday, 12 March</span></dd>
+
+      <dt>17 serif / 400</dt>
+      <dd><span class="reflect">Slept badly, ran anyway, felt better by ten.</span></dd>
+
+      <dt>15 / 400</dt>
+      <dd>Interface default. Buttons, rows, list items, most body copy.</dd>
+
+      <dt>13 / 400</dt>
+      <dd><span style="font-size:var(--t-small); color:var(--ink-2)">Secondary detail and helper text.</span></dd>
+
+      <dt>12 / 400</dt>
+      <dd><span style="font-size:var(--t-caption); color:var(--ink-3)">Units, axis labels, timestamps.</span></dd>
+    </dl>
+
+    <p class="note" style="margin-top:var(--s6)">
+      Sentence case everywhere, including buttons and labels. No all-caps, no letter-spaced
+      eyebrows. Line length caps at 68 characters for sans and 74 for serif.
+    </p>
+  </section>
+
+  <!-- ===================== SPACE + SHAPE ===================== -->
+  <section id="space">
+    <div class="sec-head"><h2>Space and shape</h2><p>4px base</p></div>
+    <div class="pcols">
+      <div class="p">
+        <h4>Spacing scale</h4>
+        <p>4, 8, 12, 16, 24, 32, 48, 64, 96. Inside a component use 4–16. Between
+          components use 16–32. Between sections use 48–96. Nothing in between.</p>
+      </div>
+      <div class="p">
+        <h4>Radius carries hierarchy</h4>
+        <p>3px on chips, ticks and inputs. 6px on buttons and fields. 10px on panels.
+          Pills only on toggles that behave like switches. One radius on everything is a
+          smell, not a system.</p>
+      </div>
+      <div class="p">
+        <h4>Elevation</h4>
+        <p>Exactly two levels: canvas and surface, separated by a 1px line rather than a
+          shadow. Modals get a scrim at 55% canvas. Nothing else lifts.</p>
+      </div>
+      <div class="p">
+        <h4>Motion</h4>
+        <p>160ms, cubic-bezier(.2,.6,.3,1), and only in response to a tap. The one
+          exception is the gauge marker, which slides to position on first load so the
+          band registers before the value does.</p>
+      </div>
+    </div>
+  </section>
+
+  <!-- ===================== COMPONENTS ===================== -->
+  <section id="components">
+    <div class="sec-head"><h2>Components</h2><p>The working set</p></div>
+
+    <div class="stack">
+
+      <div>
+        <h3 style="font-size:var(--t-h3); margin-bottom:var(--s3)">Baseline gauge</h3>
+        <p class="note" style="margin-bottom:var(--s4)">The system's signature. A value, a rail with the person's usual range marked as a band, and a plain-language read. Use the compact size in lists.</p>
+        <div class="panel"><div class="panel__body">
+          <div class="gauge gauge--sleep gauge--sm">
+            <div class="gauge__label">Time asleep</div>
+            <div class="gauge__value"><b class="num">6h 12m</b></div>
+            <div class="gauge__rail">
+              <div class="gauge__ticks"></div>
+              <div class="gauge__band" style="left:46%; width:30%"></div>
+              <div class="gauge__marker" style="left:32%"></div>
+            </div>
+            <div class="gauge__scale"><span>4h</span><span>10h</span></div>
+            <p class="gauge__read">Short of your usual <em>7h–8h 20m</em>.</p>
+          </div>
+        </div></div>
+      </div>
+
+      <div>
+        <h3 style="font-size:var(--t-h3); margin-bottom:var(--s3)">Mood scale</h3>
+        <p class="note" style="margin-bottom:var(--s4)">Height encodes the value so it works without colour. Labels are neutral words, not faces — emoji flatten what a bad day actually is.</p>
+        <div class="panel"><div class="panel__body">
+          <div class="mood" role="group" aria-label="How are you today">
+            <button aria-pressed="false">Low</button>
+            <button aria-pressed="false">Flat</button>
+            <button aria-pressed="true">Okay</button>
+            <button aria-pressed="false">Good</button>
+            <button aria-pressed="false">Sharp</button>
+          </div>
+        </div></div>
+      </div>
+
+      <div>
+        <h3 style="font-size:var(--t-h3); margin-bottom:var(--s3)">Buttons</h3>
+        <div class="panel"><div class="panel__body" style="display:flex; flex-wrap:wrap; gap:var(--s3); align-items:center">
+          <button class="btn btn--primary">Save entry</button>
+          <button class="btn btn--secondary">Add a note</button>
+          <button class="btn btn--quiet">Skip today</button>
+          <button class="btn btn--danger">Delete entry</button>
+          <button class="btn btn--secondary" disabled>Syncing</button>
+        </div></div>
+      </div>
+
+      <div>
+        <h3 style="font-size:var(--t-h3); margin-bottom:var(--s3)">Fields, chips and segments</h3>
+        <div class="panel"><div class="panel__body" style="display:grid; gap:var(--s5)">
+          <div class="field">
+            <label for="w">Weight</label>
+            <input id="w" class="num" value="82.4" inputmode="decimal">
+            <span class="help">Last logged 82.9 kg, six days ago.</span>
+          </div>
+          <div class="field field--error">
+            <label for="s">Sleep start</label>
+            <input id="s" value="26:30">
+            <span class="help">Use a 24-hour time between 00:00 and 23:59.</span>
+          </div>
+          <div class="field" style="max-width:520px">
+            <label for="n">Anything worth remembering</label>
+            <textarea id="n" placeholder="Optional. One line is enough."></textarea>
+          </div>
+          <div>
+            <div class="seg" role="group" aria-label="Range">
+              <button aria-pressed="true">Week</button>
+              <button aria-pressed="false">Month</button>
+              <button aria-pressed="false">Year</button>
+            </div>
+          </div>
+          <div class="chips" role="group" aria-label="What affected today">
+            <button class="chip" aria-pressed="true">Alcohol</button>
+            <button class="chip" aria-pressed="false">Late meal</button>
+            <button class="chip" aria-pressed="true">Work stress</button>
+            <button class="chip" aria-pressed="false">Illness</button>
+            <button class="chip" aria-pressed="false">Travel</button>
+          </div>
+        </div></div>
+      </div>
+
+      <div>
+        <h3 style="font-size:var(--t-h3); margin-bottom:var(--s3)">Metric rows</h3>
+        <p class="note" style="margin-bottom:var(--s4)">The workhorse list. The 3px domain marker is the only colour; values stay in ink so the eye scans numbers, not hues.</p>
+        <div class="panel">
+          <div class="panel__head"><h4>Today</h4><time>Wednesday, 12 March</time></div>
+          <div class="rows">
+            <button class="row"><span class="row__dot" style="background:var(--sleep)"></span><span><span class="row__name">Sleep</span><br><span class="row__meta">23:40 to 06:05</span></span><span class="row__val num">6h 12m</span></button>
+            <button class="row"><span class="row__dot" style="background:var(--body)"></span><span><span class="row__name">Resting heart rate</span><br><span class="row__meta">Measured on waking</span></span><span class="row__val num">54 <span>bpm</span></span></button>
+            <button class="row"><span class="row__dot" style="background:var(--load)"></span><span><span class="row__name">Training</span><br><span class="row__meta">Intervals, 8km</span></span><span class="row__val num">48 <span>min</span></span></button>
+            <button class="row"><span class="row__dot" style="background:var(--mind)"></span><span><span class="row__name">Check-in</span><br><span class="row__meta">Okay, some work stress</span></span><span class="row__val" style="color:var(--ink-3); font-size:var(--t-small)">Logged</span></button>
+          </div>
+        </div>
+      </div>
+
+      <div>
+        <h3 style="font-size:var(--t-h3); margin-bottom:var(--s3)">Week strip</h3>
+        <p class="note" style="margin-bottom:var(--s4)">Missed days are drawn as dashed outlines, not gaps or red marks. A blank day is information, not a failure.</p>
+        <div class="panel"><div class="panel__body">
+          <div class="week">
+            <div><div class="bar"><i style="height:74%"></i></div>M</div>
+            <div><div class="bar"><i style="height:88%"></i></div>T</div>
+            <div><div class="bar bar--empty"></div>W</div>
+            <div><div class="bar"><i style="height:62%"></i></div>T</div>
+            <div><div class="bar"><i style="height:91%"></i></div>F</div>
+            <div><div class="bar"><i style="height:100%"></i></div>S</div>
+            <div><div class="bar"><i style="height:55%"></i></div>S</div>
+          </div>
+        </div></div>
+      </div>
+
+      <div>
+        <h3 style="font-size:var(--t-h3); margin-bottom:var(--s3)">Status, empty state, and the one alert</h3>
+        <div class="panel"><div class="panel__body" style="display:grid; gap:var(--s5)">
+          <div style="display:flex; flex-wrap:wrap; gap:var(--s2)">
+            <span class="status status--mind"><i></i>Checked in</span>
+            <span class="status status--body"><i></i>Synced from watch</span>
+            <span class="status status--load"><i></i>Above usual</span>
+            <span class="status status--alert"><i></i>Needs attention</span>
+          </div>
+
+          <div class="empty">
+            <h4>No readings yet this month</h4>
+            <p>Baseline needs about two weeks of data before it can show your usual range.</p>
+            <button class="btn btn--secondary">Log today</button>
+          </div>
+
+          <div class="callout">
+            <strong>Your resting heart rate has been climbing for nine days.</strong>
+            That can follow illness, alcohol, or hard training. If it holds and you feel unwell,
+            it is worth a word with a GP.
+          </div>
+          <p class="note">Alert colour appears at most once per screen and only where a person's
+            health could genuinely be affected. It is never used for a missed log.</p>
+        </div></div>
+      </div>
+
+    </div>
+  </section>
+
+  <!-- ===================== SCREENS ===================== -->
+  <section id="screens">
+    <div class="sec-head"><h2>Screens</h2><p>Components in place</p></div>
+    <div class="mocks">
+
+      <div class="phone">
+        <div class="phone__top"><h5>Today</h5><span>Wed 12 Mar</span></div>
+        <div class="phone__body">
+          <div class="gauge gauge--sleep">
+            <div class="gauge__label">Time asleep</div>
+            <div class="gauge__value"><b class="num">6h 12m</b></div>
+            <div class="gauge__rail">
+              <div class="gauge__ticks"></div>
+              <div class="gauge__band" style="left:46%; width:30%"></div>
+              <div class="gauge__marker" style="left:32%"></div>
+            </div>
+            <div class="gauge__scale"><span>4h</span><span>10h</span></div>
+            <p class="gauge__read">An hour under your usual.</p>
+          </div>
+
+          <div>
+            <p style="font-size:var(--t-small); color:var(--ink-2); margin-bottom:var(--s3)">How are you today?</p>
+            <div class="mood" role="group" aria-label="How are you today">
+              <button aria-pressed="false">Low</button>
+              <button aria-pressed="false">Flat</button>
+              <button aria-pressed="false">Okay</button>
+              <button aria-pressed="false">Good</button>
+              <button aria-pressed="false">Sharp</button>
+            </div>
+          </div>
+
+          <button class="btn btn--primary btn--full">Save entry</button>
+          <button class="btn btn--quiet" style="justify-self:center">Not today</button>
+        </div>
+        <div class="tabbar"><b>Today</b><span>Trends</span><span>Log</span><span>You</span></div>
+      </div>
+
+      <div class="phone">
+        <div class="phone__top"><h5>Trends</h5><span>Last 30 days</span></div>
+        <div class="phone__body">
+          <div class="seg" role="group" aria-label="Range" style="justify-self:start">
+            <button aria-pressed="false">Week</button>
+            <button aria-pressed="true">Month</button>
+            <button aria-pressed="false">Year</button>
+          </div>
+
+          <div class="gauge gauge--body gauge--sm">
+            <div class="gauge__label">Resting heart rate</div>
+            <div class="gauge__value"><b class="num">54</b><span class="gauge__unit">bpm</span></div>
+            <div class="gauge__rail">
+              <div class="gauge__ticks"></div>
+              <div class="gauge__band" style="left:30%; width:34%"></div>
+              <div class="gauge__marker" style="left:44%"></div>
+            </div>
+            <div class="gauge__scale"><span>44</span><span>72</span></div>
+          </div>
+
+          <div class="gauge gauge--mind gauge--sm">
+            <div class="gauge__label">Days checked in</div>
+            <div class="gauge__value"><b class="num">22</b><span class="gauge__unit">of 30</span></div>
+            <div class="gauge__rail">
+              <div class="gauge__ticks"></div>
+              <div class="gauge__band" style="left:50%; width:34%"></div>
+              <div class="gauge__marker" style="left:73%"></div>
+            </div>
+            <div class="gauge__scale"><span>0</span><span>30</span></div>
+          </div>
+
+          <div class="panel">
+            <div class="panel__head"><h4>Written this month</h4></div>
+            <div class="panel__body">
+              <p class="reflect">Slept badly, ran anyway, felt better by ten.</p>
+              <p class="reflect__meta">4 March</p>
+            </div>
+          </div>
+        </div>
+        <div class="tabbar"><span>Today</span><b>Trends</b><span>Log</span><span>You</span></div>
+      </div>
+
+    </div>
+  </section>
+
+  <!-- ===================== VOICE ===================== -->
+  <section id="voice">
+    <div class="sec-head"><h2>Voice</h2><p>Plain, level, never coaching</p></div>
+    <p class="note" style="margin-bottom:var(--s5)">
+      The app describes and asks. It does not praise, scold, or motivate. Assume the
+      reader is an adult who is already aware he skipped three days.
+    </p>
+    <div class="voice">
+      <div class="voice__h">Write</div>
+      <div class="voice__h">Not</div>
+
+      <div class="yes">An hour under your usual.</div>
+      <div class="no">Poor sleep score: 41/100</div>
+
+      <div class="yes">No entry for Tuesday.</div>
+      <div class="no">You broke your 12-day streak!</div>
+
+      <div class="yes">How are you today?</div>
+      <div class="no">Let's crush today's check-in 💪</div>
+
+      <div class="yes">Save entry</div>
+      <div class="no">Submit</div>
+
+      <div class="yes">Baseline needs about two weeks of data before it can show your usual range.</div>
+      <div class="no">Nothing to see here yet.</div>
+
+      <div class="yes">That can follow illness, alcohol, or hard training.</div>
+      <div class="no">You might be overtraining — take it easy, champ.</div>
+    </div>
+    <p class="note" style="margin-top:var(--s4)">
+      One exception to the level tone: anything touching crisis or self-harm is written
+      by a clinician, not a designer, and always names a route to a real person. It never
+      appears as an alert chip or a push notification.
+    </p>
+  </section>
+
+  <!-- ===================== ACCESS ===================== -->
+  <section id="access">
+    <div class="sec-head"><h2>Accessibility</h2><p>Non-negotiable</p></div>
+    <div class="pcols">
+      <div class="p">
+        <h4>Contrast</h4>
+        <p>Ink on canvas is 13.4:1. Ink 2 clears 5.5:1 for small text. Ink 3 is for 12px
+          non-essential labels only and never carries meaning alone. Domain colours are
+          used for text only on their matching tint.</p>
+      </div>
+      <div class="p">
+        <h4>Never colour alone</h4>
+        <p>Around 1 in 12 men has a colour vision deficiency, and this app is built for men.
+          Every domain has a label, every mood has a height and a word, every band has a
+          number underneath it.</p>
+      </div>
+      <div class="p">
+        <h4>Targets and focus</h4>
+        <p>44×44px minimum on anything tappable, including the mood scale's narrowest bar.
+          Focus rings are a 2px solid mind-blue at 2px offset, visible in both themes.</p>
+      </div>
+      <div class="p">
+        <h4>Reduced motion</h4>
+        <p>The gauge marker's entry animation is the only thing that moves on its own,
+          and it is disabled entirely under prefers-reduced-motion.</p>
+      </div>
+    </div>
+  </section>
+
+  <footer>
+    Baseline — colour, type, spacing, components and voice for a men's mental and
+    physical health tracker. Tokens are CSS custom properties and map one-to-one to
+    a Figma variable collection or a Tailwind theme.
+  </footer>
+
+</div>
+
+<script>
+  const root = document.documentElement;
+  const btn = document.getElementById('themeBtn');
+  btn.addEventListener('click', () => {
+    const dark = root.getAttribute('data-theme') === 'dark';
+    root.setAttribute('data-theme', dark ? 'light' : 'dark');
+    btn.textContent = dark ? 'Dark' : 'Light';
+    btn.setAttribute('aria-pressed', String(!dark));
+  });
+
+  // --- Accent: hue in, everything else derived ---
+  const PRESETS = [
+    { name: 'Harbour',  h: 235, c: 0.055 },
+    { name: 'Moss',     h: 145, c: 0.055 },
+    { name: 'Brass',    h: 85,  c: 0.055 },
+    { name: 'Clay',     h: 40,  c: 0.055 },
+    { name: 'Plum',     h: 318, c: 0.055 },
+    { name: 'Teal',     h: 195, c: 0.055 },
+    { name: 'Graphite', h: 250, c: 0.006 }
+  ];
+
+  const hueInput = document.getElementById('hue');
+  const hueRead = document.getElementById('hueRead');
+
+  function setAccent(h, c) {
+    root.style.setProperty('--accent-h', h);
+    root.style.setProperty('--accent-c', c);
+    document.querySelectorAll('.accents button').forEach(b => {
+      b.setAttribute('aria-pressed', String(+b.dataset.h === +h && +b.dataset.c === +c));
+    });
+    if (hueInput) hueInput.value = h;
+    if (hueRead) {
+      const match = PRESETS.find(p => p.h === +h && p.c === +c);
+      hueRead.textContent = (match ? match.name + ' · hue ' + h : 'Hue ' + h)
+        + ' · lightness and chroma fixed by the system';
+    }
+  }
+
+  document.querySelectorAll('.accents').forEach(row => {
+    PRESETS.forEach(p => {
+      const b = document.createElement('button');
+      b.style.setProperty('--sh', p.h);
+      b.style.setProperty('--sc', p.c);
+      b.dataset.h = p.h; b.dataset.c = p.c;
+      b.setAttribute('aria-pressed', String(p.h === 235 && p.c === 0.055));
+      b.setAttribute('aria-label', p.name);
+      b.title = p.name;
+      b.addEventListener('click', () => setAccent(p.h, p.c));
+      row.appendChild(b);
+    });
+  });
+
+  if (hueInput) hueInput.addEventListener('input', e => setAccent(+e.target.value, 0.055));
+
+  // Demo interactivity for the pressable groups
+  document.querySelectorAll('.mood, .seg, .chips').forEach(group => {
+    const single = !group.classList.contains('chips');
+    group.addEventListener('click', e => {
+      const b = e.target.closest('button');
+      if (!b) return;
+      if (single) {
+        group.querySelectorAll('button').forEach(x => x.setAttribute('aria-pressed', 'false'));
+        b.setAttribute('aria-pressed', 'true');
+      } else {
+        b.setAttribute('aria-pressed', b.getAttribute('aria-pressed') === 'true' ? 'false' : 'true');
+      }
+    });
+  });
+</script>
+</body>
+</html>

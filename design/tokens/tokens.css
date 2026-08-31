@@ -1,0 +1,107 @@
+/* bro — Baseline design tokens
+   Canonical source: tokens.json. This file is the runtime form.
+   Rules for use: see ../DESIGN.md. Do not hard-code colors anywhere else. */
+
+:root {
+  color-scheme: light dark;
+
+  /* ---- Neutrals (light) ---- */
+  --canvas:       #E9E9E4;
+  --surface:      #F5F5F1;
+  --surface-sunk: #E1E2DC;
+  --line:         #D3D5CD;
+  --line-strong:  #B9BCB2;
+  --ink:          #23282B;
+  --ink-2:        #5C6469;
+  --ink-3:        #8B9297;
+  --ink-invert:   #F5F5F1;
+
+  /* ---- Domains: identity of what is measured, never status ---- */
+  --mind:  #4E6473;  --mind-tint:  #DDE4E8;
+  --body:  #667F5B;  --body-tint:  #E0E6DC;
+  --sleep: #6F6A85;  --sleep-tint: #E2E0E8;
+  --load:  #A0803F;  --load-tint:  #EBE4D3;
+  --alert: #93564A;  --alert-tint: #EEDFDB;
+
+  /* ---- Accent: the one color the user owns ----
+     Input is hue only (integer 0-360, stored as accentHue).
+     Lightness and chroma are fixed here so no choice can break
+     contrast or leave the muted range. Graphite preset sets
+     --accent-c to 0.006; all other presets use 0.055. */
+  --accent-h: 235;
+  --accent-c: 0.055;
+
+  --accent:        oklch(48% var(--accent-c) var(--accent-h));
+  --accent-strong: oklch(41% var(--accent-c) var(--accent-h));
+  --accent-tint:   oklch(92% calc(var(--accent-c) * 0.42) var(--accent-h));
+  --accent-line:   oklch(78% calc(var(--accent-c) * 0.70) var(--accent-h));
+  --on-accent:     oklch(97% calc(var(--accent-c) * 0.15) var(--accent-h));
+  --focus: var(--accent);
+
+  /* ---- Type ---- */
+  --sans:  'Archivo', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+  --serif: 'Source Serif 4', Georgia, serif;
+
+  --t-caption: 0.75rem;   /* 12 — units, axis labels, timestamps */
+  --t-small:   0.8125rem; /* 13 — secondary detail, helper text  */
+  --t-body:    0.9375rem; /* 15 — interface default              */
+  --t-lead:    1.0625rem; /* 17 — serif, user-authored text      */
+  --t-h3:      1.3125rem; /* 21 */
+  --t-h2:      1.6875rem; /* 27 */
+  --t-h1:      2.5rem;    /* 40 */
+  --t-metric:  3.5rem;    /* 56 — one per screen, tabular nums   */
+
+  /* ---- Space (4px base; nothing off-scale) ---- */
+  --s1: 4px;  --s2: 8px;  --s3: 12px; --s4: 16px;
+  --s5: 24px; --s6: 32px; --s7: 48px; --s8: 64px; --s9: 96px;
+
+  /* ---- Shape (hierarchical; never one radius everywhere) ---- */
+  --r-sm: 3px;    /* chips, inputs, ticks   */
+  --r-md: 6px;    /* buttons, fields        */
+  --r-lg: 10px;   /* panels                 */
+  --r-pill: 999px;/* switch-like toggles    */
+
+  /* ---- Motion (tap-response only; gauge entry is the one exception) ---- */
+  --dur: 160ms;
+  --ease: cubic-bezier(.2, .6, .3, 1);
+}
+
+[data-theme="dark"] {
+  --canvas:       #191C1E;
+  --surface:      #212528;
+  --surface-sunk: #141719;
+  --line:         #313739;
+  --line-strong:  #454C4F;
+  --ink:          #E4E5E1;
+  --ink-2:        #A0A7AA;
+  --ink-3:        #767D81;
+  --ink-invert:   #191C1E;
+
+  --mind:  #86A3B5;  --mind-tint:  #26333A;
+  --body:  #98AF8B;  --body-tint:  #2A332A;
+  --sleep: #A29BBB;  --sleep-tint: #2E2C39;
+  --load:  #C7A96C;  --load-tint:  #332E22;
+  --alert: #C08375;  --alert-tint: #382723;
+
+  --accent:        oklch(78% calc(var(--accent-c) * 1.15) var(--accent-h));
+  --accent-strong: oklch(85% calc(var(--accent-c) * 1.15) var(--accent-h));
+  --accent-tint:   oklch(30% calc(var(--accent-c) * 0.75) var(--accent-h));
+  --accent-line:   oklch(45% calc(var(--accent-c) * 0.90) var(--accent-h));
+  --on-accent:     oklch(18% calc(var(--accent-c) * 0.30) var(--accent-h));
+}
+
+/* Engines without OKLCH: fixed Harbour accent, hide any hue slider UI. */
+@supports not (color: oklch(50% 0.05 235)) {
+  :root {
+    --accent: #4E6473; --accent-strong: #3D5060; --accent-tint: #DDE4E8;
+    --accent-line: #A8BAC4; --on-accent: #F5F5F1;
+  }
+  [data-theme="dark"] {
+    --accent: #86A3B5; --accent-strong: #A2BACA; --accent-tint: #26333A;
+    --accent-line: #465966; --on-accent: #191C1E;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  :root { --dur: 0.01ms; }
+}
