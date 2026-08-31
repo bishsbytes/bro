@@ -45,7 +45,7 @@ These implement decisions the product plan has already taken; the rationale live
 - **Ids are UUIDv7** (small local generator; `expo-crypto` provides randomness). Timestamps are epoch-ms UTC with `localDay` and `tzOffsetMinutes` stored, never derived. `tzOffsetMinutes` follows the JavaScript `getTimezoneOffset()` convention (local + offset = UTC; UTC+2 stores −120) — see the [product conventions](product-domains-and-data.md#conventions-to-lock-in-now).
 - **Migration 001 is conflict-tolerant end to end**: `CREATE TABLE IF NOT EXISTS` / `CREATE INDEX IF NOT EXISTS` in the shipped SQL (drizzle-kit's generated output is adjusted before committing — the generated file is the artefact, the generator is not sacred), and the migrator's marker insert uses `ON CONFLICT DO NOTHING`. The umbrella plan is explicit that retrofitting tolerance into migration 001 is impossible once it has run on a device.
 - **Deletes are hard deletes**, including check-in edits from the day view.
-- **Delete local data is `DELETE FROM` each product table in one transaction — never file deletion**, preserving `__app_migrations`, exactly per the [product plan](product-domains-and-data.md#delete-local-data). Uses Phase 2's reserved copy verbatim.
+- **Delete local data is `DELETE FROM` each product table in one transaction — never file deletion**, preserving Drizzle's `__drizzle_migrations`, exactly per the [product plan](product-domains-and-data.md#delete-local-data). Uses Phase 2's reserved copy verbatim.
 
 ## Schema
 
@@ -139,8 +139,8 @@ Version 1 is UTF-8 JSON with a trailing newline and this top-level shape:
 ### Slice 1: Schema, migration 001, and the migrator's first real run
 
 1. Add the three tables to `schema.ts`, run `db:generate`, adjust the generated SQL to `IF NOT EXISTS` form, and commit the SQL plus regenerated manifest.
-2. Verify the migrator inserts markers with `ON CONFLICT DO NOTHING` and re-running `runMigrations` against an already-migrated file is a no-op; extend it if Phase 1's implementation predates the convention.
-3. Real-SQLite tests: fresh file migrates; migrated file re-migrates cleanly; a device that already ran 001 and receives 001 again (simulating the replicated-marker race) neither fails nor duplicates.
+2. Verify Drizzle owns migration tracking and re-running `runMigrations` against an already-migrated file is a no-op.
+3. Real-SQLite tests: a fresh file migrates and a migrated file re-migrates cleanly without duplicating schema objects.
 4. Convert Phase 2's structural local-data assertions to sentinel rows: seed an observation and a note through the repositories, then assert sign-in, sign-out, account switch, and account deletion leave them readable.
 
 ### Slice 2: Registry and repositories
@@ -169,7 +169,7 @@ Version 1 is UTF-8 JSON with a trailing newline and this top-level shape:
 ### Slice 5: Delete local data
 
 1. Settings route with the delete-local-data action, Phase 2's reserved copy, and a two-step confirmation.
-2. One transaction deleting from all product tables; `__app_migrations`, `bro-device.db`, and session state untouched — asserted through the real router with the account signed in: after deletion the user is still signed in, still onboarded, and today is empty.
+2. One transaction deleting from all product tables; `__drizzle_migrations`, `bro-device.db`, and session state untouched — asserted through the real router with the account signed in: after deletion the user is still signed in, still onboarded, and today is empty.
 3. The action's implementation enumerates product tables from one shared list that migration 001 also owns, so a later table cannot be forgotten by the delete path.
 
 ### Slice 6: Export serialiser, acceptance, and documentation
@@ -205,7 +205,7 @@ Version 1 is UTF-8 JSON with a trailing newline and this top-level shape:
 | Case | Expected result |
 | --- | --- |
 | Fresh install, onboarding, first check-in | Saved offline; no backend request; visible after relaunch. |
-| Migration 001 on a fresh and an already-migrated file | Applies once; re-run is a no-op; marker race does not fail startup. |
+| Migration 001 on a fresh and an already-migrated file | Drizzle applies it once and a re-run is a no-op. |
 | Two check-ins same day | Both stored; day view shows both; trend uses the registry aggregation. |
 | Tag tap and same-day untap | Row written, then hard-deleted; no zero-value rows ever. |
 | Scale snapshot | Every scored observation carries `scaleMin`/`scaleMax`; tags carry null. |

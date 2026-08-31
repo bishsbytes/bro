@@ -1,10 +1,9 @@
 /**
  * Drizzle schema for the app's embedded libSQL/Turso database.
  *
- * This file exists purely to drive `drizzle-kit generate`; it is never imported
- * at runtime. Runtime access goes through the raw-SQL repositories in
- * src/repositories, so adding a table here is step one of the recipe in
- * src/repositories/README.md.
+ * This file drives `drizzle-kit generate`; it is never imported at runtime.
+ * Application access goes through the raw-SQL repositories in src/repositories,
+ * while Drizzle owns migration execution.
  *
  * Keep the column names here aligned with the hand-written SQL in the runtime
  * repositories. The generated migrations are the only runtime artefact from

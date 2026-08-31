@@ -246,10 +246,10 @@ describe("delete local data", () => {
 			{ identifier: "another-domain:one" },
 		]);
 		const markerBefore = await db.getFirstAsync<{ count: number }>(
-			"SELECT COUNT(*) AS count FROM __app_migrations",
+			"SELECT COUNT(*) AS count FROM __drizzle_migrations",
 		);
 		const localMarkerBefore = await localDb.getFirstAsync<{ count: number }>(
-			"SELECT COUNT(*) AS count FROM __local_migrations",
+			"SELECT COUNT(*) AS count FROM __drizzle_migrations",
 		);
 		const transaction = jest.spyOn(db, "withTransactionAsync");
 		const localTransaction = jest.spyOn(localDb, "withTransactionAsync");
@@ -315,12 +315,12 @@ describe("delete local data", () => {
 		);
 		expect(
 			await db.getFirstAsync<{ count: number }>(
-				"SELECT COUNT(*) AS count FROM __app_migrations",
+				"SELECT COUNT(*) AS count FROM __drizzle_migrations",
 			),
 		).toEqual(markerBefore);
 		expect(
 			await localDb.getFirstAsync<{ count: number }>(
-				"SELECT COUNT(*) AS count FROM __local_migrations",
+				"SELECT COUNT(*) AS count FROM __drizzle_migrations",
 			),
 		).toEqual(localMarkerBefore);
 		expect(databaseApp.readDeviceSettings()).toEqual(settingsBefore);

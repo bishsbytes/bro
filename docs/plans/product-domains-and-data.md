@@ -439,7 +439,7 @@ Edit or delete an entry. **Hard deletes, no tombstones** — under sync a delete
 
 ### Delete local data
 
-The third of the [four destructive operations](offline-first-identity-onboarding-premium.md#distinguish-four-destructive-operations), unshippable until now. **`DELETE FROM` each product table in one transaction across both product stores — do not delete the files.** Dropping `bro.db` also drops `__app_migrations`, forcing a re-migration and leaving the replica inconsistent with its generation.
+The third of the [four destructive operations](offline-first-identity-onboarding-premium.md#distinguish-four-destructive-operations), unshippable until now. **`DELETE FROM` each product table in one transaction across both product stores — do not delete the files.** Dropping `bro.db` also drops Drizzle's `__drizzle_migrations`, forcing a re-migration and leaving the replica inconsistent with its generation.
 
 ### Export
 

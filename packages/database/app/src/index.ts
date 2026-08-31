@@ -29,7 +29,6 @@ export {
 	type LocalTableName,
 } from "./local-tables";
 export {
-	type MigrationResult,
 	runLocalMigrations,
 	runMigrations,
 } from "./migrator";

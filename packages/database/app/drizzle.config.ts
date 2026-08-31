@@ -1,9 +1,8 @@
 import { defineConfig } from "drizzle-kit";
 
 /**
- * Schema authoring and migration codegen only. Nothing in this package uses the
- * Drizzle client at runtime — queries go through the raw-SQL repositories in
- * src/repositories.
+ * Schema authoring and migration codegen. Runtime migrations use Drizzle's Expo
+ * adapter; application queries still go through the raw-SQL repositories.
  */
 export default defineConfig({
 	dialect: "sqlite",

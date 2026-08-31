@@ -49,6 +49,34 @@ export function createNodeSqliteMock(): NodeSqliteMock {
 
 		return {
 			execSync: (sql: string) => db.exec(sql),
+			prepareSync: (sql: string) => ({
+				executeSync: (params: unknown[] = []) => {
+					const statement = db.prepare(sql);
+					if (statement.columns().length > 0) {
+						return {
+							changes: 0,
+							lastInsertRowId: 0,
+							getAllSync: () => statement.all(...(params as never[])),
+							getFirstSync: () => statement.get(...(params as never[])) ?? null,
+						};
+					}
+
+					const result = statement.run(...(params as never[]));
+					return {
+						changes: Number(result.changes),
+						lastInsertRowId: Number(result.lastInsertRowid),
+						getAllSync: () => [],
+						getFirstSync: () => null,
+					};
+				},
+				executeForRawResultSync: (params: unknown[] = []) => {
+					const statement = db.prepare(sql);
+					statement.setReturnArrays(true);
+					return {
+						getAllSync: () => statement.all(...(params as never[])),
+					};
+				},
+			}),
 			getFirstSync: (sql: string, ...params: unknown[]) =>
 				db.prepare(sql).get(...(bindParams(params) as never[])) ?? null,
 			getAllSync: (sql: string, ...params: unknown[]) =>

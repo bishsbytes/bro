@@ -440,7 +440,7 @@ So this needs real work:
 
 ### Schema migrations across devices
 
-`__app_migrations` replicates along with everything else, so a migration applied on one device is visible to the others *after a pull*. That is weaker than it first appears, and two problems remain.
+Drizzle's `__drizzle_migrations` table replicates along with everything else, so a migration applied on one device is visible to the others *after a pull*. That is weaker than it first appears, and two problems remain.
 
 **Concurrent application.** Two devices can each apply migration N before either sees the other's marker row. Both forward their DDL to the primary, where the writes serialize — so the loser hits either an "already exists" error on the DDL or a primary-key conflict on the marker insert. `runMigrations` throws on the first failure, which turns a benign race into a failed startup. Resolve by:
 

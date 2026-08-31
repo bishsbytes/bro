@@ -1,9 +1,8 @@
 # Adding a data-domain repository
 
 The app reads and writes its embedded database through one repository class per
-data domain, each issuing hand-written parameterised SQL. Drizzle is used here
-only to author the schema and generate migrations — the Drizzle query client is
-never imported at runtime.
+data domain, each issuing hand-written parameterised SQL. Drizzle authors,
+generates, and applies migrations; application queries do not use its query API.
 
 The first product domains are implemented. Use
 [`observation-repository.ts`](observation-repository.ts) as the reference for a
@@ -31,15 +30,9 @@ pnpm exec nx run @bro/database-app:db:generate
 ```
 
 This runs `drizzle-kit generate` and then regenerates
-`src/migrations/manifest.ts`, which bundles the SQL as plain strings so Metro
-can ship it to the device. Commit both the new `drizzle/*.sql` file and the
-updated manifest.
-
-Do not hand-edit either one. The manifest generator rewrites `CREATE TABLE` and
-`CREATE INDEX` into their `IF NOT EXISTS` forms as it bundles them, because the
-migrator has to tolerate replaying a migration whose marker write was not
-observed. A migration that adds a column has no `IF NOT EXISTS` form in SQLite;
-`migrator.ts` skips those statements when the column is already present.
+`src/migrations/manifest.ts`, which bundles Drizzle's journal and SQL as
+TypeScript so Metro can ship them to the device. Commit both the new
+`drizzle/*.sql` file and the updated manifest. Do not hand-edit either one.
 
 ## 3. Write the repository
 

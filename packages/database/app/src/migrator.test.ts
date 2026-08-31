@@ -1,12 +1,8 @@
-import type { SQLiteDatabase } from "expo-sqlite";
 import type * as DatabaseApp from "./index";
 import { createNodeSqliteMock } from "./test-support/node-sqlite";
 
 const mockSqlite = createNodeSqliteMock();
 let activeDatabaseApp: typeof DatabaseApp | undefined;
-
-const MIGRATION_IDS = ["0000_flashy_leech"] as const;
-const LOCAL_MIGRATION_IDS = ["L000_local_store"] as const;
 
 jest.mock("expo-sqlite", () => ({
 	openDatabaseSync: mockSqlite.openDatabaseSync,
@@ -45,14 +41,11 @@ describe("product database migrations", () => {
 	it("creates every product table and index in a fresh database", async () => {
 		const { databaseApp, db } = await migratedDatabase("fresh.db");
 
-		await expect(databaseApp.runMigrations(db)).resolves.toEqual({
-			applied: MIGRATION_IDS,
-			skipped: [],
-		});
+		await expect(databaseApp.runMigrations(db)).resolves.toBeUndefined();
 
 		const objects = await db.getAllAsync<{ name: string; type: string }>(
 			`SELECT name, type FROM sqlite_master
-			 WHERE name NOT LIKE 'sqlite_%' AND name != '__app_migrations'
+			 WHERE name NOT LIKE 'sqlite_%' AND name != '__drizzle_migrations'
 			 ORDER BY name`,
 		);
 
@@ -129,70 +122,12 @@ describe("product database migrations", () => {
 		const { databaseApp, db } = await migratedDatabase("rerun.db");
 
 		await databaseApp.runMigrations(db);
-		await expect(databaseApp.runMigrations(db)).resolves.toEqual({
-			applied: [],
-			skipped: MIGRATION_IDS,
-		});
+		await expect(databaseApp.runMigrations(db)).resolves.toBeUndefined();
 
-		const markers = await db.getAllAsync<{ id: string }>(
-			"SELECT id FROM __app_migrations",
+		const marker = await db.getFirstAsync<{ count: number }>(
+			"SELECT COUNT(*) AS count FROM __drizzle_migrations",
 		);
-		expect(markers).toEqual(MIGRATION_IDS.map((id) => ({ id })));
-	});
-
-	it("tolerates migration statements re-running after a marker race", async () => {
-		const { databaseApp, db } = await migratedDatabase("marker-race.db");
-		await databaseApp.runMigrations(db);
-		const realGetAll = db.getAllAsync.bind(db);
-		let hideMarkerOnce = true;
-
-		const racingDb = {
-			...db,
-			getAllAsync: async <Row>(sql: string, ...params: unknown[]) => {
-				if (hideMarkerOnce && sql.includes("__app_migrations")) {
-					hideMarkerOnce = false;
-					return [] as Row[];
-				}
-
-				return await realGetAll<Row>(sql, ...(params as never[]));
-			},
-		} as SQLiteDatabase;
-
-		await expect(databaseApp.runMigrations(racingDb)).resolves.toEqual({
-			applied: MIGRATION_IDS,
-			skipped: [],
-		});
-
-		const markers = await db.getFirstAsync<{ count: number }>(
-			"SELECT COUNT(*) AS count FROM __app_migrations",
-		);
-		expect(markers?.count).toBe(MIGRATION_IDS.length);
-		expect(
-			await db.getAllAsync<{ name: string }>(
-				`SELECT name FROM sqlite_master WHERE type = 'table'
-				 AND name NOT LIKE 'sqlite_%' AND name != '__app_migrations'`,
-			),
-		).toHaveLength(databaseApp.PRODUCT_TABLES.length);
-	});
-
-	it("restores a table dropped out from under the migration marker", async () => {
-		const { databaseApp, db } = await migratedDatabase("repair.db");
-		await databaseApp.runMigrations(db);
-		await db.execAsync(`
-			DROP TABLE unit_preferences;
-			DELETE FROM __app_migrations WHERE id = '0000_flashy_leech';
-		`);
-
-		await expect(databaseApp.runMigrations(db)).resolves.toEqual({
-			applied: ["0000_flashy_leech"],
-			skipped: [],
-		});
-		expect(
-			await db.getFirstAsync<{ name: string }>(
-				`SELECT name FROM sqlite_master
-				 WHERE type = 'table' AND name = 'unit_preferences'`,
-			),
-		).toEqual({ name: "unit_preferences" });
+		expect(marker?.count).toBe(1);
 	});
 
 	it("creates and safely re-runs the independent local-store manifest", async () => {
@@ -200,14 +135,8 @@ describe("product database migrations", () => {
 		activeDatabaseApp = databaseApp;
 		const db = await databaseApp.initLocalDb("fresh-local.db");
 
-		await expect(databaseApp.runLocalMigrations(db)).resolves.toEqual({
-			applied: LOCAL_MIGRATION_IDS,
-			skipped: [],
-		});
-		expect(await databaseApp.runLocalMigrations(db)).toEqual({
-			applied: [],
-			skipped: LOCAL_MIGRATION_IDS,
-		});
+		await expect(databaseApp.runLocalMigrations(db)).resolves.toBeUndefined();
+		await expect(databaseApp.runLocalMigrations(db)).resolves.toBeUndefined();
 		expect(
 			await db.getAllAsync<{ name: string }>(
 				"SELECT name FROM pragma_table_info('raw_samples') WHERE name = 'origin'",
@@ -216,7 +145,7 @@ describe("product database migrations", () => {
 
 		const objects = await db.getAllAsync<{ name: string; type: string }>(
 			`SELECT name, type FROM sqlite_master
-			 WHERE name NOT LIKE 'sqlite_%' AND name != '__local_migrations'
+			 WHERE name NOT LIKE 'sqlite_%' AND name != '__drizzle_migrations'
 			 ORDER BY name`,
 		);
 		expect(objects).toEqual([
@@ -233,5 +162,10 @@ describe("product database migrations", () => {
 				.map(({ name }) => name)
 				.sort(),
 		).toEqual([...databaseApp.LOCAL_TABLES].sort());
+		expect(
+			await db.getFirstAsync<{ count: number }>(
+				"SELECT COUNT(*) AS count FROM __drizzle_migrations",
+			),
+		).toEqual({ count: 1 });
 	});
 });

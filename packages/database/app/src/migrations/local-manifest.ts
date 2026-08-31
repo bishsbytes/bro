@@ -1,18 +1,22 @@
-import type { Migration } from "./manifest";
-
 /**
  * bro-local.db owns a separate migration history because the file is disposable
  * and never participates in product-data replication. It is hand-written rather
  * than generated: local-schema.ts is a reference for the shape, not a codegen
  * source, so there is no drizzle-kit output to bundle.
- *
- * Statements must stay idempotent for the same reason the generated product
- * manifest normalises them — see scripts/generate-migrations-manifest.ts.
  */
-export const localMigrations: Migration[] = [
-	{
-		id: "L000_local_store",
-		sql: `CREATE TABLE IF NOT EXISTS \`health_connections\` (
+export const localMigrations = {
+	journal: {
+		entries: [
+			{
+				idx: 0,
+				when: 0,
+				tag: "L000_local_store",
+				breakpoints: true,
+			},
+		],
+	},
+	migrations: {
+		m0000: `CREATE TABLE \`health_connections\` (
 	\`id\` text PRIMARY KEY NOT NULL,
 	\`platform\` text NOT NULL,
 	\`metric_slug\` text NOT NULL,
@@ -23,9 +27,9 @@ export const localMigrations: Migration[] = [
 	\`updated_at\` integer NOT NULL
 );
 --> statement-breakpoint
-CREATE INDEX IF NOT EXISTS \`idx_health_connections_platform_metric\` ON \`health_connections\` (\`platform\`,\`metric_slug\`);
+CREATE INDEX \`idx_health_connections_platform_metric\` ON \`health_connections\` (\`platform\`,\`metric_slug\`);
 --> statement-breakpoint
-CREATE TABLE IF NOT EXISTS \`raw_samples\` (
+CREATE TABLE \`raw_samples\` (
 	\`id\` text PRIMARY KEY NOT NULL,
 	\`metric_slug\` text NOT NULL,
 	\`value\` real NOT NULL,
@@ -38,15 +42,15 @@ CREATE TABLE IF NOT EXISTS \`raw_samples\` (
 	\`imported_at\` integer NOT NULL
 );
 --> statement-breakpoint
-CREATE UNIQUE INDEX IF NOT EXISTS \`idx_raw_samples_identity\` ON \`raw_samples\` (\`source\`,\`source_record_id\`);
+CREATE UNIQUE INDEX \`idx_raw_samples_identity\` ON \`raw_samples\` (\`source\`,\`source_record_id\`);
 --> statement-breakpoint
-CREATE INDEX IF NOT EXISTS \`idx_raw_samples_metric_day\` ON \`raw_samples\` (\`metric_slug\`,\`local_day\`);
+CREATE INDEX \`idx_raw_samples_metric_day\` ON \`raw_samples\` (\`metric_slug\`,\`local_day\`);
 --> statement-breakpoint
-CREATE TABLE IF NOT EXISTS \`food_cache\` (
+CREATE TABLE \`food_cache\` (
 	\`ref\` text PRIMARY KEY NOT NULL,
 	\`payload\` text NOT NULL,
 	\`query\` text,
 	\`fetched_at\` integer NOT NULL
 );`,
 	},
-];
+};
