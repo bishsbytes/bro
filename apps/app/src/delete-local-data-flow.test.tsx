@@ -103,6 +103,7 @@ describe("delete local data", () => {
 			value: 4,
 			scaleMin: 1,
 			scaleMax: 5,
+			slot: "morning",
 			observedAt: Date.parse("2026-08-14T10:00:00.000Z"),
 			localDay: "2026-08-14",
 			tzOffsetMinutes: -60,

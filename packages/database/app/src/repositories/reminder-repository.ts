@@ -8,7 +8,7 @@ type ReminderRow = {
 	id: string;
 	minute_of_day: number;
 	days_of_week: number;
-	slot: string | null;
+	slot: string;
 	enabled: number;
 	created_at: number;
 	updated_at: number;
@@ -32,19 +32,20 @@ function assertSchedule(schedule: ReminderSchedule): void {
 	) {
 		throw new RangeError("Reminder daysOfWeek must select at least one day.");
 	}
-	if (schedule.slot !== null && !isCheckInSlot(schedule.slot)) {
-		throw new TypeError("Reminder slot must be a check-in sitting or null.");
+	if (!isCheckInSlot(schedule.slot)) {
+		throw new TypeError("Reminder slot must be a check-in sitting.");
 	}
 }
 
 function toReminder(row: ReminderRow): Reminder {
+	if (!isCheckInSlot(row.slot)) {
+		throw new TypeError(`Reminder ${row.id} has an invalid slot: ${row.slot}`);
+	}
 	return {
 		id: row.id,
 		minuteOfDay: row.minute_of_day,
 		daysOfWeek: row.days_of_week,
-		// An unreadable slot behaves as the pre-slot rows do: silenced by any
-		// check-in rather than tied to a sitting this build cannot name.
-		slot: isCheckInSlot(row.slot) ? row.slot : null,
+		slot: row.slot,
 		enabled: row.enabled === 1,
 		createdAt: row.created_at,
 		updatedAt: row.updated_at,

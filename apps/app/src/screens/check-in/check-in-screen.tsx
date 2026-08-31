@@ -154,8 +154,6 @@ export function CheckInScreen({
 				if (!active) return;
 				setToday(loaded);
 				// A specific id is only valid inside the sitting named by the route.
-				// Legacy slotless entries use the history editor, where they cannot be
-				// mistaken for whichever sitting the current clock happens to suggest.
 				const sitting = loaded.sittings[slot];
 				const entry = entryId && sitting?.id !== entryId ? null : sitting;
 				if (!entry) return;

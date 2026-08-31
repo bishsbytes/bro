@@ -100,6 +100,7 @@ describe("history and day view", () => {
 			value: 2,
 			scaleMin: 1,
 			scaleMax: 5,
+			slot: "morning",
 		});
 		await observations.create({
 			...base,
@@ -107,6 +108,7 @@ describe("history and day view", () => {
 			value: 3,
 			scaleMin: 1,
 			scaleMax: 5,
+			slot: "morning",
 		});
 		await observations.create({
 			...base,
@@ -115,6 +117,7 @@ describe("history and day view", () => {
 			scaleMin: 1,
 			scaleMax: 5,
 			sourceRecordId: mood.id,
+			slot: "morning",
 		});
 		const unknown = await observations.create({
 			...base,

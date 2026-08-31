@@ -5,18 +5,8 @@ import { createNodeSqliteMock } from "./test-support/node-sqlite";
 const mockSqlite = createNodeSqliteMock();
 let activeDatabaseApp: typeof DatabaseApp | undefined;
 
-const MIGRATION_IDS = [
-	"0000_initial_schema",
-	"0001_bored_giant_man",
-	"0002_petite_zzzax",
-	"0003_backfill_reminder_slots",
-] as const;
+const MIGRATION_IDS = ["0000_flashy_leech"] as const;
 const LOCAL_MIGRATION_IDS = ["L000_local_store"] as const;
-
-/** Every migration but the one a replay test deliberately unmarks. */
-function allExcept(id: (typeof MIGRATION_IDS)[number]): string[] {
-	return MIGRATION_IDS.filter((candidate) => candidate !== id);
-}
 
 jest.mock("expo-sqlite", () => ({
 	openDatabaseSync: mockSqlite.openDatabaseSync,
@@ -87,7 +77,7 @@ describe("product database migrations", () => {
 		]);
 	});
 
-	it("creates the columns that were once incremental additions", async () => {
+	it("creates the complete current schema from the initial migration", async () => {
 		const { databaseApp, db } = await migratedDatabase("columns.db");
 		await databaseApp.runMigrations(db);
 
@@ -115,6 +105,24 @@ describe("product database migrations", () => {
 				 WHERE name = 'area_slug'`,
 			),
 		).toEqual({ name: "area_slug" });
+		expect(
+			await db.getAllAsync<{ name: string }>(
+				`SELECT name FROM pragma_table_info('observations')
+				 WHERE name = 'slot'`,
+			),
+		).toEqual([{ name: "slot" }]);
+		expect(
+			await db.getAllAsync<{ name: string }>(
+				`SELECT name FROM pragma_table_info('tracked_metrics')
+				 WHERE name = 'check_in_slots'`,
+			),
+		).toEqual([{ name: "check_in_slots" }]);
+		expect(
+			await db.getAllAsync<{ name: string; notnull: number }>(
+				`SELECT name, "notnull" FROM pragma_table_info('reminders')
+				 WHERE name = 'slot'`,
+			),
+		).toEqual([{ name: "slot", notnull: 1 }]);
 	});
 
 	it("is a no-op when the same database is migrated again", async () => {
@@ -172,12 +180,12 @@ describe("product database migrations", () => {
 		await databaseApp.runMigrations(db);
 		await db.execAsync(`
 			DROP TABLE unit_preferences;
-			DELETE FROM __app_migrations WHERE id = '0000_initial_schema';
+			DELETE FROM __app_migrations WHERE id = '0000_flashy_leech';
 		`);
 
 		await expect(databaseApp.runMigrations(db)).resolves.toEqual({
-			applied: ["0000_initial_schema"],
-			skipped: allExcept("0000_initial_schema"),
+			applied: ["0000_flashy_leech"],
+			skipped: [],
 		});
 		expect(
 			await db.getFirstAsync<{ name: string }>(
@@ -185,53 +193,6 @@ describe("product database migrations", () => {
 				 WHERE type = 'table' AND name = 'unit_preferences'`,
 			),
 		).toEqual({ name: "unit_preferences" });
-	});
-
-	it("replays a column-adding migration without failing on the live column", async () => {
-		const { databaseApp, db } = await migratedDatabase("column-replay.db");
-		await databaseApp.runMigrations(db);
-		await db.execAsync(
-			`DELETE FROM __app_migrations WHERE id = '0001_bored_giant_man';`,
-		);
-
-		await expect(databaseApp.runMigrations(db)).resolves.toEqual({
-			applied: ["0001_bored_giant_man"],
-			skipped: allExcept("0001_bored_giant_man"),
-		});
-		expect(
-			await db.getAllAsync<{ name: string }>(
-				`SELECT name FROM pragma_table_info('habits')
-				 WHERE name = 'area_slug'`,
-			),
-		).toEqual([{ name: "area_slug" }]);
-	});
-
-	it("slots existing reminders by time and leaves chosen slots alone on replay", async () => {
-		const { databaseApp, db } = await migratedDatabase("reminder-slots.db");
-		await databaseApp.runMigrations(db);
-		// Two rows as an upgrading device holds them — no slot yet — plus one the
-		// user has since moved to a sitting its time would not have picked.
-		await db.execAsync(`
-			INSERT INTO reminders (id, minute_of_day, days_of_week, slot, enabled, created_at, updated_at)
-			VALUES ('morning-row', 480, 127, NULL, 1, 1, 1),
-			       ('evening-row', 1200, 127, NULL, 1, 1, 1),
-			       ('chosen-row', 1200, 127, 'morning', 1, 1, 1);
-			DELETE FROM __app_migrations WHERE id = '0003_backfill_reminder_slots';
-		`);
-
-		await expect(databaseApp.runMigrations(db)).resolves.toEqual({
-			applied: ["0003_backfill_reminder_slots"],
-			skipped: allExcept("0003_backfill_reminder_slots"),
-		});
-		expect(
-			await db.getAllAsync<{ id: string; slot: string }>(
-				"SELECT id, slot FROM reminders ORDER BY id",
-			),
-		).toEqual([
-			{ id: "chosen-row", slot: "morning" },
-			{ id: "evening-row", slot: "evening" },
-			{ id: "morning-row", slot: "morning" },
-		]);
 	});
 
 	it("creates and safely re-runs the independent local-store manifest", async () => {

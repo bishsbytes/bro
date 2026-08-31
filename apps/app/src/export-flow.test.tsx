@@ -63,6 +63,7 @@ describe("export flow", () => {
 			value: 4,
 			scaleMin: 1,
 			scaleMax: 5,
+			slot: "morning",
 		});
 		await observations.create({
 			...base,

@@ -10,7 +10,7 @@ function reminder(overrides: Partial<Reminder> = {}): Reminder {
 		id: "reminder-1",
 		minuteOfDay: 20 * 60,
 		daysOfWeek: EVERY_DAY_MASK,
-		slot: null,
+		slot: "evening",
 		enabled: true,
 		createdAt: 1,
 		updatedAt: 1,
@@ -31,7 +31,6 @@ describe("reminder planner", () => {
 			now,
 			"2026-08-14",
 			new Set(),
-			false,
 		);
 		expect(
 			withoutCheckIn.slice(0, 2).map(({ reminderId }) => reminderId),
@@ -42,8 +41,7 @@ describe("reminder planner", () => {
 			schedules,
 			now,
 			"2026-08-14",
-			new Set(),
-			true,
+			new Set(["evening"]),
 		);
 		expect(checkedIn.every(({ localDay }) => localDay !== "2026-08-14")).toBe(
 			true,
@@ -59,7 +57,6 @@ describe("reminder planner", () => {
 			new Date(2026, 7, 14, 10),
 			"2026-08-14",
 			new Set(),
-			false,
 		);
 		expect(planned[0]?.localDay).toBe("2026-08-15");
 	});
@@ -73,7 +70,6 @@ describe("reminder planner", () => {
 			new Date(2026, 7, 14, 10),
 			"2026-08-14",
 			new Set(),
-			false,
 		);
 		expect(planned).toHaveLength(55);
 		expect(planned.length).toBeLessThanOrEqual(MAX_PLANNED_NOTIFICATIONS);
@@ -89,7 +85,6 @@ describe("reminder planner", () => {
 				new Date(2026, 9, 24, 12),
 				"2026-10-24",
 				new Set(),
-				false,
 			);
 			const fallBackDay = planned.filter(
 				({ localDay }) => localDay === "2026-10-25",
@@ -110,7 +105,6 @@ describe("reminder planner", () => {
 				new Date(2026, 2, 28, 12),
 				"2026-03-28",
 				new Set(),
-				false,
 			);
 			const springDay = planned.filter(
 				({ localDay }) => localDay === "2026-03-29",
@@ -140,7 +134,6 @@ describe("reminder planner", () => {
 				new Date(2026, 7, 14, 7),
 				"2026-08-14",
 				new Set(completed),
-				completed.length > 0,
 			)
 				.filter(({ localDay }) => localDay === "2026-08-14")
 				.map(({ reminderId }) => reminderId);
@@ -157,29 +150,7 @@ describe("reminder planner", () => {
 				new Date(2026, 7, 14, 7),
 				"2026-08-14",
 				new Set(["morning", "evening"] as const),
-				true,
 			).some(({ localDay }) => localDay === "2026-08-15"),
 		).toBe(true);
-	});
-
-	it("keeps a slotless reminder silenced by any check-in", () => {
-		const legacy = reminder({ id: "legacy", minuteOfDay: 20 * 60 });
-		const todayFor = (
-			completed: readonly ("morning" | "evening")[],
-			anyCheckIn: boolean,
-		) =>
-			planReminderNotifications(
-				[legacy],
-				new Date(2026, 7, 14, 7),
-				"2026-08-14",
-				new Set(completed),
-				anyCheckIn,
-			).filter(({ localDay }) => localDay === "2026-08-14");
-
-		expect(todayFor([], false)).toHaveLength(1);
-		// One sitting done is a check-in, and that is all a slotless row knows.
-		expect(todayFor(["morning"], true)).toHaveLength(0);
-		// A check-in that names no sitting still counts for it.
-		expect(todayFor([], true)).toHaveLength(0);
 	});
 });

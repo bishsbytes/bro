@@ -21,6 +21,7 @@ import {
 	CHECK_IN_SLOTS,
 	type CheckInSlot,
 	CONFIGURABLE_CHECK_IN_METRIC_SLUGS,
+	isCheckInSlot,
 } from "@bro/domain/metric-registry";
 import {
 	formatMetricDelta,
@@ -61,8 +62,8 @@ export type HistoryMeasurementChange =
 export type HistoricalCheckIn = {
 	id: string;
 	observedAt: number;
-	/** The sitting it was answered in; null on a check-in written before slots. */
-	slot: CheckInSlot | null;
+	/** The sitting it was answered in. */
+	slot: CheckInSlot;
 	mood: Observation;
 	optionalScores: Observation[];
 };
@@ -126,6 +127,9 @@ function groupCheckIns(
 	const checkIns: HistoricalCheckIn[] = [];
 
 	for (const mood of moods) {
+		if (!isCheckInSlot(mood.slot)) {
+			throw new TypeError(`Mood observation ${mood.id} has no check-in slot.`);
+		}
 		const optionalScores = observations.filter(
 			(row) =>
 				optionalScoreSlugs.has(row.metricSlug) &&
@@ -146,12 +150,9 @@ function groupCheckIns(
 		});
 	}
 
-	// The day reads in the order it was lived: morning, evening, then whatever
-	// named no sitting.
+	// The day reads in the order it was lived: morning, then evening.
 	const slotOrder = (checkIn: HistoricalCheckIn) =>
-		checkIn.slot === null
-			? CHECK_IN_SLOTS.length
-			: CHECK_IN_SLOTS.indexOf(checkIn.slot);
+		CHECK_IN_SLOTS.indexOf(checkIn.slot);
 	return checkIns.sort(
 		(left, right) =>
 			slotOrder(left) - slotOrder(right) ||

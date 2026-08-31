@@ -41,7 +41,7 @@ import { unitWords } from "../units/unit-words";
 export type CheckInEntry = {
 	id: string;
 	observedAt: number;
-	slot: CheckInSlot | null;
+	slot: CheckInSlot;
 	mood: Observation;
 	optionalScores: Observation[];
 };
@@ -50,13 +50,6 @@ export type TodayCheckIn = {
 	localDay: string;
 	/** The day's two sittings; null where one has not been answered yet. */
 	sittings: Record<CheckInSlot, CheckInEntry | null>;
-	/**
-	 * Check-ins on this day that name no sitting — written before slots existed
-	 * or by a device that does not record them. Kept outside the slotted flow and
-	 * visible here so an upgrade does not appear to lose the day's entry; edits
-	 * belong to the history editor, which does not pretend the row has a sitting.
-	 */
-	slotlessEntries: CheckInEntry[];
 	/** The scored prompts each sitting asks, after settings and the registry. */
 	availableOptionalScores: Record<CheckInSlot, ScoredMetricDefinition[]>;
 	selectedTagSlugs: string[];
@@ -87,6 +80,9 @@ function groupCheckIns(observations: readonly Observation[]): CheckInEntry[] {
 	const entries: CheckInEntry[] = [];
 
 	for (const mood of moods) {
+		if (!isCheckInSlot(mood.slot)) {
+			throw new TypeError(`Mood observation ${mood.id} has no check-in slot.`);
+		}
 		const optionalScores = observations.filter(
 			(row) =>
 				optionalScoreSlugs.has(row.metricSlug) &&
@@ -319,7 +315,6 @@ export class CheckInStore {
 		return {
 			localDay,
 			sittings: sittingsBySlot(entries),
-			slotlessEntries: entries.filter((entry) => entry.slot === null),
 			availableOptionalScores,
 			selectedTagSlugs: [
 				...new Set(
@@ -353,6 +348,13 @@ export class CheckInStore {
 			fromLocalDay,
 			throughLocalDay,
 		);
+		for (const mood of moods) {
+			if (!isCheckInSlot(mood.slot)) {
+				throw new TypeError(
+					`Mood observation ${mood.id} has no check-in slot.`,
+				);
+			}
+		}
 		return new Set(moods.map((mood) => mood.localDay));
 	}
 

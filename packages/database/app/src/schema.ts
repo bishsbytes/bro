@@ -36,7 +36,7 @@ export const observations = sqliteTable(
 		sourceRecordId: text("source_record_id"),
 		assessmentId: text("assessment_id"),
 		// Written by the check-in, never derived from observed_at; null on every
-		// other kind of observation and on check-ins that predate slots.
+		// other kind of observation.
 		slot: text("slot"),
 		createdAt: integer("created_at").notNull(),
 		updatedAt: integer("updated_at").notNull(),
@@ -76,9 +76,8 @@ export const reminders = sqliteTable(PRODUCT_TABLE_NAMES.reminders, {
 	id: text("id").primaryKey(),
 	minuteOfDay: integer("minute_of_day").notNull(),
 	daysOfWeek: integer("days_of_week").notNull(),
-	// Which sitting this reminder nags for; null on rows from a device that
-	// predates slots.
-	slot: text("slot"),
+	// Which sitting this reminder nags for.
+	slot: text("slot").notNull(),
 	enabled: integer("enabled").notNull(),
 	createdAt: integer("created_at").notNull(),
 	updatedAt: integer("updated_at").notNull(),

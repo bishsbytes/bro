@@ -25,7 +25,6 @@ function morningAsking(...slugs: readonly string[]): TodayCheckIn {
 const today: TodayCheckIn = {
 	localDay: "2026-08-14",
 	sittings: { morning: null, evening: null },
-	slotlessEntries: [],
 	availableOptionalScores: {
 		morning: scoresFor(OPTIONAL_SLUGS),
 		evening: [],
@@ -68,7 +67,10 @@ function entryOf(mood: number, optional: readonly [string, number][]) {
 		observedAt: moodRow.observedAt,
 		slot: moodRow.slot,
 		mood: moodRow,
-		optionalScores: optional.map(([slug, value]) => observation(slug, value)),
+		optionalScores: optional.map(([slug, value]) => ({
+			...observation(slug, value),
+			slot: "morning" as const,
+		})),
 	} satisfies CheckInEntry;
 }
 

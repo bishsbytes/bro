@@ -50,11 +50,8 @@ function statementsOf(migration: Migration): string[] {
  * Every statement a manifest runs must tolerate replay, because a migration
  * whose marker write went unobserved is applied again on the next start. The
  * generator rewrites `CREATE …` to `CREATE … IF NOT EXISTS`; SQLite has no
- * equivalent for `ADD COLUMN`, so that one case is guarded here instead.
- *
- * A data migration carries its own replay safety in its SQL — the reminder-slot
- * backfill only ever fills a null — because nothing here can know what a second
- * run of an arbitrary statement would mean.
+ * equivalent for `ADD COLUMN`, so future migrations of that shape are guarded
+ * here instead.
  */
 const ADD_COLUMN_STATEMENT =
 	/^ALTER TABLE [`"]?([A-Za-z_][A-Za-z0-9_]*)[`"]? ADD(?: COLUMN)? [`"]?([A-Za-z_][A-Za-z0-9_]*)[`"]?/i;

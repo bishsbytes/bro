@@ -58,12 +58,8 @@ function CheckInEditor({
 
 	return (
 		<Card style={styles.card}>
-			{/* Which sitting this was; a check-in from before sittings existed
-			    says so rather than being filed under one it never named. */}
 			<AppText variant="caption" color="subtle">
-				{checkIn.slot
-					? t(`checkIn:slots.${checkIn.slot}.name`)
-					: t("checkIn:sittings.unslotted")}
+				{t(`checkIn:slots.${checkIn.slot}.name`)}
 			</AppText>
 			<AppText variant="score">
 				{new Date(checkIn.observedAt).toLocaleTimeString([], {

@@ -763,9 +763,13 @@ describe("check-in export", () => {
 			id: "observation-mood-evening",
 			slot: "evening",
 		};
-		const slotlessMood: Observation = {
+		const weight: Observation = {
 			...moodObservation,
-			id: "observation-mood-legacy",
+			id: "observation-weight",
+			metricSlug: "weight",
+			value: 80,
+			scaleMin: null,
+			scaleMax: null,
 			slot: null,
 		};
 		const reslottedLibido: TrackedMetric = {
@@ -774,17 +778,11 @@ describe("check-in export", () => {
 			metricSlug: "libido",
 			checkInSlots: "morning",
 		};
-		const slotlessReminder: Reminder = {
-			...eveningReminder,
-			id: "reminder-legacy",
-			minuteOfDay: 8 * 60,
-			slot: null,
-		};
 		const input = {
-			observations: [moodObservation, eveningMood, slotlessMood],
+			observations: [moodObservation, eveningMood, weight],
 			dayNotes: [],
 			trackedMetrics: [trackedAlcohol, reslottedLibido],
-			reminders: [eveningReminder, slotlessReminder],
+			reminders: [eveningReminder],
 			assessments: [],
 			goals: [],
 			unitPreferences: [],
@@ -796,7 +794,7 @@ describe("check-in export", () => {
 			consumptionEntries: [],
 			customConsumables: [],
 			customConsumableComponents: [],
-			registry: [knownMetric("mood")],
+			registry: [knownMetric("mood"), knownMetric("weight")],
 		};
 
 		const parsed = parseCheckInExport(
@@ -809,7 +807,7 @@ describe("check-in export", () => {
 		expect(parsed.observations.map(({ id, slot }) => [id, slot])).toEqual([
 			["observation-mood", "morning"],
 			["observation-mood-evening", "evening"],
-			["observation-mood-legacy", null],
+			["observation-weight", null],
 		]);
 		expect(
 			parsed.trackedMetrics.map(({ id, checkInSlots }) => [id, checkInSlots]),
@@ -818,7 +816,6 @@ describe("check-in export", () => {
 			["tracked-libido", "morning"],
 		]);
 		expect(parsed.reminders.map(({ id, slot }) => [id, slot])).toEqual([
-			["reminder-legacy", null],
 			["reminder-evening", "evening"],
 		]);
 	});

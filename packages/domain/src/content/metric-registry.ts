@@ -443,12 +443,7 @@ export function hasCompletedCheckIn(
 	);
 }
 
-/**
- * Which of the day's sittings are done. A check-in written before slots
- * existed, or by a device that does not record them, carries no slot and so
- * completes neither — `hasCompletedCheckIn` is what still counts it as a
- * check-in day.
- */
+/** Which of the day's morning and evening sittings are done. */
 export function completedCheckInSlots(
 	observations: readonly {
 		readonly metricSlug: string;

@@ -41,7 +41,7 @@ function observation(
 		source: "user",
 		sourceRecordId: null,
 		assessmentId: null,
-		slot: null,
+		slot: "morning",
 		...overrides,
 	};
 }
@@ -94,11 +94,11 @@ describe("product repositories", () => {
 		expect(created).toMatchObject({
 			localDay: "2026-08-14",
 			tzOffsetMinutes: 120,
-			slot: null,
+			slot: "morning",
 		});
 	});
 
-	it("round-trips a check-in's sitting and leaves other rows slotless", async () => {
+	it("round-trips a check-in's sitting and leaves other rows without one", async () => {
 		let nextId = 0;
 		const repository = new databaseApp.ObservationRepository(db, {
 			now: () => 10_000,
@@ -118,6 +118,7 @@ describe("product repositories", () => {
 				value: 80,
 				scaleMin: null,
 				scaleMax: null,
+				slot: null,
 			}),
 		);
 
@@ -201,6 +202,7 @@ describe("product repositories", () => {
 				value: 1,
 				scaleMin: null,
 				scaleMax: null,
+				slot: null,
 			}),
 		);
 		await repository.create(
@@ -209,6 +211,7 @@ describe("product repositories", () => {
 				value: 1,
 				scaleMin: null,
 				scaleMax: null,
+				slot: null,
 			}),
 		);
 		const mood = await repository.create(observation());
@@ -666,12 +669,14 @@ describe("product repositories", () => {
 					value: 6,
 					scaleMin: 1,
 					scaleMax: 10,
+					slot: null,
 				}),
 				observation({
 					metricSlug: "wheel:health",
 					value: 8,
 					scaleMin: 1,
 					scaleMax: 10,
+					slot: null,
 				}),
 			],
 		};
@@ -720,12 +725,14 @@ describe("product repositories", () => {
 						value: 6,
 						scaleMin: 1,
 						scaleMax: 10,
+						slot: null,
 					}),
 					observation({
 						metricSlug: "wheel:health",
 						value: 11,
 						scaleMin: 1,
 						scaleMax: 10,
+						slot: null,
 					}),
 				],
 			}),

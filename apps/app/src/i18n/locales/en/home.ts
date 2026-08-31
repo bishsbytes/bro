@@ -2,8 +2,6 @@ export const home = {
 	loadFailed: "Your journal could not be loaded",
 	checkIns: {
 		title: "Check-ins",
-		edit: "Edit",
-		editA11y: "Edit check-in {{summary}}",
 		none: "No check-in was logged.",
 	},
 	tags: {

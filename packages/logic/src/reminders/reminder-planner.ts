@@ -37,24 +37,6 @@ function comparePlanned(
 }
 
 /**
- * Whether today's reminder has already been answered. A slotted reminder is
- * silenced only by its own sitting, so finishing the morning leaves the evening
- * nudge standing. A reminder with no slot — written before sittings existed, or
- * by a device that does not record them — keeps its old behaviour of being
- * silenced by any check-in, so an unmigrated row never nags more than it used
- * to.
- */
-function answeredToday(
-	reminder: Reminder,
-	completedSlots: ReadonlySet<CheckInSlot>,
-	anyCheckInToday: boolean,
-): boolean {
-	return reminder.slot === null
-		? anyCheckInToday
-		: completedSlots.has(reminder.slot);
-}
-
-/**
  * Turns replicated wall-clock schedules into a bounded set of install-local,
  * one-shot notifications. The cap is applied at a day boundary, so a busy day
  * is never partially scheduled.
@@ -64,7 +46,6 @@ export function planReminderNotifications(
 	now: Date,
 	todayLocalDay: string,
 	completedSlots: ReadonlySet<CheckInSlot>,
-	anyCheckInToday: boolean,
 ): PlannedNotification[] {
 	const startOfToday = new Date(
 		now.getFullYear(),
@@ -86,10 +67,7 @@ export function planReminderNotifications(
 				(reminder) =>
 					reminder.enabled &&
 					includesWeekday(reminder.daysOfWeek, weekday) &&
-					!(
-						localDay === todayLocalDay &&
-						answeredToday(reminder, completedSlots, anyCheckInToday)
-					),
+					!(localDay === todayLocalDay && completedSlots.has(reminder.slot)),
 			)
 			.map((reminder): PlannedNotification => {
 				const fireAt = dateAtMinute(day, reminder.minuteOfDay);

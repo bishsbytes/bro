@@ -855,43 +855,6 @@ export function HomeScreen({
 				})}
 			</View>
 			{error ? <AppText color="danger">{error}</AppText> : null}
-
-			{/* Check-ins from before the day had named sittings still belong to it,
-			    so an upgrade mid-day does not appear to lose one. Their edit action
-			    opens history instead of assigning a sitting from the current clock. */}
-			{today.slotlessEntries.length > 0 ? (
-				<>
-					<AppText variant="caption" color="subtle">
-						{t("checkIn:sittings.earlier")}
-					</AppText>
-					{today.slotlessEntries.map((entry) => (
-						<Card key={entry.id} style={styles.entryCard}>
-							<View>
-								<AppText variant="label">{checkInScoreSummary(entry)}</AppText>
-								<AppText variant="caption" color="subtle">
-									{new Date(entry.observedAt).toLocaleTimeString([], {
-										hour: "2-digit",
-										minute: "2-digit",
-									})}
-								</AppText>
-							</View>
-							<TouchableOpacity
-								accessibilityRole="button"
-								accessibilityLabel={t("checkIns.editA11y", {
-									summary: checkInScoreSummary(entry),
-								})}
-								onPress={() =>
-									router.push(`/history/${today.localDay}` as Href)
-								}
-							>
-								<AppText variant="label" color="brand">
-									{t("checkIns.edit")}
-								</AppText>
-							</TouchableOpacity>
-						</Card>
-					))}
-				</>
-			) : null}
 		</View>
 	);
 

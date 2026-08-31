@@ -370,13 +370,9 @@ describe("metric registry", () => {
 				{ metricSlug: "mood", slot: "morning" },
 			]),
 		]).toEqual(["morning", "evening"]);
-		// A configurable score alone does not complete a sitting, and a check-in
-		// from before slots existed completes neither.
+		// A configurable score alone does not complete a sitting.
 		expect([
-			...completedCheckInSlots([
-				{ metricSlug: "energy", slot: "morning" },
-				{ metricSlug: "mood", slot: null },
-			]),
+			...completedCheckInSlots([{ metricSlug: "energy", slot: "morning" }]),
 		]).toEqual([]);
 	});
 

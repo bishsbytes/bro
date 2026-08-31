@@ -20,7 +20,7 @@ function observation(
 		source: "user",
 		sourceRecordId: null,
 		assessmentId: null,
-		slot: null,
+		slot: "morning",
 		createdAt: 1,
 		updatedAt: 1,
 		...overrides,

@@ -1,10 +1,6 @@
 import type { Reminder, ReminderSchedule } from "@bro/database-app";
 import type { WeekStartDay } from "@bro/domain";
-import {
-	CHECK_IN_SLOTS,
-	type CheckInSlot,
-	checkInSlotForMinuteOfDay,
-} from "@bro/domain/metric-registry";
+import { CHECK_IN_SLOTS, type CheckInSlot } from "@bro/domain/metric-registry";
 import {
 	EVERY_DAY_MASK,
 	ISO_WEEKDAYS,
@@ -80,11 +76,7 @@ function ReminderEditor({
 	const { t } = useTranslation(["settings", "checkIn"]);
 	const [time, setTime] = useState(formatTime(initial.minuteOfDay));
 	const [daysOfWeek, setDaysOfWeek] = useState(initial.daysOfWeek);
-	// A reminder the user has never slotted takes the sitting its time
-	// suggests; one that already has a sitting opens on it.
-	const [slot, setSlot] = useState<CheckInSlot>(
-		initial.slot ?? checkInSlotForMinuteOfDay(initial.minuteOfDay),
-	);
+	const [slot, setSlot] = useState<CheckInSlot>(initial.slot);
 	const [error, setError] = useState<string | null>(null);
 	const weekdays = useMemo(() => orderedIsoWeekdays(weekStart), [weekStart]);
 
@@ -257,13 +249,9 @@ export function RemindersScreen({
 							<AppText color="muted">
 								{formatDays(t, reminder.daysOfWeek)}
 							</AppText>
-							{/* A reminder from before sittings names none, and is still
-							    silenced by any check-in — so it claims neither. */}
-							{reminder.slot ? (
-								<AppText variant="caption" color="subtle">
-									{t(`checkIn:slots.${reminder.slot}.name`)}
-								</AppText>
-							) : null}
+							<AppText variant="caption" color="subtle">
+								{t(`checkIn:slots.${reminder.slot}.name`)}
+							</AppText>
 						</View>
 						<ThemedSwitch
 							accessibilityLabel={
@@ -314,7 +302,7 @@ export function RemindersScreen({
 							? {
 									minuteOfDay: 20 * 60,
 									daysOfWeek: EVERY_DAY_MASK,
-									slot: null,
+									slot: "evening",
 								}
 							: editing
 					}

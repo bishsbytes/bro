@@ -1,7 +1,7 @@
 {
   "version": "6",
   "dialect": "sqlite",
-  "id": "0b343275-731b-484e-af03-1875bbe2da4e",
+  "id": "0a8cdd39-a9ce-450c-a833-a0abdb41f81e",
   "prevId": "00000000-0000-0000-0000-000000000000",
   "tables": {
     "assessments": {
@@ -868,6 +868,13 @@
           "notNull": false,
           "autoincrement": false
         },
+        "area_slug": {
+          "name": "area_slug",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
+        },
         "days_of_week": {
           "name": "days_of_week",
           "type": "integer",
@@ -997,6 +1004,13 @@
           "notNull": false,
           "autoincrement": false
         },
+        "slot": {
+          "name": "slot",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
+        },
         "created_at": {
           "name": "created_at",
           "type": "integer",
@@ -1054,6 +1068,13 @@
         "days_of_week": {
           "name": "days_of_week",
           "type": "integer",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "slot": {
+          "name": "slot",
+          "type": "text",
           "primaryKey": false,
           "notNull": true,
           "autoincrement": false
@@ -1126,6 +1147,13 @@
         },
         "custom_label": {
           "name": "custom_label",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
+        },
+        "check_in_slots": {
+          "name": "check_in_slots",
           "type": "text",
           "primaryKey": false,
           "notNull": false,

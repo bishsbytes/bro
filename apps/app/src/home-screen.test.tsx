@@ -3,7 +3,7 @@ import { act, fireEvent, render, waitFor } from "@testing-library/react-native";
 import * as Haptics from "expo-haptics";
 import { router } from "expo-router";
 import { Text } from "react-native";
-import type { CheckInEntry, TodayCheckIn } from "./check-in/check-in-store";
+import type { TodayCheckIn } from "./check-in/check-in-store";
 import {
 	monthHeaderLabel,
 	TodayHeaderMonthProvider,
@@ -40,7 +40,6 @@ const FIXED_NOW = () => new Date(2026, 7, 14, 12);
 const emptyToday: TodayCheckIn = {
 	localDay: "2026-08-14",
 	sittings: { morning: null, evening: null },
-	slotlessEntries: [] as CheckInEntry[],
 	availableOptionalScores: {
 		morning: listScoredMetrics().filter((metric) => metric.slug === "energy"),
 		evening: [],
@@ -117,15 +116,15 @@ function observation(metricSlug: string, value: number) {
 }
 
 function historyDay(localDay: string) {
-	const mood = observation("mood", 2);
-	const energy = observation("energy", 3);
+	const mood = { ...observation("mood", 2), slot: "morning" as const };
+	const energy = { ...observation("energy", 3), slot: "morning" as const };
 	return {
 		localDay,
 		checkIns: [
 			{
 				id: mood.id,
 				observedAt: mood.observedAt,
-				slot: null,
+				slot: "morning" as const,
 				mood,
 				optionalScores: [energy],
 			},
@@ -375,33 +374,6 @@ describe("home screen", () => {
 		);
 		expect(router.push).toHaveBeenCalledWith("/check-in?slot=morning");
 		expect(store.saveCheckIn).not.toHaveBeenCalled();
-	});
-
-	it("keeps a check-in written before slots visible on the day", async () => {
-		const mood = { ...observation("mood", 2), localDay: "2026-08-14" };
-		const entry = {
-			id: mood.id,
-			observedAt: mood.observedAt,
-			slot: null,
-			mood,
-			optionalScores: [],
-		};
-		const store = checkInStore({
-			...emptyToday,
-			slotlessEntries: [entry],
-		});
-		const screen = await render(
-			<HomeScreen
-				{...supportingProps()}
-				habitsStore={habitsStore()}
-				store={store}
-			/>,
-		);
-
-		expect(await screen.findByText("Earlier today")).toBeTruthy();
-		expect(screen.getByText("Mood 2")).toBeTruthy();
-		await fireEvent.press(screen.getByText("Edit"));
-		expect(router.push).toHaveBeenCalledWith("/history/2026-08-14");
 	});
 
 	it("persists a tag the moment it is toggled, without a check-in", async () => {

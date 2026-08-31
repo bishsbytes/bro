@@ -346,10 +346,9 @@ export type Reminder = {
 	daysOfWeek: number;
 	/**
 	 * The sitting this reminder nags for, so completing one does not silence the
-	 * other. Null on a reminder from a device that predates slots, which is
-	 * silenced by any check-in as it always was.
+	 * other.
 	 */
-	slot: CheckInSlot | null;
+	slot: CheckInSlot;
 	enabled: boolean;
 	createdAt: number;
 	updatedAt: number;

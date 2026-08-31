@@ -57,6 +57,7 @@ describe("daily insight signal", () => {
 			value: 2,
 			scaleMin: 1,
 			scaleMax: 5,
+			slot: "morning",
 		});
 		await observations.create({
 			...base,
@@ -65,6 +66,7 @@ describe("daily insight signal", () => {
 			value: 4,
 			scaleMin: 1,
 			scaleMax: 5,
+			slot: "evening",
 		});
 		await observations.create({
 			...base,
@@ -73,6 +75,7 @@ describe("daily insight signal", () => {
 			value: 10,
 			scaleMin: 0,
 			scaleMax: 10,
+			slot: "morning",
 		});
 		await observations.create({
 			...base,
@@ -82,6 +85,7 @@ describe("daily insight signal", () => {
 			value: 3,
 			scaleMin: 1,
 			scaleMax: 5,
+			slot: "morning",
 		});
 		await observations.create({
 			...base,

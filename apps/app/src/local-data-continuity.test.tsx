@@ -90,6 +90,7 @@ describe("product data continuity across optional identity", () => {
 			value: 4,
 			scaleMin: 1,
 			scaleMax: 5,
+			slot: "morning",
 			observedAt: 1_786_723_200_000,
 			localDay: "2026-08-14",
 			tzOffsetMinutes: 0,

@@ -14,7 +14,7 @@ function reminder(overrides: Partial<Reminder> = {}): Reminder {
 		id: "reminder-1",
 		minuteOfDay: 20 * 60,
 		daysOfWeek: 0b111_1111,
-		slot: null,
+		slot: "evening",
 		enabled: true,
 		createdAt: 1,
 		updatedAt: 1,

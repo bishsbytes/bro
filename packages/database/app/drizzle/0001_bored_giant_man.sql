@@ -1,1 +1,0 @@
-ALTER TABLE `habits` ADD `area_slug` text;

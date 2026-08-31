@@ -112,7 +112,10 @@ describe("check-in store", () => {
 
 	it("rejects editing an entry through a different sitting", async () => {
 		const observations = new databaseApp.ObservationRepository(db);
-		const mood = await observations.create(scoredObservation("mood", 3, 1, 5));
+		const mood = await observations.create({
+			...scoredObservation("mood", 3, 1, 5),
+			slot: "evening",
+		});
 		const store = new CheckInStore(db, () => CAPTURED_AT);
 
 		await expect(
@@ -122,7 +125,7 @@ describe("check-in store", () => {
 				{
 					id: mood.id,
 					observedAt: mood.observedAt,
-					slot: null,
+					slot: "evening",
 					mood,
 					optionalScores: [],
 				},
@@ -182,28 +185,10 @@ describe("check-in store", () => {
 		// The most recently written wins the card.
 		expect(today.sittings.morning?.id).toBe(newer.id);
 		expect(today.sittings.morning?.mood.value).toBe(5);
-		expect(today.slotlessEntries).toEqual([]);
 		// Neither row was deleted, and the day still counts as checked in.
 		expect(
 			(await observations.listByDay(LOCAL_DAY)).map((row) => row.id).sort(),
 		).toEqual([older.id, newer.id].sort());
-	});
-
-	it("keeps a check-in written before slots out of both sittings", async () => {
-		const observations = new databaseApp.ObservationRepository(db);
-		const store = new CheckInStore(db, () => CAPTURED_AT);
-		const legacy = await observations.create(
-			scoredObservation("mood", 3, 1, 5),
-		);
-
-		const today = await store.loadToday();
-		expect(today.sittings).toEqual({ morning: null, evening: null });
-		expect(today.slotlessEntries.map((entry) => entry.id)).toEqual([legacy.id]);
-
-		// Answering the morning adds a sitting rather than adopting the old row.
-		const saved = await store.saveCheckIn("morning", { mood: 4 });
-		expect(saved.sittings.morning?.id).not.toBe(legacy.id);
-		expect(saved.slotlessEntries.map((entry) => entry.id)).toEqual([legacy.id]);
 	});
 
 	it("loads the distinct days with a mood observation in an inclusive range", async () => {
@@ -212,15 +197,18 @@ describe("check-in store", () => {
 		await observations.create({
 			...scoredObservation("mood", 3, 1, 5),
 			localDay: "2026-08-13",
+			slot: "morning",
 		});
 		await observations.create({
 			...scoredObservation("mood", 4, 1, 5),
 			localDay: "2026-08-14",
+			slot: "morning",
 		});
 		await observations.create({
 			...scoredObservation("mood", 5, 1, 5),
 			observedAt: CAPTURED_AT.getTime() + 1,
 			localDay: "2026-08-14",
+			slot: "evening",
 		});
 		await observations.create({
 			...scoredObservation("energy", 4, 1, 5),
@@ -229,10 +217,12 @@ describe("check-in store", () => {
 		await observations.create({
 			...scoredObservation("mood", 3, 1, 5),
 			localDay: "2026-08-16",
+			slot: "morning",
 		});
 		await observations.create({
 			...scoredObservation("mood", 2, 1, 5),
 			localDay: "2026-08-17",
+			slot: "evening",
 		});
 
 		expect(await store.loadCheckInDays("2026-08-14", "2026-08-16")).toEqual(

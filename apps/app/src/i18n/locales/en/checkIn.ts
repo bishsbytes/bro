@@ -59,9 +59,6 @@ export const checkIn = {
 		start: "Check in",
 		editA11y: "Edit {{sitting}} check-in: {{summary}}",
 		startA11y: "Start {{sitting}} check-in",
-		earlier: "Earlier today",
-		/** An entry recorded before the day had named sittings. */
-		unslotted: "Recorded before morning and evening check-ins",
 	},
 	nav: {
 		back: "Back",

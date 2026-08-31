@@ -136,6 +136,7 @@ CREATE TABLE `habits` (
 	`metric_slug` text,
 	`direction` text,
 	`target_value` real,
+	`area_slug` text,
 	`days_of_week` integer NOT NULL,
 	`position` integer NOT NULL,
 	`added_at` integer NOT NULL,
@@ -156,6 +157,7 @@ CREATE TABLE `observations` (
 	`source` text NOT NULL,
 	`source_record_id` text,
 	`assessment_id` text,
+	`slot` text,
 	`created_at` integer NOT NULL,
 	`updated_at` integer NOT NULL
 );
@@ -166,6 +168,7 @@ CREATE TABLE `reminders` (
 	`id` text PRIMARY KEY NOT NULL,
 	`minute_of_day` integer NOT NULL,
 	`days_of_week` integer NOT NULL,
+	`slot` text NOT NULL,
 	`enabled` integer NOT NULL,
 	`created_at` integer NOT NULL,
 	`updated_at` integer NOT NULL
@@ -178,6 +181,7 @@ CREATE TABLE `tracked_metrics` (
 	`added_at` integer,
 	`removed_at` integer,
 	`custom_label` text,
+	`check_in_slots` text,
 	`created_at` integer NOT NULL,
 	`updated_at` integer NOT NULL
 );

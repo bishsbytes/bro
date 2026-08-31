@@ -29,7 +29,7 @@ function observation(
 		source: "user",
 		sourceRecordId: null,
 		assessmentId,
-		slot: null,
+		slot: metricSlug === "mood" ? "morning" : null,
 		createdAt: 1_000,
 		updatedAt: 1_000,
 	};

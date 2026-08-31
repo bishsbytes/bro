@@ -19,11 +19,7 @@ import type {
 	UnitPreference,
 } from "@bro/mobile-model";
 
-/**
- * 2 adds the check-in slot to observations and reminders, and the slot
- * override to tracked metrics.
- */
-export const CHECK_IN_EXPORT_FORMAT_VERSION = 2 as const;
+export const CHECK_IN_EXPORT_FORMAT_VERSION = 1 as const;
 
 export type CheckInExportInput = {
 	observations: readonly Observation[];

@@ -340,6 +340,7 @@ describe("body store", () => {
 			value: 4,
 			scaleMin: 1,
 			scaleMax: 5,
+			slot: "morning",
 			observedAt: Date.parse("2026-08-14T12:00:00.000Z"),
 			localDay: "2026-08-14",
 			tzOffsetMinutes: 0,

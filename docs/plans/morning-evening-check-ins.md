@@ -52,9 +52,9 @@ alike.
   survive as rows. `saveCheckIn` upserts at the store level, and reads pick a
   deterministic canonical sitting per slot (latest `updatedAt`, then id) while
   the history day view continues to show every row it holds — nothing hidden.
-- **Legacy rows keep `slot = NULL` and are not backfilled.** Guessing history
-  from `observedAt` would manufacture facts. Old days render as they always
-  have (a plain list); only new sittings get the two-slot presentation.
+- **Morning/evening is the initial persisted shape.** The app had not shipped
+  before this change, so there is no pre-slot product data to migrate or
+  compatibility UI to retain.
 - **Mood in both slots keeps insights untouched at parity.** The daily signal
   already means same-day scored rows, so morning + evening mood becomes a mean
   of two fixed samples — better comparability across days, no engine change.
@@ -70,14 +70,10 @@ alike.
   `energy` and `motivation` morning, `productivity` and `libido` evening —
   each metric is then sampled once per day at a consistent time, which is the
   best shape for its trend.
-- **Reminders get a `slot` column, backfilled once.** Existing reminders are
-  assigned by their time (`minute_of_day < 720` → morning, else evening) by a
-  hand-written data migration, which only ever fills a null so a replay cannot
-  overwrite a choice; a wrong guess is a one-tap fix in the reminders screen,
-  which now shows and edits the sitting. The planner takes the set of completed
-  slots alongside the old `anyCheckInToday` boolean: a slotted reminder is
-  dropped for today when its own sitting is done, and a slotless one keeps
-  being silenced by any check-in.
+- **Every reminder names a slot.** The required column is part of the initial
+  schema, and the reminder editor always creates a morning or evening schedule.
+  The planner takes the set of completed slots and drops today's reminder when
+  its own sitting is done.
 - **The slot is optional on the write type, required on the read type.**
   `CreateObservation.slot` defaults to null so body measurements, habits,
   imports and wheel sittings never have to declare they have no sitting, while
@@ -98,31 +94,28 @@ had to land together to keep the tree green.
   default slot on the four configurable scored metrics;
   `CHECK_IN_METRIC_SLUGS` / `hasCompletedCheckIn` unchanged.
 - [schema.ts](../../packages/database/app/src/schema.ts): nullable `slot` on
-  `observations`, nullable `check_in_slots` on `tracked_metrics`, nullable
-  `slot` on `reminders`, regenerated into `0002_petite_zzzax`. The reminder
-  backfill is a separate hand-written migration, `0003_backfill_reminder_slots`
-  (drizzle's `generate --custom`), because drizzle only emits schema diffs and
-  the alternative was hand-editing generated SQL.
+  `observations` (non-check-in observations have no sitting), nullable
+  `check_in_slots` on `tracked_metrics` (`NULL` follows the registry default),
+  and required `slot` on `reminders`. The complete current schema is emitted as
+  the single initial product migration.
 - [records.ts](../../packages/mobile-model/src/records.ts): the three types
   gain their fields; repositories read/write them
   ([observation-repository](../../packages/database/app/src/repositories/observation-repository.ts),
   [tracked-metrics-repository](../../packages/database/app/src/repositories/tracked-metrics-repository.ts),
   [reminder-repository](../../packages/database/app/src/repositories/reminder-repository.ts)).
-- `CHECK_IN_EXPORT_FORMAT_VERSION` bumps to 2 in
-  [check-in-export.ts](../../packages/logic/src/export/check-in-export.ts) —
-  the new fields flow through the existing raw-row serialisation.
-- Tests: the backfill assigns by time, survives a replay, and leaves a slot the
-  user has since chosen alone; repository round-trips of all three columns; a
-  focused export round-trip covering a slotted, an unslotted, and a re-slotted
-  row (the golden fixture keeps its own scope).
+- [check-in-export.ts](../../packages/logic/src/export/check-in-export.ts)
+  defines this current shape as export format 1, including observation slots,
+  reminder slots, and tracked-metric slot overrides.
+- Tests: the flattened schema exposes all three columns with reminder slot
+  required; repositories round-trip them; a focused export round-trip covers
+  both sittings, a non-check-in observation, a reminder, and a re-slotted score.
 
 ### 2. Check-in store
 
 - [check-in-store.ts](../../apps/app/src/check-in/check-in-store.ts):
   `TodayCheckIn.entries` becomes `sittings: Record<CheckInSlot, CheckInEntry | null>`
-  (canonical pick as decided above) plus `slotlessEntries` for the day's
-  pre-slot check-ins; `saveCheckIn(slot, scores, entry?)` writes `slot` on
-  every row and rewrites whatever already fills the slot;
+  (canonical pick as decided above); `saveCheckIn(slot, scores, entry?)` writes
+  `slot` on every row and rewrites whatever already fills the slot;
   `availableOptionalScores` becomes one list per slot, resolved from the
   overlay + registry default. `loadCheckInDays` is untouched (any Mood still
   marks the day). The store validates score *values*, not which slot they
@@ -135,11 +128,8 @@ had to land together to keep the tree green.
 ### 3. Reminders
 
 - [reminder-planner.ts](../../packages/logic/src/reminders/reminder-planner.ts):
-  `todayHasCheckIn: boolean` → `completedSlots: ReadonlySet<CheckInSlot>` plus
-  `anyCheckInToday: boolean` (the slotless rows still need the old signal); a
-  slotted reminder is suppressed for today when its slot is complete; a
-  legacy `NULL`-slot reminder keeps today's behaviour (suppressed by any
-  check-in) so an unmigrated row never nags more than it used to.
+  `todayHasCheckIn: boolean` → `completedSlots: ReadonlySet<CheckInSlot>`; a
+  reminder is suppressed for today when its slot is complete.
 - [reminder-materialiser.ts](../../apps/app/src/reminders/reminder-materialiser.ts)
   computes the completed-slot set from today's Mood observations;
   [reminder-store.ts](../../apps/app/src/reminders/reminder-store.ts) and the
@@ -159,9 +149,8 @@ had to land together to keep the tree green.
   over unchanged.
 - [history-store.ts](../../apps/app/src/history/history-store.ts) /
   [history-day-screen.tsx](../../apps/app/src/screens/history/history-day-screen.tsx):
-  `HistoricalCheckIn` carries its slot, the day orders morning → evening →
-  slotless, and each entry is labelled with its sitting (or as pre-dating
-  them). `unpairedScored` handling stays.
+  `HistoricalCheckIn` carries its slot, the day orders morning → evening, and
+  each entry is labelled with its sitting. `unpairedScored` handling stays.
 - [week-strip.tsx](../../apps/app/src/components/week-strip.tsx) unchanged
   (`hasCheckIn` = any). A half-filled indicator for one-of-two slots is a
   follow-up.
