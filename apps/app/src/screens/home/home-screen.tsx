@@ -347,6 +347,8 @@ export function HomeScreen({
 	const resolvedSelectedDay = selectedDay ?? todayLocalDay;
 	const [previewDay, setPreviewDay] = useState<string | null>(null);
 	const calendarSelectedDay = previewDay ?? resolvedSelectedDay;
+	const calendarSelectedDayRef = useRef(calendarSelectedDay);
+	calendarSelectedDayRef.current = calendarSelectedDay;
 	const previewPagerDay = useCallback(
 		(localDay: string) => {
 			setPreviewDay(localDay === resolvedSelectedDay ? null : localDay);
@@ -543,7 +545,12 @@ export function HomeScreen({
 	const handleVisibleRangeChange = useCallback(
 		(from: string, through: string) => {
 			visibleRange.current = { from, through };
-			setHeaderVisibleMonthDay(shiftLocalDay(from, 3));
+			const selected = calendarSelectedDayRef.current;
+			setHeaderVisibleMonthDay(
+				selected >= from && selected <= through
+					? selected
+					: shiftLocalDay(from, 3),
+			);
 			void loadIndicatorRange(from, through);
 		},
 		[loadIndicatorRange, setHeaderVisibleMonthDay],

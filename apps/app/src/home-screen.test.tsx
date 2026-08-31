@@ -692,6 +692,34 @@ describe("home screen", () => {
 		);
 	});
 
+	it("uses the selected day's month when the visible week crosses a month boundary", async () => {
+		const store = checkInStore({
+			...emptyToday,
+			localDay: "2026-08-31",
+		});
+		const screen = await render(
+			<TodayHeaderMonthProvider>
+				<HeaderMonthProbe />
+				<HomeScreen
+					{...supportingProps()}
+					now={() => new Date(2026, 7, 31, 12)}
+					habitsStore={habitsStore()}
+					store={store}
+				/>
+			</TodayHeaderMonthProvider>,
+		);
+
+		await waitFor(() =>
+			expect(store.loadCheckInDays).toHaveBeenCalledWith(
+				"2026-08-31",
+				"2026-09-06",
+			),
+		);
+		expect(screen.getByTestId("header-month").props.children).toBe(
+			monthHeaderLabel("2026-08-31"),
+		);
+	});
+
 	it("returns to today when the active Journal tab is pressed again", async () => {
 		const screen = await render(
 			<TodayHeaderMonthProvider>
