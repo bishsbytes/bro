@@ -2,7 +2,8 @@
 
 The app reads and writes its embedded database through one repository class per
 data domain, each issuing hand-written parameterised SQL. Drizzle authors,
-generates, and applies migrations; application queries do not use its query API.
+generates, and applies migrations through an asynchronous Expo SQLite transport;
+application queries do not use its query API.
 
 The first product domains are implemented. Use
 [`observation-repository.ts`](observation-repository.ts) as the reference for a

@@ -40,8 +40,10 @@ describe("product database migrations", () => {
 
 	it("creates every product table and index in a fresh database", async () => {
 		const { databaseApp, db } = await migratedDatabase("fresh.db");
+		const prepareAsync = jest.spyOn(db, "prepareAsync");
 
 		await expect(databaseApp.runMigrations(db)).resolves.toBeUndefined();
+		expect(prepareAsync).toHaveBeenCalled();
 
 		const objects = await db.getAllAsync<{ name: string; type: string }>(
 			`SELECT name, type FROM sqlite_master
