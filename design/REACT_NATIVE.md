@@ -61,3 +61,7 @@ Expo consumes raster files, so the checked-in PNG app, splash, and favicon
 assets are deterministic exports of `design/brand/*.svg`. Light and dark splash
 variants use their matching Baseline neutral backgrounds. Re-export after a
 brand SVG changes; do not redraw the mark in React Native.
+
+Android adaptive icons use separate transparent layers. The foreground keeps
+the wordmark inside Android's safe zone, while the Android 13+ monochrome layer
+uses the compact `b.` glyph so themed launchers have a meaningful alpha mask.
