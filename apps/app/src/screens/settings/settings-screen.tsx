@@ -105,6 +105,10 @@ export function SettingsScreen({
 
 	return (
 		<Screen scroll padded gap="md" keyboardShouldPersistTaps="handled">
+			<View style={styles.section}>
+				<SectionHeader title={t("account.sectionTitle")} />
+				<AccountSection />
+			</View>
 			<ListRow
 				title={t("index.appearance")}
 				detail={t("index.appearanceDetail")}
@@ -164,10 +168,6 @@ export function SettingsScreen({
 				accessibilityLabel={t("index.exportA11y")}
 				onPress={() => router.push("/settings/export" as Href)}
 			/>
-			<View style={styles.section}>
-				<SectionHeader title={t("account.sectionTitle")} />
-				<AccountSection />
-			</View>
 			<Card style={styles.section}>
 				<SectionHeader title={t("localData.title")} />
 				{deleteStep === "idle" ? (
