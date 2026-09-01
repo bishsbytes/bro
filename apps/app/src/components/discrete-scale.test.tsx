@@ -24,7 +24,7 @@ describe("DiscreteScale", () => {
 		expect(view.getByText("Very good")).toBeTruthy();
 	});
 
-	it("maps the full-width touch target to the nearest stop", async () => {
+	it("maps native touches and web clicks against the full rail", async () => {
 		const onSelect = jest.fn();
 		const view = await render(
 			<DiscreteScale
@@ -49,8 +49,16 @@ describe("DiscreteScale", () => {
 		await fireEvent.press(scale, {
 			nativeEvent: { locationX: 176, locationY: 32 },
 		});
+		await fireEvent.press(scale, {
+			nativeEvent: {
+				locationX: undefined,
+				offsetX: 240,
+				locationY: 32,
+			},
+		});
 
-		expect(onSelect).toHaveBeenCalledWith(6);
+		expect(onSelect).toHaveBeenNthCalledWith(1, 6);
+		expect(onSelect).toHaveBeenNthCalledWith(2, 8);
 	});
 
 	it("supports screen-reader and keyboard adjustments", async () => {

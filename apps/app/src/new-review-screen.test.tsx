@@ -64,7 +64,8 @@ async function chooseScore(view: RenderResult, prefix: string, score: number) {
 	});
 	await fireEvent.press(scale, {
 		nativeEvent: {
-			locationX: (score - 0.5) * (width / 10),
+			locationX: undefined,
+			offsetX: (score - 0.5) * (width / 10),
 			locationY: 32,
 		},
 	});

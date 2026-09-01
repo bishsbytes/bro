@@ -5,7 +5,12 @@ import {
 	useState,
 } from "react";
 import { useTranslation } from "react-i18next";
-import { type NativeSyntheticEvent, Pressable, View } from "react-native";
+import {
+	type GestureResponderEvent,
+	type NativeSyntheticEvent,
+	Pressable,
+	View,
+} from "react-native";
 import { StyleSheet } from "../theme/unistyles";
 import { AppText } from "./app-text";
 
@@ -28,6 +33,19 @@ const KeyboardPressable = Pressable as ComponentType<
 		onKeyDown?: (event: KeyEvent) => void;
 	}
 >;
+
+/** React Native Web sends a MouseEvent to onPress, while native sends touch data. */
+function pointerPosition(event: GestureResponderEvent): number | null {
+	const location = event.nativeEvent.locationX;
+	if (Number.isFinite(location)) return location;
+
+	const mouseEvent = event.nativeEvent as typeof event.nativeEvent & {
+		offsetX?: number;
+	};
+	return Number.isFinite(mouseEvent.offsetX)
+		? (mouseEvent.offsetX ?? null)
+		: null;
+}
 
 /**
  * A compact, adjustable rail for scales too long to remain thumb-sized as
@@ -109,13 +127,18 @@ export function DiscreteScale({
 				}}
 				onFocus={() => setFocused(true)}
 				onBlur={() => setFocused(false)}
-				onPressIn={(event) => setPreview(scoreAt(event.nativeEvent.locationX))}
-				onTouchMove={(event) =>
-					setPreview(scoreAt(event.nativeEvent.locationX))
-				}
+				onPressIn={(event) => {
+					const position = pointerPosition(event);
+					setPreview(position === null ? null : scoreAt(position));
+				}}
+				onTouchMove={(event) => {
+					const position = pointerPosition(event);
+					setPreview(position === null ? null : scoreAt(position));
+				}}
 				onPressOut={() => setPreview(null)}
 				onPress={(event) => {
-					const score = scoreAt(event.nativeEvent.locationX);
+					const position = pointerPosition(event);
+					const score = position === null ? null : scoreAt(position);
 					if (score !== null) onSelect(score);
 				}}
 				onAccessibilityAction={(event) => {
