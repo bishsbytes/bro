@@ -119,7 +119,7 @@ export function ReviewResultScreen({
 									{score.label}
 								</AppText>
 								{score.focused ? (
-									<AppText variant="caption" color="brand">
+									<AppText variant="caption" color="muted">
 										{t("result.focus")}
 									</AppText>
 								) : null}
@@ -230,7 +230,13 @@ const styles = StyleSheet.create((theme) => ({
 		justifyContent: "space-between",
 		gap: theme.spacing.md,
 	},
-	labelGroup: { flex: 1, gap: theme.spacing.xs },
+	labelGroup: {
+		flex: 1,
+		flexDirection: "row",
+		alignItems: "baseline",
+		flexWrap: "wrap",
+		gap: theme.spacing.xs,
+	},
 	label: { fontWeight: "600" },
 	comparison: { color: theme.colors.mind },
 	nextActions: { gap: theme.spacing.sm, marginTop: theme.spacing.sm },
