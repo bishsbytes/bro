@@ -30,7 +30,7 @@ export function ListRow({
 		<TouchableOpacity
 			accessibilityRole="button"
 			activeOpacity={0.72}
-			style={[styles.row, style]}
+			style={[styles.row, showChevron && styles.chevronRow, style]}
 			{...props}
 		>
 			<View style={styles.content}>
@@ -69,6 +69,11 @@ const styles = StyleSheet.create((theme) => ({
 		borderRadius: theme.radius.lg,
 		backgroundColor: theme.colors.surface,
 	},
+	/**
+	 * The chevron's ink spans 8–16 of its 24px box, so it carries 8px of its own
+	 * whitespace. Full padding on that edge would read wider than the left.
+	 */
+	chevronRow: { paddingRight: theme.spacing.sm },
 	content: { flex: 1, gap: theme.spacing.xs },
 	heading: {
 		flexDirection: "row",

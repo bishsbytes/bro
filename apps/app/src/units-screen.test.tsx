@@ -9,6 +9,12 @@ jest.mock("expo-router", () => ({
 	},
 }));
 
+// The sheet reads insets; the screen itself still needs the real SafeAreaView.
+jest.mock("react-native-safe-area-context", () => ({
+	...jest.requireActual("react-native-safe-area-context"),
+	useSafeAreaInsets: () => ({ top: 0, right: 0, bottom: 24, left: 0 }),
+}));
+
 const localeSnapshot: UnitSettingsSnapshot = {
 	settings: [
 		{
@@ -65,7 +71,7 @@ const localeSnapshot: UnitSettingsSnapshot = {
 };
 
 describe("units screen", () => {
-	it("shows locale defaults as previews without marking them as saved", async () => {
+	it("glimpses the resolved unit and its example on each row", async () => {
 		const store = {
 			load: jest.fn(async () => localeSnapshot),
 			set: jest.fn(),
@@ -77,19 +83,35 @@ describe("units screen", () => {
 		await waitFor(() =>
 			expect(view.getByText("Example: 12 st 4 lb")).toBeTruthy(),
 		);
+		expect(view.getByText("Stones & pounds")).toBeTruthy();
+		expect(view.getByText("Feet & inches")).toBeTruthy();
+		expect(view.getByText("Monday")).toBeTruthy();
+		expect(store.set).not.toHaveBeenCalled();
+	});
+
+	it("says where an unchosen unit came from without marking it as saved", async () => {
+		const store = {
+			load: jest.fn(async () => localeSnapshot),
+			set: jest.fn(),
+			loadWeekStart: jest.fn(async () => "monday" as const),
+			setWeekStart: jest.fn(),
+		};
+		const view = await render(<UnitsScreen store={store} />);
+
+		await fireEvent.press(
+			await view.findByLabelText("Choose the unit for Weight"),
+		);
+
 		expect(view.getByText(/Device default: Stones & pounds/)).toBeTruthy();
-		expect(view.getByLabelText("Use Feet & inches for Height")).toBeTruthy();
 		expect(
-			view.getByLabelText("Use Inches for Other body measurements"),
+			view.getByText("Used for weight entries, history, trends, and goals."),
 		).toBeTruthy();
+		// The locale resolved it, so no option is shown as the saved one.
 		expect(
 			view.getByLabelText("Use Stones & pounds for Weight").props
 				.accessibilityState,
 		).toMatchObject({ selected: false });
 		expect(store.set).not.toHaveBeenCalled();
-		expect(
-			view.getByLabelText("Start weeks on Monday").props.accessibilityState,
-		).toMatchObject({ selected: true });
 	});
 
 	it("persists a choice and replaces the preview immediately", async () => {
@@ -114,16 +136,16 @@ describe("units screen", () => {
 		};
 		const view = await render(<UnitsScreen store={store} />);
 
-		await waitFor(() =>
-			expect(view.getByText("Example: 12 st 4 lb")).toBeTruthy(),
+		await fireEvent.press(
+			await view.findByLabelText("Choose the unit for Weight"),
 		);
 		await fireEvent.press(view.getByLabelText("Use Kilograms for Weight"));
 
 		await waitFor(() => expect(store.set).toHaveBeenCalledWith("mass", "kg"));
+		// Choosing answers the row, so the sheet closes and the row carries it.
+		expect(view.queryByLabelText("Use Kilograms for Weight")).toBeNull();
+		expect(view.getByText("Kilograms")).toBeTruthy();
 		expect(view.getByText("Example: 78.0 kg")).toBeTruthy();
-		expect(
-			view.getByLabelText("Use Kilograms for Weight").props.accessibilityState,
-		).toMatchObject({ selected: true });
 		expect(globalThis.fetch).not.toHaveBeenCalled();
 	});
 
@@ -136,16 +158,18 @@ describe("units screen", () => {
 		};
 		const view = await render(<UnitsScreen store={store} />);
 
-		await waitFor(() =>
-			expect(view.getByLabelText("Start weeks on Sunday")).toBeTruthy(),
+		await fireEvent.press(
+			await view.findByLabelText("Choose which day weeks start on"),
 		);
+		expect(
+			view.getByLabelText("Start weeks on Monday").props.accessibilityState,
+		).toMatchObject({ selected: true });
+
 		await fireEvent.press(view.getByLabelText("Start weeks on Sunday"));
 
 		await waitFor(() =>
 			expect(store.setWeekStart).toHaveBeenCalledWith("sunday"),
 		);
-		expect(
-			view.getByLabelText("Start weeks on Sunday").props.accessibilityState,
-		).toMatchObject({ selected: true });
+		expect(view.getByText("Sunday")).toBeTruthy();
 	});
 });

@@ -3,16 +3,16 @@ import { useCallback, useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { View } from "react-native";
 import { AppText } from "../../components/app-text";
-import { Button } from "../../components/button";
-import { Card } from "../../components/card";
 import { EmptyState } from "../../components/empty-state";
+import { ListRow } from "../../components/list-row";
+import { OptionSheet } from "../../components/option-sheet";
 import { LoadingScreen, StackScreen as Screen } from "../../components/screen";
-import { SectionHeader } from "../../components/section-header";
 import { toMessage } from "../../lib/errors";
 import { useFocusStoreLoad } from "../../lib/use-store-load";
 import { StyleSheet } from "../../theme/unistyles";
 import {
 	createUnitSettingsStore,
+	type UnitSetting,
 	type UnitSettingsSnapshot,
 	type UnitSettingsStore,
 	WEEK_START_OPTIONS,
@@ -25,19 +25,31 @@ type UnitsScreenProps = {
 	>;
 };
 
-function resolvedLabel(
-	setting: UnitSettingsSnapshot["settings"][number],
-): string {
+const WEEK_START_DIMENSION = "week_start";
+
+function resolvedLabel(setting: UnitSetting): string {
 	return (
 		setting.options.find((option) => option.unit === setting.resolvedUnit)
 			?.label ?? setting.resolvedUnit
 	);
 }
 
+/** Says where an unchosen unit came from, so the row's value is not a mystery. */
+function inheritedNoteKey(setting: UnitSetting) {
+	if (setting.resolutionSource === "locale") {
+		return "units.deviceDefault" as const;
+	}
+	if (setting.resolutionSource === "fallback") {
+		return "units.unsupportedUnit" as const;
+	}
+	return null;
+}
+
 export function UnitsScreen({ store }: UnitsScreenProps) {
 	const { t } = useTranslation(["settings", "common"]);
 	const unitsStore = useMemo(() => store ?? createUnitSettingsStore(), [store]);
 	const [busyDimension, setBusyDimension] = useState<string | null>(null);
+	const [editing, setEditing] = useState<string | null>(null);
 	// Units and week start are separate preferences, but the screen shows them
 	// as one page and has nothing to say until both have arrived.
 	const { data, error, loading, reload, setData, setError } = useFocusStoreLoad(
@@ -70,7 +82,7 @@ export function UnitsScreen({ store }: UnitsScreenProps) {
 
 	async function chooseWeekStart(day: WeekStartDay) {
 		if (!data) return;
-		setBusyDimension("week_start");
+		setBusyDimension(WEEK_START_DIMENSION);
 		setError(null);
 		try {
 			await unitsStore.setWeekStart(day);
@@ -86,6 +98,14 @@ export function UnitsScreen({ store }: UnitsScreenProps) {
 		return <LoadingScreen />;
 	}
 
+	const editingSetting =
+		snapshot?.settings.find((setting) => setting.dimension === editing) ?? null;
+	const editingWeekStart = editing === WEEK_START_DIMENSION;
+	const weekStartLabel = WEEK_START_OPTIONS.find(
+		(option) => option.day === weekStart,
+	)?.labelKey;
+	const inheritedKey = editingSetting ? inheritedNoteKey(editingSetting) : null;
+
 	return (
 		<Screen scroll padded gap="lg">
 			<AppText color="muted">{t("units.intro")}</AppText>
@@ -100,81 +120,84 @@ export function UnitsScreen({ store }: UnitsScreenProps) {
 				/>
 			) : null}
 
-			{weekStart ? (
-				<Card style={styles.setting}>
-					<SectionHeader title={t("units.weekStartTitle")} />
-					<AppText color="muted">{t("units.weekStartIntro")}</AppText>
-					<View style={styles.options}>
-						{WEEK_START_OPTIONS.map((option) => {
-							const selected = weekStart === option.day;
-							return (
-								<Button
-									key={option.day}
-									label={t(option.labelKey)}
-									accessibilityLabel={t("units.weekStartA11y", {
-										day: t(option.labelKey),
-									})}
-									accessibilityState={{ selected }}
-									variant={selected ? "primary" : "secondary"}
-									disabled={busyDimension === "week_start"}
-									style={styles.option}
-									onPress={() => void chooseWeekStart(option.day)}
-								/>
-							);
+			<View style={styles.rows}>
+				{weekStart && weekStartLabel ? (
+					<ListRow
+						title={t("units.weekStartTitle")}
+						value={t(weekStartLabel)}
+						detail={t("units.weekStartIntro")}
+						accessibilityLabel={t("units.weekStartRowA11y")}
+						disabled={busyDimension !== null}
+						onPress={() => setEditing(WEEK_START_DIMENSION)}
+					/>
+				) : null}
+
+				{snapshot?.settings.map((setting) => (
+					<ListRow
+						key={setting.dimension}
+						title={setting.title}
+						value={resolvedLabel(setting)}
+						detail={t("units.example", { value: setting.preview })}
+						accessibilityLabel={t("units.settingA11y", {
+							setting: setting.title,
 						})}
-					</View>
-				</Card>
+						disabled={busyDimension !== null}
+						onPress={() => setEditing(setting.dimension)}
+					/>
+				))}
+			</View>
+
+			{editingSetting ? (
+				<OptionSheet
+					visible
+					title={editingSetting.title}
+					intro={editingSetting.description}
+					note={
+						inheritedKey
+							? t(inheritedKey, { unit: resolvedLabel(editingSetting) })
+							: undefined
+					}
+					closeAccessibilityLabel={t("units.dismissA11y", {
+						setting: editingSetting.title,
+					})}
+					options={editingSetting.options.map((option) => ({
+						value: option.unit,
+						label: option.label,
+						accessibilityLabel: t("units.useUnit", {
+							unit: option.label,
+							setting: editingSetting.title,
+						}),
+					}))}
+					selected={editingSetting.explicitUnit}
+					disabled={busyDimension !== null}
+					onSelect={(unit) => void choose(editingSetting.dimension, unit)}
+					onClose={() => setEditing(null)}
+				/>
 			) : null}
 
-			{snapshot?.settings.map((setting) => (
-				<Card key={setting.dimension} style={styles.setting}>
-					<SectionHeader title={setting.title} />
-					<AppText color="muted">{setting.description}</AppText>
-					<AppText variant="label">
-						{t("units.example", { value: setting.preview })}
-					</AppText>
-					{setting.resolutionSource === "locale" ? (
-						<AppText color="muted">
-							{t("units.deviceDefault", { unit: resolvedLabel(setting) })}
-						</AppText>
-					) : null}
-					{setting.resolutionSource === "fallback" ? (
-						<AppText color="muted">
-							{t("units.unsupportedUnit", { unit: resolvedLabel(setting) })}
-						</AppText>
-					) : null}
-					<View style={styles.options}>
-						{setting.options.map((option) => {
-							const selected = setting.explicitUnit === option.unit;
-							return (
-								<Button
-									key={option.unit}
-									label={option.label}
-									accessibilityLabel={t("units.useUnit", {
-										unit: option.label,
-										setting: setting.title,
-									})}
-									accessibilityState={{ selected }}
-									variant={selected ? "primary" : "secondary"}
-									disabled={busyDimension === setting.dimension}
-									style={styles.option}
-									onPress={() => void choose(setting.dimension, option.unit)}
-								/>
-							);
-						})}
-					</View>
-				</Card>
-			))}
+			{editingWeekStart && weekStart ? (
+				<OptionSheet
+					visible
+					title={t("units.weekStartTitle")}
+					intro={t("units.weekStartIntro")}
+					closeAccessibilityLabel={t("units.weekStartDismissA11y")}
+					options={WEEK_START_OPTIONS.map((option) => ({
+						value: option.day,
+						label: t(option.labelKey),
+						accessibilityLabel: t("units.weekStartA11y", {
+							day: t(option.labelKey),
+						}),
+					}))}
+					selected={weekStart}
+					disabled={busyDimension !== null}
+					onSelect={(day) => void chooseWeekStart(day)}
+					onClose={() => setEditing(null)}
+				/>
+			) : null}
 		</Screen>
 	);
 }
 
 const styles = StyleSheet.create((theme) => ({
-	setting: { gap: theme.spacing.md },
-	options: {
-		flexDirection: "row",
-		flexWrap: "wrap",
-		gap: theme.spacing.sm,
-	},
-	option: { flexGrow: 1 },
+	rows: { gap: theme.spacing.md },
 }));

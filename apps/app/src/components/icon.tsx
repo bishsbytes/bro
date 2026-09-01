@@ -24,6 +24,8 @@ import Settings from "lucide-react-native/icons/settings";
 import Signpost from "lucide-react-native/icons/signpost";
 import Sparkles from "lucide-react-native/icons/sparkles";
 import Sprout from "lucide-react-native/icons/sprout";
+import Square from "lucide-react-native/icons/square";
+import SquareCheck from "lucide-react-native/icons/square-check";
 import Sun from "lucide-react-native/icons/sun";
 import SunMoon from "lucide-react-native/icons/sun-moon";
 import User from "lucide-react-native/icons/user";
@@ -69,6 +71,8 @@ const ICONS = {
 	person: User,
 	search: Search,
 	settings: Settings,
+	square: Square,
+	"square-check": SquareCheck,
 	"theme-dark": Moon,
 	"theme-light": Sun,
 	"theme-system": SunMoon,

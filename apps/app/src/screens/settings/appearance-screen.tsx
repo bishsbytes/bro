@@ -4,6 +4,7 @@ import { TouchableOpacity, View } from "react-native";
 import { AppText } from "../../components/app-text";
 import { Card } from "../../components/card";
 import { Icon, type IconName } from "../../components/icon";
+import { OptionRow } from "../../components/option-row";
 import { StackScreen as Screen } from "../../components/screen";
 import { SectionHeader } from "../../components/section-header";
 import { useDeviceSettings } from "../../providers/device-settings-provider";
@@ -45,7 +46,7 @@ const THEME_OPTIONS = [
 export function AppearanceScreen() {
 	const { t } = useTranslation("settings");
 	const { settings, updateAppearance } = useDeviceSettings();
-	const { theme, rt } = useUnistyles();
+	const { rt } = useUnistyles();
 	const activeScheme = rt.themeName === "dark" ? "dark" : "light";
 
 	function chooseTheme(themeMode: ThemeMode) {
@@ -62,48 +63,24 @@ export function AppearanceScreen() {
 
 			<Card style={styles.card}>
 				<SectionHeader title={t("appearance.themeTitle")} />
-				<View accessibilityRole="radiogroup" style={styles.themeOptions}>
-					{THEME_OPTIONS.map((option) => {
-						const selected = option.value === settings.themeMode;
-						return (
-							<TouchableOpacity
-								key={option.value}
-								accessibilityRole="radio"
-								accessibilityLabel={t("appearance.themeA11y", {
-									name: t(option.labelKey),
-								})}
-								accessibilityState={{ selected }}
-								activeOpacity={0.72}
-								style={[styles.themeOption, selected && styles.selectedOption]}
-								onPress={() => chooseTheme(option.value)}
-							>
-								<View
-									style={[styles.themeIcon, selected && styles.selectedIcon]}
-								>
-									<Icon
-										name={option.icon}
-										size={22}
-										color={
-											selected ? theme.colors.brand : theme.colors.textMuted
-										}
-									/>
-								</View>
-								<View style={styles.themeCopy}>
-									<AppText variant="label" style={styles.optionLabel}>
-										{t(option.labelKey)}
-									</AppText>
-									<AppText variant="caption" color="muted">
-										{t(option.detailKey)}
-									</AppText>
-								</View>
-								<Icon
-									name={selected ? "check-circle" : "circle"}
-									size={22}
-									color={selected ? theme.colors.brand : theme.colors.border}
-								/>
-							</TouchableOpacity>
-						);
-					})}
+				<View
+					accessibilityRole="radiogroup"
+					accessibilityLabel={t("appearance.themeTitle")}
+					style={styles.themeOptions}
+				>
+					{THEME_OPTIONS.map((option) => (
+						<OptionRow
+							key={option.value}
+							label={t(option.labelKey)}
+							detail={t(option.detailKey)}
+							icon={option.icon}
+							selected={option.value === settings.themeMode}
+							accessibilityLabel={t("appearance.themeA11y", {
+								name: t(option.labelKey),
+							})}
+							onPress={() => chooseTheme(option.value)}
+						/>
+					))}
 				</View>
 			</Card>
 
@@ -158,31 +135,10 @@ export function AppearanceScreen() {
 const styles = StyleSheet.create((theme) => ({
 	card: { gap: theme.spacing.md },
 	themeOptions: { gap: theme.spacing.sm },
-	themeOption: {
-		minHeight: theme.control.buttonMinHeight,
-		flexDirection: "row",
-		alignItems: "center",
-		gap: theme.spacing.md,
-		padding: theme.spacing.md,
-		borderRadius: theme.radius.sm,
-		borderWidth: 1,
-		borderColor: theme.colors.lineStrong,
-	},
 	selectedOption: {
 		borderColor: theme.colors.accent,
 		backgroundColor: theme.colors.accentTint,
 	},
-	themeIcon: {
-		width: 40,
-		height: 40,
-		alignItems: "center",
-		justifyContent: "center",
-		borderRadius: theme.radius.md,
-		backgroundColor: theme.colors.background,
-	},
-	selectedIcon: { backgroundColor: theme.colors.surface },
-	themeCopy: { flex: 1 },
-	optionLabel: { fontWeight: "600" },
 	accents: {
 		flexDirection: "row",
 		flexWrap: "wrap",

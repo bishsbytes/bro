@@ -177,6 +177,7 @@ describe("body metrics flow", () => {
 		)[0]?.targetValue;
 		await act(async () => expoRouter.replace("/settings/units"));
 		expect(await view.findByText("Example: 12 st 4 lb")).toBeTruthy();
+		await fireEvent.press(view.getByLabelText("Choose the unit for Weight"));
 		await fireEvent.press(view.getByLabelText("Use Kilograms for Weight"));
 		expect(await view.findByText("Example: 78.0 kg")).toBeTruthy();
 		expect(

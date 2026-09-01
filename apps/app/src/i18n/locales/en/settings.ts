@@ -86,19 +86,37 @@ export const settings = {
 		scored: "Scored from 1 to 5",
 		scoredSensitive: "Sensitive · scored from 1 to 5",
 		sensitive: "Sensitive",
-		addScore: "Add {{name}} from check-ins",
-		removeScore: "Remove {{name}} from check-ins",
+		scoresTitle: "Scores",
+		/** The row's glimpse of the setting, and the sheet's option labels. */
 		slotChoice: {
+			off: "Off",
 			morning: "Morning",
 			evening: "Evening",
 			both: "Both",
 		},
+		slotDetail: {
+			off: "Not asked in either check-in",
+			morning: "Asked in the morning check-in",
+			evening: "Asked in the evening check-in",
+			both: "Asked in both check-ins",
+		},
+		scoreA11y: "Choose when {{name}} is asked",
+		scoreSheetIntro:
+			"Choose the sitting that asks for {{name}}, or turn it off.",
+		scoreDismissA11y: "Close {{name}} options",
 		askIn: "Ask {{name}} in the {{when}} check-in",
+		dontAsk: "Do not ask {{name}}",
 		scoresNote:
 			"Turning a score off does not delete anything you already logged.",
 		tagsTitle: "What happened",
 		tagsIntro:
 			"Choose the tags you want to see under your check-in. Keep the list short enough to tap through in seconds.",
+		/** How many of a group are on, shown beside the group name. */
+		tagsOn: "{{enabled}} of {{total}} on",
+		groupSensitive: "Includes sensitive tags",
+		tagsA11y: "Choose {{name}} tags",
+		tagsSheetIntro: "Choose the tags you want under your check-in.",
+		tagsDismissA11y: "Close {{name}} tags",
 		addTag: "Add {{name}} tag",
 		removeTag: "Remove {{name}} tag",
 		tagsNote: "Turning a tag off does not delete anything you already logged.",
@@ -115,6 +133,8 @@ export const settings = {
 		unitsTitle: "Display units",
 		example: "Example: {{value}}",
 		useUnit: "Use {{unit}} for {{setting}}",
+		unitA11y: "Choose the unit for {{setting}}",
+		unitDismissA11y: "Close {{setting}} options",
 	},
 	food: {
 		loadFailed: "Food settings could not be loaded",
@@ -182,6 +202,8 @@ export const settings = {
 		weekStartIntro:
 			"Used to order days in the journal week strip and day pickers.",
 		weekStartA11y: "Start weeks on {{day}}",
+		weekStartRowA11y: "Choose which day weeks start on",
+		weekStartDismissA11y: "Close week start options",
 		monday: "Monday",
 		sunday: "Sunday",
 		saturday: "Saturday",
@@ -190,6 +212,8 @@ export const settings = {
 		unsupportedUnit:
 			"A saved unit is no longer supported. Using {{unit}} until you choose another.",
 		useUnit: "Use {{unit}} for {{setting}}",
+		settingA11y: "Choose the unit for {{setting}}",
+		dismissA11y: "Close {{setting}} options",
 	},
 	reminders: {
 		everyDay: "Every day",

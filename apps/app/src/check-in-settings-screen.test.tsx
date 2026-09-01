@@ -8,6 +8,12 @@ jest.mock("expo-router", () => ({
 	},
 }));
 
+// The sheet reads insets; the screen itself still needs the real SafeAreaView.
+jest.mock("react-native-safe-area-context", () => ({
+	...jest.requireActual("react-native-safe-area-context"),
+	useSafeAreaInsets: () => ({ top: 0, right: 0, bottom: 24, left: 0 }),
+}));
+
 const initial = {
 	metrics: [
 		{
@@ -41,6 +47,13 @@ const initial = {
 			category: "body" as const,
 		},
 		{
+			metricSlug: "illness",
+			label: "Illness",
+			enabled: false,
+			sensitive: false,
+			category: "body" as const,
+		},
+		{
 			metricSlug: "masturbation",
 			label: "Masturbation",
 			enabled: false,
@@ -50,103 +63,148 @@ const initial = {
 	],
 };
 
+function storeWith(
+	overrides: Partial<{
+		setEnabled: jest.Mock;
+		setCheckInSlots: jest.Mock;
+	}> = {},
+) {
+	return {
+		load: jest.fn(async () => initial),
+		setEnabled: jest.fn(async () => initial),
+		setCheckInSlots: jest.fn(async () => initial),
+		...overrides,
+	};
+}
+
 describe("check-in settings screen", () => {
-	it("labels sensitive prompts and lets Energy be removed", async () => {
-		const store = {
-			load: jest.fn(async () => initial),
-			setEnabled: jest.fn(async (metricSlug: string, enabled: boolean) => ({
+	it("glimpses each score's sitting on its row, off included", async () => {
+		const view = await render(<CheckInSettingsScreen store={storeWith()} />);
+
+		expect(await view.findByText("Energy")).toBeTruthy();
+		expect(view.getByText("Sensitive · scored from 1 to 5")).toBeTruthy();
+		// Two scores sit in the morning; Libido is off, so it reads as off rather
+		// than showing the sitting it would return to.
+		expect(view.getAllByText("Morning")).toHaveLength(2);
+		expect(view.getByText("Off")).toBeTruthy();
+		expect(view.queryByText("Evening")).toBeNull();
+	});
+
+	it("moves a score to another sitting from its sheet", async () => {
+		const setCheckInSlots = jest.fn(
+			async (
+				metricSlug: string,
+				checkInSlots: "morning" | "evening" | "both",
+			) => ({
 				metrics: initial.metrics.map((metric) =>
-					metric.metricSlug === metricSlug ? { ...metric, enabled } : metric,
+					metric.metricSlug === metricSlug
+						? { ...metric, checkInSlots }
+						: metric,
 				),
-				tags: initial.tags.map((tag) =>
-					tag.metricSlug === metricSlug ? { ...tag, enabled } : tag,
-				),
-			})),
-			setCheckInSlots: jest.fn(async () => initial),
-		};
+				tags: initial.tags,
+			}),
+		);
+		const store = storeWith({ setCheckInSlots });
 		const view = await render(<CheckInSettingsScreen store={store} />);
 
+		await fireEvent.press(
+			await view.findByLabelText("Choose when Energy is asked"),
+		);
 		expect(
-			await view.findByText("Sensitive · scored from 1 to 5"),
-		).toBeTruthy();
-		await fireEvent(
-			view.getByLabelText("Remove Energy from check-ins"),
-			"valueChange",
-			false,
-		);
-		await waitFor(() =>
-			expect(store.setEnabled).toHaveBeenCalledWith("energy", false),
-		);
-		expect(view.getByLabelText("Add Energy from check-ins")).toBeTruthy();
-	});
-
-	it("groups the panel tags by category and turns one on", async () => {
-		const store = {
-			load: jest.fn(async () => initial),
-			setEnabled: jest.fn(async (metricSlug: string, enabled: boolean) => ({
-				metrics: initial.metrics,
-				tags: initial.tags.map((tag) =>
-					tag.metricSlug === metricSlug ? { ...tag, enabled } : tag,
-				),
-			})),
-			setCheckInSlots: jest.fn(async () => initial),
-		};
-		const view = await render(<CheckInSettingsScreen store={store} />);
-
-		expect(await view.findByText("Sexual")).toBeTruthy();
-		expect(view.getByText("Body")).toBeTruthy();
-		expect(view.getByLabelText("Remove Training tag")).toBeTruthy();
-
-		await fireEvent(
-			view.getByLabelText("Add Masturbation tag"),
-			"valueChange",
-			true,
-		);
-		await waitFor(() =>
-			expect(store.setEnabled).toHaveBeenCalledWith("masturbation", true),
-		);
-		expect(view.getByLabelText("Remove Masturbation tag")).toBeTruthy();
-	});
-
-	it("moves an enabled score to another sitting, and hides the choice when off", async () => {
-		const store = {
-			load: jest.fn(async () => initial),
-			setEnabled: jest.fn(async () => initial),
-			setCheckInSlots: jest.fn(
-				async (
-					metricSlug: string,
-					checkInSlots: "morning" | "evening" | "both",
-				) => ({
-					metrics: initial.metrics.map((metric) =>
-						metric.metricSlug === metricSlug
-							? { ...metric, checkInSlots }
-							: metric,
-					),
-					tags: initial.tags,
-				}),
-			),
-		};
-		const view = await render(<CheckInSettingsScreen store={store} />);
-
-		// Energy is on and asked in the morning, so that choice reads as selected.
-		expect(
-			(await view.findByLabelText("Ask Energy in the Morning check-in")).props
+			view.getByLabelText("Ask Energy in the Morning check-in").props
 				.accessibilityState.selected,
 		).toBe(true);
-		// Libido is off, so it is not offered a sitting at all.
-		expect(
-			view.queryByLabelText("Ask Libido in the Evening check-in"),
-		).toBeNull();
 
 		await fireEvent.press(
 			view.getByLabelText("Ask Energy in the Evening check-in"),
 		);
+
 		await waitFor(() =>
-			expect(store.setCheckInSlots).toHaveBeenCalledWith("energy", "evening"),
+			expect(setCheckInSlots).toHaveBeenCalledWith("energy", "evening"),
 		);
+		// The sheet answered the row and closed, leaving the new sitting on it.
 		expect(
-			view.getByLabelText("Ask Energy in the Evening check-in").props
-				.accessibilityState.selected,
-		).toBe(true);
+			view.queryByLabelText("Ask Energy in the Evening check-in"),
+		).toBeNull();
+		expect(view.getByText("Evening")).toBeTruthy();
+	});
+
+	it("turns a score off from the same sheet that sets its sitting", async () => {
+		const setEnabled = jest.fn(
+			async (metricSlug: string, enabled: boolean) => ({
+				metrics: initial.metrics.map((metric) =>
+					metric.metricSlug === metricSlug ? { ...metric, enabled } : metric,
+				),
+				tags: initial.tags,
+			}),
+		);
+		const store = storeWith({ setEnabled });
+		const view = await render(<CheckInSettingsScreen store={store} />);
+
+		await fireEvent.press(
+			await view.findByLabelText("Choose when Energy is asked"),
+		);
+		await fireEvent.press(view.getByLabelText("Do not ask Energy"));
+
+		await waitFor(() =>
+			expect(setEnabled).toHaveBeenCalledWith("energy", false),
+		);
+		expect(store.setCheckInSlots).not.toHaveBeenCalled();
+		expect(view.getAllByText("Off")).toHaveLength(2);
+	});
+
+	it("turns a score back on into the sitting it already had", async () => {
+		const setEnabled = jest.fn(
+			async (metricSlug: string, enabled: boolean) => ({
+				metrics: initial.metrics.map((metric) =>
+					metric.metricSlug === metricSlug ? { ...metric, enabled } : metric,
+				),
+				tags: initial.tags,
+			}),
+		);
+		const store = storeWith({ setEnabled });
+		const view = await render(<CheckInSettingsScreen store={store} />);
+
+		await fireEvent.press(
+			await view.findByLabelText("Choose when Libido is asked"),
+		);
+		await fireEvent.press(
+			view.getByLabelText("Ask Libido in the Evening check-in"),
+		);
+
+		await waitFor(() =>
+			expect(setEnabled).toHaveBeenCalledWith("libido", true),
+		);
+		// Its stored sitting already matched, so nothing had to be written twice.
+		expect(store.setCheckInSlots).not.toHaveBeenCalled();
+	});
+
+	it("counts the tags a group has on and toggles them without leaving the sheet", async () => {
+		const setEnabled = jest.fn(
+			async (metricSlug: string, enabled: boolean) => ({
+				metrics: initial.metrics,
+				tags: initial.tags.map((tag) =>
+					tag.metricSlug === metricSlug ? { ...tag, enabled } : tag,
+				),
+			}),
+		);
+		const store = storeWith({ setEnabled });
+		const view = await render(<CheckInSettingsScreen store={store} />);
+
+		expect(await view.findByText("Body")).toBeTruthy();
+		expect(view.getByText("Sexual")).toBeTruthy();
+		expect(view.getByText("1 of 2 on")).toBeTruthy();
+
+		await fireEvent.press(view.getByLabelText("Choose Body tags"));
+		expect(view.getByLabelText("Remove Training tag")).toBeTruthy();
+
+		await fireEvent.press(view.getByLabelText("Add Illness tag"));
+
+		await waitFor(() =>
+			expect(setEnabled).toHaveBeenCalledWith("illness", true),
+		);
+		// A group is set in one visit, so the sheet is still open afterwards.
+		expect(view.getByLabelText("Remove Illness tag")).toBeTruthy();
+		expect(view.getByText("2 of 2 on")).toBeTruthy();
 	});
 });
