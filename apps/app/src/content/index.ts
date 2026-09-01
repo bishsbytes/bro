@@ -32,6 +32,11 @@ import {
 	type MetricResolution,
 	resolveMetric as resolveMetricSource,
 } from "@bro/domain/metric-registry";
+import {
+	NICOTINE_CATALOGUE as NICOTINE_CATALOGUE_SOURCE,
+	resolveNicotineEntry as resolveNicotineEntrySource,
+} from "@bro/domain/nicotine-catalogue";
+import type { SubstanceCatalogueEntry } from "@bro/domain/substance-catalogue";
 import { i18n } from "../i18n";
 
 /**
@@ -171,6 +176,38 @@ export function resolveDrink(id: string): DrinkCatalogueEntry | null {
 
 export function drinkCatalogue(): DrinkCatalogueEntry[] {
 	return DRINK_CATALOGUE_SOURCE.map(localiseDrink);
+}
+
+/**
+ * Substance content localises by the same rule as drinks, keyed by the
+ * catalogue's own namespace so each substance's copy stays its own.
+ */
+function localiseSubstance(
+	entry: SubstanceCatalogueEntry,
+	namespace: string,
+): SubstanceCatalogueEntry {
+	const key = `${namespace}.${bareSlug(entry.id)}`;
+	return {
+		...entry,
+		label: translate(`${key}.label`, entry.label),
+		servings: entry.servings.map((serving) => ({
+			...serving,
+			label: translate(`${key}.servings.${serving.id}`, serving.label),
+		})),
+	};
+}
+
+export function nicotineCatalogue(): SubstanceCatalogueEntry[] {
+	return NICOTINE_CATALOGUE_SOURCE.map((entry) =>
+		localiseSubstance(entry, "nicotine"),
+	);
+}
+
+export function resolveNicotineEntry(
+	id: string,
+): SubstanceCatalogueEntry | null {
+	const entry = resolveNicotineEntrySource(id);
+	return entry && localiseSubstance(entry, "nicotine");
 }
 
 function localiseInsight(

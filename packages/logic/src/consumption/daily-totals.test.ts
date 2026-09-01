@@ -19,12 +19,13 @@ function entry(
 			| "volumeL"
 			| "ethanolKg"
 			| "caffeineKg"
+			| "nicotineKg"
 			| "energyKcal"
 			| "proteinG"
 			| "carbsG"
 			| "fatG"
 		>
-	>,
+	> & { kind?: ConsumptionEntry["kind"] },
 ): ConsumptionEntry {
 	return {
 		id,
@@ -37,6 +38,7 @@ function entry(
 		volumeL: null,
 		ethanolKg: null,
 		caffeineKg: null,
+		nicotineKg: null,
 		energyKcal: null,
 		proteinG: null,
 		carbsG: null,
@@ -80,6 +82,14 @@ const chicken = entry("chicken", "2026-08-15", {
 	carbsG: 0,
 	fatG: 24,
 });
+const cigarette = entry("cigarette", "2026-08-15", {
+	kind: "nicotine",
+	nicotineKg: 1.2e-6,
+});
+const vape = entry("vape", "2026-08-15", {
+	kind: "nicotine",
+	nicotineKg: 0.8e-6,
+});
 
 describe("consumption-derived daily totals", () => {
 	it("sums each canonical entry field and distinguishes no data from zero", () => {
@@ -118,6 +128,41 @@ describe("consumption-derived daily totals", () => {
 		expect(
 			consumptionMetricDayTotal("fat_intake", "2026-08-15", entries).value,
 		).toBeCloseTo(0.024, 12);
+	});
+
+	it("sums nicotine without touching the drink and food metrics", () => {
+		const entries = [lager, coffee, chicken, cigarette, vape];
+		expect(
+			consumptionMetricDayTotal("nicotine_intake", "2026-08-15", entries).value,
+		).toBeCloseTo(2e-6, 12);
+		// The substance entries carry nothing else, so every other metric reads
+		// exactly as it did without them.
+		expect(
+			consumptionMetricDayTotal("alcohol_intake", "2026-08-15", entries).value,
+		).toBeCloseTo(0.020_181_999, 12);
+		expect(
+			consumptionMetricDayTotal("energy_intake", "2026-08-15", entries).value,
+		).toBe(666);
+		// A day with drinks but no smoke has no nicotine reading at all, which is
+		// what lets an unlogged day differ from a logged zero.
+		expect(
+			consumptionMetricDayTotal("nicotine_intake", "2026-08-16", [
+				nextDayWater,
+			]),
+		).toMatchObject({ value: null, entries: [] });
+	});
+
+	it("counts a nicotine-free day as met and a logged one as missed", () => {
+		// The alcohol-free semantics, on the metric the nicotine habit targets:
+		// an at-most-zero ceiling is met by silence and broken by any entry.
+		const logged = consumptionMetricDayTotal("nicotine_intake", "2026-08-15", [
+			cigarette,
+		]);
+		expect(logged.value ?? 0).toBeGreaterThan(0);
+		expect(
+			consumptionMetricDayTotal("nicotine_intake", "2026-08-20", [cigarette])
+				.value ?? 0,
+		).toBe(0);
 	});
 
 	it("selects entry provenance and changes immediately after a correction", () => {

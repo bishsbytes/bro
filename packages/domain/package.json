@@ -46,6 +46,16 @@
 			"import": "./src/content/metric-registry.ts",
 			"default": "./src/content/metric-registry.ts"
 		},
+		"./nicotine-catalogue": {
+			"types": "./src/content/nicotine-catalogue.ts",
+			"import": "./src/content/nicotine-catalogue.ts",
+			"default": "./src/content/nicotine-catalogue.ts"
+		},
+		"./substance-catalogue": {
+			"types": "./src/content/substance-catalogue.ts",
+			"import": "./src/content/substance-catalogue.ts",
+			"default": "./src/content/substance-catalogue.ts"
+		},
 		"./wheel-template": {
 			"types": "./src/content/wheel-template.ts",
 			"import": "./src/content/wheel-template.ts",

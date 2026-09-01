@@ -203,6 +203,7 @@ const caffeineEntry: ConsumptionEntry = {
 	volumeL: 0.25,
 	ethanolKg: 0,
 	caffeineKg: 0.000_095,
+	nicotineKg: null,
 	energyKcal: 2,
 	proteinG: null,
 	carbsG: null,
@@ -244,6 +245,23 @@ const fluidEntry: ConsumptionEntry = {
 	updatedAt: 1_786_621_700_100,
 };
 
+const nicotineEntry: ConsumptionEntry = {
+	...caffeineEntry,
+	id: "consumption-cigarette",
+	kind: "nicotine",
+	catalogueRef: "nicotine:cigarette",
+	label: "Cigarette",
+	servingLabel: "cigarette",
+	volumeL: null,
+	ethanolKg: null,
+	caffeineKg: null,
+	nicotineKg: 1.2e-6,
+	energyKcal: null,
+	occurredAt: 1_786_621_900_000,
+	createdAt: 1_786_621_900_100,
+	updatedAt: 1_786_621_900_100,
+};
+
 const foodEntry: ConsumptionEntry = {
 	id: "consumption-chicken-rice",
 	kind: "food",
@@ -255,6 +273,7 @@ const foodEntry: ConsumptionEntry = {
 	volumeL: null,
 	ethanolKg: null,
 	caffeineKg: null,
+	nicotineKg: null,
 	energyKcal: 430,
 	proteinG: 38,
 	carbsG: 0,
@@ -658,25 +677,41 @@ describe("check-in export", () => {
 			id: "goal-caffeine",
 			metricSlug: "caffeine_intake",
 		};
+		const trackedNicotine: TrackedMetric = {
+			...trackedAlcohol,
+			id: "tracked-nicotine-intake",
+			metricSlug: "nicotine_intake",
+		};
+		const nicotineGoal: Goal = {
+			...goal,
+			id: "goal-nicotine",
+			metricSlug: "nicotine_intake",
+		};
 		const input = {
 			observations: [],
 			dayNotes: [],
-			trackedMetrics: [trackedAlcoholIntake, trackedCaffeine],
+			trackedMetrics: [trackedAlcoholIntake, trackedCaffeine, trackedNicotine],
 			reminders: [],
 			assessments: [],
-			goals: [alcoholGoal, caffeineGoal],
+			goals: [alcoholGoal, caffeineGoal, nicotineGoal],
 			unitPreferences: [],
 			dailyMetrics: [],
 			habits: [],
 			habitCompletions: [],
 			challengeEnrolments: [],
 			challengeProgress: [],
-			consumptionEntries: [fluidEntry, alcoholEntry, caffeineEntry],
+			consumptionEntries: [
+				fluidEntry,
+				alcoholEntry,
+				caffeineEntry,
+				nicotineEntry,
+			],
 			customConsumables: [],
 			customConsumableComponents: [],
 			registry: [
 				knownMetric("alcohol_intake"),
 				knownMetric("caffeine_intake"),
+				knownMetric("nicotine_intake"),
 				knownMetric("fluid_intake"),
 			],
 		};
@@ -689,6 +724,7 @@ describe("check-in export", () => {
 			alcoholEntry,
 			caffeineEntry,
 			fluidEntry,
+			nicotineEntry,
 		]);
 
 		const excluded = buildCheckInExport(input, {
@@ -696,6 +732,8 @@ describe("check-in export", () => {
 			exportedAt: 1_786_708_800_000,
 			excludeSensitiveMetrics: true,
 		});
+		// Exclusion is keyed on the substance an entry carries, not on its kind:
+		// the ethanol drink and the nicotine entry both go, whole.
 		expect(excluded.consumptionEntries).toEqual([caffeineEntry, fluidEntry]);
 		expect(excluded.registry.metrics.map(({ slug }) => slug)).toEqual([
 			"caffeine_intake",

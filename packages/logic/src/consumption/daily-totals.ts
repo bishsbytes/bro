@@ -5,6 +5,7 @@ import type { ConsumptionEntry } from "@bro/mobile-model";
 const ENTRY_FIELD_BY_METRIC = {
 	alcohol_intake: "ethanolKg",
 	caffeine_intake: "caffeineKg",
+	nicotine_intake: "nicotineKg",
 	fluid_intake: "volumeL",
 	energy_intake: "energyKcal",
 	protein_intake: "proteinG",
@@ -14,6 +15,7 @@ const ENTRY_FIELD_BY_METRIC = {
 	ConsumptionDerivedMeasurementSlug,
 	| "ethanolKg"
 	| "caffeineKg"
+	| "nicotineKg"
 	| "volumeL"
 	| "energyKcal"
 	| "proteinG"
@@ -24,6 +26,7 @@ const ENTRY_FIELD_BY_METRIC = {
 const ENTRY_SCALE_BY_METRIC = {
 	alcohol_intake: 1,
 	caffeine_intake: 1,
+	nicotine_intake: 1,
 	fluid_intake: 1,
 	energy_intake: 1,
 	protein_intake: 1 / 1_000,

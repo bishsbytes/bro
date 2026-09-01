@@ -4,6 +4,7 @@ import {
 	ConsumptionEntryRepository,
 	type CreateCustomConsumableComponent,
 	type CustomConsumable,
+	type CustomConsumableKind,
 	CustomConsumableRepository,
 	type CustomConsumableServing,
 	type Goal,
@@ -520,6 +521,20 @@ export abstract class ConsumptionStore<
 		}
 	}
 
+	/**
+	 * The custom-consumable kind this store writes. Only the stores with a user
+	 * library have one: a substance store's "something else" writes a complete
+	 * entry and recents make it repeatable, so it never reaches these helpers.
+	 */
+	protected customConsumableKind(): CustomConsumableKind {
+		if (this.kind !== "drink" && this.kind !== "food") {
+			throw new TypeError(
+				`${this.kind} entries have no custom consumable library.`,
+			);
+		}
+		return this.kind;
+	}
+
 	/** Creates or replaces a custom consumable and its components together. */
 	protected async saveCustomConsumable(
 		draft: CustomConsumableDraft,
@@ -533,12 +548,12 @@ export abstract class ConsumptionStore<
 		};
 		if (!draft.id) {
 			return await this.customConsumables.create(
-				{ kind: this.kind, ...fields },
+				{ kind: this.customConsumableKind(), ...fields },
 				components,
 			);
 		}
 		const existing = await this.customConsumables.findById(draft.id);
-		if (existing?.kind !== this.kind) {
+		if (existing?.kind !== this.customConsumableKind()) {
 			throw this.customNotFound();
 		}
 		const currentComponents = await this.customConsumables.listComponents(

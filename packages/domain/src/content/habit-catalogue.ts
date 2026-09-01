@@ -284,6 +284,21 @@ export const HABIT_CATALOGUE = [
 		sensitive: false,
 		defaultPosition: 15,
 	},
+	{
+		slug: "habit:nicotine-free",
+		label: "Have a nicotine-free day",
+		description:
+			"Counts automatically from your smoke log: a day with nothing logged is nicotine-free.",
+		kind: "metric",
+		metricSlug: "nicotine_intake",
+		direction: "at_most",
+		defaultTargetValue: 0,
+		tagSlug: null,
+		defaultDaysOfWeek: EVERY_DAY,
+		areaSlug: "wheel:sobriety",
+		sensitive: true,
+		defaultPosition: 16,
+	},
 ] as const satisfies readonly HabitTemplate[];
 
 const habitsBySlug = new Map<string, HabitTemplate>(

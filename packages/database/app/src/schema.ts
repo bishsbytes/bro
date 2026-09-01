@@ -223,6 +223,7 @@ export const consumptionEntries = sqliteTable(
 		volumeL: real("volume_l"),
 		ethanolKg: real("ethanol_kg"),
 		caffeineKg: real("caffeine_kg"),
+		nicotineKg: real("nicotine_kg"),
 		energyKcal: real("energy_kcal"),
 		proteinG: real("protein_g"),
 		carbsG: real("carbs_g"),

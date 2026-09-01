@@ -29,6 +29,10 @@ export default function SettingsLayout() {
 			/>
 			<Stack.Screen name="drinks" options={{ title: t("settings.drinks") }} />
 			<Stack.Screen name="food" options={{ title: t("settings.food") }} />
+			<Stack.Screen
+				name="nicotine"
+				options={{ title: t("settings.nicotine") }}
+			/>
 			<Stack.Screen name="health" options={{ title: t("settings.health") }} />
 			<Stack.Screen name="data" options={{ headerShown: false }} />
 		</Stack>

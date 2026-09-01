@@ -8,6 +8,13 @@
       "when": 1788178415922,
       "tag": "0000_flashy_leech",
       "breakpoints": true
+    },
+    {
+      "idx": 1,
+      "version": "6",
+      "when": 1788299004504,
+      "tag": "0001_fast_night_thrasher",
+      "breakpoints": true
     }
   ]
 }

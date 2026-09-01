@@ -13,6 +13,7 @@ import { insights } from "./en/insights";
 import { life } from "./en/life";
 import { log } from "./en/log";
 import { navigation } from "./en/navigation";
+import { nicotine } from "./en/nicotine";
 import { notifications } from "./en/notifications";
 import { onboarding } from "./en/onboarding";
 import { privacy } from "./en/privacy";
@@ -46,6 +47,7 @@ export const resources = {
 		life,
 		log,
 		navigation,
+		nicotine,
 		notifications,
 		onboarding,
 		privacy,

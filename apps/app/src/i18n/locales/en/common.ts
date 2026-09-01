@@ -69,8 +69,10 @@ export const common = {
 		/** Context keeps room for languages whose generic serving word differs. */
 		defaultServing_drink: "serving",
 		defaultServing_food: "serving",
+		defaultServing_nicotine: "serving",
 		/** One logged entry's quantity, serving, and local time. */
 		entryDetail_drink: "{{quantity}} × {{serving}} · {{time}}",
 		entryDetail_food: "{{quantity}} × {{serving}} · {{time}}",
+		entryDetail_nicotine: "{{quantity}} × {{serving}} · {{time}}",
 	},
 } as const;

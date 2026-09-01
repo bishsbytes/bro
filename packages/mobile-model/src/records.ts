@@ -55,7 +55,12 @@ export type ChallengeProgress = {
 	updatedAt: number;
 };
 
-export type ConsumptionEntryKind = "drink" | "food";
+/**
+ * The logging journey an entry came from, not the substance it carries: a
+ * drink already carries ethanol, caffeine, and energy on one row, and a
+ * substance entry carries its own canonical quantities the same way.
+ */
+export type ConsumptionEntryKind = "drink" | "food" | "nicotine";
 
 export type ConsumptionEntry = {
 	id: string;
@@ -68,6 +73,7 @@ export type ConsumptionEntry = {
 	volumeL: number | null;
 	ethanolKg: number | null;
 	caffeineKg: number | null;
+	nicotineKg: number | null;
 	energyKcal: number | null;
 	proteinG: number | null;
 	carbsG: number | null;
@@ -84,11 +90,19 @@ type FoodSnapshotFields = Pick<
 	"consumableRef" | "proteinG" | "carbsG" | "fatG"
 >;
 
+/** Optional for the same reason food's are: a drink carries no nicotine. */
+type SubstanceSnapshotFields = Pick<ConsumptionEntry, "nicotineKg">;
+
 export type CreateConsumptionEntry = Omit<
 	ConsumptionEntry,
-	"id" | "createdAt" | "updatedAt" | keyof FoodSnapshotFields
+	| "id"
+	| "createdAt"
+	| "updatedAt"
+	| keyof FoodSnapshotFields
+	| keyof SubstanceSnapshotFields
 > &
-	Partial<FoodSnapshotFields>;
+	Partial<FoodSnapshotFields> &
+	Partial<SubstanceSnapshotFields>;
 
 export type UpdateConsumptionEntry = Omit<CreateConsumptionEntry, "kind">;
 

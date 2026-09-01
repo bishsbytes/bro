@@ -1,4 +1,5 @@
 import type * as DatabaseApp from "./index";
+import { migrations } from "./migrations/manifest";
 import { createNodeSqliteMock } from "./test-support/node-sqlite";
 
 const mockSqlite = createNodeSqliteMock();
@@ -85,13 +86,15 @@ describe("product database migrations", () => {
 		expect(
 			await db.getAllAsync<{ name: string }>(
 				`SELECT name FROM pragma_table_info('consumption_entries')
-				 WHERE name IN ('protein_g', 'carbs_g', 'fat_g', 'consumable_ref')
+				 WHERE name IN
+					('protein_g', 'carbs_g', 'fat_g', 'consumable_ref', 'nicotine_kg')
 				 ORDER BY name`,
 			),
 		).toEqual([
 			{ name: "carbs_g" },
 			{ name: "consumable_ref" },
 			{ name: "fat_g" },
+			{ name: "nicotine_kg" },
 			{ name: "protein_g" },
 		]);
 		expect(
@@ -129,7 +132,54 @@ describe("product database migrations", () => {
 		const marker = await db.getFirstAsync<{ count: number }>(
 			"SELECT COUNT(*) AS count FROM __drizzle_migrations",
 		);
-		expect(marker?.count).toBe(1);
+		expect(marker?.count).toBe(migrations.journal.entries.length);
+	});
+
+	it("adds nicotine_kg to a database that predates it, keeping its rows", async () => {
+		const { databaseApp, db } = await migratedDatabase("baseline.db");
+
+		// A device on the pre-nicotine baseline: the first migration's statements
+		// applied and recorded in Drizzle's ledger — which is what stops the
+		// baseline's plain CREATE TABLEs from re-running — plus a logged drink.
+		const [baselineEntry] = migrations.journal.entries;
+		if (!baselineEntry) throw new Error("Expected a baseline migration.");
+		for (const statement of migrations.migrations.m0000.split(
+			"--> statement-breakpoint",
+		)) {
+			await db.execAsync(statement);
+		}
+		await db.execAsync(
+			`CREATE TABLE IF NOT EXISTS __drizzle_migrations (
+				id SERIAL PRIMARY KEY,
+				hash text NOT NULL,
+				created_at numeric
+			)`,
+		);
+		await db.runAsync(
+			"INSERT INTO __drizzle_migrations (hash, created_at) VALUES (?, ?)",
+			["", baselineEntry.when],
+		);
+		await db.runAsync(
+			`INSERT INTO consumption_entries (
+				id, kind, label, quantity, ethanol_kg, occurred_at, local_day,
+				tz_offset_minutes, created_at, updated_at
+			) VALUES ('e1', 'drink', 'Lager, 4.5%', 1, 0.0202, 1, '2026-09-01', 0, 1, 1)`,
+		);
+
+		await expect(databaseApp.runMigrations(db)).resolves.toBeUndefined();
+
+		expect(
+			await db.getFirstAsync<{ name: string }>(
+				`SELECT name FROM pragma_table_info('consumption_entries')
+				 WHERE name = 'nicotine_kg'`,
+			),
+		).toEqual({ name: "nicotine_kg" });
+		// The pre-existing drink survives untouched, with no nicotine of its own.
+		expect(
+			await db.getFirstAsync<{ label: string; nicotine_kg: number | null }>(
+				"SELECT label, nicotine_kg FROM consumption_entries WHERE id = 'e1'",
+			),
+		).toEqual({ label: "Lager, 4.5%", nicotine_kg: null });
 	});
 
 	it("creates and safely re-runs the independent local-store manifest", async () => {

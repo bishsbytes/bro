@@ -28,6 +28,7 @@ describe("habit catalogue", () => {
 			"habit:fun-break",
 			"habit:quiet-reflection",
 			"habit:fatherhood-moment",
+			"habit:nicotine-free",
 		]);
 		expect(new Set(positions).size).toBe(positions.length);
 		for (const habit of HABIT_CATALOGUE) {
@@ -82,5 +83,12 @@ describe("habit catalogue", () => {
 			}
 		}
 		expect(resolveHabit("habit:alcohol-free")?.sensitive).toBe(true);
+		expect(resolveHabit("habit:nicotine-free")).toMatchObject({
+			metricSlug: "nicotine_intake",
+			direction: "at_most",
+			defaultTargetValue: 0,
+			areaSlug: "wheel:sobriety",
+			sensitive: true,
+		});
 	});
 });

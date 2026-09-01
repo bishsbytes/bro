@@ -4,6 +4,7 @@ import { HABIT_CATALOGUE } from "@bro/domain/habit-catalogue";
 import { INSIGHT_CATALOGUE } from "@bro/domain/insight-catalogue";
 import { LIFE_AREA_CATALOGUE } from "@bro/domain/life-area-catalogue";
 import { METRIC_REGISTRY } from "@bro/domain/metric-registry";
+import { NICOTINE_CATALOGUE } from "@bro/domain/nicotine-catalogue";
 
 /**
  * The English half of the `content` namespace is derived from the domain
@@ -69,6 +70,16 @@ export const content = {
 			label: drink.label,
 			servings: Object.fromEntries(
 				drink.servings.map((serving) => [serving.id, serving.label]),
+			),
+		}),
+	),
+	nicotine: byBareSlug(
+		NICOTINE_CATALOGUE,
+		(entry) => entry.id,
+		(entry) => ({
+			label: entry.label,
+			servings: Object.fromEntries(
+				entry.servings.map((serving) => [serving.id, serving.label]),
 			),
 		}),
 	),

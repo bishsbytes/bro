@@ -106,6 +106,12 @@ export function SettingsScreen({
 				onPress={() => router.push("/settings/food" as Href)}
 			/>
 			<ListRow
+				title={t("index.nicotine")}
+				detail={t("index.nicotineDetail")}
+				accessibilityLabel={t("index.nicotineA11y")}
+				onPress={() => router.push("/settings/nicotine" as Href)}
+			/>
+			<ListRow
 				title={t("index.units")}
 				detail={t("index.unitsDetail")}
 				accessibilityLabel={t("index.unitsA11y")}

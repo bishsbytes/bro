@@ -68,7 +68,7 @@ describe("metric registry", () => {
 			"productivity",
 			"libido",
 		]);
-		expect(listTags()).toHaveLength(22);
+		expect(listTags()).toHaveLength(21);
 		expect(
 			Object.fromEntries(
 				["body", "lifestyle", "mind", "social", "sexual"].map((category) => [
@@ -76,19 +76,18 @@ describe("metric registry", () => {
 					listTags().filter((metric) => metric.category === category).length,
 				]),
 			),
-		).toEqual({ body: 5, lifestyle: 5, mind: 4, social: 4, sexual: 4 });
+		).toEqual({ body: 5, lifestyle: 4, mind: 4, social: 4, sexual: 4 });
 		expect(
 			listTags()
 				.filter((metric) => metric.sensitive)
 				.map((metric) => metric.slug),
-		).toEqual([
-			"sex",
-			"masturbation",
-			"porn",
-			"morning_erection",
-			"hangover",
-			"nicotine",
-		]);
+		).toEqual(["sex", "masturbation", "porn", "morning_erection", "hangover"]);
+		// The nicotine tag was replaced outright by its quantified counterpart.
+		expect(listTags().some((metric) => metric.slug === "nicotine")).toBe(false);
+		expect(resolveMetric("nicotine")).toEqual({
+			kind: "unknown",
+			slug: "nicotine",
+		});
 		expect(
 			listTags()
 				.filter((metric) => metric.defaultEnabled)
@@ -143,6 +142,13 @@ describe("metric registry", () => {
 				slug: "caffeine_intake",
 				dimension: "mass",
 				fixedDisplayUnit: "mg",
+			}),
+			expect.objectContaining({
+				slug: "nicotine_intake",
+				dimension: "mass",
+				aggregation: "sum",
+				fixedDisplayUnit: "mg",
+				sensitive: true,
 			}),
 			expect.objectContaining({
 				slug: "fluid_intake",
@@ -207,6 +213,13 @@ describe("metric registry", () => {
 			expect.objectContaining({
 				slug: "caffeine_intake",
 				sensitive: false,
+			}),
+			expect.objectContaining({
+				slug: "nicotine_intake",
+				userEnterable: false,
+				measurementSource: "consumption",
+				sensitive: true,
+				fixedDisplayUnit: "mg",
 			}),
 			expect.objectContaining({
 				slug: "fluid_intake",

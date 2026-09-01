@@ -3,6 +3,7 @@ import { useState } from "react";
 import { useTranslation } from "react-i18next";
 import { TouchableOpacity, View } from "react-native";
 import { playSelectionHaptic } from "../feedback/selection-haptic";
+import { isNicotineTracked } from "../substances/nicotine";
 import { StyleSheet, useUnistyles } from "../theme/unistyles";
 import { AppText } from "./app-text";
 import { Icon, type IconName } from "./icon";
@@ -42,19 +43,34 @@ function QuickLogAction({ icon, title, detail, onPress }: QuickLogActionProps) {
 	);
 }
 
-export function QuickLogFab({ bottom }: { bottom: number }) {
+export function QuickLogFab({
+	bottom,
+	isNicotineEnabled = isNicotineTracked,
+}: {
+	bottom: number;
+	isNicotineEnabled?: () => Promise<boolean>;
+}) {
 	const { t } = useTranslation("navigation");
 	const { theme } = useUnistyles();
 	const [open, setOpen] = useState(false);
+	const [nicotineEnabled, setNicotineEnabled] = useState(false);
 
 	function choose(href: Href) {
 		setOpen(false);
 		router.push(href);
 	}
 
+	/**
+	 * Smoking is the one action this sheet asks about before offering. Eating
+	 * and drinking are universal; a standing smoking button for everyone would
+	 * be the product assuming something about the person holding the phone.
+	 */
 	function openSheet() {
 		playSelectionHaptic();
 		setOpen(true);
+		isNicotineEnabled()
+			.then(setNicotineEnabled)
+			.catch(() => setNicotineEnabled(false));
 	}
 
 	return (
@@ -88,6 +104,14 @@ export function QuickLogFab({ bottom }: { bottom: number }) {
 						detail={t("quickLog.drinkDetail")}
 						onPress={() => choose("/drinks/log")}
 					/>
+					{nicotineEnabled ? (
+						<QuickLogAction
+							icon="drink"
+							title={t("quickLog.nicotine")}
+							detail={t("quickLog.nicotineDetail")}
+							onPress={() => choose("/nicotine/log")}
+						/>
+					) : null}
 					<QuickLogAction
 						icon="check-in"
 						title={t("quickLog.checkIn")}

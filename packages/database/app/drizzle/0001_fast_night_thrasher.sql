@@ -1,0 +1,1 @@
+ALTER TABLE `consumption_entries` ADD `nicotine_kg` real;

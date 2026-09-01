@@ -249,6 +249,15 @@ function copyChallengeProgress(progress: ChallengeProgress): ChallengeProgress {
 	};
 }
 
+/**
+ * Whether an entry carries any substance whose metric is sensitive. Keyed on
+ * content rather than on `kind`, so an entry that carries one through another
+ * logging journey is still excluded, and a later substance adds one term.
+ */
+function carriesSensitive(entry: ConsumptionEntry): boolean {
+	return (entry.ethanolKg ?? 0) > 0 || (entry.nicotineKg ?? 0) > 0;
+}
+
 function copyConsumptionEntry(entry: ConsumptionEntry): ConsumptionEntry {
 	return {
 		id: entry.id,
@@ -261,6 +270,7 @@ function copyConsumptionEntry(entry: ConsumptionEntry): ConsumptionEntry {
 		volumeL: entry.volumeL,
 		ethanolKg: entry.ethanolKg,
 		caffeineKg: entry.caffeineKg,
+		nicotineKg: entry.nicotineKg,
 		energyKcal: entry.energyKcal,
 		proteinG: entry.proteinG,
 		carbsG: entry.carbsG,
@@ -493,8 +503,7 @@ export function buildCheckInExport(
 			),
 		consumptionEntries: input.consumptionEntries
 			.filter(
-				(entry) =>
-					!options.excludeSensitiveMetrics || (entry.ethanolKg ?? 0) <= 0,
+				(entry) => !options.excludeSensitiveMetrics || !carriesSensitive(entry),
 			)
 			.map(copyConsumptionEntry)
 			.sort(

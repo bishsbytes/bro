@@ -59,6 +59,48 @@ describe("derived metric habit completion", () => {
 			}),
 		).toBe(true);
 
+		// Nicotine inherits exactly those semantics, which is what makes a
+		// nicotine-free day countable without the user confirming a negative.
+		const nicotineFree = metricHabit({
+			slug: "habit:nicotine-free",
+			metricSlug: "nicotine_intake",
+			direction: "at_most",
+			targetValue: 0,
+		});
+		expect(habitMetricDayValue(nicotineFree, null)).toBe(0);
+		expect(
+			isMetricHabitComplete(nicotineFree, {
+				metricSlug: "nicotine_intake",
+				value: habitMetricDayValue(nicotineFree, null),
+			}),
+		).toBe(true);
+		// One logged cigarette breaks the ceiling.
+		expect(
+			isMetricHabitComplete(nicotineFree, {
+				metricSlug: "nicotine_intake",
+				value: 1.2e-6,
+			}),
+		).toBe(false);
+		// A taper target is met at or under its ceiling, in canonical mass.
+		const taper = metricHabit({
+			slug: "habit:nicotine-free",
+			metricSlug: "nicotine_intake",
+			direction: "at_most",
+			targetValue: 6e-6,
+		});
+		expect(
+			isMetricHabitComplete(taper, {
+				metricSlug: "nicotine_intake",
+				value: 6e-6,
+			}),
+		).toBe(true);
+		expect(
+			isMetricHabitComplete(taper, {
+				metricSlug: "nicotine_intake",
+				value: 7.2e-6,
+			}),
+		).toBe(false);
+
 		// A consumption floor must never succeed on silence…
 		const fluidFloor = metricHabit({
 			metricSlug: "fluid_intake",

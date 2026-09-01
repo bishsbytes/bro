@@ -19,11 +19,14 @@ type FoodSnapshotFields = Pick<
 	"consumableRef" | "proteinG" | "carbsG" | "fatG"
 >;
 
+type SubstanceSnapshotFields = Pick<ConsumptionEntry, "nicotineKg">;
+
 type NormalizedConsumptionEntryInput = Omit<
 	CreateConsumptionEntry,
-	keyof FoodSnapshotFields
+	keyof FoodSnapshotFields | keyof SubstanceSnapshotFields
 > &
-	Required<FoodSnapshotFields>;
+	Required<FoodSnapshotFields> &
+	Required<SubstanceSnapshotFields>;
 
 type ConsumptionEntryRow = {
 	id: string;
@@ -36,6 +39,7 @@ type ConsumptionEntryRow = {
 	volume_l: number | null;
 	ethanol_kg: number | null;
 	caffeine_kg: number | null;
+	nicotine_kg: number | null;
 	energy_kcal: number | null;
 	protein_g: number | null;
 	carbs_g: number | null;
@@ -49,9 +53,20 @@ type ConsumptionEntryRow = {
 
 const SELECT_COLUMNS = `
 	id, kind, catalogue_ref, consumable_ref, label, serving_label, quantity,
-	volume_l, ethanol_kg, caffeine_kg, energy_kcal, protein_g, carbs_g, fat_g,
-	occurred_at, local_day, tz_offset_minutes, created_at, updated_at
+	volume_l, ethanol_kg, caffeine_kg, nicotine_kg, energy_kcal, protein_g,
+	carbs_g, fat_g, occurred_at, local_day, tz_offset_minutes, created_at,
+	updated_at
 `;
+
+const ENTRY_KINDS = [
+	"drink",
+	"food",
+	"nicotine",
+] as const satisfies readonly ConsumptionEntryKind[];
+
+function isEntryKind(value: string): value is ConsumptionEntryKind {
+	return ENTRY_KINDS.some((kind) => kind === value);
+}
 
 function required(value: string, label: string): string {
 	const normalized = value.trim();
@@ -78,8 +93,10 @@ function assertOptionalQuantity(
 }
 
 function assertEntry(input: CreateConsumptionEntry): void {
-	if (input.kind !== "drink" && input.kind !== "food") {
-		throw new TypeError("Consumption entry kind must be drink or food.");
+	if (!isEntryKind(input.kind)) {
+		throw new TypeError(
+			`Consumption entry kind must be one of ${ENTRY_KINDS.join(", ")}.`,
+		);
 	}
 	required(input.label, "Consumption entry label");
 	if (!Number.isFinite(input.quantity) || input.quantity <= 0) {
@@ -90,6 +107,7 @@ function assertEntry(input: CreateConsumptionEntry): void {
 	assertOptionalQuantity(input.volumeL, "Consumption entry volume");
 	assertOptionalQuantity(input.ethanolKg, "Consumption entry ethanol mass");
 	assertOptionalQuantity(input.caffeineKg, "Consumption entry caffeine mass");
+	assertOptionalQuantity(input.nicotineKg, "Consumption entry nicotine mass");
 	assertOptionalQuantity(input.energyKcal, "Consumption entry energy");
 	assertOptionalQuantity(input.proteinG, "Consumption entry protein");
 	assertOptionalQuantity(input.carbsG, "Consumption entry carbs");
@@ -98,6 +116,7 @@ function assertEntry(input: CreateConsumptionEntry): void {
 		input.volumeL === null &&
 		input.ethanolKg === null &&
 		input.caffeineKg === null &&
+		input.nicotineKg == null &&
 		input.energyKcal === null &&
 		input.proteinG == null &&
 		input.carbsG == null &&
@@ -136,11 +155,12 @@ function normalizeEntry(
 		proteinG: input.proteinG ?? null,
 		carbsG: input.carbsG ?? null,
 		fatG: input.fatG ?? null,
+		nicotineKg: input.nicotineKg ?? null,
 	};
 }
 
 function toConsumptionEntry(row: ConsumptionEntryRow): ConsumptionEntry {
-	if (row.kind !== "drink" && row.kind !== "food") {
+	if (!isEntryKind(row.kind)) {
 		throw new TypeError(`Unsupported consumption entry kind: ${row.kind}`);
 	}
 	return {
@@ -154,6 +174,7 @@ function toConsumptionEntry(row: ConsumptionEntryRow): ConsumptionEntry {
 		volumeL: row.volume_l,
 		ethanolKg: row.ethanol_kg,
 		caffeineKg: row.caffeine_kg,
+		nicotineKg: row.nicotine_kg,
 		energyKcal: row.energy_kcal,
 		proteinG: row.protein_g,
 		carbsG: row.carbs_g,
@@ -171,7 +192,9 @@ export class ConsumptionEntryRepository extends BaseRepository {
 		assertEntry(input);
 		const normalized = normalizeEntry(input);
 		const now = this.now();
-		const entry: ConsumptionEntry & Required<FoodSnapshotFields> = {
+		const entry: ConsumptionEntry &
+			Required<FoodSnapshotFields> &
+			Required<SubstanceSnapshotFields> = {
 			...normalized,
 			id: this.createId(now),
 			createdAt: now,
@@ -181,10 +204,10 @@ export class ConsumptionEntryRepository extends BaseRepository {
 		await this.run(
 			`INSERT INTO consumption_entries (
 				id, kind, catalogue_ref, consumable_ref, label, serving_label,
-				quantity, volume_l, ethanol_kg, caffeine_kg, energy_kcal, protein_g,
-				carbs_g, fat_g, occurred_at, local_day, tz_offset_minutes, created_at,
-				updated_at
-			) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+				quantity, volume_l, ethanol_kg, caffeine_kg, nicotine_kg, energy_kcal,
+				protein_g, carbs_g, fat_g, occurred_at, local_day, tz_offset_minutes,
+				created_at, updated_at
+			) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
 			[
 				entry.id,
 				entry.kind,
@@ -196,6 +219,7 @@ export class ConsumptionEntryRepository extends BaseRepository {
 				entry.volumeL,
 				entry.ethanolKg,
 				entry.caffeineKg,
+				entry.nicotineKg,
 				entry.energyKcal,
 				entry.proteinG,
 				entry.carbsG,
@@ -279,8 +303,9 @@ export class ConsumptionEntryRepository extends BaseRepository {
 			`UPDATE consumption_entries SET
 				catalogue_ref = ?, consumable_ref = ?, label = ?, serving_label = ?,
 				quantity = ?, volume_l = ?, ethanol_kg = ?, caffeine_kg = ?,
-				energy_kcal = ?, protein_g = ?, carbs_g = ?, fat_g = ?, occurred_at = ?,
-				local_day = ?, tz_offset_minutes = ?, updated_at = ?
+				nicotine_kg = ?, energy_kcal = ?, protein_g = ?, carbs_g = ?,
+				fat_g = ?, occurred_at = ?, local_day = ?, tz_offset_minutes = ?,
+				updated_at = ?
 			 WHERE id = ?`,
 			[
 				normalized.catalogueRef,
@@ -291,6 +316,7 @@ export class ConsumptionEntryRepository extends BaseRepository {
 				normalized.volumeL,
 				normalized.ethanolKg,
 				normalized.caffeineKg,
+				normalized.nicotineKg,
 				normalized.energyKcal,
 				normalized.proteinG,
 				normalized.carbsG,

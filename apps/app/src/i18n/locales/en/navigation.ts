@@ -48,6 +48,13 @@ export const navigation = {
 		goals: "Drink goals",
 		day: "Drink record",
 	},
+	nicotine: {
+		index: "Smoking & vaping",
+		addA11y: "Log smoking or vaping",
+		log: "Log smoking or vaping",
+		goals: "Nicotine goals",
+		day: "Smoking record",
+	},
 	quickLog: {
 		open: "Log",
 		title: "What would you like to log?",
@@ -55,6 +62,9 @@ export const navigation = {
 		foodDetail: "Search foods or enter nutrition yourself",
 		drink: "Drink",
 		drinkDetail: "Water, caffeine, alcohol, or another drink",
+		/** Only offered once the smoking log is switched on; see the FAB. */
+		nicotine: "Smoke or vape",
+		nicotineDetail: "A cigarette, a vape, or something else",
 		checkIn: "Check-in",
 		checkInDetail: "Mood, energy, stress, and your day",
 		close: "Close log menu",
@@ -67,6 +77,7 @@ export const navigation = {
 		checkIns: "Check-ins",
 		drinks: "Drink settings",
 		food: "Food settings",
+		nicotine: "Smoking & vaping",
 		health: "Health data",
 		data: "Data",
 		deleteLocalData: "Delete local data",

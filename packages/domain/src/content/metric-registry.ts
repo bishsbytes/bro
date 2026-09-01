@@ -39,7 +39,6 @@ export type TagSlug =
 	| "masturbation"
 	| "porn"
 	| "morning_erection"
-	| "nicotine"
 	| "hangover"
 	| "muscle_soreness"
 	| "cold_exposure"
@@ -57,6 +56,7 @@ export type ImportedOnlyMeasurementSlug =
 export type ConsumptionDerivedMeasurementSlug =
 	| "alcohol_intake"
 	| "caffeine_intake"
+	| "nicotine_intake"
 	| "fluid_intake"
 	| "energy_intake"
 	| "protein_intake"
@@ -351,9 +351,9 @@ export const METRIC_REGISTRY = [
 	}),
 	tag("muscle_soreness", "Muscle soreness", "body", 18),
 	tag("cold_exposure", "Cold exposure", "body", 19),
-	tag("nicotine", "Nicotine", "lifestyle", 20, {
-		sensitive: true,
-	}),
+	// Position 20 was the `nicotine` tag, replaced outright by the quantified
+	// `nicotine_intake`. Authored positions are defaults, so the gap costs
+	// nothing, and the slug must not return as a tag: the metric owns it now.
 	tag("long_hours", "Long hours", "lifestyle", 21),
 	tag("meditation", "Meditation", "mind", 22),
 	tag("anxiety", "Anxiety", "mind", 23),
@@ -376,6 +376,9 @@ export const METRIC_REGISTRY = [
 		unitPreferenceDimension: "alcohol",
 	}),
 	consumptionMeasurement("caffeine_intake", "Caffeine", "mass", 7, false, {
+		fixedDisplayUnit: "mg",
+	}),
+	consumptionMeasurement("nicotine_intake", "Nicotine", "mass", 13, true, {
 		fixedDisplayUnit: "mg",
 	}),
 	consumptionMeasurement("fluid_intake", "Fluid intake", "volume", 8, false, {
