@@ -10,6 +10,8 @@
 		"format": "biome format --write .",
 		"format:check": "biome format .",
 		"check": "biome check . && nx run-many -t lint",
+		"android:build": "cd apps/app/android && ./gradlew assembleRelease",
+		"android:install": "cd apps/app/android && ./gradlew installRelease",
 		"brand": "node tools/scripts/brand-assets.mjs",
 		"brand:check": "node tools/scripts/brand-assets.mjs --check"
 	},
