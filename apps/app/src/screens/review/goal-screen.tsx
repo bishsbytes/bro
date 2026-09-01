@@ -4,6 +4,7 @@ import { useTranslation } from "react-i18next";
 import { AppText } from "../../components/app-text";
 import { Button } from "../../components/button";
 import { Card } from "../../components/card";
+import { DateField } from "../../components/date-field";
 import { EmptyState } from "../../components/empty-state";
 import { FormField } from "../../components/form-field";
 import { LoadingScreen, StackScreen as Screen } from "../../components/screen";
@@ -105,12 +106,11 @@ export function GoalScreen({
 				keyboardType="number-pad"
 				placeholder={t("goal.targetScorePlaceholder")}
 			/>
-			<FormField
+			<DateField
 				label={t("goal.targetDate")}
 				value={targetDate}
-				onChangeText={setTargetDate}
-				autoCapitalize="none"
-				placeholder={t("goal.targetDatePlaceholder")}
+				onChangeDate={setTargetDate}
+				allowClear
 			/>
 			{error ? <AppText color="danger">{error}</AppText> : null}
 			<Button

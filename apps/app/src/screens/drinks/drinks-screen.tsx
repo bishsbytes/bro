@@ -14,6 +14,7 @@ import {
 import { AppText } from "../../components/app-text";
 import { Button } from "../../components/button";
 import { Card } from "../../components/card";
+import { DateField } from "../../components/date-field";
 import { EmptyState } from "../../components/empty-state";
 import { FormField } from "../../components/form-field";
 import { Icon } from "../../components/icon";
@@ -198,11 +199,10 @@ function DrinkLogForm({
 				keyboardType="decimal-pad"
 			/>
 			<View style={styles.actions}>
-				<FormField
+				<DateField
 					label={t("add.dateField")}
 					value={localDay}
-					onChangeText={onLocalDayChange}
-					placeholder={t("add.datePlaceholder")}
+					onChangeDate={onLocalDayChange}
 					containerStyle={styles.grow}
 				/>
 				<FormField
@@ -1132,11 +1132,11 @@ export function DrinksScreen({ view = "overview", store }: DrinksScreenProps) {
 												onChangeText={setGoalTarget}
 												keyboardType="decimal-pad"
 											/>
-											<FormField
+											<DateField
 												label={t("goals.targetDateField")}
 												value={goalDate}
-												onChangeText={setGoalDate}
-												placeholder={t("add.datePlaceholder")}
+												onChangeDate={setGoalDate}
+												allowClear
 											/>
 											<Button
 												label={t("goals.save")}

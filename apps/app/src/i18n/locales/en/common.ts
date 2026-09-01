@@ -7,6 +7,14 @@ export const common = {
 		tryAgain: "Try again",
 		viewLog: "View log",
 	},
+	datePicker: {
+		chooseDate: "Choose date",
+		openHint: "Opens the date picker",
+		noDateSelected: "No date selected",
+		clearDate: "Clear date",
+		cancel: "Cancel",
+		done: "Done",
+	},
 	ratingEnds: {
 		veryBad: "Very bad",
 		veryLow: "Very low",

@@ -27,6 +27,7 @@
 		"@expo/vector-icons": "catalog:",
 		"@gorhom/bottom-sheet": "catalog:",
 		"@kingstinct/react-native-healthkit": "catalog:",
+		"@react-native-community/datetimepicker": "catalog:",
 		"@testing-library/react-native": "catalog:",
 		"better-auth": "catalog:",
 		"expo": "catalog:",

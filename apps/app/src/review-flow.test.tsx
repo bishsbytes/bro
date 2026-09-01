@@ -131,10 +131,14 @@ describe("wheel-of-life review flow", () => {
 			await firstRun.findByText("Your current wheel score is 6/10."),
 		).toBeTruthy();
 		await fireEvent.changeText(firstRun.getByLabelText("Target score"), "8");
-		await fireEvent.changeText(
-			firstRun.getByLabelText("Target date (optional)"),
-			"2026-12-01",
+		await fireEvent.press(firstRun.getByLabelText("Target date (optional)"));
+		await fireEvent(
+			firstRun.getByTestId("date-picker"),
+			"valueChange",
+			{ nativeEvent: { timestamp: Date.parse("2026-12-01T12:00:00Z") } },
+			new Date(2026, 11, 1, 12),
 		);
+		await fireEvent.press(firstRun.getByText("Done"));
 		await fireEvent.press(firstRun.getByText("Save goal"));
 		expect(
 			await firstRun.findByText("Started at 6/10 · Latest 6/10 · Target 8/10"),

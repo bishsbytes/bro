@@ -14,8 +14,8 @@ import {
 import { AppText } from "../../components/app-text";
 import { Button } from "../../components/button";
 import { Card } from "../../components/card";
+import { DateField } from "../../components/date-field";
 import { EmptyState } from "../../components/empty-state";
-import { FormField } from "../../components/form-field";
 import { MeasurementField } from "../../components/measurement-field";
 import { LoadingScreen, StackScreen as Screen } from "../../components/screen";
 import { SectionHeader } from "../../components/section-header";
@@ -346,12 +346,11 @@ export function BodyMetricScreen({ metricSlug, store }: BodyMetricScreenProps) {
 								error={targetError}
 								onChangeEntry={setTarget}
 							/>
-							<FormField
+							<DateField
 								label={t("goal.targetDateField")}
 								value={targetDate}
-								placeholder={t("goal.targetDatePlaceholder")}
-								autoCapitalize="none"
-								onChangeText={setTargetDate}
+								onChangeDate={setTargetDate}
+								allowClear
 							/>
 							<Button
 								label={t("goal.save")}

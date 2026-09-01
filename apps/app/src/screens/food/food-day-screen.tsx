@@ -6,6 +6,7 @@ import { View } from "react-native";
 import { AppText } from "../../components/app-text";
 import { Button } from "../../components/button";
 import { Card } from "../../components/card";
+import { DateField } from "../../components/date-field";
 import { EmptyState } from "../../components/empty-state";
 import { FormField } from "../../components/form-field";
 import { LoadingScreen, StackScreen as Screen } from "../../components/screen";
@@ -69,10 +70,10 @@ function EntryEditor({
 					keyboardType="decimal-pad"
 					containerStyle={styles.grow}
 				/>
-				<FormField
+				<DateField
 					label={t("day.dateField")}
 					value={localDay}
-					onChangeText={setLocalDay}
+					onChangeDate={setLocalDay}
 					containerStyle={styles.grow}
 				/>
 				<FormField

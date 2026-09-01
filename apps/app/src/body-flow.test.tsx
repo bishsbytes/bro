@@ -115,10 +115,14 @@ describe("body metrics flow", () => {
 
 		await fireEvent.changeText(view.getByLabelText("Target (stones)"), "12");
 		await fireEvent.changeText(view.getByLabelText("Target (pounds)"), "0");
-		await fireEvent.changeText(
-			view.getByLabelText("Target date (optional)"),
-			"2026-12-25",
+		await fireEvent.press(view.getByLabelText("Target date (optional)"));
+		await fireEvent(
+			view.getByTestId("date-picker"),
+			"valueChange",
+			{ nativeEvent: { timestamp: Date.parse("2026-12-25T12:00:00Z") } },
+			new Date(2026, 11, 25, 12),
 		);
+		await fireEvent.press(view.getByText("Done"));
 		await fireEvent.press(view.getByText("Save goal"));
 		expect(await view.findByText("Target 12 st 0 lb")).toBeTruthy();
 		expect(
