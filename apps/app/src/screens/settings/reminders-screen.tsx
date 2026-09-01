@@ -206,7 +206,11 @@ export function RemindersScreen({
 
 	return (
 		<Screen scroll padded gap="lg">
-			{state?.permission === "denied" ? (
+			{/* Anything short of granted leaves the schedules below silent, and
+			    Android hands back "undetermined" for a prompt the user has
+			    dismissed once. The warning waits for a schedule to warn about,
+			    so a first visit to an empty screen stays quiet. */}
+			{state && state.permission !== "granted" && state.reminders.length > 0 ? (
 				<Card style={styles.banner}>
 					<AppText variant="label" color="danger">
 						{t("reminders.deniedTitle")}

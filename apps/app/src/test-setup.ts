@@ -175,8 +175,19 @@ jest.mock("expo-notifications", () => ({
 	setNotificationHandler: jest.fn(),
 	setNotificationChannelAsync: jest.fn(async () => null),
 	getNotificationChannelAsync: jest.fn(async () => ({ importance: 3 })),
-	getPermissionsAsync: jest.fn(async () => ({ status: "undetermined" })),
-	requestPermissionsAsync: jest.fn(async () => ({ status: "granted" })),
+	// Shaped like a real response: the gateway reads canAskAgain and granted
+	// alongside the status, because Android's status alone cannot tell a fresh
+	// install from a refusal.
+	getPermissionsAsync: jest.fn(async () => ({
+		status: "undetermined",
+		canAskAgain: true,
+		granted: false,
+	})),
+	requestPermissionsAsync: jest.fn(async () => ({
+		status: "granted",
+		canAskAgain: false,
+		granted: true,
+	})),
 	getAllScheduledNotificationsAsync: jest.fn(async () => []),
 	scheduleNotificationAsync: jest.fn(async ({ identifier }) => identifier),
 	cancelScheduledNotificationAsync: jest.fn(async () => undefined),

@@ -82,6 +82,28 @@ describe("reminders screen", () => {
 		expect(globalThis.fetch).not.toHaveBeenCalled();
 	});
 
+	it("warns about a schedule the OS has not been asked to deliver yet", async () => {
+		// Android reports a dismissed prompt as undetermined, not denied: the
+		// reminder is on and saved, and nothing will ever fire from it.
+		const store = {
+			load: jest.fn(async () => ({
+				reminders: [reminder()],
+				permission: "undetermined" as const,
+			})),
+			create: jest.fn(),
+			update: jest.fn(),
+			setEnabled: jest.fn(),
+			delete: jest.fn(),
+		};
+		const view = await render(
+			<RemindersScreen store={store} unitSettingsStore={weekStartStore()} />,
+		);
+
+		await waitFor(() =>
+			expect(view.getByText("Notifications are off")).toBeTruthy(),
+		);
+	});
+
 	it("keeps denied schedules visible and points to system settings", async () => {
 		const store = {
 			load: jest.fn(async () => ({

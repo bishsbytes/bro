@@ -20,16 +20,24 @@ export type ReminderNotificationGateway = {
 	cancel(identifier: string): Promise<void>;
 };
 
+/**
+ * Android never reports a reminder permission as undetermined. Until
+ * POST_NOTIFICATIONS is granted, `areNotificationsEnabled()` is false, and
+ * expo-notifications reports that ahead of the permission's own undetermined
+ * state, so a fresh install looks exactly like a refusal. Only `canAskAgain`
+ * separates the two: it says the OS will still show its own dialog if asked.
+ *
+ * An app whose notifications were switched off in system settings still holds
+ * the permission, so `granted` marks the refusal that asking again cannot
+ * undo — on that path only system settings can turn reminders back on.
+ */
 function normalisePermission(
-	status: Notifications.PermissionStatus,
+	response: Notifications.NotificationPermissionsStatus,
 ): NotificationPermissionStatus {
-	if (status === Notifications.PermissionStatus.GRANTED) {
+	if (response.status === Notifications.PermissionStatus.GRANTED) {
 		return "granted";
 	}
-	if (status === Notifications.PermissionStatus.DENIED) {
-		return "denied";
-	}
-	return "undetermined";
+	return response.canAskAgain && !response.granted ? "undetermined" : "denied";
 }
 
 export const notificationGateway: ReminderNotificationGateway = {
@@ -50,7 +58,7 @@ export const notificationGateway: ReminderNotificationGateway = {
 
 	async getPermissionStatus() {
 		const permission = normalisePermission(
-			(await Notifications.getPermissionsAsync()).status,
+			await Notifications.getPermissionsAsync(),
 		);
 		if (permission !== "granted" || Platform.OS !== "android") {
 			return permission;
@@ -64,9 +72,7 @@ export const notificationGateway: ReminderNotificationGateway = {
 	},
 
 	async requestPermission() {
-		return normalisePermission(
-			(await Notifications.requestPermissionsAsync()).status,
-		);
+		return normalisePermission(await Notifications.requestPermissionsAsync());
 	},
 
 	async listScheduled() {
