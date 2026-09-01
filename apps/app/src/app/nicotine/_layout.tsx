@@ -36,6 +36,7 @@ export default function NicotineLayout() {
 				}}
 			/>
 			<Stack.Screen name="log" options={{ title: t("nicotine.log") }} />
+			<Stack.Screen name="goals" options={{ title: t("nicotine.goals") }} />
 			<Stack.Screen name="[localDay]" options={{ title: t("nicotine.day") }} />
 		</Stack>
 	);

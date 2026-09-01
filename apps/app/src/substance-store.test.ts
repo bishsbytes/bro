@@ -76,6 +76,20 @@ describe("substance store, configured for nicotine", () => {
 			today.metrics.find(({ metric }) => metric.slug === "nicotine_intake")
 				?.dayFormatted,
 		).toBe("4 mg");
+
+		const corrected = await subject.updateEntry(cigarette.id, {
+			label: cigarette.label,
+			servingLabel: cigarette.servingLabel,
+			quantity: 2,
+			localDay: cigarette.localDay,
+			time: "09:15",
+		});
+		expect(corrected.nicotineKg).toBeCloseTo(nicotineKgFromMg(2.4), 12);
+		expect(
+			(await subject.loadToday()).metrics.find(
+				({ metric }) => metric.slug === "nicotine_intake",
+			)?.dayFormatted,
+		).toBe("2 mg");
 		// Logging a smoke is not a check-in and writes no observation.
 		expect(await new databaseApp.ObservationRepository(db).listAll()).toEqual(
 			[],
@@ -179,5 +193,24 @@ describe("substance store, configured for nicotine", () => {
 		expect(today.metrics.map(({ metric }) => metric.slug)).toEqual([
 			"nicotine_intake",
 		]);
+	});
+
+	it("is on when an active habit targets its metric", async () => {
+		const subject = store();
+		expect(await subject.isTracked()).toBe(false);
+
+		await new databaseApp.HabitRepository(db).create({
+			slug: "habit:nicotine-free",
+			customLabel: null,
+			kind: "metric",
+			metricSlug: "nicotine_intake",
+			direction: "at_most",
+			targetValue: 0,
+			areaSlug: "wheel:sobriety",
+			daysOfWeek: 0b111_1111,
+			position: 0,
+		});
+
+		expect(await subject.isTracked()).toBe(true);
 	});
 });

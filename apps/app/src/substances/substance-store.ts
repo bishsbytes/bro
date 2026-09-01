@@ -2,6 +2,7 @@ import {
 	type ConsumptionEntry,
 	type ConsumptionEntryKind,
 	getDb,
+	HabitRepository,
 } from "@bro/database-app";
 import { resolveLocalMoment } from "@bro/domain";
 import type {
@@ -92,6 +93,7 @@ export type SubstanceCopy = {
 	goalAchieve: () => string;
 	goalAbandon: () => string;
 	goalNeedsLog: () => string;
+	recentDays: () => string;
 };
 
 export type SubstanceMetric<Slug extends ConsumptionDerivedMeasurementSlug> =
@@ -136,6 +138,7 @@ export class SubstanceStore<
 > extends ConsumptionStore<Slug, SubstanceMetric<Slug>> {
 	protected readonly kind: ConsumptionEntryKind;
 	protected readonly metricSlugs: readonly Slug[];
+	private readonly habits: HabitRepository;
 
 	constructor(
 		private readonly descriptor: SubstanceDescriptor<Slug>,
@@ -146,6 +149,7 @@ export class SubstanceStore<
 		super(db, now, locale);
 		this.kind = descriptor.kind;
 		this.metricSlugs = [descriptor.metricSlug];
+		this.habits = new HabitRepository(db);
 	}
 
 	/**
@@ -235,8 +239,18 @@ export class SubstanceStore<
 
 	/** Whether this stream is on: its metric tracked, or a habit targeting it. */
 	async isTracked(): Promise<boolean> {
-		const settings = await this.trackedMetricSettings();
-		return settings.some((setting) => setting.tracked);
+		const [settings, habits] = await Promise.all([
+			this.trackedMetricSettings(),
+			this.habits.listActive(),
+		]);
+		return (
+			settings.some((setting) => setting.tracked) ||
+			habits.some(
+				(habit) =>
+					habit.kind === "metric" &&
+					habit.metricSlug === this.descriptor.metricSlug,
+			)
+		);
 	}
 }
 

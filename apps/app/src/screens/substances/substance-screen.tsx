@@ -163,6 +163,21 @@ export function SubstanceScreen<
 					))}
 				</Card>
 			) : null}
+
+			{snapshot.recentLocalDays.length > 0 ? (
+				<Card style={styles.section}>
+					<SectionHeader title={descriptor.copy.recentDays()} />
+					{snapshot.recentLocalDays.map((day) => (
+						<ListRow
+							key={day}
+							title={day}
+							onPress={() =>
+								router.push(`${descriptor.routeBase}/${day}` as Href)
+							}
+						/>
+					))}
+				</Card>
+			) : null}
 		</Screen>
 	);
 }

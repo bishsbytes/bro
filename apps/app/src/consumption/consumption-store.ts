@@ -494,6 +494,7 @@ export abstract class ConsumptionStore<
 			volumeL: scaleNullable(entry.volumeL, scale),
 			ethanolKg: scaleNullable(entry.ethanolKg, scale),
 			caffeineKg: scaleNullable(entry.caffeineKg, scale),
+			nicotineKg: scaleNullable(entry.nicotineKg, scale),
 			energyKcal: scaleNullable(entry.energyKcal, scale),
 			proteinG: scaleNullable(entry.proteinG, scale),
 			carbsG: scaleNullable(entry.carbsG, scale),

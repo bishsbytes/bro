@@ -220,6 +220,12 @@ describe("app entry", () => {
 		).toBeTruthy();
 	});
 
+	it("protects the nicotine stack until onboarding is complete", async () => {
+		const { router } = await launch({}, "/nicotine");
+
+		expect(router.getPathname()).toBe("/onboarding");
+	});
+
 	it("sends an onboarded install straight into the app", async () => {
 		const { router, view } = await launch({ onboardingComplete: true });
 

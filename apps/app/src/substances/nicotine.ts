@@ -47,6 +47,7 @@ export const NICOTINE_DESCRIPTOR: SubstanceDescriptor<"nicotine_intake"> = {
 		goalAchieve: () => i18n.t("nicotine:goals.achieve"),
 		goalAbandon: () => i18n.t("nicotine:goals.abandon"),
 		goalNeedsLog: () => i18n.t("nicotine:goals.needsLog"),
+		recentDays: () => i18n.t("nicotine:day.recentDays"),
 	},
 	routeBase: "/nicotine",
 };

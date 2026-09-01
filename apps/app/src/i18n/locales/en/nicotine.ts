@@ -69,6 +69,7 @@ export const nicotine = {
 		empty: "Nothing logged for this day.",
 		emptyBody: "Anything you log for this day will appear here.",
 		total: "Day total",
+		recentDays: "Recent days",
 	},
 	goals: {
 		/** States the target and where the day stands, without grading either. */
