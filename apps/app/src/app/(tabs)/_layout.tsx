@@ -34,21 +34,23 @@ function TabShell() {
 	const activeTabTitle = activeTabKey ? t(activeTabKey) : undefined;
 	const activeHeaderTitle =
 		pathname === "/" ? todayHeaderMonth : activeTabTitle;
-	const lastTabHeader = useRef({
-		title: activeHeaderTitle ?? todayHeaderMonth,
-		centerTitle: activeHeaderTitle ? pathname === "/" : true,
-	});
+	const isJournalTab = pathname === "/";
+	const lastTabHeader = useRef(
+		activeHeaderTitle
+			? { title: activeHeaderTitle, isJournal: isJournalTab }
+			: { title: todayHeaderMonth, isJournal: true },
+	);
 	useLayoutEffect(() => {
 		if (activeHeaderTitle) {
 			lastTabHeader.current = {
 				title: activeHeaderTitle,
-				centerTitle: pathname === "/",
+				isJournal: isJournalTab,
 			};
 		}
-	}, [activeHeaderTitle, pathname]);
+	}, [activeHeaderTitle, isJournalTab]);
 	const isNestedTabRoute = segments[0] === "(tabs)" && segments.length > 2;
 	const header = activeHeaderTitle
-		? { title: activeHeaderTitle, centerTitle: pathname === "/" }
+		? { title: activeHeaderTitle, isJournal: isJournalTab }
 		: lastTabHeader.current;
 	const title = isNestedTabRoute ? undefined : header.title;
 	const activeTabName = pathname === "/" ? "index" : pathname.slice(1);
@@ -58,9 +60,9 @@ function TabShell() {
 			{title ? (
 				<AppHeader
 					title={title}
-					centerTitle={header.centerTitle}
+					centerTitle={header.isJournal}
 					leading={
-						pathname === "/" ? (
+						header.isJournal ? (
 							<TouchableOpacity
 								accessibilityRole="button"
 								accessibilityLabel={t("tabs.openHistory")}

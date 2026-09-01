@@ -136,7 +136,7 @@ describe("TabLayout", () => {
 		expect(Haptics.selectionAsync).toHaveBeenCalledTimes(1);
 	});
 
-	it("keeps the last tab header mounted behind root-stack transitions", async () => {
+	it("keeps the complete last tab header mounted behind root-stack transitions", async () => {
 		const screen = await render(<TabLayout />);
 		const currentMonth = monthHeaderLabel(localDayOf(new Date()));
 
@@ -149,6 +149,7 @@ describe("TabLayout", () => {
 		expect(
 			NativeStyleSheet.flatten(retainedMonth.parent?.props.style).pointerEvents,
 		).toBe("none");
+		expect(screen.getByTestId("history-header-icon")).toBeTruthy();
 
 		mockPathname = "/body/weight";
 		mockSegments = ["(tabs)", "body", "[slug]"];
