@@ -138,6 +138,33 @@ describe("DiscreteScale", () => {
 		expect(preventDefault).toHaveBeenCalledTimes(2);
 	});
 
+	it("settles on the walked-to score when a keyboard press names no stop", async () => {
+		const onSelect = jest.fn();
+		const view = await render(scaleOf({ selected: 7, onSelect }));
+		await layOut(view);
+		const scale = view.getByLabelText("Work & career score");
+
+		// React Native Web runs Enter through a document keyup listener, which
+		// hands onPress a bare DOM event with no nativeEvent of any kind.
+		await fireEvent(scale, "pressIn", { type: "keydown" });
+		await fireEvent(scale, "pressOut", { type: "keyup" });
+		await fireEvent(scale, "press", { type: "keyup" });
+
+		expect(onSelect).toHaveBeenCalledTimes(1);
+		expect(onSelect).toHaveBeenCalledWith(7, "pointer");
+	});
+
+	it("does nothing when a keyboard press has no score to settle on", async () => {
+		const onSelect = jest.fn();
+		const view = await render(scaleOf({ selected: null, onSelect }));
+		await layOut(view);
+
+		await fireEvent(view.getByLabelText("Work & career score"), "press", {
+			type: "keyup",
+		});
+		expect(onSelect).not.toHaveBeenCalled();
+	});
+
 	it("starts an unanswered scale from either end", async () => {
 		const onSelect = jest.fn();
 		const view = await render(scaleOf({ selected: null, onSelect }));

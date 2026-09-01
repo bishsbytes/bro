@@ -29,9 +29,13 @@ type DiscreteScaleProps = {
 
 type KeyEvent = NativeSyntheticEvent<Readonly<{ key: string }>>;
 
-/** A press, a touch drag, or a mouse drag — anything carrying coordinates. */
+/**
+ * A press, a touch drag, or a mouse drag. A keyboard press reaches the same
+ * handlers from a bare DOM listener, so `nativeEvent` is genuinely absent
+ * there rather than merely empty.
+ */
 type PointerEvent = Readonly<{
-	nativeEvent: Readonly<{ locationX?: number; offsetX?: number }>;
+	nativeEvent?: Readonly<{ locationX?: number; offsetX?: number }>;
 }>;
 
 // React Native Web forwards keyboard and mouse events, but the stable Pressable
@@ -43,9 +47,14 @@ const KeyboardPressable = Pressable as ComponentType<
 	}
 >;
 
-/** React Native Web sends a MouseEvent to onPress, while native sends touch data. */
+/**
+ * Where along the control a press landed, or null when it did not come from a
+ * pointer at all. React Native Web sends a MouseEvent to onPress and native
+ * sends touch data, but Enter arrives from a document-level keyup listener
+ * carrying no coordinates to aim with.
+ */
 function pointerPosition(event: PointerEvent): number | null {
-	const { locationX, offsetX } = event.nativeEvent;
+	const { locationX, offsetX } = event.nativeEvent ?? {};
 	if (Number.isFinite(locationX)) return locationX ?? null;
 	return Number.isFinite(offsetX) ? (offsetX ?? null) : null;
 }
@@ -153,7 +162,14 @@ export function DiscreteScale({
 				}}
 				onPress={(event) => {
 					const position = pointerPosition(event);
-					const score = position === null ? null : scoreAt(position);
+					// Enter names no stop, so it settles on the one the arrows have
+					// already walked to — the keyboard's equivalent of lifting a
+					// finger, and the only press that can arrive without a pointer.
+					if (position === null) {
+						if (selected !== null) onSelect(selected, "pointer");
+						return;
+					}
+					const score = scoreAt(position);
 					if (score !== null) onSelect(score, "pointer");
 				}}
 				onAccessibilityAction={(event) => {
