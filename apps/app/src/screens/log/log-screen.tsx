@@ -454,7 +454,7 @@ const styles = StyleSheet.create((theme) => ({
 		borderTopColor: theme.colors.border,
 	},
 	summaryRow: {
-		paddingHorizontal: 0,
+		paddingHorizontal: theme.spacing.sm,
 		paddingVertical: theme.spacing.md,
 		borderRadius: 0,
 		backgroundColor: "transparent",
