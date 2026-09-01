@@ -2,6 +2,7 @@ import { type Href, router } from "expo-router";
 import { useState } from "react";
 import { useTranslation } from "react-i18next";
 import { TouchableOpacity, View } from "react-native";
+import { playSelectionHaptic } from "../feedback/selection-haptic";
 import { StyleSheet, useUnistyles } from "../theme/unistyles";
 import { AppText } from "./app-text";
 import { Icon, type IconName } from "./icon";
@@ -51,6 +52,11 @@ export function QuickLogFab({ bottom }: { bottom: number }) {
 		router.push(href);
 	}
 
+	function openSheet() {
+		playSelectionHaptic();
+		setOpen(true);
+	}
+
 	return (
 		<>
 			<TouchableOpacity
@@ -58,7 +64,7 @@ export function QuickLogFab({ bottom }: { bottom: number }) {
 				accessibilityLabel={t("quickLog.open")}
 				activeOpacity={0.82}
 				style={[styles.fab, { bottom }]}
-				onPress={() => setOpen(true)}
+				onPress={openSheet}
 			>
 				<Icon name="add" color={theme.colors.onBrand} size={28} />
 			</TouchableOpacity>

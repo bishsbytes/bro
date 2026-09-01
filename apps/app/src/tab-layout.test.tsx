@@ -117,6 +117,7 @@ describe("TabLayout", () => {
 
 		await fireEvent.press(screen.getByLabelText("Log"));
 		expect(screen.getByText("What would you like to log?")).toBeTruthy();
+		expect(Haptics.selectionAsync).toHaveBeenCalledTimes(1);
 		await fireEvent.press(screen.getByLabelText("Food"));
 
 		expect(router.push).toHaveBeenCalledWith("/food/log");
