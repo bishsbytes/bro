@@ -6,6 +6,7 @@ import {
 	waitFor,
 } from "@testing-library/react-native";
 import { router } from "expo-router";
+import { AccessibilityInfo } from "react-native";
 import type { ReviewDraft, ReviewResult } from "./review/review-store";
 import { NewReviewScreen } from "./screens/review/new-review-screen";
 
@@ -75,6 +76,29 @@ describe("take stock screen", () => {
 	beforeEach(() => {
 		jest.clearAllMocks();
 		beforeRemove = null;
+		// General flow tests cover the reduced-motion path without waiting. The
+		// confirmation test below opts into the Baseline motion duration.
+		jest
+			.spyOn(AccessibilityInfo, "isReduceMotionEnabled")
+			.mockResolvedValue(true);
+	});
+	afterEach(() => jest.restoreAllMocks());
+
+	it("briefly shows the committed score before moving to the next area", async () => {
+		jest
+			.mocked(AccessibilityInfo.isReduceMotionEnabled)
+			.mockResolvedValue(false);
+		const store = reviewStore();
+		const screen = await render(<NewReviewScreen store={store} />);
+		await act(async () => Promise.resolve());
+
+		await chooseScore(screen, "Work & career", 6);
+
+		expect(screen.getByText("1 of 3")).toBeTruthy();
+		expect(
+			screen.getByLabelText("Work & career score").props.accessibilityValue.now,
+		).toBe(6);
+		expect(await screen.findByText("2 of 3")).toBeTruthy();
 	});
 
 	it("asks for one area at a time and saves every score together", async () => {

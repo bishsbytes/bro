@@ -1,7 +1,12 @@
 import { router, useNavigation } from "expo-router";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
-import { ScrollView, TouchableOpacity, View } from "react-native";
+import {
+	AccessibilityInfo,
+	ScrollView,
+	TouchableOpacity,
+	View,
+} from "react-native";
 import { AppText } from "../../components/app-text";
 import { Button } from "../../components/button";
 import { Card } from "../../components/card";
@@ -46,6 +51,7 @@ export function NewReviewScreen({ store }: NewReviewScreenProps) {
 	const [index, setIndex] = useState(0);
 	const [confirmingExit, setConfirmingExit] = useState(false);
 	const [saving, setSaving] = useState(false);
+	const [reducedMotion, setReducedMotion] = useState<boolean>();
 	const {
 		data: draft,
 		error,
@@ -59,6 +65,31 @@ export function NewReviewScreen({ store }: NewReviewScreenProps) {
 	// Set before any navigation this screen asks for, so the guard below lets
 	// the deliberate exits — a discard, and the hop to the saved result — past.
 	const leaving = useRef(false);
+	const advanceTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+	const advancing = useRef(false);
+
+	const cancelPendingAdvance = useCallback(() => {
+		if (advanceTimer.current !== null) clearTimeout(advanceTimer.current);
+		advanceTimer.current = null;
+		advancing.current = false;
+	}, []);
+
+	useEffect(() => {
+		let active = true;
+		void AccessibilityInfo.isReduceMotionEnabled().then((enabled) => {
+			if (active) setReducedMotion(enabled);
+		});
+		const subscription = AccessibilityInfo.addEventListener(
+			"reduceMotionChanged",
+			setReducedMotion,
+		);
+
+		return () => {
+			active = false;
+			subscription?.remove();
+			cancelPendingAdvance();
+		};
+	}, [cancelPendingAdvance]);
 
 	// A swipe or hardware back would drop every score on the floor, so it does
 	// what the screen's own Back does instead: steps back through the areas, and
@@ -69,6 +100,7 @@ export function NewReviewScreen({ store }: NewReviewScreenProps) {
 				return;
 			}
 			event.preventDefault();
+			cancelPendingAdvance();
 			if (index === 0) {
 				setConfirmingExit(true);
 				return;
@@ -77,9 +109,10 @@ export function NewReviewScreen({ store }: NewReviewScreenProps) {
 			setError(null);
 			setIndex((current) => current - 1);
 		});
-	}, [navigation, index, answered]);
+	}, [navigation, index, answered, cancelPendingAdvance]);
 
 	function leave() {
+		cancelPendingAdvance();
 		leaving.current = true;
 		router.back();
 	}
@@ -133,13 +166,26 @@ export function NewReviewScreen({ store }: NewReviewScreenProps) {
 	});
 
 	function answer(slug: string, value: number) {
+		if (advancing.current) return;
+		advancing.current = true;
 		playSelectionHaptic();
 		setError(null);
 		setScores((current) => ({ ...current, [slug]: value }));
-		setIndex((current) => current + 1);
+
+		const advance = () => {
+			advanceTimer.current = null;
+			advancing.current = false;
+			setIndex((current) => current + 1);
+		};
+		if (reducedMotion !== false) {
+			advance();
+			return;
+		}
+		advanceTimer.current = setTimeout(advance, theme.motion.duration);
 	}
 
 	function goTo(step: number) {
+		cancelPendingAdvance();
 		playSelectionHaptic();
 		setError(null);
 		setIndex(step);
