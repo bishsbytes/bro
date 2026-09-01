@@ -9,7 +9,9 @@
 		"lint:affected": "biome lint . && nx affected -t lint",
 		"format": "biome format --write .",
 		"format:check": "biome format .",
-		"check": "biome check . && nx run-many -t lint"
+		"check": "biome check . && nx run-many -t lint",
+		"brand": "node tools/scripts/brand-assets.mjs",
+		"brand:check": "node tools/scripts/brand-assets.mjs --check"
 	},
 	"private": true,
 	"devDependencies": {
