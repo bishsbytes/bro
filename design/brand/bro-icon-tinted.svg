@@ -1,12 +1,12 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1024 1024" width="1024" height="1024" role="img" aria-label="bro">
   <rect width="1024" height="1024" fill="#141719"/>
-  <g transform="translate(89,439) scale(2.35)">
+  <g transform="translate(87,434.5) scale(2.5)">
     <g fill="none" stroke="#9AA0A3" stroke-width="24" stroke-linecap="round">
       <path d="M12,-26 L12,88"/>
       <circle cx="50" cy="50" r="38"/>
       <path d="M132,88 L132,34 C132,16 146,12 166,12"/>
-      <circle cx="260" cy="50" r="38"/>
+      <circle cx="240" cy="50" r="38"/>
     </g>
-    <circle cx="348" cy="88" r="12" fill="#E4E5E1"/>
+    <circle cx="328" cy="88" r="12" fill="#E4E5E1"/>
   </g>
 </svg>
