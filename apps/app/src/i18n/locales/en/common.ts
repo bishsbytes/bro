@@ -28,6 +28,8 @@ export const common = {
 		trendChart: "{{metric}} trend chart",
 		/** One score button, e.g. "Mood 4". */
 		score: "{{prefix}} {{score}}",
+		/** One adjustable score rail, e.g. "Work & career score". */
+		scale: "{{prefix}} score",
 		weekOf: "Week of {{date}}",
 		checkInLogged: "check-in logged",
 		noCheckIn: "no check-in",

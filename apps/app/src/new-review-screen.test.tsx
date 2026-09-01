@@ -1,4 +1,10 @@
-import { act, fireEvent, render, waitFor } from "@testing-library/react-native";
+import {
+	act,
+	fireEvent,
+	type RenderResult,
+	render,
+	waitFor,
+} from "@testing-library/react-native";
 import { router } from "expo-router";
 import type { ReviewDraft, ReviewResult } from "./review/review-store";
 import { NewReviewScreen } from "./screens/review/new-review-screen";
@@ -50,6 +56,20 @@ async function pressSystemBack() {
 	return preventDefault;
 }
 
+async function chooseScore(view: RenderResult, prefix: string, score: number) {
+	const scale = await view.findByLabelText(`${prefix} score`);
+	const width = 1000;
+	await fireEvent(scale, "layout", {
+		nativeEvent: { layout: { x: 0, y: 0, width, height: 64 } },
+	});
+	await fireEvent.press(scale, {
+		nativeEvent: {
+			locationX: (score - 0.5) * (width / 10),
+			locationY: 32,
+		},
+	});
+}
+
 describe("take stock screen", () => {
 	beforeEach(() => {
 		jest.clearAllMocks();
@@ -65,11 +85,14 @@ describe("take stock screen", () => {
 		expect(screen.queryByText("Health")).toBeNull();
 		expect(screen.getByText("Very low")).toBeTruthy();
 		expect(screen.getByText("Very good")).toBeTruthy();
+		expect(
+			screen.getByLabelText("Work & career score").props.accessibilityRole,
+		).toBe("adjustable");
 
-		await fireEvent.press(screen.getByLabelText("Work & career 6"));
+		await chooseScore(screen, "Work & career", 6);
 		expect(await screen.findByText("2 of 3")).toBeTruthy();
-		await fireEvent.press(screen.getByLabelText("Health 9"));
-		await fireEvent.press(await screen.findByLabelText("Money 3"));
+		await chooseScore(screen, "Health", 9);
+		await chooseScore(screen, "Money", 3);
 
 		// The last answer opens the focus step rather than a fourth scale.
 		expect(await screen.findByText("Choose your focus")).toBeTruthy();
@@ -96,11 +119,11 @@ describe("take stock screen", () => {
 		expect(await screen.findByText("Last time 6/10")).toBeTruthy();
 
 		// An area the previous wheel did not carry simply says nothing.
-		await fireEvent.press(screen.getByLabelText("Work & career 8"));
+		await chooseScore(screen, "Work & career", 8);
 		expect(await screen.findByText("2 of 3")).toBeTruthy();
 		expect(screen.queryByText(/^Last time/)).toBeNull();
 
-		await fireEvent.press(screen.getByLabelText("Health 4"));
+		await chooseScore(screen, "Health", 4);
 		expect(await screen.findByText("Last time 7.5/10")).toBeTruthy();
 	});
 
@@ -108,15 +131,14 @@ describe("take stock screen", () => {
 		const store = reviewStore();
 		const screen = await render(<NewReviewScreen store={store} />);
 
-		await fireEvent.press(await screen.findByLabelText("Work & career 6"));
+		await chooseScore(screen, "Work & career", 6);
 		await fireEvent.press(await screen.findByLabelText("Previous area"));
 
 		// The earlier answer is still selected, so a revisit shows what was said.
 		expect(await screen.findByText("1 of 3")).toBeTruthy();
 		expect(
-			screen.getByLabelText("Work & career 6").props.accessibilityState
-				.selected,
-		).toBe(true);
+			screen.getByLabelText("Work & career score").props.accessibilityValue.now,
+		).toBe(6);
 
 		await fireEvent.press(screen.getByLabelText("Close review"));
 		expect(await screen.findByText("Discard this review?")).toBeTruthy();
@@ -138,7 +160,7 @@ describe("take stock screen", () => {
 	it("turns a system back into a step back rather than losing the scores", async () => {
 		const store = reviewStore();
 		const screen = await render(<NewReviewScreen store={store} />);
-		await fireEvent.press(await screen.findByLabelText("Work & career 6"));
+		await chooseScore(screen, "Work & career", 6);
 		expect(await screen.findByText("2 of 3")).toBeTruthy();
 
 		expect(await pressSystemBack()).toHaveBeenCalled();
@@ -165,9 +187,9 @@ describe("take stock screen", () => {
 		const store = reviewStore();
 		const screen = await render(<NewReviewScreen store={store} />);
 
-		await fireEvent.press(await screen.findByLabelText("Work & career 6"));
-		await fireEvent.press(await screen.findByLabelText("Health 9"));
-		await fireEvent.press(await screen.findByLabelText("Money 3"));
+		await chooseScore(screen, "Work & career", 6);
+		await chooseScore(screen, "Health", 9);
+		await chooseScore(screen, "Money", 3);
 		expect(await screen.findByText("Choose your focus")).toBeTruthy();
 
 		// The score on a focus card leads back to the area that set it.
@@ -186,9 +208,9 @@ describe("take stock screen", () => {
 		await waitFor(() => expect(screen.getByText("1 of 3")).toBeTruthy());
 		expect(screen.queryByLabelText("Choose focus areas")).toBeNull();
 
-		await fireEvent.press(screen.getByLabelText("Work & career 6"));
-		await fireEvent.press(await screen.findByLabelText("Health 9"));
-		await fireEvent.press(await screen.findByLabelText("Money 3"));
+		await chooseScore(screen, "Work & career", 6);
+		await chooseScore(screen, "Health", 9);
+		await chooseScore(screen, "Money", 3);
 		await fireEvent.press(await screen.findByText("Change scores"));
 
 		expect(await screen.findByText("3 of 3")).toBeTruthy();
@@ -204,9 +226,9 @@ describe("take stock screen", () => {
 		);
 		const screen = await render(<NewReviewScreen store={store} />);
 
-		await fireEvent.press(await screen.findByLabelText("Work & career 6"));
-		await fireEvent.press(await screen.findByLabelText("Health 9"));
-		await fireEvent.press(await screen.findByLabelText("Money 3"));
+		await chooseScore(screen, "Work & career", 6);
+		await chooseScore(screen, "Health", 9);
+		await chooseScore(screen, "Money", 3);
 		await fireEvent.press(await screen.findByText("Save review"));
 
 		expect(await screen.findByText("Disk full")).toBeTruthy();

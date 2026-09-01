@@ -5,9 +5,9 @@ import { ScrollView, TouchableOpacity, View } from "react-native";
 import { AppText } from "../../components/app-text";
 import { Button } from "../../components/button";
 import { Card } from "../../components/card";
+import { DiscreteScale } from "../../components/discrete-scale";
 import { EmptyState } from "../../components/empty-state";
 import { Icon } from "../../components/icon";
-import { ScoreRow } from "../../components/score-row";
 import { LoadingScreen, FullScreen as Screen } from "../../components/screen";
 import { WheelChart } from "../../components/wheel-chart";
 import { playSelectionHaptic } from "../../feedback/selection-haptic";
@@ -370,7 +370,7 @@ export function NewReviewScreen({ store }: NewReviewScreenProps) {
 						</AppText>
 					)}
 				</View>
-				<ScoreRow
+				<DiscreteScale
 					accessibilityPrefix={step.label}
 					scores={SCORES}
 					selected={scores[step.slug] ?? null}
