@@ -79,6 +79,7 @@ function ReminderEditor({
 	const [slot, setSlot] = useState<CheckInSlot>(initial.slot);
 	const [error, setError] = useState<string | null>(null);
 	const weekdays = useMemo(() => orderedIsoWeekdays(weekStart), [weekStart]);
+	const weekdayRows = [weekdays.slice(0, 4), weekdays.slice(4)];
 
 	function toggleDay(day: IsoWeekdayIndex) {
 		setDaysOfWeek((mask) => mask ^ (1 << day));
@@ -106,25 +107,31 @@ function ReminderEditor({
 				value={time}
 				onChangeTime={setTime}
 			/>
-			<View style={styles.days}>
-				{weekdays.map((day) => {
-					const selected = (daysOfWeek & (1 << day.index)) !== 0;
-					return (
-						<Button
-							key={day.index}
-							label={day.shortLabel}
-							accessibilityLabel={
-								selected
-									? t("reminders.removeDay", { day: day.label })
-									: t("reminders.addDay", { day: day.label })
-							}
-							accessibilityState={{ selected }}
-							variant={selected ? "primary" : "secondary"}
-							style={styles.dayButton}
-							onPress={() => toggleDay(day.index)}
-						/>
-					);
-				})}
+			<View style={styles.weekdayRows}>
+				{weekdayRows.map((row, rowIndex) => (
+					<View key={rowIndex} style={styles.days}>
+						{row.map((day) => {
+							const selected = (daysOfWeek & (1 << day.index)) !== 0;
+							return (
+								<View key={day.index} style={styles.dayCell}>
+									<Button
+										label={day.shortLabel}
+										accessibilityLabel={
+											selected
+												? t("reminders.removeDay", { day: day.label })
+												: t("reminders.addDay", { day: day.label })
+										}
+										accessibilityState={{ selected }}
+										variant={selected ? "primary" : "secondary"}
+										style={styles.weekdayButton}
+										onPress={() => toggleDay(day.index)}
+									/>
+								</View>
+							);
+						})}
+						{row.length < 4 ? <View style={styles.dayCell} /> : null}
+					</View>
+				))}
 			</View>
 			{/* Which sitting this nudges for, so finishing one does not silence
 			    the other. */}
@@ -338,6 +345,9 @@ const styles = StyleSheet.create((theme) => ({
 	actions: { flexDirection: "row", gap: theme.spacing.sm },
 	actionButton: { flex: 1 },
 	editor: { gap: theme.spacing.md },
-	days: { flexDirection: "row", flexWrap: "wrap", gap: theme.spacing.sm },
-	dayButton: { minWidth: 64, flexGrow: 1 },
+	weekdayRows: { gap: theme.spacing.sm },
+	days: { flexDirection: "row", gap: theme.spacing.sm },
+	dayCell: { minWidth: 0, flex: 1 },
+	weekdayButton: { width: "100%" },
+	dayButton: { flex: 1 },
 }));
