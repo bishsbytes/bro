@@ -2,6 +2,7 @@ import { localDayOf } from "@bro/domain";
 import { fireEvent, render } from "@testing-library/react-native";
 import * as Haptics from "expo-haptics";
 import type { ReactNode } from "react";
+import { StyleSheet as NativeStyleSheet } from "react-native";
 import TabLayout from "./app/(tabs)/_layout";
 import { monthHeaderLabel } from "./components/today-header-month-context";
 import * as themeModule from "./theme/unistyles";
@@ -142,7 +143,11 @@ describe("TabLayout", () => {
 		mockSegments = ["settings"];
 		await screen.rerender(<TabLayout />);
 
-		expect(screen.getByText(currentMonth)).toBeTruthy();
+		const retainedMonth = screen.getByText(currentMonth);
+		expect(retainedMonth).toBeTruthy();
+		expect(
+			NativeStyleSheet.flatten(retainedMonth.parent?.props.style).pointerEvents,
+		).toBe("none");
 
 		mockPathname = "/body/weight";
 		mockSegments = ["(tabs)", "body", "[slug]"];

@@ -34,16 +34,23 @@ function TabShell() {
 	const activeTabTitle = activeTabKey ? t(activeTabKey) : undefined;
 	const activeHeaderTitle =
 		pathname === "/" ? todayHeaderMonth : activeTabTitle;
-	const lastTabTitle = useRef(activeHeaderTitle ?? todayHeaderMonth);
+	const lastTabHeader = useRef({
+		title: activeHeaderTitle ?? todayHeaderMonth,
+		centerTitle: activeHeaderTitle ? pathname === "/" : true,
+	});
 	useLayoutEffect(() => {
 		if (activeHeaderTitle) {
-			lastTabTitle.current = activeHeaderTitle;
+			lastTabHeader.current = {
+				title: activeHeaderTitle,
+				centerTitle: pathname === "/",
+			};
 		}
-	}, [activeHeaderTitle]);
+	}, [activeHeaderTitle, pathname]);
 	const isNestedTabRoute = segments[0] === "(tabs)" && segments.length > 2;
-	const title = isNestedTabRoute
-		? undefined
-		: (activeHeaderTitle ?? lastTabTitle.current);
+	const header = activeHeaderTitle
+		? { title: activeHeaderTitle, centerTitle: pathname === "/" }
+		: lastTabHeader.current;
+	const title = isNestedTabRoute ? undefined : header.title;
 	const activeTabName = pathname === "/" ? "index" : pathname.slice(1);
 
 	return (
@@ -51,7 +58,7 @@ function TabShell() {
 			{title ? (
 				<AppHeader
 					title={title}
-					centerTitle={pathname === "/"}
+					centerTitle={header.centerTitle}
 					leading={
 						pathname === "/" ? (
 							<TouchableOpacity
