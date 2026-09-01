@@ -10,7 +10,10 @@ import {
 import { AppText } from "../../components/app-text";
 import { Button } from "../../components/button";
 import { Card } from "../../components/card";
-import { DiscreteScale } from "../../components/discrete-scale";
+import {
+	DiscreteScale,
+	type ScaleInput,
+} from "../../components/discrete-scale";
 import { EmptyState } from "../../components/empty-state";
 import { Icon } from "../../components/icon";
 import { LoadingScreen, FullScreen as Screen } from "../../components/screen";
@@ -52,6 +55,10 @@ export function NewReviewScreen({ store }: NewReviewScreenProps) {
 	const [confirmingExit, setConfirmingExit] = useState(false);
 	const [saving, setSaving] = useState(false);
 	const [reducedMotion, setReducedMotion] = useState<boolean>();
+	// Set when an adjustment leaves a score on the rail. A pointer names one
+	// stop and the step moves on by itself, but arrow keys and a screen
+	// reader's increment walk through neighbours, so those need a way out.
+	const [awaitingNext, setAwaitingNext] = useState(false);
 	const {
 		data: draft,
 		error,
@@ -76,9 +83,14 @@ export function NewReviewScreen({ store }: NewReviewScreenProps) {
 
 	useEffect(() => {
 		let active = true;
-		void AccessibilityInfo.isReduceMotionEnabled().then((enabled) => {
-			if (active) setReducedMotion(enabled);
-		});
+		void AccessibilityInfo.isReduceMotionEnabled()
+			// The screen waits on this to keep the pause after an answer the same
+			// from the first area on, so a refusal has to settle it rather than
+			// leave the wait open.
+			.catch(() => true)
+			.then((enabled) => {
+				if (active) setReducedMotion(enabled);
+			});
 		const subscription = AccessibilityInfo.addEventListener(
 			"reduceMotionChanged",
 			setReducedMotion,
@@ -90,6 +102,9 @@ export function NewReviewScreen({ store }: NewReviewScreenProps) {
 			cancelPendingAdvance();
 		};
 	}, [cancelPendingAdvance]);
+
+	// Any move between areas ends the last one's adjustment.
+	useEffect(() => setAwaitingNext(false), [index]);
 
 	// A swipe or hardware back would drop every score on the floor, so it does
 	// what the screen's own Back does instead: steps back through the areas, and
@@ -142,7 +157,7 @@ export function NewReviewScreen({ store }: NewReviewScreenProps) {
 		}
 	}
 
-	if (loading) {
+	if (loading || reducedMotion === undefined) {
 		return <LoadingScreen variant="full" />;
 	}
 
@@ -165,19 +180,26 @@ export function NewReviewScreen({ store }: NewReviewScreenProps) {
 		return value === undefined ? [] : [{ ...item, value, focused: false }];
 	});
 
-	function answer(slug: string, value: number) {
+	function answer(slug: string, value: number, input: ScaleInput) {
 		if (advancing.current) return;
-		advancing.current = true;
 		playSelectionHaptic();
 		setError(null);
 		setScores((current) => ({ ...current, [slug]: value }));
 
+		// An adjustment is a step on the way somewhere: leaving now would strand
+		// whoever is using it on the first value they touched.
+		if (input === "adjust") {
+			setAwaitingNext(true);
+			return;
+		}
+
+		advancing.current = true;
 		const advance = () => {
 			advanceTimer.current = null;
 			advancing.current = false;
 			setIndex((current) => current + 1);
 		};
-		if (reducedMotion !== false) {
+		if (reducedMotion) {
 			advance();
 			return;
 		}
@@ -420,12 +442,18 @@ export function NewReviewScreen({ store }: NewReviewScreenProps) {
 					accessibilityPrefix={step.label}
 					scores={SCORES}
 					selected={scores[step.slug] ?? null}
-					onSelect={(score) => answer(step.slug, score)}
+					onSelect={(score, input) => answer(step.slug, score, input)}
 					endLabels={{
 						minimum: t("common:ratingEnds.veryLow"),
 						maximum: t("common:ratingEnds.veryGood"),
 					}}
 				/>
+				{awaitingNext ? (
+					<Button
+						label={t("sitting.nav.next")}
+						onPress={() => goTo(index + 1)}
+					/>
+				) : null}
 			</View>
 
 			{error ? <AppText color="danger">{error}</AppText> : null}

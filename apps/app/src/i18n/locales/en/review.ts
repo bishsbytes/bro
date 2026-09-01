@@ -62,6 +62,9 @@ export const review = {
 			closeA11y: "Close review",
 			/** Jumps to the focus step once every area carries a score. */
 			finish: "Focus",
+			/** Offered after an arrow-key or screen-reader adjustment, which
+			    settles on a score without moving on the way a tap does. */
+			next: "Next",
 			position: "{{current}} of {{total}}",
 		},
 		chooseFocus: "Choose focus areas",

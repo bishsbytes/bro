@@ -5,46 +5,49 @@ import {
 	useState,
 } from "react";
 import { useTranslation } from "react-i18next";
-import {
-	type GestureResponderEvent,
-	type NativeSyntheticEvent,
-	Pressable,
-	View,
-} from "react-native";
+import { type NativeSyntheticEvent, Pressable, View } from "react-native";
 import { StyleSheet } from "../theme/unistyles";
 import { AppText } from "./app-text";
+import { type EndLabels, ScaleEndLabels } from "./scale-end-labels";
+
+/**
+ * How a score arrived. A pointer names one stop outright, so the caller can
+ * treat it as the whole answer; an adjustment steps through neighbours on the
+ * way somewhere, so the caller has to leave room for the next step.
+ */
+export type ScaleInput = "pointer" | "adjust";
 
 type DiscreteScaleProps = {
 	/** Names the measured thing, as in "Work & career". */
 	accessibilityPrefix: string;
 	scores: readonly number[];
 	selected: number | null;
-	onSelect: (score: number) => void;
-	endLabels: Readonly<{ minimum: string; maximum: string }>;
+	onSelect: (score: number, input: ScaleInput) => void;
+	endLabels: EndLabels;
 	disabled?: boolean;
 };
 
 type KeyEvent = NativeSyntheticEvent<Readonly<{ key: string }>>;
 
-// React Native Web forwards keyboard events, but the stable Pressable type does
-// not expose the newer cross-platform key props yet.
+/** A press, a touch drag, or a mouse drag — anything carrying coordinates. */
+type PointerEvent = Readonly<{
+	nativeEvent: Readonly<{ locationX?: number; offsetX?: number }>;
+}>;
+
+// React Native Web forwards keyboard and mouse events, but the stable Pressable
+// type does not expose the newer cross-platform key props yet.
 const KeyboardPressable = Pressable as ComponentType<
 	ComponentProps<typeof Pressable> & {
 		onKeyDown?: (event: KeyEvent) => void;
+		onMouseMove?: (event: PointerEvent) => void;
 	}
 >;
 
 /** React Native Web sends a MouseEvent to onPress, while native sends touch data. */
-function pointerPosition(event: GestureResponderEvent): number | null {
-	const location = event.nativeEvent.locationX;
-	if (Number.isFinite(location)) return location;
-
-	const mouseEvent = event.nativeEvent as typeof event.nativeEvent & {
-		offsetX?: number;
-	};
-	return Number.isFinite(mouseEvent.offsetX)
-		? (mouseEvent.offsetX ?? null)
-		: null;
+function pointerPosition(event: PointerEvent): number | null {
+	const { locationX, offsetX } = event.nativeEvent;
+	if (Number.isFinite(locationX)) return locationX ?? null;
+	return Number.isFinite(offsetX) ? (offsetX ?? null) : null;
 }
 
 /**
@@ -61,43 +64,54 @@ export function DiscreteScale({
 	disabled = false,
 }: DiscreteScaleProps) {
 	const { t } = useTranslation("common");
-	const [width, setWidth] = useState(0);
-	const widthRef = useRef(0);
+	// The stops sit inside the control's padding and border, so the rail they
+	// span is narrower than the pressable and starts a few pixels in. Mapping a
+	// touch against the pressable instead would put every boundary off centre.
+	const [track, setTrack] = useState({ left: 0, width: 0 });
+	const trackRef = useRef(track);
 	const [preview, setPreview] = useState<number | null>(null);
+	const dragging = useRef(false);
 	const [focused, setFocused] = useState(false);
 	const shownSelection = preview ?? selected;
 	const minimum = scores[0];
 	const maximum = scores.at(-1);
-	const edgeInset = width / (scores.length * 2);
+	const edgeInset = track.width / (scores.length * 2);
 
 	if (minimum === undefined || maximum === undefined) {
 		return null;
 	}
 
 	function scoreAt(position: number): number | null {
-		const measuredWidth = widthRef.current;
-		if (measuredWidth <= 0) return null;
-		const bounded = Math.max(0, Math.min(position, measuredWidth));
+		const { left, width } = trackRef.current;
+		if (width <= 0) return null;
+		const bounded = Math.max(0, Math.min(position - left, width));
 		const index = Math.min(
 			scores.length - 1,
-			Math.floor((bounded / measuredWidth) * scores.length),
+			Math.floor((bounded / width) * scores.length),
 		);
 		return scores[index] ?? null;
 	}
 
+	function trackPointer(event: PointerEvent) {
+		if (!dragging.current) return;
+		const position = pointerPosition(event);
+		if (position !== null) setPreview(scoreAt(position));
+	}
+
+	/**
+	 * One step along the scale, the way a slider's own increment behaves: the
+	 * score is reported, but as an adjustment, so a screen reader or arrow key
+	 * can walk past it to the value it was actually aiming for.
+	 */
 	function adjust(direction: -1 | 1) {
-		const currentIndex =
-			selected === null
-				? direction === 1
-					? -1
-					: scores.length
-				: scores.indexOf(selected);
+		const at = selected === null ? -1 : scores.indexOf(selected);
+		const from = at === -1 ? (direction === 1 ? -1 : scores.length) : at;
 		const nextIndex = Math.max(
 			0,
-			Math.min(scores.length - 1, currentIndex + direction),
+			Math.min(scores.length - 1, from + direction),
 		);
 		const next = scores[nextIndex];
-		if (next !== undefined && next !== selected) onSelect(next);
+		if (next !== undefined && next !== selected) onSelect(next, "adjust");
 	}
 
 	return (
@@ -121,25 +135,26 @@ export function DiscreteScale({
 					focused && styles.focused,
 					disabled && styles.disabled,
 				]}
-				onLayout={(event) => {
-					widthRef.current = event.nativeEvent.layout.width;
-					setWidth(event.nativeEvent.layout.width);
-				}}
 				onFocus={() => setFocused(true)}
 				onBlur={() => setFocused(false)}
 				onPressIn={(event) => {
 					const position = pointerPosition(event);
-					setPreview(position === null ? null : scoreAt(position));
+					// Enter and a screen reader's activate arrive without coordinates,
+					// and have nothing to aim at; only a real pointer starts a drag.
+					if (position === null) return;
+					dragging.current = true;
+					setPreview(scoreAt(position));
 				}}
-				onTouchMove={(event) => {
-					const position = pointerPosition(event);
-					setPreview(position === null ? null : scoreAt(position));
+				onTouchMove={trackPointer}
+				onMouseMove={trackPointer}
+				onPressOut={() => {
+					dragging.current = false;
+					setPreview(null);
 				}}
-				onPressOut={() => setPreview(null)}
 				onPress={(event) => {
 					const position = pointerPosition(event);
 					const score = position === null ? null : scoreAt(position);
-					if (score !== null) onSelect(score);
+					if (score !== null) onSelect(score, "pointer");
 				}}
 				onAccessibilityAction={(event) => {
 					if (event.nativeEvent.actionName === "increment") adjust(1);
@@ -157,11 +172,11 @@ export function DiscreteScale({
 					}
 					if (key === "Home") {
 						event.preventDefault();
-						onSelect(minimum);
+						onSelect(minimum, "adjust");
 					}
 					if (key === "End") {
 						event.preventDefault();
-						onSelect(maximum);
+						onSelect(maximum, "adjust");
 					}
 				}}
 			>
@@ -172,6 +187,11 @@ export function DiscreteScale({
 					pointerEvents="none"
 					style={styles.points}
 					testID="discrete-scale-points"
+					onLayout={(event) => {
+						const { x, width } = event.nativeEvent.layout;
+						trackRef.current = { left: x, width };
+						setTrack({ left: x, width });
+					}}
 				>
 					<View style={[styles.rail, { left: edgeInset, right: edgeInset }]} />
 					{scores.map((score) => {
@@ -198,14 +218,7 @@ export function DiscreteScale({
 					})}
 				</View>
 			</KeyboardPressable>
-			<View style={styles.endLabels}>
-				<AppText variant="micro" color="subtle">
-					{endLabels.minimum}
-				</AppText>
-				<AppText variant="micro" color="subtle">
-					{endLabels.maximum}
-				</AppText>
-			</View>
+			<ScaleEndLabels {...endLabels} />
 		</View>
 	);
 }
@@ -264,10 +277,5 @@ const styles = StyleSheet.create((theme) => ({
 	selectedValue: {
 		borderColor: theme.colors.accent,
 		backgroundColor: theme.colors.accentTint,
-	},
-	endLabels: {
-		flexDirection: "row",
-		alignItems: "center",
-		justifyContent: "space-between",
 	},
 }));

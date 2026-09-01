@@ -68,7 +68,19 @@ describe("wheel-of-life review flow", () => {
 			(candidate) => candidate.defaultEnabled,
 		)) {
 			expect(await firstRun.findByText(area.label)).toBeTruthy();
-			await fireEvent.press(firstRun.getByLabelText(`${area.label} 6`));
+			// The areas are scored on one adjustable rail, so a score is a press
+			// at a point along it rather than a button of its own.
+			const width = 1000;
+			await fireEvent(
+				firstRun.getByTestId("discrete-scale-points", {
+					includeHiddenElements: true,
+				}),
+				"layout",
+				{ nativeEvent: { layout: { x: 0, y: 0, width, height: 64 } } },
+			);
+			await fireEvent.press(firstRun.getByLabelText(`${area.label} score`), {
+				nativeEvent: { locationX: undefined, offsetX: 5.5 * (width / 10) },
+			});
 		}
 		// Answering the last area lands on the focus step with no button to press.
 		expect(await firstRun.findByText("Choose your focus")).toBeTruthy();

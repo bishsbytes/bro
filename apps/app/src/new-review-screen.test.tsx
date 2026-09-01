@@ -57,18 +57,30 @@ async function pressSystemBack() {
 	return preventDefault;
 }
 
+/** Taps a stop the way a finger does: the rail is measured, then pressed at
+ *  the centre of the stop wanted. */
 async function chooseScore(view: RenderResult, prefix: string, score: number) {
 	const scale = await view.findByLabelText(`${prefix} score`);
 	const width = 1000;
-	await fireEvent(scale, "layout", {
-		nativeEvent: { layout: { x: 0, y: 0, width, height: 64 } },
-	});
+	await fireEvent(
+		view.getByTestId("discrete-scale-points", { includeHiddenElements: true }),
+		"layout",
+		{ nativeEvent: { layout: { x: 0, y: 0, width, height: 64 } } },
+	);
 	await fireEvent.press(scale, {
 		nativeEvent: {
 			locationX: undefined,
 			offsetX: (score - 0.5) * (width / 10),
 			locationY: 32,
 		},
+	});
+}
+
+/** One step of a screen reader's swipe or an arrow key on the rail. */
+async function adjustScore(view: RenderResult, prefix: string) {
+	const scale = await view.findByLabelText(`${prefix} score`);
+	await fireEvent(scale, "accessibilityAction", {
+		nativeEvent: { actionName: "increment" },
 	});
 }
 
@@ -99,6 +111,49 @@ describe("take stock screen", () => {
 			screen.getByLabelText("Work & career score").props.accessibilityValue.now,
 		).toBe(6);
 		expect(await screen.findByText("2 of 3")).toBeTruthy();
+	});
+
+	it("holds the area open while a screen reader steps through the scale", async () => {
+		const store = reviewStore();
+		const screen = await render(<NewReviewScreen store={store} />);
+		expect(await screen.findByText("1 of 3")).toBeTruthy();
+
+		// Every increment lands on a value the rail announces, and none of them
+		// is the answer: leaving on the first would record a 1 and move on.
+		await adjustScore(screen, "Work & career");
+		await adjustScore(screen, "Work & career");
+		await adjustScore(screen, "Work & career");
+
+		expect(screen.getByText("1 of 3")).toBeTruthy();
+		expect(
+			screen.getByLabelText("Work & career score").props.accessibilityValue.now,
+		).toBe(3);
+
+		// Nothing moves on by itself, so the step offers its own way forward.
+		await fireEvent.press(screen.getByText("Next"));
+		expect(await screen.findByText("2 of 3")).toBeTruthy();
+		expect(screen.queryByText("Next")).toBeNull();
+	});
+
+	it("keeps an adjusted score when the area is answered by adjustment alone", async () => {
+		const store = reviewStore();
+		const screen = await render(<NewReviewScreen store={store} />);
+		expect(await screen.findByText("1 of 3")).toBeTruthy();
+
+		await adjustScore(screen, "Work & career");
+		await fireEvent.press(screen.getByText("Next"));
+		await chooseScore(screen, "Health", 9);
+		await chooseScore(screen, "Money", 3);
+
+		expect(await screen.findByText("Choose your focus")).toBeTruthy();
+		await fireEvent.press(screen.getByText("Save review"));
+		await waitFor(() =>
+			expect(store.completeSitting).toHaveBeenCalledWith(
+				draftOf(),
+				{ work: 1, health: 9, money: 3 },
+				[],
+			),
+		);
 	});
 
 	it("asks for one area at a time and saves every score together", async () => {
