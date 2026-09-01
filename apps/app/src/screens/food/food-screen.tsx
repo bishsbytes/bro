@@ -24,6 +24,7 @@ import { LogConfirmationToast } from "../../components/log-confirmation-toast";
 import { ModalSheet } from "../../components/modal-sheet";
 import { LoadingScreen, StackScreen as Screen } from "../../components/screen";
 import { SectionHeader } from "../../components/section-header";
+import { TimeField } from "../../components/time-field";
 import {
 	createFoodSearchStore,
 	type FoodSearchSnapshot,
@@ -461,11 +462,10 @@ function SearchedFoodLogForm({
 					onChangeDate={onLocalDayChange}
 					containerStyle={styles.grow}
 				/>
-				<FormField
+				<TimeField
 					label={t("search.timeField")}
 					value={time}
-					onChangeText={onTimeChange}
-					placeholder={t("search.timePlaceholder")}
+					onChangeTime={onTimeChange}
 					containerStyle={styles.grow}
 				/>
 			</View>
@@ -1201,11 +1201,10 @@ export function FoodScreen({
 										onChangeDate={setLocalDay}
 										containerStyle={styles.grow}
 									/>
-									<FormField
+									<TimeField
 										label={t("add.timeField")}
 										value={time}
-										onChangeText={setTime}
-										placeholder={t("search.timePlaceholder")}
+										onChangeTime={setTime}
 										containerStyle={styles.grow}
 									/>
 								</View>

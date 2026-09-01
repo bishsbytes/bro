@@ -15,6 +15,13 @@ export const common = {
 		cancel: "Cancel",
 		done: "Done",
 	},
+	timePicker: {
+		chooseTime: "Choose time",
+		openHint: "Opens the time picker",
+		noTimeSelected: "No time selected",
+		cancel: "Cancel",
+		done: "Done",
+	},
 	ratingEnds: {
 		veryBad: "Very bad",
 		veryLow: "Very low",

@@ -11,6 +11,7 @@ import { EmptyState } from "../../components/empty-state";
 import { FormField } from "../../components/form-field";
 import { LoadingScreen, StackScreen as Screen } from "../../components/screen";
 import { SectionHeader } from "../../components/section-header";
+import { TimeField } from "../../components/time-field";
 import {
 	createDrinksStore,
 	type DrinksStore,
@@ -77,10 +78,10 @@ function EntryEditor({
 					onChangeDate={setLocalDay}
 					containerStyle={styles.grow}
 				/>
-				<FormField
+				<TimeField
 					label={t("day.timeField")}
 					value={time}
-					onChangeText={setTime}
+					onChangeTime={setTime}
 					containerStyle={styles.grow}
 				/>
 			</View>

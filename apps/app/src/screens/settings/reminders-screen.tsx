@@ -16,10 +16,10 @@ import { AppText } from "../../components/app-text";
 import { Button } from "../../components/button";
 import { Card } from "../../components/card";
 import { EmptyState } from "../../components/empty-state";
-import { FormField } from "../../components/form-field";
 import { LoadingScreen, StackScreen as Screen } from "../../components/screen";
 import { SectionHeader } from "../../components/section-header";
 import { ThemedSwitch } from "../../components/themed-switch";
+import { TimeField } from "../../components/time-field";
 import { toMessage } from "../../lib/errors";
 import { useFocusStoreLoad } from "../../lib/use-store-load";
 import {
@@ -101,13 +101,10 @@ function ReminderEditor({
 	return (
 		<Card style={styles.editor}>
 			<SectionHeader title={t("reminders.editorTitle")} />
-			<FormField
+			<TimeField
 				label={t("reminders.timeField")}
 				value={time}
-				onChangeText={setTime}
-				placeholder={t("reminders.timePlaceholder")}
-				keyboardType="numbers-and-punctuation"
-				autoCapitalize="none"
+				onChangeTime={setTime}
 			/>
 			<View style={styles.days}>
 				{weekdays.map((day) => {

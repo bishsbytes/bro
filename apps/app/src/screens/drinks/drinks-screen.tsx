@@ -23,6 +23,7 @@ import { LogConfirmationToast } from "../../components/log-confirmation-toast";
 import { ModalSheet } from "../../components/modal-sheet";
 import { LoadingScreen, StackScreen as Screen } from "../../components/screen";
 import { SectionHeader } from "../../components/section-header";
+import { TimeField } from "../../components/time-field";
 import { createDrinksStore, type DrinksStore } from "../../drinks/drinks-store";
 import { upperCaseForLanguage } from "../../i18n";
 import { toMessage } from "../../lib/errors";
@@ -205,11 +206,10 @@ function DrinkLogForm({
 					onChangeDate={onLocalDayChange}
 					containerStyle={styles.grow}
 				/>
-				<FormField
+				<TimeField
 					label={t("add.timeField")}
 					value={time}
-					onChangeText={onTimeChange}
-					placeholder={t("add.timePlaceholder")}
+					onChangeTime={onTimeChange}
 					containerStyle={styles.grow}
 				/>
 			</View>

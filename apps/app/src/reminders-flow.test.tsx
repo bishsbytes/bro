@@ -67,7 +67,9 @@ describe("reminder schedule continuity", () => {
 
 		expect(await firstRun.findByText("No reminders yet")).toBeTruthy();
 		await fireEvent.press(firstRun.getByText("Add reminder"));
-		expect(firstRun.getByLabelText("Time (24-hour)").props.value).toBe("20:00");
+		expect(firstRun.getByLabelText("Time").props.accessibilityValue).toEqual({
+			text: "20:00",
+		});
 		await fireEvent.press(firstRun.getByText("Save reminder"));
 		expect(await firstRun.findByText("Every day")).toBeTruthy();
 		expect(firstRun.getByText("20:00")).toBeTruthy();

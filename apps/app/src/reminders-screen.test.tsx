@@ -54,7 +54,18 @@ describe("reminders screen", () => {
 			expect(view.getByText("No reminders yet")).toBeTruthy(),
 		);
 		await fireEvent.press(view.getByText("Add reminder"));
-		expect(view.getByLabelText("Time (24-hour)").props.value).toBe("20:00");
+		expect(view.getByLabelText("Time").props.accessibilityValue).toEqual({
+			text: "20:00",
+		});
+		const chosenTime = new Date(2026, 0, 1, 19, 15);
+		await fireEvent.press(view.getByLabelText("Time"));
+		await fireEvent(
+			view.getByTestId("time-picker"),
+			"valueChange",
+			{ nativeEvent: { timestamp: chosenTime.getTime() } },
+			chosenTime,
+		);
+		await fireEvent.press(view.getByText("Done"));
 		expect(
 			view
 				.getAllByLabelText(/^Remove /)
@@ -72,9 +83,9 @@ describe("reminders screen", () => {
 
 		await waitFor(() =>
 			expect(store.create).toHaveBeenCalledWith({
-				minuteOfDay: 1_200,
+				minuteOfDay: 1_155,
 				daysOfWeek: 0b111_1111,
-				// 20:00 with no slot chosen yet is an evening reminder.
+				// 19:15 with no slot chosen yet is an evening reminder.
 				slot: "evening",
 			}),
 		);

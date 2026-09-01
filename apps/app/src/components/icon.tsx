@@ -8,6 +8,7 @@ import ChevronRight from "lucide-react-native/icons/chevron-right";
 import Circle from "lucide-react-native/icons/circle";
 import CircleCheck from "lucide-react-native/icons/circle-check";
 import CircleDashed from "lucide-react-native/icons/circle-dashed";
+import Clock from "lucide-react-native/icons/clock";
 import Compass from "lucide-react-native/icons/compass";
 import CupSoda from "lucide-react-native/icons/cup-soda";
 import Heart from "lucide-react-native/icons/heart";
@@ -43,6 +44,7 @@ const ICONS = {
 	"check-in": NotebookPen,
 	"chevron-right": ChevronRight,
 	circle: Circle,
+	clock: Clock,
 	close: X,
 	drink: CupSoda,
 	explore: Compass,

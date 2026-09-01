@@ -197,7 +197,7 @@ export const settings = {
 		needDay: "Choose at least one day.",
 		editorTitle: "Reminder schedule",
 		slotLabel: "Reminds you to do the",
-		timeField: "Time (24-hour)",
+		timeField: "Time",
 		timePlaceholder: "20:00",
 		addDay: "Add {{day}}",
 		removeDay: "Remove {{day}}",
