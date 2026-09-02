@@ -110,6 +110,7 @@ function RootNavigator() {
 				<Stack.Screen name="check-in" options={{ headerShown: false }} />
 				<Stack.Screen name="review" options={{ headerShown: false }} />
 				<Stack.Screen name="history" options={{ headerShown: false }} />
+				<Stack.Screen name="insights" options={{ headerShown: false }} />
 				<Stack.Screen name="settings" options={{ headerShown: false }} />
 				<Stack.Screen name="drinks" options={{ headerShown: false }} />
 				<Stack.Screen name="food" options={{ headerShown: false }} />
@@ -124,10 +125,6 @@ function RootNavigator() {
 					options={{ title: t("root.measurement") }}
 				/>
 				<Stack.Screen name="challenges" options={{ headerShown: false }} />
-				<Stack.Screen
-					name="insights/[id]"
-					options={{ title: t("root.insight") }}
-				/>
 			</Stack.Protected>
 			<Stack.Screen name="sign-in" options={{ title: t("root.signIn") }} />
 			<Stack.Screen name="sign-up" options={{ title: t("root.signUp") }} />

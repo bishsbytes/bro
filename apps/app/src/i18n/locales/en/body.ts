@@ -2,6 +2,31 @@ export const body = {
 	notFound: "Measurement not found",
 	notFoundBody: "This measurement is not available.",
 	backToBody: "Back to Body",
+	overview: {
+		intro: "Keep the measurements that matter in view.",
+		loadFailed: "Your measurements could not be loaded",
+		loadFailedBody: "Try again.",
+		/** Renders in capitals; see the note on eyebrows in the review catalogue. */
+		eyebrow: "YOUR BODY",
+	},
+	measurements: {
+		title: "Measurements",
+		more: "More measurements",
+		emptyTitle: "No body metrics tracked",
+		emptyBody: "Turn on a measurement below to log it here and see its trend.",
+		/** {{when}} is either an observation date or a local day. */
+		latest: "Latest {{value}} · {{when}}",
+		nothingLogged: "Nothing logged yet",
+		/** Names the origin of an imported reading. */
+		source: "Source: {{name}}",
+		track: "Track {{name}}",
+		stopTracking: "Stop tracking {{name}}",
+		enterPlaceholder: "Enter {{unit}}",
+		enterIn: "Enter in {{unit}}",
+		logMetric: "Log {{name}}",
+	},
+	/** {{name}} is a measurement name. */
+	open: "Open {{name}}",
 	/** Renders in capitals; see the note on eyebrows in the review catalogue. */
 	latestEyebrow: "LATEST",
 	noneLoggedPrompt: "Log this measurement from your daily check-in.",
@@ -14,6 +39,8 @@ export const body = {
 	goal: {
 		title: "Goal",
 		target: "Target {{value}}",
+		/** Appends a status note to the target line. */
+		targetWithNote: "{{target}} · {{note}}",
 		/** Joins the two fragments below; reorder freely per language. */
 		summary: "{{start}} · {{current}}",
 		startValue: "Started at {{value}}",

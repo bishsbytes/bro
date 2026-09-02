@@ -2,7 +2,9 @@
 
 ## Status
 
-**Draft, 20 August 2026.** The delivery plan for items 2–5 of [ia-rebalance.md](ia-rebalance.md), planned against the resolved direction: **job-based tabs — Today · Log · Insights · Life.** The [week strip](today-week-strip.md) is a separate plan and lands first; the only overlap between the two is a handful of link paths on the home screen, noted where they occur.
+**Draft, 20 August 2026. Tab set superseded 2 September 2026 by [intake-body-split.md](intake-body-split.md)** — Log split into Intake and Body, and Insights left the tab bar for the Journal header. The reasoning below still records why the Life and Insights screens hold what they hold; only the four tab names and the Log tab's contents are out of date.
+
+The delivery plan for items 2–5 of [ia-rebalance.md](ia-rebalance.md), planned against the then-resolved direction: **job-based tabs — Today · Log · Insights · Life.** The [week strip](today-week-strip.md) is a separate plan and lands first; the only overlap between the two is a handful of link paths on the home screen, noted where they occur.
 
 ## Outcome
 

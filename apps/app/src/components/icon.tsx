@@ -19,6 +19,7 @@ import Moon from "lucide-react-native/icons/moon";
 import NotebookPen from "lucide-react-native/icons/notebook-pen";
 import PartyPopper from "lucide-react-native/icons/party-popper";
 import Plus from "lucide-react-native/icons/plus";
+import Scale from "lucide-react-native/icons/scale";
 import Search from "lucide-react-native/icons/search";
 import Settings from "lucide-react-native/icons/settings";
 import Signpost from "lucide-react-native/icons/signpost";
@@ -40,6 +41,7 @@ import { View } from "react-native";
 /** Semantic names keep call sites decoupled from the icon set. */
 const ICONS = {
 	add: Plus,
+	body: Scale,
 	calendar: Calendar,
 	check: Check,
 	"check-circle": CircleCheck,
@@ -67,7 +69,6 @@ const ICONS = {
 	"life-partner": Heart,
 	"life-purpose": Signpost,
 	"life-sobriety": WineOff,
-	log: NotebookPen,
 	person: User,
 	search: Search,
 	settings: Settings,

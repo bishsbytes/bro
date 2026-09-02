@@ -1,10 +1,8 @@
 import { KILOGRAMS_PER_POUND } from "@bro/domain";
 import { fireEvent, render } from "@testing-library/react-native";
 import type { BodyOverview } from "./body/body-store";
-import type { DrinkDaySnapshot } from "./drinks/drinks-store";
-import type { FoodDaySnapshot } from "./food/food-store";
 import { i18n } from "./i18n";
-import { LogScreen } from "./screens/log/log-screen";
+import { BodyScreen } from "./screens/body/body-screen";
 
 const mockPush = jest.fn();
 
@@ -35,14 +33,6 @@ jest.mock("react-native-safe-area-context", () => {
 	};
 });
 
-const emptyDay = { entries: [], metrics: [] };
-const drinksStore = {
-	loadToday: jest.fn(async () => emptyDay as unknown as DrinkDaySnapshot),
-};
-const foodStore = {
-	loadToday: jest.fn(async () => emptyDay as unknown as FoodDaySnapshot),
-};
-
 function weightOverview(tracked: boolean): BodyOverview {
 	return {
 		inputLocale: "en-GB",
@@ -72,84 +62,20 @@ function weightOverview(tracked: boolean): BodyOverview {
 	} as unknown as BodyOverview;
 }
 
-describe("Log screen", () => {
+const emptyOverview = { metrics: [], inputLocale: "en-GB" } as BodyOverview;
+
+describe("Body screen", () => {
 	beforeEach(() => jest.clearAllMocks());
-
-	it("leads with today's food and drink totals and opens each logger", async () => {
-		const screen = await render(
-			<LogScreen
-				bodyStore={{
-					loadOverview: jest.fn(
-						async () => ({ metrics: [], inputLocale: "en-GB" }) as BodyOverview,
-					),
-					setTracked: jest.fn(),
-					recordMeasurement: jest.fn(),
-				}}
-				drinksStore={{
-					loadToday: jest.fn(
-						async () =>
-							({
-								entries: [{ entry: { id: "drink-1" } }],
-								metrics: [
-									{
-										metric: { slug: "fluid_intake", label: "Fluid" },
-										dayFormatted: "1.5 L",
-									},
-									{
-										metric: { slug: "energy_intake", label: "Energy intake" },
-										dayFormatted: "2,100 kcal",
-									},
-								],
-							}) as unknown as DrinkDaySnapshot,
-					),
-				}}
-				foodStore={{
-					loadToday: jest.fn(
-						async () =>
-							({
-								entries: [],
-								metrics: [
-									{
-										metric: { slug: "protein_intake", label: "Protein" },
-										dayFormatted: "82.0 g",
-									},
-									{
-										metric: { slug: "energy_intake", label: "Energy intake" },
-										dayFormatted: "2,100 kcal",
-									},
-								],
-							}) as unknown as FoodDaySnapshot,
-					),
-				}}
-			/>,
-		);
-
-		expect(await screen.findByText("1.5 L")).toBeTruthy();
-		expect(screen.getByText("82.0 g")).toBeTruthy();
-		expect(screen.getByText("1 entry")).toBeTruthy();
-		expect(screen.getByText("Food & drinks")).toBeTruthy();
-		expect(screen.getAllByText("Drinks")).toHaveLength(1);
-		expect(screen.getAllByText("Food")).toHaveLength(1);
-		expect(screen.getAllByText("ENERGY INTAKE")).toHaveLength(1);
-		expect(screen.getAllByText("2,100 kcal")).toHaveLength(1);
-
-		await fireEvent.press(screen.getByLabelText("Open Drinks"));
-		expect(mockPush).toHaveBeenLastCalledWith("/drinks");
-		await fireEvent.press(screen.getByLabelText("Open Food"));
-		expect(mockPush).toHaveBeenLastCalledWith("/food");
-	});
 
 	it("records a tracked measurement in canonical units", async () => {
 		const recordMeasurement = jest.fn(async () => weightOverview(true));
 		const screen = await render(
-			<LogScreen
-				bodyStore={{
+			<BodyScreen
+				store={{
 					loadOverview: jest.fn(async () => weightOverview(true)),
 					setTracked: jest.fn(),
 					recordMeasurement,
 				}}
-				drinksStore={drinksStore}
-				foodStore={foodStore}
 			/>,
 		);
 
@@ -178,14 +104,12 @@ describe("Log screen", () => {
 		const recordMeasurement = jest.fn(async () => weightOverview(true));
 		try {
 			const screen = await render(
-				<LogScreen
-					bodyStore={{
+				<BodyScreen
+					store={{
 						loadOverview: jest.fn(async () => weightOverview(true)),
 						setTracked: jest.fn(),
 						recordMeasurement,
 					}}
-					drinksStore={drinksStore}
-					foodStore={foodStore}
 				/>,
 			);
 
@@ -212,14 +136,12 @@ describe("Log screen", () => {
 
 	it("offers entry only once a measurement is tracked", async () => {
 		const screen = await render(
-			<LogScreen
-				bodyStore={{
+			<BodyScreen
+				store={{
 					loadOverview: jest.fn(async () => weightOverview(false)),
 					setTracked: jest.fn(),
 					recordMeasurement: jest.fn(),
 				}}
-				drinksStore={drinksStore}
-				foodStore={foodStore}
 			/>,
 		);
 
@@ -230,25 +152,11 @@ describe("Log screen", () => {
 
 	it("leaves the bottom safe area to the tab navigator", async () => {
 		const screen = await render(
-			<LogScreen
-				bodyStore={{
-					loadOverview: jest.fn(
-						async () => ({ metrics: [], inputLocale: "en-GB" }) as BodyOverview,
-					),
+			<BodyScreen
+				store={{
+					loadOverview: jest.fn(async () => emptyOverview),
 					setTracked: jest.fn(),
 					recordMeasurement: jest.fn(),
-				}}
-				drinksStore={{
-					loadToday: jest.fn(
-						async () =>
-							({ entries: [], metrics: [] }) as unknown as DrinkDaySnapshot,
-					),
-				}}
-				foodStore={{
-					loadToday: jest.fn(
-						async () =>
-							({ entries: [], metrics: [] }) as unknown as FoodDaySnapshot,
-					),
 				}}
 			/>,
 		);

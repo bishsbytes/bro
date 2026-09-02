@@ -2,17 +2,21 @@
 export const navigation = {
 	tabs: {
 		journal: "Journal",
-		log: "Log",
-		insights: "Insights",
+		intake: "Intake",
+		body: "Body",
 		life: "Life",
 		openHistory: "Open history",
+		openInsights: "Open insights",
 	},
 	root: {
 		lifeAreas: "Life areas",
 		measurement: "Measurement",
-		insight: "Insight",
 		signIn: "Sign in",
 		signUp: "Create account",
+	},
+	insights: {
+		index: "Insights",
+		detail: "Insight",
 	},
 	review: {
 		index: "Review",

@@ -248,7 +248,7 @@ export function BodyMetricScreen({ metricSlug, store }: BodyMetricScreenProps) {
 					title={t("notFound")}
 					body={error ?? t("notFoundBody")}
 					actionLabel={t("backToBody")}
-					onAction={() => router.replace("/log")}
+					onAction={() => router.replace("/body")}
 				/>
 			</Screen>
 		);

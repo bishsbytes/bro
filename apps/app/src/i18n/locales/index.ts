@@ -10,8 +10,8 @@ import { habits } from "./en/habits";
 import { history } from "./en/history";
 import { home } from "./en/home";
 import { insights } from "./en/insights";
+import { intake } from "./en/intake";
 import { life } from "./en/life";
-import { log } from "./en/log";
 import { navigation } from "./en/navigation";
 import { nicotine } from "./en/nicotine";
 import { notifications } from "./en/notifications";
@@ -44,8 +44,8 @@ export const resources = {
 		history,
 		home,
 		insights,
+		intake,
 		life,
-		log,
 		navigation,
 		nicotine,
 		notifications,

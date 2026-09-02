@@ -2,7 +2,7 @@
 
 ## Status
 
-**Direction accepted, 20 August 2026.** The record of the IA review of the tab structure, kept so the findings outlive the conversation that produced them. The open decision below is **resolved: option A, job-based tabs.** Delivery is planned in two docs: [today-week-strip.md](today-week-strip.md) for item 1, and [tab-rebalance.md](tab-rebalance.md) for items 2–5.
+**Direction accepted, 20 August 2026.** The record of the IA review of the tab structure, kept so the findings outlive the conversation that produced them. The open decision below is **resolved: option A, job-based tabs.** Delivery is planned in two docs: [today-week-strip.md](today-week-strip.md) for item 1, and [tab-rebalance.md](tab-rebalance.md) for items 2–5. Option A's tab set was later rebalanced again — see [intake-body-split.md](intake-body-split.md) — without disturbing the findings here.
 
 ## The findings
 

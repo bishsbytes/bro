@@ -1,10 +1,10 @@
-import { router, Tabs, usePathname, useSegments } from "expo-router";
+import { type Href, router, Tabs, usePathname, useSegments } from "expo-router";
 import { useLayoutEffect, useRef } from "react";
 import { useTranslation } from "react-i18next";
 import { TouchableOpacity, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { AppHeader } from "../../components/app-header";
-import { Icon } from "../../components/icon";
+import { Icon, type IconName } from "../../components/icon";
 import { QuickLogFab } from "../../components/quick-log-fab";
 import {
 	TodayHeaderMonthProvider,
@@ -16,12 +16,43 @@ import { StyleSheet, useUnistyles } from "../../theme/unistyles";
 /** Values are keys in the `navigation` catalogue, not copy. */
 const TAB_TITLE_KEYS = {
 	"/": "tabs.journal",
-	"/log": "tabs.log",
-	"/insights": "tabs.insights",
+	"/intake": "tabs.intake",
+	"/body": "tabs.body",
 	"/life": "tabs.life",
 } as const;
 
 const TAB_BAR_CONTENT_HEIGHT = 56;
+
+function HeaderIconButton({
+	icon,
+	testID,
+	label,
+	href,
+}: {
+	icon: IconName;
+	testID: string;
+	label: string;
+	href: Href;
+}) {
+	const { theme } = useUnistyles();
+
+	return (
+		<TouchableOpacity
+			accessibilityRole="button"
+			accessibilityLabel={label}
+			hitSlop={theme.spacing.sm}
+			style={styles.headerAction}
+			onPress={() => router.push(href)}
+		>
+			<Icon
+				testID={testID}
+				name={icon}
+				color={theme.colors.text}
+				size={theme.control.avatarIconSize}
+			/>
+		</TouchableOpacity>
+	);
+}
 
 function TabShell() {
 	const { t } = useTranslation("navigation");
@@ -63,20 +94,22 @@ function TabShell() {
 					centerTitle={header.isJournal}
 					leading={
 						header.isJournal ? (
-							<TouchableOpacity
-								accessibilityRole="button"
-								accessibilityLabel={t("tabs.openHistory")}
-								hitSlop={theme.spacing.sm}
-								style={styles.headerAction}
-								onPress={() => router.push("/history")}
-							>
-								<Icon
-									testID="history-header-icon"
-									name="calendar"
-									color={theme.colors.text}
-									size={theme.control.avatarIconSize}
-								/>
-							</TouchableOpacity>
+							<HeaderIconButton
+								icon="insights"
+								testID="insights-header-icon"
+								label={t("tabs.openInsights")}
+								href="/insights"
+							/>
+						) : null
+					}
+					actions={
+						header.isJournal ? (
+							<HeaderIconButton
+								icon="calendar"
+								testID="history-header-icon"
+								label={t("tabs.openHistory")}
+								href="/history"
+							/>
 						) : null
 					}
 				/>
@@ -119,20 +152,20 @@ function TabShell() {
 					}}
 				/>
 				<Tabs.Screen
-					name="log"
+					name="intake"
 					options={{
-						title: t("tabs.log"),
+						title: t("tabs.intake"),
 						tabBarIcon: ({ color, size }) => (
-							<Icon name="log" color={color} size={size} />
+							<Icon name="food" color={color} size={size} />
 						),
 					}}
 				/>
 				<Tabs.Screen
-					name="insights"
+					name="body"
 					options={{
-						title: t("tabs.insights"),
+						title: t("tabs.body"),
 						tabBarIcon: ({ color, size }) => (
-							<Icon name="insights" color={color} size={size} />
+							<Icon name="body" color={color} size={size} />
 						),
 					}}
 				/>
@@ -146,7 +179,7 @@ function TabShell() {
 					}}
 				/>
 			</Tabs>
-			{pathname === "/" || pathname === "/log" ? (
+			{pathname === "/" || pathname === "/intake" ? (
 				<QuickLogFab
 					bottom={TAB_BAR_CONTENT_HEIGHT + insets.bottom + theme.spacing.lg}
 				/>

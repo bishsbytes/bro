@@ -6,7 +6,6 @@ import { useTranslation } from "react-i18next";
 import { View } from "react-native";
 import {
 	type BodyGoalProgress,
-	type BodyOverview,
 	type BodyStore,
 	createBodyStore,
 	type MeasurementPresentation,
@@ -15,24 +14,12 @@ import { AppText } from "../../components/app-text";
 import { Button } from "../../components/button";
 import { Card } from "../../components/card";
 import { EmptyState } from "../../components/empty-state";
-import { ListRow } from "../../components/list-row";
 import { MeasurementField } from "../../components/measurement-field";
 import { LoadingScreen, Screen } from "../../components/screen";
 import { SectionHeader } from "../../components/section-header";
 import { ThemedSwitch } from "../../components/themed-switch";
 import { TrendChart } from "../../components/trend-chart";
-import {
-	createDrinksStore,
-	type DrinkDaySnapshot,
-	type DrinksStore,
-} from "../../drinks/drinks-store";
-import {
-	createFoodStore,
-	type FoodDaySnapshot,
-	type FoodStore,
-} from "../../food/food-store";
 import { healthPlatformLabel } from "../../health/platform-label";
-import { upperCaseForLanguage } from "../../i18n";
 import { toMessage } from "../../lib/errors";
 import { useFocusStoreLoad } from "../../lib/use-store-load";
 import {
@@ -42,19 +29,8 @@ import {
 } from "../../measurements/measurement-entry";
 import { StyleSheet } from "../../theme/unistyles";
 
-type LogScreenProps = {
-	bodyStore?: Pick<
-		BodyStore,
-		"loadOverview" | "setTracked" | "recordMeasurement"
-	>;
-	drinksStore?: Pick<DrinksStore, "loadToday">;
-	foodStore?: Pick<FoodStore, "loadToday">;
-};
-
-type LogSnapshot = {
-	body: BodyOverview;
-	drinks: DrinkDaySnapshot;
-	food: FoodDaySnapshot;
+type BodyScreenProps = {
+	store?: Pick<BodyStore, "loadOverview" | "setTracked" | "recordMeasurement">;
 };
 
 function observedLabel(observedAt: number): string {
@@ -65,14 +41,17 @@ function observedLabel(observedAt: number): string {
 	});
 }
 
-function sourceLabel(t: TFunction<"log">, source: string): string {
-	return healthPlatformLabel(source) ?? t("measurements.sourceYou");
+function sourceLabel(t: TFunction<"body">, source: string): string {
+	return healthPlatformLabel(source) ?? t("sourceYou");
 }
 
-function goalLine(t: TFunction<"log">, goal: BodyGoalProgress): string {
+function goalLine(t: TFunction<"body">, goal: BodyGoalProgress): string {
 	const target = t("goal.target", { value: goal.targetFormatted });
 	if (goal.targetReached) {
-		return t("goal.targetWithNote", { target, note: t("goal.reached") });
+		return t("goal.targetWithNote", {
+			target,
+			note: t("goal.targetReached"),
+		});
 	}
 	if (goal.progressPercent === null) {
 		return target;
@@ -83,88 +62,26 @@ function goalLine(t: TFunction<"log">, goal: BodyGoalProgress): string {
 	});
 }
 
-function DailySummary({
-	title,
-	entryCount,
-	metrics,
-	onPress,
-}: {
-	title: string;
-	entryCount: number;
-	metrics: readonly {
-		metric: { slug: string; label: string };
-		dayFormatted: string | null;
-	}[];
-	onPress: () => void;
-}) {
-	const { t } = useTranslation(["log", "common"]);
-
-	return (
-		<ListRow
-			title={title}
-			value={t("entries", { count: entryCount })}
-			accessibilityLabel={t("open", { name: title })}
-			style={styles.summaryRow}
-			onPress={onPress}
-		>
-			<View style={styles.summaryMetrics}>
-				{metrics.map((metric) => (
-					<View key={metric.metric.slug} style={styles.summaryMetric}>
-						<AppText variant="micro" color="subtle">
-							{upperCaseForLanguage(metric.metric.label)}
-						</AppText>
-						<AppText variant="label">
-							{metric.dayFormatted ?? t("common:emDash")}
-						</AppText>
-					</View>
-				))}
-			</View>
-		</ListRow>
-	);
-}
-
-export function LogScreen({
-	bodyStore,
-	drinksStore,
-	foodStore,
-}: LogScreenProps) {
-	const { t } = useTranslation(["log", "common"]);
-	const body = useMemo(() => bodyStore ?? createBodyStore(), [bodyStore]);
-	const drinks = useMemo(
-		() => drinksStore ?? createDrinksStore(),
-		[drinksStore],
-	);
-	const food = useMemo(() => foodStore ?? createFoodStore(), [foodStore]);
+export function BodyScreen({ store }: BodyScreenProps) {
+	const { t } = useTranslation(["body", "common"]);
+	const body = useMemo(() => store ?? createBodyStore(), [store]);
 	const [busySlug, setBusySlug] = useState<string | null>(null);
 	const [entries, setEntries] = useState<Record<string, MeasurementEntry>>({});
 	const [entryErrors, setEntryErrors] = useState<Record<string, string>>({});
 	const {
-		data: snapshot,
+		data: overview,
 		error,
 		loading,
 		reload,
-		setData: setSnapshot,
+		setData: setOverview,
 		setError,
-	} = useFocusStoreLoad(
-		useCallback(async (): Promise<LogSnapshot> => {
-			const [bodyOverview, drinksToday, foodToday] = await Promise.all([
-				body.loadOverview(),
-				drinks.loadToday(),
-				food.loadToday(),
-			]);
-			return { body: bodyOverview, drinks: drinksToday, food: foodToday };
-		}, [body, drinks, food]),
-	);
+	} = useFocusStoreLoad(useCallback(() => body.loadOverview(), [body]));
 
 	async function setTracked(metricSlug: string, enabled: boolean) {
-		if (!snapshot) return;
 		setBusySlug(metricSlug);
 		setError(null);
 		try {
-			setSnapshot({
-				...snapshot,
-				body: await body.setTracked(metricSlug, enabled),
-			});
+			setOverview(await body.setTracked(metricSlug, enabled));
 		} catch (caught) {
 			setError(toMessage(caught));
 		} finally {
@@ -186,13 +103,13 @@ export function LogScreen({
 		metricSlug: string,
 		presentation: MeasurementPresentation,
 	) {
-		if (!snapshot || busySlug) return;
+		if (!overview || busySlug) return;
 		const entry = entries[metricSlug] ?? EMPTY_ENTRY;
 		if (isBlankEntry(entry)) return;
 		const parsed = parseMeasurementInput(
 			entry,
 			presentation,
-			snapshot.body.inputLocale,
+			overview.inputLocale,
 		);
 		if (!parsed.ok) {
 			setEntryErrors((current) => ({ ...current, [metricSlug]: parsed.error }));
@@ -201,11 +118,9 @@ export function LogScreen({
 		setBusySlug(metricSlug);
 		setError(null);
 		try {
-			const recorded = await body.recordMeasurement(
-				metricSlug,
-				parsed.canonicalValue,
+			setOverview(
+				await body.recordMeasurement(metricSlug, parsed.canonicalValue),
 			);
-			setSnapshot({ ...snapshot, body: recorded });
 			setEntries((current) => ({ ...current, [metricSlug]: EMPTY_ENTRY }));
 		} catch (caught) {
 			setError(toMessage(caught));
@@ -218,12 +133,12 @@ export function LogScreen({
 		return <LoadingScreen variant="tab" />;
 	}
 
-	if (!snapshot) {
+	if (!overview) {
 		return (
 			<Screen centered padded>
 				<EmptyState
-					title={t("loadFailed")}
-					body={error ?? t("loadFailedBody")}
+					title={t("overview.loadFailed")}
+					body={error ?? t("overview.loadFailedBody")}
 					actionLabel={t("common:actions.tryAgain")}
 					onAction={() => void reload()}
 					tone="danger"
@@ -232,64 +147,19 @@ export function LogScreen({
 		);
 	}
 
-	const visible = snapshot.body.metrics.filter((metric) => metric.visible);
-	const untracked = snapshot.body.metrics.filter((metric) => !metric.visible);
-	const energy =
-		snapshot.food.metrics.find(
-			({ metric }) => metric.slug === "energy_intake",
-		) ??
-		snapshot.drinks.metrics.find(
-			({ metric }) => metric.slug === "energy_intake",
-		);
-	const drinkMetrics = snapshot.drinks.metrics.filter(
-		({ metric }) => metric.slug !== "energy_intake",
-	);
-	const foodMetrics = snapshot.food.metrics.filter(
-		({ metric }) => metric.slug !== "energy_intake",
-	);
+	const visible = overview.metrics.filter((metric) => metric.visible);
+	const untracked = overview.metrics.filter((metric) => !metric.visible);
 
 	return (
 		<Screen scroll padded gap="lg">
-			<AppText color="muted">{t("intro")}</AppText>
-
-			<View style={styles.section}>
-				<SectionHeader title={t("consumption")} eyebrow={t("todayEyebrow")} />
-				<Card style={styles.summaryCard}>
-					{energy ? (
-						<View style={styles.sharedMetric}>
-							<AppText variant="micro" color="subtle">
-								{upperCaseForLanguage(energy.metric.label)}
-							</AppText>
-							<AppText variant="section">
-								{energy.dayFormatted ?? t("common:emDash")}
-							</AppText>
-						</View>
-					) : null}
-					<View style={energy ? styles.summaryDivider : undefined}>
-						<DailySummary
-							title={t("drinks")}
-							entryCount={snapshot.drinks.entries.length}
-							metrics={drinkMetrics}
-							onPress={() => router.push("/drinks")}
-						/>
-					</View>
-					<View style={styles.summaryDivider}>
-						<DailySummary
-							title={t("food")}
-							entryCount={snapshot.food.entries.length}
-							metrics={foodMetrics}
-							onPress={() => router.push("/food")}
-						/>
-					</View>
-				</Card>
-			</View>
+			<AppText color="muted">{t("overview.intro")}</AppText>
 
 			{error ? <AppText color="danger">{error}</AppText> : null}
 
 			<View style={styles.section}>
 				<SectionHeader
 					title={t("measurements.title")}
-					eyebrow={t("bodyEyebrow")}
+					eyebrow={t("overview.eyebrow")}
 				/>
 				{visible.length === 0 ? (
 					<EmptyState
@@ -400,7 +270,7 @@ export function LogScreen({
 				<View style={styles.section}>
 					<SectionHeader
 						title={t("measurements.more")}
-						eyebrow={t("bodyEyebrow")}
+						eyebrow={t("overview.eyebrow")}
 					/>
 					{untracked.map((metric) => (
 						<Card key={metric.metricSlug} style={styles.heading}>
@@ -441,31 +311,6 @@ const styles = StyleSheet.create((theme) => ({
 		gap: theme.spacing.md,
 	},
 	grow: { flex: 1, gap: theme.spacing.xs },
-	summaryCard: { paddingVertical: theme.spacing.sm },
-	sharedMetric: {
-		flexDirection: "row",
-		alignItems: "center",
-		justifyContent: "space-between",
-		gap: theme.spacing.md,
-		paddingVertical: theme.spacing.md,
-	},
-	summaryDivider: {
-		borderTopWidth: 1,
-		borderTopColor: theme.colors.border,
-	},
-	summaryRow: {
-		paddingHorizontal: theme.spacing.sm,
-		paddingVertical: theme.spacing.md,
-		borderRadius: 0,
-		backgroundColor: "transparent",
-	},
-	summaryMetrics: {
-		flexDirection: "row",
-		flexWrap: "wrap",
-		gap: theme.spacing.md,
-		marginTop: theme.spacing.sm,
-	},
-	summaryMetric: { flex: 1, minWidth: "28%", gap: theme.spacing.xs },
 }));
 
-export default LogScreen;
+export default BodyScreen;

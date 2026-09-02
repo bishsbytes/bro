@@ -82,6 +82,15 @@ jest.mock("./food/food-store", () => ({
 	}),
 }));
 
+jest.mock("./substances/nicotine", () => ({
+	...jest.requireActual("./substances/nicotine"),
+	createNicotineStore: () => ({
+		isTracked: async () => false,
+		loadToday: async () => ({ entries: [], metrics: [] }),
+	}),
+	isNicotineTracked: async () => false,
+}));
+
 jest.mock("./habits/habits-store", () => ({
 	createHabitsStore: () => ({
 		loadToday: async () => ({
@@ -240,16 +249,16 @@ describe("app entry", () => {
 		const { router, view } = await launch({ onboardingComplete: true });
 		expect(view.getByLabelText("Settings")).toBeTruthy();
 
-		await fireEvent.press(view.getByLabelText(/^Log, tab/));
-		await waitFor(() => expect(router.getPathname()).toBe("/log"));
-		expect(await view.findByText("No body metrics tracked")).toBeTruthy();
+		await fireEvent.press(view.getByLabelText(/^Intake, tab/));
+		await waitFor(() => expect(router.getPathname()).toBe("/intake"));
+		expect(
+			await view.findByText("Everything you took in today, in one place."),
+		).toBeTruthy();
 		expect(view.getByLabelText("Settings")).toBeTruthy();
 
-		await press(view, "Insights");
-		await waitFor(() => expect(router.getPathname()).toBe("/insights"));
-		expect(
-			await view.findByText("Your patterns start with check-ins"),
-		).toBeTruthy();
+		await fireEvent.press(view.getByLabelText(/^Body, tab/));
+		await waitFor(() => expect(router.getPathname()).toBe("/body"));
+		expect(await view.findByText("No body metrics tracked")).toBeTruthy();
 		expect(view.getByLabelText("Settings")).toBeTruthy();
 
 		await press(view, "Life");
@@ -261,6 +270,17 @@ describe("app entry", () => {
 		await fireEvent.press(view.getByLabelText(/^Journal, tab/));
 		await waitFor(() => expect(router.getPathname()).toBe("/"));
 		expect(await view.findByText("Morning")).toBeTruthy();
+	});
+
+	it("opens insights from the journal header now that it has no tab of its own", async () => {
+		const { router, view } = await launch({ onboardingComplete: true });
+
+		await fireEvent.press(await view.findByLabelText("Open insights"));
+
+		await waitFor(() => expect(router.getPathname()).toBe("/insights"));
+		expect(
+			await view.findByText("Your patterns start with check-ins"),
+		).toBeTruthy();
 	});
 
 	it("walks onboarding through to the app without a backend request", async () => {

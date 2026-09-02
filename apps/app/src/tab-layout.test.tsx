@@ -102,10 +102,10 @@ describe("TabLayout", () => {
 		expect(screenOptions.tabBarStyle).not.toHaveProperty("paddingTop");
 		expect(screenOptions.tabBarItemStyle).toBeUndefined();
 
-		mockPathname = "/log";
+		mockPathname = "/intake";
 		await screen.rerender(<TabLayout />);
 
-		expect(screen.getByText("Log")).toBeTruthy();
+		expect(screen.getByText("Intake")).toBeTruthy();
 		expect(screen.queryByText(currentMonth)).toBeNull();
 	});
 
@@ -132,7 +132,7 @@ describe("TabLayout", () => {
 		listeners({ route: { name: "index" } }).tabPress();
 		expect(Haptics.selectionAsync).not.toHaveBeenCalled();
 
-		listeners({ route: { name: "log" } }).tabPress();
+		listeners({ route: { name: "intake" } }).tabPress();
 		expect(Haptics.selectionAsync).toHaveBeenCalledTimes(1);
 	});
 
@@ -173,11 +173,31 @@ describe("TabLayout", () => {
 		const screenOptions = mockTabsOptions.mock.calls[0]?.[0] as {
 			tabBarActiveTintColor: string;
 		};
+		const insightsIcon = screen.getByTestId("insights-header-icon");
 		const historyIcon = screen.getByTestId("history-header-icon");
 		const settingsIcon = screen.getByTestId("settings-header-icon");
 
 		expect(screenOptions.tabBarActiveTintColor).toBe("neutral-chrome");
+		expect(insightsIcon.props.children.props.color).toBe("neutral-chrome");
 		expect(historyIcon.props.children.props.color).toBe("neutral-chrome");
 		expect(settingsIcon.props.children.props.color).toBe("neutral-chrome");
+	});
+
+	it("reaches insights and history from the journal header alone", async () => {
+		const screen = await render(<TabLayout />);
+		const { router } = jest.requireMock("expo-router") as {
+			router: { push: jest.Mock };
+		};
+
+		await fireEvent.press(screen.getByLabelText("Open insights"));
+		expect(router.push).toHaveBeenLastCalledWith("/insights");
+		await fireEvent.press(screen.getByLabelText("Open history"));
+		expect(router.push).toHaveBeenLastCalledWith("/history");
+
+		// Neither belongs to a tab any more, so no other tab may offer them.
+		mockPathname = "/intake";
+		await screen.rerender(<TabLayout />);
+		expect(screen.queryByLabelText("Open insights")).toBeNull();
+		expect(screen.queryByLabelText("Open history")).toBeNull();
 	});
 });

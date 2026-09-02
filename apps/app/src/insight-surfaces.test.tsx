@@ -15,6 +15,26 @@ jest.mock("expo-router", () => ({
 	},
 }));
 
+jest.mock("react-native-safe-area-context", () => {
+	const React = jest.requireActual<typeof import("react")>("react");
+	const { View } =
+		jest.requireActual<typeof import("react-native")>("react-native");
+	return {
+		...jest.requireActual("react-native-safe-area-context"),
+		SafeAreaView: ({
+			edges = [],
+			...props
+		}: {
+			edges?: readonly string[];
+			children?: React.ReactNode;
+		}) =>
+			React.createElement(View, {
+				...props,
+				testID: `safe-area-${edges.join("-")}`,
+			}),
+	};
+});
+
 const pair = INSIGHT_CATALOGUE[0];
 const shown: ShownInsight = {
 	kind: "shown",
@@ -72,6 +92,9 @@ describe("insight surfaces", () => {
 				"The closest needs 6 more days matching “Days after drinking”.",
 			),
 		).toBeTruthy();
+		// Reached from the journal header, not a tab: nothing else reserves the
+		// bottom inset, so this screen has to.
+		expect(screen.getByTestId("safe-area-bottom")).toBeTruthy();
 	});
 
 	it("promises generic check-ins only for the output-days gate", async () => {
