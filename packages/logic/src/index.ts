@@ -11,7 +11,10 @@
  * vitest instead of the app's React Native test environment.
  */
 
-export { formatLocalDayLabel } from "./calendar/local-day-label";
+export {
+	formatLocalDayLabel,
+	formatLocalDayLabelShort,
+} from "./calendar/local-day-label";
 
 export {
 	type ConsumptionMetricDayTotal,

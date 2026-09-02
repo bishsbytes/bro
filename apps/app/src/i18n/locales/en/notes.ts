@@ -19,8 +19,10 @@ export const notes = {
 		day: "Day",
 		prompt: "What's on your mind?",
 		field: "Note",
-		placeholder: "Write something worth remembering.",
 		save: "Save note",
 		emptyBody: "Write something before saving.",
+		discard: "Discard",
+		discardPrompt: "Discard this note?",
+		keepWriting: "Keep writing",
 	},
 } as const;

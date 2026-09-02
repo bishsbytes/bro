@@ -1,11 +1,12 @@
 import { isCalendarDay, localDayOf } from "@bro/domain";
-import { router } from "expo-router";
+import { formatLocalDayLabelShort } from "@bro/logic";
+import { router, Stack } from "expo-router";
 import { useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
-import { View } from "react-native";
+import { KeyboardAvoidingView, Platform, View } from "react-native";
 import { AppText } from "../../components/app-text";
 import { Button } from "../../components/button";
-import { DateField } from "../../components/date-field";
+import { DayPickerButton } from "../../components/day-picker-button";
 import { FormField } from "../../components/form-field";
 import { StackScreen as Screen } from "../../components/screen";
 import { toMessage } from "../../lib/errors";
@@ -26,6 +27,9 @@ export function NewNoteScreen({
 	const { t } = useTranslation("notes");
 	const notes = useMemo(() => store ?? createNotesStore(), [store]);
 	const today = localDayOf(now());
+	// Pinned for the life of the composer: a Date rebuilt every render would
+	// hand the picker a new maximum on each keystroke.
+	const latestDay = useMemo(() => now(), [now]);
 	const [localDay, setLocalDay] = useState(
 		initialLocalDay &&
 			isCalendarDay(initialLocalDay) &&
@@ -36,6 +40,7 @@ export function NewNoteScreen({
 	const [body, setBody] = useState("");
 	const [saving, setSaving] = useState(false);
 	const [error, setError] = useState<string | null>(null);
+	const [confirmingDiscard, setConfirmingDiscard] = useState(false);
 	const empty = body.trim().length === 0;
 
 	async function save() {
@@ -59,38 +64,111 @@ export function NewNoteScreen({
 		}
 	}
 
-	return (
-		<Screen scroll padded gap="lg" keyboardShouldPersistTaps="handled">
-			<DateField
-				label={t("new.day")}
-				value={localDay}
-				onChangeDate={setLocalDay}
-				maximumDate={now()}
-			/>
+	function discard() {
+		// Nothing written yet is nothing to lose, so leaving needs no ceremony.
+		// Once there are words on the screen, one tap must not take them away.
+		if (empty) {
+			router.back();
+			return;
+		}
+		setConfirmingDiscard(true);
+	}
 
-			<View style={styles.composer}>
-				<AppText variant="section">{t("new.prompt")}</AppText>
+	return (
+		<Screen padded>
+			<Stack.Screen
+				options={{
+					headerRight: () => (
+						<DayPickerButton
+							label={t("new.day")}
+							value={localDay}
+							displayValue={formatLocalDayLabelShort(localDay, today)}
+							onChangeDate={setLocalDay}
+							maximumDate={latestDay}
+						/>
+					),
+				}}
+			/>
+			{/* The composer fills the screen and the actions sit under it, so on
+			    iOS the keyboard would cover them without this. */}
+			<KeyboardAvoidingView
+				behavior={Platform.OS === "ios" ? "padding" : undefined}
+				style={styles.fill}
+			>
 				<FormField
 					label={t("new.field")}
+					showLabel={false}
 					value={body}
 					onChangeText={setBody}
-					placeholder={t("new.placeholder")}
+					placeholder={t("new.prompt")}
 					multiline
 					autoFocus
+					containerStyle={styles.composer}
+					style={styles.composerInput}
 				/>
-			</View>
 
-			{error ? <AppText color="danger">{error}</AppText> : null}
-			<Button
-				label={t("new.save")}
-				loading={saving}
-				disabled={empty}
-				onPress={() => void save()}
-			/>
+				{error ? (
+					<AppText color="danger" style={styles.error}>
+						{error}
+					</AppText>
+				) : null}
+
+				{confirmingDiscard ? (
+					<View style={styles.footer}>
+						<AppText color="muted">{t("new.discardPrompt")}</AppText>
+						<View style={styles.actions}>
+							<Button
+								label={t("new.keepWriting")}
+								variant="secondary"
+								style={styles.action}
+								onPress={() => setConfirmingDiscard(false)}
+							/>
+							<Button
+								label={t("new.discard")}
+								variant="danger"
+								style={styles.action}
+								onPress={() => router.back()}
+							/>
+						</View>
+					</View>
+				) : (
+					<View style={styles.actions}>
+						<Button
+							label={t("new.discard")}
+							variant="secondary"
+							tone="danger"
+							disabled={saving}
+							style={styles.action}
+							onPress={discard}
+						/>
+						<Button
+							label={t("new.save")}
+							loading={saving}
+							disabled={empty}
+							style={styles.action}
+							onPress={() => void save()}
+						/>
+					</View>
+				)}
+			</KeyboardAvoidingView>
 		</Screen>
 	);
 }
 
 const styles = StyleSheet.create((theme) => ({
-	composer: { gap: theme.spacing.md },
+	fill: { flex: 1, gap: theme.spacing.md },
+	composer: { flex: 1 },
+	// Borderless and flush with the page: the whole screen is the note, so a
+	// box drawn around it would only fence off the space it already owns.
+	composerInput: {
+		flex: 1,
+		borderWidth: 0,
+		paddingHorizontal: 0,
+		paddingTop: 0,
+		backgroundColor: "transparent",
+	},
+	error: { marginTop: theme.spacing.xs },
+	footer: { gap: theme.spacing.sm },
+	actions: { flexDirection: "row", gap: theme.spacing.md },
+	action: { flex: 1 },
 }));

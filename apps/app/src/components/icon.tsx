@@ -4,6 +4,7 @@ import Briefcase from "lucide-react-native/icons/briefcase";
 import Calendar from "lucide-react-native/icons/calendar";
 import ChartLine from "lucide-react-native/icons/chart-line";
 import Check from "lucide-react-native/icons/check";
+import ChevronDown from "lucide-react-native/icons/chevron-down";
 import ChevronRight from "lucide-react-native/icons/chevron-right";
 import Circle from "lucide-react-native/icons/circle";
 import CircleCheck from "lucide-react-native/icons/circle-check";
@@ -46,6 +47,7 @@ const ICONS = {
 	check: Check,
 	"check-circle": CircleCheck,
 	"check-in": NotebookPen,
+	"chevron-down": ChevronDown,
 	"chevron-right": ChevronRight,
 	circle: Circle,
 	clock: Clock,

@@ -84,7 +84,7 @@ describe("notes flow", () => {
 		expect(await view.findByText("A note already here")).toBeTruthy();
 		await fireEvent.press(view.getByLabelText("Add note"));
 		await waitFor(() => expect(route.getPathname()).toBe("/notes/new"));
-		expect(view.getByText("What's on your mind?")).toBeTruthy();
+		expect(view.getByPlaceholderText("What's on your mind?")).toBeTruthy();
 
 		await fireEvent.changeText(view.getByLabelText("Note"), "A newer note");
 		await fireEvent.press(view.getByText("Save note"));

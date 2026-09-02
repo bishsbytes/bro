@@ -9,6 +9,12 @@ jest.mock("expo-router", () => ({
 		const React = jest.requireActual("react");
 		React.useEffect(effect, [effect]);
 	},
+	// Renders the header the screen asks for inline, so what the reader would
+	// see in the navigation bar is queryable from the tree.
+	Stack: {
+		Screen: ({ options }: { options?: { headerRight?: () => unknown } }) =>
+			options?.headerRight?.() ?? null,
+	},
 }));
 
 const FIXED_NOW = () => new Date(2026, 7, 14, 12);
@@ -135,7 +141,7 @@ describe("notes screens", () => {
 			/>,
 		);
 
-		expect(screen.getByText("What's on your mind?")).toBeTruthy();
+		expect(screen.getByPlaceholderText("What's on your mind?")).toBeTruthy();
 		expect(screen.getByLabelText("Day").props.accessibilityValue).toEqual({
 			text: "2026-08-12",
 		});
@@ -166,6 +172,19 @@ describe("notes screens", () => {
 		},
 	);
 
+	it("names the day in the header, in the words the reader thinks in", async () => {
+		const screen = await render(
+			<NewNoteScreen
+				now={FIXED_NOW}
+				initialLocalDay="2026-08-13"
+				store={{ createNote: jest.fn(async () => null) }}
+			/>,
+		);
+
+		expect(screen.getByText("Yesterday")).toBeTruthy();
+		expect(screen.queryByText("Day")).toBeNull();
+	});
+
 	it("will not save a blank note, nor close the composer on one", async () => {
 		const createNote = jest.fn(async () => null);
 		const screen = await render(
@@ -188,6 +207,43 @@ describe("notes screens", () => {
 			expect(screen.getByText("Write something before saving.")).toBeTruthy(),
 		);
 		expect(router.back).not.toHaveBeenCalled();
+	});
+
+	it("leaves without ceremony when there is nothing written to lose", async () => {
+		const screen = await render(
+			<NewNoteScreen
+				now={FIXED_NOW}
+				store={{ createNote: jest.fn(async () => null) }}
+			/>,
+		);
+
+		await fireEvent.press(screen.getByLabelText("Discard"));
+		expect(screen.queryByText("Discard this note?")).toBeNull();
+		expect(router.back).toHaveBeenCalledTimes(1);
+	});
+
+	it("asks before throwing away words already written", async () => {
+		const screen = await render(
+			<NewNoteScreen
+				now={FIXED_NOW}
+				store={{ createNote: jest.fn(async () => null) }}
+			/>,
+		);
+		await fireEvent.changeText(screen.getByLabelText("Note"), "Half a thought");
+
+		await fireEvent.press(screen.getByLabelText("Discard"));
+		expect(screen.getByText("Discard this note?")).toBeTruthy();
+		expect(router.back).not.toHaveBeenCalled();
+
+		// Backing out of the prompt returns the words, not an empty composer.
+		await fireEvent.press(screen.getByLabelText("Keep writing"));
+		expect(screen.queryByText("Discard this note?")).toBeNull();
+		expect(screen.getByLabelText("Note").props.value).toBe("Half a thought");
+		expect(router.back).not.toHaveBeenCalled();
+
+		await fireEvent.press(screen.getByLabelText("Discard"));
+		await fireEvent.press(screen.getByLabelText("Discard"));
+		expect(router.back).toHaveBeenCalledTimes(1);
 	});
 
 	it("keeps the composer open and reports a failed write", async () => {

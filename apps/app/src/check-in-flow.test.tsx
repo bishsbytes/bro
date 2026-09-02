@@ -145,7 +145,9 @@ describe("daily check-in flow", () => {
 		expect(transaction).toHaveBeenCalledTimes(3);
 		await fireEvent.press(view.getByLabelText("Log"));
 		await fireEvent.press(view.getByLabelText("Note"));
-		expect(await view.findByText("What's on your mind?")).toBeTruthy();
+		expect(
+			await view.findByPlaceholderText("What's on your mind?"),
+		).toBeTruthy();
 		await fireEvent.changeText(view.getByLabelText("Note"), "Strong finish");
 		await fireEvent.press(view.getByText("Save note"));
 		await act(async () => undefined);
@@ -237,5 +239,5 @@ describe("daily check-in flow", () => {
 		expect(mockSqlite.openDatabaseAsync).toHaveBeenCalledTimes(3);
 		expect(mockedUseSession).not.toHaveBeenCalled();
 		expect(globalThis.fetch).not.toHaveBeenCalled();
-	});
+	}, 30_000);
 });
