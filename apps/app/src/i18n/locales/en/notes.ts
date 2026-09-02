@@ -13,6 +13,10 @@ export const notes = {
 		/** In a list spanning days; day and position together identify the note. */
 		openA11y: "Open note {{position}} of {{count}} from {{day}}",
 	},
+	row: {
+		addedAt: "Added {{time}}",
+		editedAt: "Edited {{time}}",
+	},
 	journal: {
 		title: "Notes",
 		emptyTitle: "What's on your mind?",

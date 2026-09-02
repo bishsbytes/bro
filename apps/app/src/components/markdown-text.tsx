@@ -16,7 +16,7 @@ type MarkdownTextProps = {
  * rather than shown as their markdown punctuation.
  *
  * Every surface that shows a saved note goes through here, so a note reads the
- * same in the list, on the home card and in the day it belongs to. Notes
+ * same in the list, on the home screen and in the day it belongs to. Notes
  * written before the composer could format are plain prose, which markdown
  * renders unchanged.
  */
@@ -31,7 +31,9 @@ export function MarkdownText({ markdown, containerStyle }: MarkdownTextProps) {
 			lineHeight: theme.typography.lead.lineHeight,
 			color: theme.colors.ink,
 			marginTop: 0,
-			marginBottom: theme.spacing.sm,
+			// The editor treats each paragraph as the next line in one note. Keep
+			// that rhythm here instead of inserting renderer-default block gaps.
+			marginBottom: 0,
 		},
 		// The real cuts are loaded, so tell the renderer to set them as they are
 		// instead of slanting and thickening the regular face on top of them.
@@ -47,7 +49,7 @@ export function MarkdownText({ markdown, containerStyle }: MarkdownTextProps) {
 			gapWidth: theme.spacing.sm,
 			marginLeft: theme.spacing.sm,
 			marginTop: 0,
-			marginBottom: theme.spacing.sm,
+			marginBottom: 0,
 			itemSpacing: theme.spacing.xs,
 		},
 		link: { color: theme.colors.accent, underline: true },
@@ -58,10 +60,9 @@ export function MarkdownText({ markdown, containerStyle }: MarkdownTextProps) {
 			markdown={markdown}
 			markdownStyle={markdownStyle}
 			containerStyle={containerStyle}
-			// On the notes list each of these sits on a card that opens the day it
-			// belongs to, and a selectable text view would take the press and the
-			// long press for itself. Off everywhere rather than only there, so a
-			// note answers a touch the same way wherever it is read.
+			// A list row opens the note it contains, and a selectable text view would
+			// take the press and long press for itself. Off everywhere so a saved note
+			// answers a touch the same way wherever it is read.
 			selectable={false}
 		/>
 	);

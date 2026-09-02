@@ -3,11 +3,11 @@ import { type Href, router } from "expo-router";
 import type { TFunction } from "i18next";
 import { useCallback, useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
-import { TouchableOpacity, View } from "react-native";
+import { View } from "react-native";
 import { AppText } from "../../components/app-text";
 import { Button } from "../../components/button";
 import { Card } from "../../components/card";
-import { MarkdownText } from "../../components/markdown-text";
+import { NoteRow } from "../../components/note-row";
 import { ScoreRow } from "../../components/score-row";
 import { LoadingScreen, StackScreen as Screen } from "../../components/screen";
 import { SectionHeader } from "../../components/section-header";
@@ -120,7 +120,7 @@ function CheckInEditor({
 	);
 }
 
-function NoteCard({
+function DayNoteRow({
 	note,
 	position,
 	count,
@@ -134,15 +134,14 @@ function NoteCard({
 	// Editing happens on the note's own screen, so a day stays a day's worth of
 	// reading rather than a page of open editors.
 	return (
-		<TouchableOpacity
-			accessibilityRole="button"
+		<NoteRow
 			accessibilityLabel={t("actions.open", { position, count })}
+			markdown={note.body}
+			createdAt={note.createdAt}
+			updatedAt={note.updatedAt}
+			last={position === count}
 			onPress={() => router.push(`/notes/${note.id}` as Href)}
-		>
-			<Card>
-				<MarkdownText markdown={note.body} />
-			</Card>
-		</TouchableOpacity>
+		/>
 	);
 }
 
@@ -362,14 +361,18 @@ export function HistoryDayScreen({ localDay, store }: HistoryDayScreenProps) {
 					{day.notes.length > 0 ? (
 						<SectionHeader title={t("day.notes")} />
 					) : null}
-					{day.notes.map((note, index) => (
-						<NoteCard
-							key={note.id}
-							note={note}
-							position={index + 1}
-							count={day.notes.length}
-						/>
-					))}
+					{day.notes.length > 0 ? (
+						<View>
+							{day.notes.map((note, index) => (
+								<DayNoteRow
+									key={note.id}
+									note={note}
+									position={index + 1}
+									count={day.notes.length}
+								/>
+							))}
+						</View>
+					) : null}
 				</>
 			) : null}
 		</Screen>

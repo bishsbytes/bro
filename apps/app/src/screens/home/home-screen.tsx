@@ -27,7 +27,7 @@ import { Card } from "../../components/card";
 import { DayPager } from "../../components/day-pager";
 import { EmptyState } from "../../components/empty-state";
 import { LoadingIndicator } from "../../components/loading-indicator";
-import { MarkdownText } from "../../components/markdown-text";
+import { NoteRow } from "../../components/note-row";
 import { LoadingScreen, Screen } from "../../components/screen";
 import { SectionHeader } from "../../components/section-header";
 import { useSetTodayHeaderVisibleMonthDay } from "../../components/today-header-month-context";
@@ -191,25 +191,28 @@ function JournalNotesSection({
 					onAction={onAddNote}
 				/>
 			) : null}
-			{notes.map((note, index) => {
-				const dayLabel = formatLocalDayLabel(note.localDay, todayLocalDay);
-				return (
-					<TouchableOpacity
-						key={note.id}
-						accessibilityRole="button"
-						accessibilityLabel={t("actions.openA11y", {
-							day: dayLabel,
-							position: index + 1,
-							count: notes.length,
-						})}
-						onPress={() => router.push(`/notes/${note.id}` as Href)}
-					>
-						<Card>
-							<MarkdownText markdown={note.body} />
-						</Card>
-					</TouchableOpacity>
-				);
-			})}
+			{notes.length > 0 ? (
+				<View>
+					{notes.map((note, index) => {
+						const dayLabel = formatLocalDayLabel(note.localDay, todayLocalDay);
+						return (
+							<NoteRow
+								key={note.id}
+								accessibilityLabel={t("actions.openA11y", {
+									day: dayLabel,
+									position: index + 1,
+									count: notes.length,
+								})}
+								markdown={note.body}
+								createdAt={note.createdAt}
+								updatedAt={note.updatedAt}
+								last={index === notes.length - 1}
+								onPress={() => router.push(`/notes/${note.id}` as Href)}
+							/>
+						);
+					})}
+				</View>
+			) : null}
 		</View>
 	);
 }

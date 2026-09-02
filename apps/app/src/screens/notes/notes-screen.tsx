@@ -4,11 +4,10 @@ import { formatLocalDayLabel } from "@bro/logic";
 import { type Href, router } from "expo-router";
 import { useCallback, useMemo, useRef } from "react";
 import { useTranslation } from "react-i18next";
-import { TouchableOpacity, View } from "react-native";
+import { View } from "react-native";
 import { Button } from "../../components/button";
-import { Card } from "../../components/card";
 import { EmptyState } from "../../components/empty-state";
-import { MarkdownText } from "../../components/markdown-text";
+import { NoteRow } from "../../components/note-row";
 import { LoadingScreen, StackScreen as Screen } from "../../components/screen";
 import { SectionHeader } from "../../components/section-header";
 import { useFocusStoreLoad } from "../../lib/use-store-load";
@@ -85,22 +84,23 @@ export function NotesScreen({
 				return (
 					<View key={localDay} style={styles.day}>
 						<SectionHeader title={dayLabel} />
-						{dayNotes.map((note, index) => (
-							<TouchableOpacity
-								key={note.id}
-								accessibilityRole="button"
-								accessibilityLabel={t("actions.openA11y", {
-									day: dayLabel,
-									position: index + 1,
-									count: dayNotes.length,
-								})}
-								onPress={() => router.push(`/notes/${note.id}` as Href)}
-							>
-								<Card>
-									<MarkdownText markdown={note.body} />
-								</Card>
-							</TouchableOpacity>
-						))}
+						<View>
+							{dayNotes.map((note, index) => (
+								<NoteRow
+									key={note.id}
+									accessibilityLabel={t("actions.openA11y", {
+										day: dayLabel,
+										position: index + 1,
+										count: dayNotes.length,
+									})}
+									markdown={note.body}
+									createdAt={note.createdAt}
+									updatedAt={note.updatedAt}
+									last={index === dayNotes.length - 1}
+									onPress={() => router.push(`/notes/${note.id}` as Href)}
+								/>
+							))}
+						</View>
 					</View>
 				);
 			})}
