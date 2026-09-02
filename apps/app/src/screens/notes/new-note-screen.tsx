@@ -3,16 +3,16 @@ import { formatLocalDayLabelShort } from "@bro/logic";
 import { router, Stack } from "expo-router";
 import { useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
-import { KeyboardAvoidingView, Platform, View } from "react-native";
+import { View } from "react-native";
+import { KeyboardAvoidingView } from "react-native-keyboard-controller";
 import { AppText } from "../../components/app-text";
 import { Button } from "../../components/button";
 import { DayPickerButton } from "../../components/day-picker-button";
 import { MarkdownField } from "../../components/markdown-field";
 import { StackScreen as Screen } from "../../components/screen";
 import { toMessage } from "../../lib/errors";
-import { useKeyboardInset } from "../../lib/use-keyboard-inset";
 import { createNotesStore, type NotesStore } from "../../notes/notes-store";
-import { StyleSheet } from "../../theme/unistyles";
+import { StyleSheet, useUnistyles } from "../../theme/unistyles";
 
 type NewNoteScreenProps = {
 	store?: Pick<NotesStore, "createNote">;
@@ -26,6 +26,7 @@ export function NewNoteScreen({
 	now = () => new Date(),
 }: NewNoteScreenProps) {
 	const { t } = useTranslation("notes");
+	const { theme } = useUnistyles();
 	const notes = useMemo(() => store ?? createNotesStore(), [store]);
 	const today = localDayOf(now());
 	// Pinned for the life of the composer: a Date rebuilt every render would
@@ -42,7 +43,6 @@ export function NewNoteScreen({
 	const [saving, setSaving] = useState(false);
 	const [error, setError] = useState<string | null>(null);
 	const [confirmingDiscard, setConfirmingDiscard] = useState(false);
-	const keyboardInset = useKeyboardInset();
 	const empty = body.trim().length === 0;
 
 	async function save() {
@@ -92,12 +92,19 @@ export function NewNoteScreen({
 				}}
 			/>
 			{/* The composer fills the screen and the formatting row and actions sit
-			    under it, so the keyboard would cover them all without this. iOS
-			    lifts them by the view below; Android, where edge-to-edge leaves the
-			    window unresized, by the inset padding. */}
+			    under it, so the keyboard would cover them all. This is the keyboard
+			    controller's view rather than React Native's: the platform one does
+			    nothing on Android, where edge-to-edge stops `adjustResize` from
+			    resizing the window. `automaticOffset` measures where the composer
+			    actually sits, which is what the stack header would otherwise throw
+			    out. */}
 			<KeyboardAvoidingView
-				behavior={Platform.OS === "ios" ? "padding" : undefined}
-				style={[styles.fill, { paddingBottom: keyboardInset }]}
+				behavior="padding"
+				automaticOffset
+				// Alongside `automaticOffset` this is purely extra room, so the
+				// actions rest a gap above the keyboard rather than on top of it.
+				keyboardVerticalOffset={theme.spacing.md}
+				style={styles.fill}
 			>
 				<MarkdownField
 					label={t("new.field")}

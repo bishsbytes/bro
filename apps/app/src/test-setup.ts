@@ -136,6 +136,13 @@ jest.mock("react-native-enriched-markdown", () =>
 	require("react-native-enriched-markdown/jest"),
 );
 
+// The keyboard controller is a native module with its own view managers. Its
+// shipped mock renders the provider and the avoiding/aware views as plain RN
+// containers, and reports a closed keyboard.
+jest.mock("react-native-keyboard-controller", () =>
+	require("react-native-keyboard-controller/jest"),
+);
+
 // PagerView is a native container. Tests exercise its selection callback through
 // this host-view stand-in while the package owns the platform gesture behavior.
 jest.mock("react-native-pager-view", () => {

@@ -157,8 +157,9 @@ describe("history and day view", () => {
 
 		expect(await view.findByText("future_metric: 42")).toBeTruthy();
 		expect(view.getByText("Source: future-sync")).toBeTruthy();
-		expect(view.getByDisplayValue("First synced note")).toBeTruthy();
-		expect(view.getByDisplayValue("Second synced note")).toBeTruthy();
+		// A day reads its notes; editing one happens on the note's own screen.
+		expect(view.getByText("First synced note")).toBeTruthy();
+		expect(view.getByText("Second synced note")).toBeTruthy();
 		expect(view.getByText("Very bad")).toBeTruthy();
 		expect(view.getAllByText("Very low")).toHaveLength(2);
 		expect(view.getAllByText("Very good")).toHaveLength(3);
@@ -182,21 +183,31 @@ describe("history and day view", () => {
 		await waitFor(() => expect(view.queryByText("Stress")).toBeNull());
 		expect(await observations.findById(tag.id)).toBeNull();
 
+		await fireEvent.press(view.getAllByLabelText("Open note")[0]);
+		await act(async () => undefined);
 		await fireEvent.changeText(
-			view.getByDisplayValue("First synced note"),
+			await view.findByDisplayValue("First synced note"),
 			"Edited first note",
 		);
-		await fireEvent.press(view.getAllByText("Save note")[0]);
+		await fireEvent.press(view.getByText("Save note"));
 		await act(async () => undefined);
 		expect(await notes.listByDay(localDay)).toMatchObject([
 			{ body: "Edited first note" },
 			{ body: "Second synced note" },
 		]);
-		await fireEvent.press(view.getAllByText("Delete note")[0]);
-		await waitFor(() =>
-			expect(view.queryByDisplayValue("Edited first note")).toBeNull(),
-		);
+		// Back on the day, which re-reads on focus rather than showing the note
+		// as it was when the screen opened.
+		expect(await view.findByText("Edited first note")).toBeTruthy();
+
+		await fireEvent.press(view.getAllByLabelText("Open note")[0]);
+		await act(async () => undefined);
+		await fireEvent.press(view.getByText("Delete note"));
+		await fireEvent.press(view.getByText("Delete note"));
+		await act(async () => undefined);
 		expect(await notes.listByDay(localDay)).toHaveLength(1);
+		await waitFor(() =>
+			expect(view.queryByText("Edited first note")).toBeNull(),
+		);
 		await fireEvent.press(view.getByText("Delete check-in"));
 		await waitFor(() => expect(view.queryByText("Delete check-in")).toBeNull());
 		rows = await observations.listByDay(localDay);

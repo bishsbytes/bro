@@ -36,6 +36,8 @@ export default function NotesLayout() {
 				}}
 			/>
 			<Stack.Screen name="new" options={{ title: t("notes.new") }} />
+			{/* The screen itself retitles this to the note's day once it loads. */}
+			<Stack.Screen name="[id]" options={{ title: t("notes.edit") }} />
 		</Stack>
 	);
 }

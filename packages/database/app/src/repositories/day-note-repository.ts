@@ -42,6 +42,15 @@ export class DayNoteRepository extends BaseRepository {
 		return note;
 	}
 
+	async findById(id: string): Promise<DayNote | null> {
+		const row = await this.first<DayNoteRow>(
+			`SELECT id, local_day, body, created_at, updated_at
+			 FROM day_notes WHERE id = ?`,
+			[id],
+		);
+		return row ? toDayNote(row) : null;
+	}
+
 	async listAll(): Promise<DayNote[]> {
 		const rows = await this.all<DayNoteRow>(
 			`SELECT id, local_day, body, created_at, updated_at

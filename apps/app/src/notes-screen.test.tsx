@@ -1,5 +1,6 @@
 import { fireEvent, render, waitFor } from "@testing-library/react-native";
 import { router } from "expo-router";
+import { EditNoteScreen } from "./screens/notes/edit-note-screen";
 import { NewNoteScreen } from "./screens/notes/new-note-screen";
 import { NotesScreen } from "./screens/notes/notes-screen";
 
@@ -10,10 +11,24 @@ jest.mock("expo-router", () => ({
 		React.useEffect(effect, [effect]);
 	},
 	// Renders the header the screen asks for inline, so what the reader would
-	// see in the navigation bar is queryable from the tree.
+	// see in the navigation bar — its title and its actions — is queryable from
+	// the tree.
 	Stack: {
-		Screen: ({ options }: { options?: { headerRight?: () => unknown } }) =>
-			options?.headerRight?.() ?? null,
+		Screen: ({
+			options,
+		}: {
+			options?: { title?: string; headerRight?: () => React.ReactNode };
+		}) => {
+			const React = jest.requireActual<typeof import("react")>("react");
+			const { Text } =
+				jest.requireActual<typeof import("react-native")>("react-native");
+			return React.createElement(
+				React.Fragment,
+				null,
+				options?.title ? React.createElement(Text, null, options.title) : null,
+				options?.headerRight?.() ?? null,
+			);
+		},
 	},
 }));
 
@@ -69,7 +84,7 @@ describe("notes screens", () => {
 		expect(screen.queryByText("Show older notes")).toBeNull();
 	});
 
-	it("opens the day a note belongs to so it can be edited", async () => {
+	it("opens a note on its own screen so it can be edited", async () => {
 		const screen = await render(
 			<NotesScreen
 				now={FIXED_NOW}
@@ -83,9 +98,9 @@ describe("notes screens", () => {
 		);
 
 		await fireEvent.press(
-			(await screen.findAllByLabelText("Edit notes for Today"))[0],
+			(await screen.findAllByLabelText("Open note from Today"))[0],
 		);
-		expect(router.push).toHaveBeenCalledWith("/history/2026-08-14");
+		expect(router.push).toHaveBeenCalledWith("/notes/today-1");
 	});
 
 	it("widens the window rather than blanking the list to show older notes", async () => {
@@ -265,5 +280,119 @@ describe("notes screens", () => {
 		expect(
 			screen.getByLabelText("Save note").props.accessibilityState,
 		).toMatchObject({ disabled: false });
+	});
+});
+
+describe("note editor", () => {
+	const NOTE = NOTES[0];
+
+	beforeEach(() => {
+		jest.clearAllMocks();
+	});
+
+	function editor(store: Parameters<typeof EditNoteScreen>[0]["store"]) {
+		return render(
+			<EditNoteScreen noteId={NOTE.id} now={FIXED_NOW} store={store} />,
+		);
+	}
+
+	it("opens the note as it was written, under the day it belongs to", async () => {
+		const screen = await editor({
+			loadNote: jest.fn(async () => NOTE),
+			updateNote: jest.fn(),
+			deleteNote: jest.fn(),
+		});
+
+		expect(await screen.findByDisplayValue("The first thought")).toBeTruthy();
+		// The header names the day rather than repeating "Note".
+		expect(screen.getByText("Today")).toBeTruthy();
+	});
+
+	it("saves an edit and returns to where it was opened from", async () => {
+		const updateNote = jest.fn(async () => ({
+			...NOTE,
+			body: "A second thought",
+		}));
+		const screen = await editor({
+			loadNote: jest.fn(async () => NOTE),
+			updateNote,
+			deleteNote: jest.fn(),
+		});
+
+		await fireEvent.changeText(
+			await screen.findByLabelText("Note"),
+			"A second thought",
+		);
+		await fireEvent.press(screen.getByLabelText("Save note"));
+
+		await waitFor(() =>
+			expect(updateNote).toHaveBeenCalledWith("today-1", "A second thought"),
+		);
+		expect(router.back).toHaveBeenCalledTimes(1);
+	});
+
+	it("saves the note untouched when nothing was typed", async () => {
+		const updateNote = jest.fn(async () => NOTE);
+		const screen = await editor({
+			loadNote: jest.fn(async () => NOTE),
+			updateNote,
+			deleteNote: jest.fn(),
+		});
+
+		await fireEvent.press(await screen.findByLabelText("Save note"));
+
+		await waitFor(() =>
+			expect(updateNote).toHaveBeenCalledWith("today-1", "The first thought"),
+		);
+	});
+
+	it("will not save a note emptied out", async () => {
+		const updateNote = jest.fn();
+		const screen = await editor({
+			loadNote: jest.fn(async () => NOTE),
+			updateNote,
+			deleteNote: jest.fn(),
+		});
+
+		await fireEvent.changeText(await screen.findByLabelText("Note"), "   ");
+		await fireEvent.press(screen.getByLabelText("Save note"));
+
+		expect(updateNote).not.toHaveBeenCalled();
+		expect(
+			screen.getByLabelText("Save note").props.accessibilityState,
+		).toMatchObject({ disabled: true });
+	});
+
+	it("asks before deleting, and deletes once asked twice", async () => {
+		const deleteNote = jest.fn(async () => true);
+		const screen = await editor({
+			loadNote: jest.fn(async () => NOTE),
+			updateNote: jest.fn(),
+			deleteNote,
+		});
+
+		await fireEvent.press(await screen.findByLabelText("Delete note"));
+		expect(screen.getByText("Delete this note?")).toBeTruthy();
+		expect(deleteNote).not.toHaveBeenCalled();
+
+		// Backing out of the prompt leaves the note alone.
+		await fireEvent.press(screen.getByLabelText("Keep note"));
+		expect(screen.queryByText("Delete this note?")).toBeNull();
+
+		await fireEvent.press(screen.getByLabelText("Delete note"));
+		await fireEvent.press(screen.getByLabelText("Delete note"));
+
+		await waitFor(() => expect(deleteNote).toHaveBeenCalledWith("today-1"));
+		expect(router.back).toHaveBeenCalledTimes(1);
+	});
+
+	it("says so when the note has been deleted from elsewhere", async () => {
+		const screen = await editor({
+			loadNote: jest.fn(async () => null),
+			updateNote: jest.fn(),
+			deleteNote: jest.fn(),
+		});
+
+		expect(await screen.findByText("This note is no longer here")).toBeTruthy();
 	});
 });

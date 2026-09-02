@@ -35,6 +35,7 @@ export const navigation = {
 	notes: {
 		index: "Notes",
 		new: "New note",
+		edit: "Note",
 		addA11y: "Add note",
 	},
 	habits: {

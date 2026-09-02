@@ -156,10 +156,12 @@ const PAST_DAY_CACHE_LIMIT = 7;
 
 function JournalNotesSection({
 	notes,
+	todayLocalDay,
 	onAddNote,
 	onOpenNotes,
 }: {
 	notes: readonly DayNote[];
+	todayLocalDay: string;
 	onAddNote: () => void;
 	onOpenNotes: () => void;
 }) {
@@ -189,11 +191,21 @@ function JournalNotesSection({
 					onAction={onAddNote}
 				/>
 			) : null}
-			{notes.map((note) => (
-				<Card key={note.id}>
-					<MarkdownText markdown={note.body} />
-				</Card>
-			))}
+			{notes.map((note) => {
+				const dayLabel = formatLocalDayLabel(note.localDay, todayLocalDay);
+				return (
+					<TouchableOpacity
+						key={note.id}
+						accessibilityRole="button"
+						accessibilityLabel={t("actions.openA11y", { day: dayLabel })}
+						onPress={() => router.push(`/notes/${note.id}` as Href)}
+					>
+						<Card>
+							<MarkdownText markdown={note.body} />
+						</Card>
+					</TouchableOpacity>
+				);
+			})}
 		</View>
 	);
 }
@@ -305,6 +317,7 @@ function PastDaySection({
 					) : null}
 					<JournalNotesSection
 						notes={day.notes}
+						todayLocalDay={todayLocalDay}
 						onAddNote={onAddNote}
 						onOpenNotes={onOpenNotes}
 					/>
@@ -917,6 +930,7 @@ export function HomeScreen({
 	const journalNotesSection = (
 		<JournalNotesSection
 			notes={today.notes}
+			todayLocalDay={todayLocalDay}
 			onAddNote={() =>
 				router.push({
 					pathname: "/notes/new",

@@ -6,6 +6,7 @@ import { useTranslation } from "react-i18next";
 import { AppText } from "../../components/app-text";
 import { EmptyState } from "../../components/empty-state";
 import { ListRow } from "../../components/list-row";
+import { MarkdownText } from "../../components/markdown-text";
 import { LoadingScreen, StackScreen as Screen } from "../../components/screen";
 import {
 	createHistoryStore,
@@ -98,9 +99,10 @@ export function HistoryScreen({ store }: HistoryScreenProps) {
 							</AppText>
 						) : null}
 						{day.noteBodies.map((body, index) => (
-							<AppText variant="lead" key={`${day.localDay}-note-${index}`}>
-								{body}
-							</AppText>
+							<MarkdownText
+								key={`${day.localDay}-note-${index}`}
+								markdown={body}
+							/>
 						))}
 					</ListRow>
 				);

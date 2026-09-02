@@ -1,12 +1,13 @@
 import type { DayNote, Observation } from "@bro/database-app";
+import { type Href, router } from "expo-router";
 import type { TFunction } from "i18next";
 import { useCallback, useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
-import { View } from "react-native";
+import { TouchableOpacity, View } from "react-native";
 import { AppText } from "../../components/app-text";
 import { Button } from "../../components/button";
 import { Card } from "../../components/card";
-import { MarkdownField } from "../../components/markdown-field";
+import { MarkdownText } from "../../components/markdown-text";
 import { ScoreRow } from "../../components/score-row";
 import { LoadingScreen, StackScreen as Screen } from "../../components/screen";
 import { SectionHeader } from "../../components/section-header";
@@ -19,20 +20,14 @@ import {
 	type HistoryStore,
 } from "../../history/history-store";
 import { toMessage } from "../../lib/errors";
-import { useKeyboardInset } from "../../lib/use-keyboard-inset";
-import { useStoreLoad } from "../../lib/use-store-load";
+import { useFocusStoreLoad } from "../../lib/use-store-load";
 import { StyleSheet } from "../../theme/unistyles";
 
 type HistoryDayScreenProps = {
 	localDay: string;
 	store?: Pick<
 		HistoryStore,
-		| "loadDay"
-		| "updateCheckIn"
-		| "deleteCheckIn"
-		| "deleteObservation"
-		| "updateNote"
-		| "deleteNote"
+		"loadDay" | "updateCheckIn" | "deleteCheckIn" | "deleteObservation"
 	>;
 };
 
@@ -125,41 +120,21 @@ function CheckInEditor({
 	);
 }
 
-function NoteEditor({
-	note,
-	onSave,
-	onDelete,
-}: {
-	note: DayNote;
-	onSave: (note: DayNote, body: string) => void;
-	onDelete: (note: DayNote) => void;
-}) {
-	const { t } = useTranslation("history");
-	const [body, setBody] = useState(note.body);
+function NoteCard({ note }: { note: DayNote }) {
+	const { t } = useTranslation("notes");
 
+	// Editing happens on the note's own screen, so a day stays a day's worth of
+	// reading rather than a page of open editors.
 	return (
-		<Card style={styles.card}>
-			<MarkdownField
-				label={t("day.note")}
-				showLabel={false}
-				accessibilityLabel={t("day.noteA11y", { id: note.id })}
-				defaultValue={note.body}
-				onChangeMarkdown={setBody}
-			/>
-			<View style={styles.actions}>
-				<Button
-					label={t("day.saveNote")}
-					variant="text"
-					onPress={() => onSave(note, body)}
-				/>
-				<Button
-					label={t("day.deleteNote")}
-					variant="text"
-					tone="danger"
-					onPress={() => onDelete(note)}
-				/>
-			</View>
-		</Card>
+		<TouchableOpacity
+			accessibilityRole="button"
+			accessibilityLabel={t("actions.open")}
+			onPress={() => router.push(`/notes/${note.id}` as Href)}
+		>
+			<Card>
+				<MarkdownText markdown={note.body} />
+			</Card>
+		</TouchableOpacity>
 	);
 }
 
@@ -220,10 +195,9 @@ export function HistoryDayScreen({ localDay, store }: HistoryDayScreenProps) {
 		loading,
 		setData: setDay,
 		setError,
-	} = useStoreLoad(
+	} = useFocusStoreLoad(
 		useCallback(() => history.loadDay(localDay), [history, localDay]),
 	);
-	const keyboardInset = useKeyboardInset();
 
 	async function mutate(work: () => Promise<HistoryDay>) {
 		setError(null);
@@ -381,22 +355,10 @@ export function HistoryDayScreen({ localDay, store }: HistoryDayScreenProps) {
 						<SectionHeader title={t("day.notes")} />
 					) : null}
 					{day.notes.map((note) => (
-						<NoteEditor
-							key={note.id}
-							note={note}
-							onSave={(entry, body) =>
-								void mutate(() => history.updateNote(entry, body))
-							}
-							onDelete={(entry) => void mutate(() => history.deleteNote(entry))}
-						/>
+						<NoteCard key={note.id} note={note} />
 					))}
 				</>
 			) : null}
-
-			{/* Room to scroll an editor clear of the keyboard. Android leaves the
-			    window unresized under edge-to-edge, so without this the note being
-			    typed into can sit behind the keys. */}
-			<View style={{ height: keyboardInset }} />
 		</Screen>
 	);
 }

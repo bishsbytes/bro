@@ -8,7 +8,10 @@ export const notes = {
 		add: "Add note",
 		viewAll: "View all",
 		showOlder: "Show older notes",
-		editA11y: "Edit notes for {{day}}",
+		/** On a note's own card, where the day it belongs to is already on screen. */
+		open: "Open note",
+		/** In a list that spans days, where the day tells two notes apart. */
+		openA11y: "Open note from {{day}}",
 	},
 	journal: {
 		title: "Notes",
@@ -24,5 +27,18 @@ export const notes = {
 		discard: "Discard",
 		discardPrompt: "Discard this note?",
 		keepWriting: "Keep writing",
+	},
+	edit: {
+		field: "Note",
+		prompt: "What's on your mind?",
+		save: "Save note",
+		emptyBody: "A note cannot be left empty.",
+		delete: "Delete note",
+		deletePrompt: "Delete this note?",
+		keepNote: "Keep note",
+		/** The note was deleted before this screen could open it. */
+		missing: "This note is no longer here",
+		missingBody: "It has been deleted.",
+		loadFailed: "This note could not be opened",
 	},
 } as const;

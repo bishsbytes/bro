@@ -3,6 +3,16 @@ import { render } from "@testing-library/react-native";
 import type { HistoryDay } from "./history/history-store";
 import { HistoryDayScreen } from "./screens/history/history-day-screen";
 
+// The screen re-reads its day on focus, which needs a navigator this test has
+// no use for otherwise.
+jest.mock("expo-router", () => ({
+	router: { push: jest.fn() },
+	useFocusEffect: (effect: () => undefined | (() => void)) => {
+		const React = jest.requireActual<typeof import("react")>("react");
+		React.useEffect(effect, [effect]);
+	},
+}));
+
 function userWeight(): Observation {
 	return {
 		id: "manual-weight",
@@ -65,8 +75,6 @@ describe("history measurement provenance", () => {
 			updateCheckIn: jest.fn(),
 			deleteCheckIn: jest.fn(),
 			deleteObservation: jest.fn(),
-			updateNote: jest.fn(),
-			deleteNote: jest.fn(),
 		};
 		const view = await render(
 			<HistoryDayScreen localDay="2026-08-16" store={store} />,

@@ -16,6 +16,7 @@ import { useCallback, useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { Text, TouchableOpacity, View } from "react-native";
 import { SystemBars } from "react-native-edge-to-edge";
+import { KeyboardProvider } from "react-native-keyboard-controller";
 import { LoadingIndicator } from "../components/loading-indicator";
 import { HealthImportEffects } from "../health/health-import-effects";
 // Initialises i18next before anything renders. Screens read copy through
@@ -193,20 +194,24 @@ export default function RootLayout() {
 	}, [start]);
 
 	return (
-		<View style={styles.container}>
-			<SystemBars style={rt.themeName === "dark" ? "light" : "dark"} />
-			{startup.kind === "loading" || (!fontsLoaded && !fontError) ? (
-				<Loading />
-			) : null}
-			{startup.kind === "error" ? (
-				<StorageError error={startup.error} onRetry={retry} />
-			) : null}
-			{startup.kind === "ready" && (fontsLoaded || fontError) ? (
-				<DeviceSettingsProvider initialSettings={startup.settings}>
-					<AppProviders />
-				</DeviceSettingsProvider>
-			) : null}
-		</View>
+		// Both bars are translucent under edge-to-edge and react-native-safe-area-context
+		// owns the insets, so the provider is told not to inset the root itself.
+		<KeyboardProvider statusBarTranslucent navigationBarTranslucent>
+			<View style={styles.container}>
+				<SystemBars style={rt.themeName === "dark" ? "light" : "dark"} />
+				{startup.kind === "loading" || (!fontsLoaded && !fontError) ? (
+					<Loading />
+				) : null}
+				{startup.kind === "error" ? (
+					<StorageError error={startup.error} onRetry={retry} />
+				) : null}
+				{startup.kind === "ready" && (fontsLoaded || fontError) ? (
+					<DeviceSettingsProvider initialSettings={startup.settings}>
+						<AppProviders />
+					</DeviceSettingsProvider>
+				) : null}
+			</View>
+		</KeyboardProvider>
 	);
 }
 

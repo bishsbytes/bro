@@ -40,10 +40,6 @@ export const history = {
 		moodSource: "Mood source: {{source}}",
 		saveCheckIn: "Save changes",
 		deleteCheckIn: "Delete check-in",
-		note: "Note",
 		/** {{id}} disambiguates rows for screen readers; it is not shown. */
-		noteA11y: "Note {{id}}",
-		saveNote: "Save note",
-		deleteNote: "Delete note",
 	},
 } as const;

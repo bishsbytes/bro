@@ -31,6 +31,11 @@ export class NotesStore {
 		return await this.notes.listRecentDays(dayLimit);
 	}
 
+	/** One note, or null once it has been deleted. */
+	async loadNote(id: string): Promise<DayNote | null> {
+		return await this.notes.findById(id);
+	}
+
 	/**
 	 * Writes a note for the day, or returns null for a body that is blank once
 	 * trimmed — there is nothing to keep, and callers show that back rather than
@@ -43,6 +48,22 @@ export class NotesStore {
 		const trimmed = body.trim();
 		if (trimmed.length === 0) return null;
 		return await this.notes.create(localDay, trimmed);
+	}
+
+	/**
+	 * Rewrites a note's body, or returns null for a body blank once trimmed.
+	 *
+	 * Emptying a note is not how it is deleted: the editor keeps what is stored
+	 * and says so, rather than quietly leaving a card with nothing on it.
+	 */
+	async updateNote(id: string, body: string): Promise<DayNote | null> {
+		const trimmed = body.trim();
+		if (trimmed.length === 0) return null;
+		return await this.notes.update(id, trimmed);
+	}
+
+	async deleteNote(id: string): Promise<boolean> {
+		return await this.notes.delete(id);
 	}
 }
 

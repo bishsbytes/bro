@@ -89,8 +89,8 @@ export function NotesScreen({
 							<TouchableOpacity
 								key={note.id}
 								accessibilityRole="button"
-								accessibilityLabel={t("actions.editA11y", { day: dayLabel })}
-								onPress={() => router.push(`/history/${localDay}` as Href)}
+								accessibilityLabel={t("actions.openA11y", { day: dayLabel })}
+								onPress={() => router.push(`/notes/${note.id}` as Href)}
 							>
 								<Card>
 									<MarkdownText markdown={note.body} />

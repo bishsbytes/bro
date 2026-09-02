@@ -619,16 +619,6 @@ export class HistoryStore {
 		await this.observations.delete(observation.id);
 		return await this.loadDay(observation.localDay);
 	}
-
-	async updateNote(note: DayNote, body: string): Promise<HistoryDay> {
-		await this.notes.update(note.id, body);
-		return await this.loadDay(note.localDay);
-	}
-
-	async deleteNote(note: DayNote): Promise<HistoryDay> {
-		await this.notes.delete(note.id);
-		return await this.loadDay(note.localDay);
-	}
 }
 
 export function createHistoryStore(): HistoryStore {
