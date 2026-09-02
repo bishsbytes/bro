@@ -54,6 +54,7 @@ describe("body store", () => {
 			"weight",
 			"waist",
 			"body_fat",
+			"resting_heart_rate",
 			"neck",
 			"chest",
 			"bicep",
@@ -65,7 +66,12 @@ describe("body store", () => {
 			{ metricSlug: "waist", tracked: false, displayUnit: "cm" },
 			{ metricSlug: "body_fat", tracked: false, displayUnit: "%" },
 		]);
-		expect(fresh.metrics.slice(3, 8)).toMatchObject([
+		expect(fresh.metrics.slice(3, 9)).toMatchObject([
+			{
+				metricSlug: "resting_heart_rate",
+				tracked: false,
+				displayUnit: null,
+			},
 			{ metricSlug: "neck", tracked: false, displayUnit: "cm" },
 			{ metricSlug: "chest", tracked: false, displayUnit: "cm" },
 			{ metricSlug: "bicep", tracked: false, displayUnit: "cm" },
@@ -84,21 +90,27 @@ describe("body store", () => {
 		expect(overlays[0]?.enabled).toBe(true);
 	});
 
-	it("keeps imported-only metrics hidden when there is no imported data", async () => {
-		await new databaseApp.TrackedMetricsRepository(db).configure(
-			"resting_heart_rate",
-			5,
-			true,
-		);
+	it("offers resting heart rate for manual tracking before an import exists", async () => {
 		const store = new BodyStore(db);
 
-		expect(await store.loadMetric("resting_heart_rate")).toBeNull();
+		expect(await store.loadMetric("resting_heart_rate")).toMatchObject({
+			metricSlug: "resting_heart_rate",
+			tracked: false,
+			visible: false,
+			editablePresentation: {
+				dimension: "rate_bpm",
+				displayUnit: "bpm",
+			},
+		});
+		await store.setTracked("resting_heart_rate", true);
 		expect(
-			(await store.loadOverview()).metrics.map(({ metricSlug }) => metricSlug),
-		).not.toContain("resting_heart_rate");
+			(await store.recordMeasurement("resting_heart_rate", 58)).metrics.find(
+				({ metricSlug }) => metricSlug === "resting_heart_rate",
+			),
+		).toMatchObject({ latestFormatted: "58 bpm", latest: { source: "user" } });
 	});
 
-	it("merges imported body values, exposes resting heart rate read-only, and resolves goals", async () => {
+	it("merges imported body values, keeps manual entries intentional, and resolves goals", async () => {
 		let now = new Date("2026-08-16T12:00:00.000Z");
 		const observations = new databaseApp.ObservationRepository(db);
 		const daily = new databaseApp.DailyMetricRepository(db);
@@ -151,8 +163,8 @@ describe("body store", () => {
 			tracked: false,
 			visible: true,
 			hasImportedData: true,
-			latestFormatted: "79.0 kg",
-			latest: { source: "health_connect", value: 79 },
+			latestFormatted: "80.0 kg",
+			latest: { source: "user", value: 80 },
 		});
 		expect(
 			overview.metrics.find(
@@ -160,7 +172,7 @@ describe("body store", () => {
 			),
 		).toMatchObject({
 			metricSlug: "resting_heart_rate",
-			userEnterable: false,
+			userEnterable: true,
 			visible: true,
 			latestFormatted: "62 bpm",
 		});
@@ -170,12 +182,12 @@ describe("body store", () => {
 		expect(weight?.history).toEqual(
 			expect.arrayContaining([
 				expect.objectContaining({
-					selected: true,
+					selected: false,
 					editable: false,
 					observation: expect.objectContaining({ source: "health_connect" }),
 				}),
 				expect.objectContaining({
-					selected: false,
+					selected: true,
 					editable: true,
 					observation: expect.objectContaining({
 						id: manual.id,
@@ -186,7 +198,7 @@ describe("body store", () => {
 		);
 		expect(
 			(await store.loadMetric("resting_heart_rate"))?.editablePresentation,
-		).toBeNull();
+		).toMatchObject({ dimension: "rate_bpm", displayUnit: "bpm" });
 
 		const goal = await store.createGoal("weight", 70, null);
 		expect(goal).toMatchObject({ direction: "decrease" });
@@ -198,10 +210,38 @@ describe("body store", () => {
 			source: "health_connect",
 		});
 		expect((await store.loadMetric("weight"))?.goals[0]).toMatchObject({
-			startValue: 79,
+			startValue: 80,
 			currentValue: 77,
-			progressPercent: 22,
+			progressPercent: 30,
 		});
+	});
+
+	it("records a partial measuring session at one shared capture time", async () => {
+		const now = new Date("2026-08-14T12:00:00.000Z");
+		const store = new BodyStore(
+			db,
+			() => now,
+			() => "en-GB",
+		);
+		await store.setTracked("weight", true);
+		await store.setTracked("waist", true);
+
+		await store.recordMeasurements([
+			{ metricSlug: "weight", canonicalValue: 78.5 },
+			{ metricSlug: "waist", canonicalValue: 0.86 },
+		]);
+
+		const rows = await new databaseApp.ObservationRepository(db).listByDay(
+			"2026-08-14",
+		);
+		expect(rows).toHaveLength(2);
+		expect(rows.map(({ metricSlug }) => metricSlug).sort()).toEqual([
+			"waist",
+			"weight",
+		]);
+		expect(new Set(rows.map(({ observedAt }) => observedAt))).toEqual(
+			new Set([now.getTime()]),
+		);
 	});
 
 	it("derives decreasing goal progress from canonical history across unit changes", async () => {

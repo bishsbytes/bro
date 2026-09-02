@@ -9,7 +9,6 @@ import {
 	UnitPreferenceRepository,
 } from "@bro/database-app";
 import {
-	formatMeasurement,
 	isCalendarDay,
 	localDayOf,
 	resolveUnitPreference,
@@ -27,6 +26,7 @@ import {
 } from "@bro/domain/metric-registry";
 import {
 	coveredTagSlugs,
+	formatMetricValue,
 	type MeasurementPresentation,
 	toMeasurementPresentation,
 } from "@bro/logic";
@@ -268,13 +268,16 @@ export class CheckInStore {
 				return [];
 			}
 			const metric = resolved.metric;
-			const preferenceDimension =
-				metric.unitPreferenceDimension ?? metric.dimension;
-			const displayUnit = resolveUnitPreference(
-				preferenceDimension,
-				preferenceByDimension.get(preferenceDimension),
-				inputLocale,
-			);
+			const displayUnit = (() => {
+				if (metric.dimension === "rate_bpm") return null;
+				const preferenceDimension =
+					metric.unitPreferenceDimension ?? metric.dimension;
+				return resolveUnitPreference(
+					preferenceDimension,
+					preferenceByDimension.get(preferenceDimension),
+					inputLocale,
+				);
+			})();
 			return [
 				{
 					measurement: toMeasurementPresentation(
@@ -298,13 +301,26 @@ export class CheckInStore {
 							{
 								...measurement,
 								observation,
-								formattedValue: formatMeasurement(
-									observation.value,
-									measurement.dimension,
-									measurement.displayUnit,
-									inputLocale,
-									unitWords(),
-								),
+								formattedValue: (() => {
+									const resolved = resolveMetric(measurement.metricSlug);
+									if (
+										resolved.kind !== "known" ||
+										resolved.metric.kind !== "measurement"
+									) {
+										throw new TypeError(
+											`Unknown measurement: ${measurement.metricSlug}`,
+										);
+									}
+									return formatMetricValue(
+										resolved.metric,
+										observation.value,
+										measurement.dimension === "rate_bpm"
+											? null
+											: measurement.displayUnit,
+										inputLocale,
+										unitWords(),
+									);
+								})(),
 							},
 						]
 					: [];

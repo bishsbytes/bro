@@ -15,11 +15,11 @@ type BaselineGaugeProps = {
 	unit?: string | null;
 	/** The 56px size is one per screen, so the caller decides who gets it. */
 	valueVariant?: "metric" | "score";
-	rail: GaugeRange;
-	railLabels: { min: string; max: string };
+	rail?: GaugeRange | null;
+	railLabels?: { min: string; max: string } | null;
 	/** The user's own usual range. Absent until there are enough readings. */
 	band?: GaugeRange | null;
-	current: number;
+	current?: number | null;
 	previous?: number | null;
 	/** One line of plain language stating what the marks say. */
 	read?: string | null;
@@ -61,15 +61,13 @@ export function BaselineGauge({
 }: BaselineGaugeProps) {
 	const { theme } = useUnistyles();
 	const dataColor = theme.colors[domain];
-	const bandStart = band ? position(band.min, rail) : 0;
-	const bandEnd = band ? position(band.max, rail) : 0;
+	const hasRail =
+		rail && railLabels && current !== null && current !== undefined;
+	const bandStart = band && rail ? position(band.min, rail) : 0;
+	const bandEnd = band && rail ? position(band.max, rail) : 0;
 
-	return (
-		<View
-			accessible
-			accessibilityLabel={accessibilityLabel}
-			style={styles.root}
-		>
+	const content = (
+		<>
 			<View style={styles.heading}>
 				<AppText variant="caption" color="muted" style={styles.label}>
 					{label}
@@ -88,64 +86,89 @@ export function BaselineGauge({
 					</AppText>
 				) : null}
 			</AppText>
-			<View style={styles.rail}>
-				{Array.from({ length: TICK_COUNT }, (_unused, index) => (
-					<View
-						key={`tick-${(index / (TICK_COUNT - 1)) * 100}`}
-						style={[
-							styles.tick,
-							{ left: `${(index / (TICK_COUNT - 1)) * 100}%` },
-						]}
-					/>
-				))}
-				{band ? (
-					<View
-						testID="gauge-band"
-						style={[
-							styles.band,
-							{
-								left: `${bandStart}%`,
-								width: `${Math.max(bandEnd - bandStart, 0)}%`,
-								backgroundColor: dataColor,
-								borderColor: dataColor,
-							},
-						]}
-					/>
-				) : null}
-				{previous === null || previous === undefined ? null : (
-					<View
-						testID="gauge-previous"
-						style={[styles.previous, { left: `${position(previous, rail)}%` }]}
-					>
-						{Array.from({ length: PREVIOUS_DASHES }, (_unused, index) => (
+			{hasRail ? (
+				<>
+					<View style={styles.rail}>
+						{Array.from({ length: TICK_COUNT }, (_unused, index) => (
 							<View
-								key={`dash-${index * 2}`}
-								style={[styles.previousDash, { backgroundColor: dataColor }]}
+								key={`tick-${(index / (TICK_COUNT - 1)) * 100}`}
+								style={[
+									styles.tick,
+									{ left: `${(index / (TICK_COUNT - 1)) * 100}%` },
+								]}
 							/>
 						))}
+						{band ? (
+							<View
+								testID="gauge-band"
+								style={[
+									styles.band,
+									{
+										left: `${bandStart}%`,
+										width: `${Math.max(bandEnd - bandStart, 0)}%`,
+										backgroundColor: dataColor,
+										borderColor: dataColor,
+									},
+								]}
+							/>
+						) : null}
+						{previous === null || previous === undefined ? null : (
+							<View
+								testID="gauge-previous"
+								style={[
+									styles.previous,
+									{ left: `${position(previous, rail)}%` },
+								]}
+							>
+								{Array.from({ length: PREVIOUS_DASHES }, (_unused, index) => (
+									<View
+										key={`dash-${index * 2}`}
+										style={[
+											styles.previousDash,
+											{ backgroundColor: dataColor },
+										]}
+									/>
+								))}
+							</View>
+						)}
+						<View
+							testID="gauge-marker"
+							style={[styles.marker, { left: `${position(current, rail)}%` }]}
+						>
+							<View
+								style={[styles.markerCap, { backgroundColor: dataColor }]}
+							/>
+							<View
+								style={[styles.markerStem, { backgroundColor: dataColor }]}
+							/>
+						</View>
 					</View>
-				)}
-				<View
-					testID="gauge-marker"
-					style={[styles.marker, { left: `${position(current, rail)}%` }]}
-				>
-					<View style={[styles.markerCap, { backgroundColor: dataColor }]} />
-					<View style={[styles.markerStem, { backgroundColor: dataColor }]} />
-				</View>
-			</View>
-			<View style={styles.scale}>
-				<AppText variant="micro" color="subtle">
-					{railLabels.min}
-				</AppText>
-				<AppText variant="micro" color="subtle">
-					{railLabels.max}
-				</AppText>
-			</View>
+					<View style={styles.scale}>
+						<AppText variant="micro" color="subtle">
+							{railLabels.min}
+						</AppText>
+						<AppText variant="micro" color="subtle">
+							{railLabels.max}
+						</AppText>
+					</View>
+				</>
+			) : null}
 			{read ? (
 				<AppText variant="caption" color="muted">
 					{read}
 				</AppText>
 			) : null}
+		</>
+	);
+
+	return (
+		<View
+			testID="baseline-gauge"
+			accessible
+			accessibilityLabel={accessibilityLabel}
+			style={styles.root}
+		>
+			{content}
 		</View>
 	);
 }

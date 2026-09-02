@@ -56,6 +56,19 @@ describe("MeasurementField", () => {
 		expect(onChangeEntry).toHaveBeenCalledWith({ major: "85", minor: "" });
 	});
 
+	it("labels an intrinsic heart-rate field in bpm", async () => {
+		const view = await render(
+			<MeasurementField
+				label="Resting heart rate"
+				unit="bpm"
+				entry={{ major: "58", minor: "" }}
+				onChangeEntry={jest.fn()}
+			/>,
+		);
+
+		expect(view.getByLabelText("Resting heart rate (bpm)")).toBeTruthy();
+	});
+
 	it("names each part for a screen reader when given a base label", async () => {
 		const view = await render(
 			<MeasurementField

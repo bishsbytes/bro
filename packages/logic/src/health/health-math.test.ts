@@ -299,7 +299,7 @@ describe("health import policy and pure math", () => {
 		expect(replayed.rollups).toEqual(first.rollups);
 	});
 
-	it("selects imported objective data while retaining both provenances", () => {
+	it("keeps a deliberate manual value while retaining imported provenance", () => {
 		const user = observation(80);
 		const olderImport = dailyMetric(81, 200);
 		const latestImport = dailyMetric(79, 300);
@@ -310,10 +310,10 @@ describe("health import policy and pure math", () => {
 			[latestImport, olderImport],
 		);
 
-		expect(resolved.value).toBe(79);
+		expect(resolved.value).toBe(80);
 		expect(resolved.selected).toEqual({
-			kind: "imported",
-			row: latestImport,
+			kind: "user",
+			rows: [user],
 		});
 		expect(resolved.userRows).toEqual([user]);
 		expect(resolved.importedRows).toEqual([olderImport, latestImport]);

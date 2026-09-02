@@ -87,6 +87,28 @@ export function resolveMetricDay(
 		.filter((row) => row.metricSlug === metricSlug && row.localDay === localDay)
 		.sort(compareImports);
 	const imported = importedRows.at(-1);
+	// A deliberate manual reading wins for its day. Imports remain attached as
+	// provenance, but a later sync must not make the person's correction appear
+	// to have been ignored.
+	if (userRows.length > 0) {
+		let value: number;
+		if (resolved.metric.aggregation === "last") {
+			value = userRows.at(-1)?.value ?? 0;
+		} else {
+			const total = userRows.reduce((sum, row) => sum + row.value, 0);
+			value =
+				resolved.metric.aggregation === "sum" ? total : total / userRows.length;
+		}
+		return {
+			metricSlug,
+			localDay,
+			value,
+			selected: { kind: "user", rows: userRows },
+			userRows,
+			importedRows,
+			consumptionEntries: [],
+		};
+	}
 	if (imported) {
 		return {
 			metricSlug,
@@ -98,31 +120,11 @@ export function resolveMetricDay(
 			consumptionEntries: [],
 		};
 	}
-	if (userRows.length === 0) {
-		return {
-			metricSlug,
-			localDay,
-			value: null,
-			selected: null,
-			userRows,
-			importedRows,
-			consumptionEntries: [],
-		};
-	}
-
-	let value: number;
-	if (resolved.metric.aggregation === "last") {
-		value = userRows.at(-1)?.value ?? 0;
-	} else {
-		const total = userRows.reduce((sum, row) => sum + row.value, 0);
-		value =
-			resolved.metric.aggregation === "sum" ? total : total / userRows.length;
-	}
 	return {
 		metricSlug,
 		localDay,
-		value,
-		selected: { kind: "user", rows: userRows },
+		value: null,
+		selected: null,
 		userRows,
 		importedRows,
 		consumptionEntries: [],

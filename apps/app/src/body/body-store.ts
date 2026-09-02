@@ -10,7 +10,9 @@ import {
 } from "@bro/database-app";
 import { type DisplayUnit, localDayOf, systemLocale } from "@bro/domain";
 import {
+	type BodyMetricGroup,
 	listUserEnterableMeasurements,
+	type ManualMeasurementCapture,
 	type MeasurementMetricDefinition,
 	type MeasurementSlug,
 	type UserEnterableMeasurementMetricDefinition,
@@ -46,6 +48,9 @@ export type BodyMetricPresentation = {
 	label: string;
 	dimension: MeasurementMetricDefinition["dimension"];
 	displayUnit: DisplayUnit | null;
+	bodyGroup: BodyMetricGroup;
+	manualCapture: ManualMeasurementCapture;
+	healthImport: boolean;
 };
 
 export type BodyGoalProgress = ResolvedGoalProgress;
@@ -98,6 +103,11 @@ export type BodyMetricSummary = BodyMetricPresentation & {
 export type BodyOverview = {
 	metrics: BodyMetricSummary[];
 	inputLocale: string | undefined;
+};
+
+export type BodyMeasurementDraft = {
+	metricSlug: string;
+	canonicalValue: number;
 };
 
 export type BodyHistoryEntry = {
@@ -256,7 +266,7 @@ export class BodyStore {
 	private readonly unitPreferences: UnitPreferenceRepository;
 
 	constructor(
-		db: SQLiteDatabase,
+		private readonly db: SQLiteDatabase,
 		private readonly now: () => Date = () => new Date(),
 		private readonly locale: () => string | undefined = systemLocale,
 	) {
@@ -351,27 +361,56 @@ export class BodyStore {
 		metricSlug: string,
 		canonicalValue: number,
 	): Promise<BodyOverview> {
-		const metric = resolveMeasurement(metricSlug);
-		assertCanonicalValue(metric, canonicalValue);
+		return await this.recordMeasurements([{ metricSlug, canonicalValue }]);
+	}
+
+	/** Saves every non-blank field from one measuring session atomically. */
+	async recordMeasurements(
+		drafts: readonly BodyMeasurementDraft[],
+	): Promise<BodyOverview> {
+		if (drafts.length === 0) return await this.loadOverview();
+		const seen = new Set<string>();
+		const resolved = drafts.map((draft) => {
+			if (seen.has(draft.metricSlug)) {
+				throw new TypeError(
+					`Measurement repeated in session: ${draft.metricSlug}`,
+				);
+			}
+			seen.add(draft.metricSlug);
+			const metric = resolveMeasurement(draft.metricSlug);
+			assertCanonicalValue(metric, draft.canonicalValue);
+			return { ...draft, metric };
+		});
 		const overlays = await this.trackedMetrics.listResolved(
 			measurementDefaults(),
 		);
-		const tracked = overlays.find((row) => row.metricSlug === metric.slug);
-		if (!tracked?.enabled) {
-			throw new TypeError(`Measurement is not tracked: ${metric.slug}`);
+		const enabled = new Set(
+			overlays.filter((row) => row.enabled).map((row) => row.metricSlug),
+		);
+		for (const { metric } of resolved) {
+			if (!enabled.has(metric.slug)) {
+				throw new TypeError(`Measurement is not tracked: ${metric.slug}`);
+			}
 		}
 		const capturedAt = this.now();
-		await this.observations.create({
-			metricSlug: metric.slug,
-			value: canonicalValue,
-			scaleMin: null,
-			scaleMax: null,
-			observedAt: capturedAt.getTime(),
-			localDay: localDayOf(capturedAt),
-			tzOffsetMinutes: capturedAt.getTimezoneOffset(),
-			source: "user",
-			sourceRecordId: null,
-			assessmentId: null,
+		const observedAt = capturedAt.getTime();
+		const localDay = localDayOf(capturedAt);
+		const tzOffsetMinutes = capturedAt.getTimezoneOffset();
+		await this.db.withTransactionAsync(async () => {
+			for (const { metric, canonicalValue } of resolved) {
+				await this.observations.create({
+					metricSlug: metric.slug,
+					value: canonicalValue,
+					scaleMin: null,
+					scaleMax: null,
+					observedAt,
+					localDay,
+					tzOffsetMinutes,
+					source: "user",
+					sourceRecordId: null,
+					assessmentId: null,
+				});
+			}
 		});
 		return await this.loadOverview();
 	}
@@ -480,16 +519,7 @@ export class BodyStore {
 		);
 		const throughLocalDay = localDayOf(this.now());
 
-		const importedSlugs = new Set(dailyMetrics.map((row) => row.metricSlug));
-		const restingHeartRate = resolveMetric("resting_heart_rate");
-		const metrics: MeasurementMetricDefinition[] = [
-			...listUserEnterableMeasurements(),
-			...(restingHeartRate.kind === "known" &&
-			restingHeartRate.metric.kind === "measurement" &&
-			importedSlugs.has(restingHeartRate.metric.slug)
-				? [restingHeartRate.metric]
-				: []),
-		];
+		const metrics = listUserEnterableMeasurements();
 
 		return metrics
 			.map((metric) => {
@@ -504,7 +534,7 @@ export class BodyStore {
 							metric.slug,
 							overlay?.customLabel ?? metric.label,
 							metric.dimension,
-							displayUnit as DisplayUnit,
+							displayUnit,
 						)
 					: null;
 				const presentation: BodyMetricPresentation = {
@@ -512,6 +542,9 @@ export class BodyStore {
 					label: overlay?.customLabel ?? metric.label,
 					dimension: metric.dimension,
 					displayUnit,
+					bodyGroup: metric.bodyGroup,
+					manualCapture: metric.manualCapture,
+					healthImport: metric.healthImport,
 				};
 				const metricRows = observations.filter(
 					(row) => row.metricSlug === metric.slug,

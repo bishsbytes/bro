@@ -116,7 +116,7 @@ describe("trends store", () => {
 		).toEqual(["mood", "energy", "motivation", "productivity", "libido"]);
 	});
 
-	it("adds imported metrics and resolves tracker values over manual values", async () => {
+	it("adds imported metrics while manual values take precedence", async () => {
 		const now = new Date("2026-08-14T22:00:00.000Z");
 		const daily = new databaseApp.DailyMetricRepository(db);
 		const observations = new databaseApp.ObservationRepository(db);
@@ -170,12 +170,12 @@ describe("trends store", () => {
 		]);
 		expect(
 			snapshot.metrics.find(({ metric }) => metric.slug === "weight"),
-		).toMatchObject({ latestFormatted: "79.0 kg" });
+		).toMatchObject({ latestFormatted: "80.0 kg" });
 		expect(
 			snapshot.metrics
 				.find(({ metric }) => metric.slug === "weight")
 				?.series.points.at(-1)?.value,
-		).toBe(79);
+		).toBe(80);
 		expect(
 			snapshot.metrics.find(({ metric }) => metric.slug === "sleep_duration"),
 		).toMatchObject({ latestFormatted: "7 h 0 m" });

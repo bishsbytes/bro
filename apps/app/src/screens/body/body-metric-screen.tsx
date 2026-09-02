@@ -29,6 +29,7 @@ import {
 	parseMeasurementInput,
 } from "../../measurements/measurement-entry";
 import { StyleSheet } from "../../theme/unistyles";
+import { BodyBaselineGauge } from "./body-baseline-gauge";
 
 type BodyMetricScreenProps = {
 	metricSlug: string;
@@ -259,26 +260,16 @@ export function BodyMetricScreen({ metricSlug, store }: BodyMetricScreenProps) {
 	return (
 		<Screen scroll padded gap="lg" keyboardShouldPersistTaps="handled">
 			<Card style={styles.summaryCard}>
-				<SectionHeader title={detail.label} eyebrow={t("latestEyebrow")} />
-				<AppText variant="metric">
-					{detail.latestFormatted ?? t("common:emDash")}
-				</AppText>
-				<AppText color="muted">
-					{detail.latest
-						? detail.hasImportedData
-							? t("latestWithSource", {
-									when: dateTimeLabel(detail.latest),
-									source: sourceLabel(t, detail.latest.source),
-								})
-							: dateTimeLabel(detail.latest)
-						: detail.userEnterable
-							? t("noneLoggedPrompt")
-							: t("noneImported")}
-				</AppText>
-				{detail.series.observedDayCount > 0 ? (
-					<TrendChart series={detail.series} />
-				) : null}
+				<BodyBaselineGauge
+					metric={detail}
+					locale={detail.inputLocale}
+					valueVariant="metric"
+				/>
 			</Card>
+
+			{detail.series.observedDayCount > 0 ? (
+				<TrendChart series={detail.series} />
+			) : null}
 
 			{error ? <AppText color="danger">{error}</AppText> : null}
 

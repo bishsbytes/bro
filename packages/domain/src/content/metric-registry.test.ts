@@ -205,10 +205,10 @@ describe("metric registry", () => {
 				kind: "measurement",
 				scaleMin: null,
 				scaleMax: null,
-				aggregation: "last",
 				userEnterable: true,
 				sensitive: true,
 			});
+			expect(["last", "mean"]).toContain(metric.aggregation);
 		}
 		expect(listImportedOnlyMeasurements()).toEqual([
 			expect.objectContaining({
@@ -221,12 +221,34 @@ describe("metric registry", () => {
 				userEnterable: false,
 				sensitive: false,
 			}),
-			expect.objectContaining({
-				slug: "resting_heart_rate",
-				userEnterable: false,
-				sensitive: true,
-			}),
 		]);
+		expect(resolveMetric("resting_heart_rate")).toMatchObject({
+			kind: "known",
+			metric: {
+				userEnterable: true,
+				dimension: "rate_bpm",
+				aggregation: "mean",
+				bodyGroup: "heart_fitness",
+				manualCapture: "standalone",
+				healthImport: true,
+			},
+		});
+		expect(resolveMetric("weight")).toMatchObject({
+			kind: "known",
+			metric: {
+				bodyGroup: "measurements",
+				manualCapture: "both",
+				healthImport: true,
+			},
+		});
+		expect(resolveMetric("waist")).toMatchObject({
+			kind: "known",
+			metric: {
+				bodyGroup: "measurements",
+				manualCapture: "measurement_session",
+				healthImport: false,
+			},
+		});
 		expect(listConsumptionDerivedMeasurements()).toEqual([
 			expect.objectContaining({
 				slug: "alcohol_intake",
@@ -344,7 +366,7 @@ describe("metric registry", () => {
 			{ metricSlug: "waist", position: 1, enabled: false },
 			{ metricSlug: "body_fat", position: 2, enabled: false },
 		]);
-		for (const imported of ["sleep_duration", "steps", "resting_heart_rate"]) {
+		for (const imported of ["sleep_duration", "steps"]) {
 			expect(
 				DEFAULT_TRACKED_METRICS.some(
 					({ metricSlug }) => metricSlug === imported,
@@ -358,6 +380,15 @@ describe("metric registry", () => {
 				listAssessmentMetrics().some(({ slug }) => slug === imported),
 			).toBe(false);
 		}
+		expect(
+			DEFAULT_TRACKED_METRICS.find(
+				({ metricSlug }) => metricSlug === "resting_heart_rate",
+			),
+		).toEqual({
+			metricSlug: "resting_heart_rate",
+			position: 5,
+			enabled: false,
+		});
 		for (const derived of listConsumptionDerivedMeasurements()) {
 			expect(
 				DEFAULT_TRACKED_METRICS.find(

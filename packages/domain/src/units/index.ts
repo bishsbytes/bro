@@ -70,4 +70,5 @@ export {
 	type ParsedMeasurement,
 	parseMeasurement,
 	parseMeasurementEntry,
+	parseRateMeasurement,
 } from "./parsing";

@@ -96,4 +96,18 @@ describe("BaselineGauge", () => {
 		expect(unitStyle?.fontSize).toBe(lightTheme.typography.caption.fontSize);
 		expect(unitStyle?.fontSize).not.toBe(lightTheme.typography.metric.fontSize);
 	});
+
+	it("supports a metric with no readings", async () => {
+		const view = await render(
+			<BaselineGauge
+				label="Body fat"
+				value="—"
+				read="Nothing logged yet"
+				accessibilityLabel="Body fat, —. Nothing logged yet"
+			/>,
+		);
+
+		expect(view.queryByTestId("gauge-marker")).toBeNull();
+		expect(view.getByLabelText("Body fat, —. Nothing logged yet")).toBeTruthy();
+	});
 });

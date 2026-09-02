@@ -22,11 +22,12 @@ const UNIT_PART_KEYS = {
 	in: "measurement.unitIn",
 	ft: "measurement.unitFt",
 	"%": "measurement.unitPercent",
-} as const satisfies Partial<Record<DisplayUnit, string>>;
+	bpm: "measurement.unitBpm",
+} as const satisfies Partial<Record<DisplayUnit | "bpm", string>>;
 
 type MeasurementFieldProps = {
 	label: string;
-	unit: DisplayUnit;
+	unit: DisplayUnit | "bpm";
 	entry: MeasurementEntry;
 	onChangeEntry: (entry: MeasurementEntry) => void;
 	/** Base for the spoken label; the unit name is appended to each part. */
@@ -53,7 +54,7 @@ export function MeasurementField({
 }: MeasurementFieldProps) {
 	const { t } = useTranslation("common");
 
-	if (!isCompoundDisplayUnit(unit)) {
+	if (unit === "bpm" || !isCompoundDisplayUnit(unit)) {
 		return (
 			<FormField
 				label={t("measurement.labelledUnit", { label, unit })}

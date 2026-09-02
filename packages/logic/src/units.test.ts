@@ -22,6 +22,7 @@ import {
 	measurementEntryOf,
 	parseMeasurement,
 	parseMeasurementEntry,
+	parseRateMeasurement,
 	resolveUnitPreference,
 	toCanonical,
 	UNIT_PREFERENCE_DIMENSIONS,
@@ -242,6 +243,21 @@ describe("measurement units", () => {
 		expect(canonicalValueOf(parseMeasurement("18.5%", "fraction", "%"))).toBe(
 			0.185,
 		);
+	});
+
+	it("parses a manually counted resting pulse in canonical bpm", () => {
+		expect(parseRateMeasurement("58 bpm")).toEqual({
+			ok: true,
+			canonicalValue: 58,
+		});
+		expect(parseRateMeasurement("58,5", "de-DE")).toEqual({
+			ok: true,
+			canonicalValue: 58.5,
+		});
+		expect(parseRateMeasurement("resting")).toEqual({
+			ok: false,
+			error: INVALID_MEASUREMENT_MESSAGE,
+		});
 	});
 
 	it.each([

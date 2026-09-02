@@ -160,6 +160,21 @@ export function parseMeasurement<D extends Dimension>(
 	return { ok: true, canonicalValue };
 }
 
+/** Parses a manually counted resting pulse; bpm is already the storage unit. */
+export function parseRateMeasurement(
+	input: string,
+	locale?: string,
+): ParsedMeasurement {
+	const match = new RegExp(
+		`^(${numberPattern(locale)})(?:\\s*bpm)?$`,
+		"i",
+	).exec(input.trim());
+	const value = match ? parseNumber(match[1] ?? "", locale) : null;
+	return value === null
+		? { ok: false, error: INVALID_MEASUREMENT_MESSAGE }
+		: { ok: true, canonicalValue: value };
+}
+
 /**
  * Parses the fields a measurement is typed into. Compound units are entered as
  * two whole numbers rather than as text, so the remainder is checked against

@@ -157,7 +157,7 @@ describe("daily insight signal", () => {
 		expect(readDailySignal("training", "2026-08-17", source)).toBeNull();
 		expect(
 			readDailySignal("sleep_duration", base.localDay, source)?.value,
-		).toBe(25_200);
+		).toBe(18_000);
 		expect(readDailySignal("mood", "2026-08-13", source)).toBeNull();
 	});
 });

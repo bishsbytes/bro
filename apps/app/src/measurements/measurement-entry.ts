@@ -3,6 +3,7 @@ import {
 	measurementEntryOf,
 	type ParsedMeasurement,
 	parseMeasurementEntry,
+	parseRateMeasurement,
 } from "@bro/domain";
 import type { MeasurementPresentation } from "@bro/logic";
 import { i18n } from "../i18n";
@@ -35,6 +36,9 @@ export function parseMeasurementInput(
 	presentation: MeasurementPresentation,
 	locale: string | undefined,
 ): ParsedMeasurementInput {
+	if (presentation.dimension === "rate_bpm") {
+		return localiseParseResult(parseRateMeasurement(entry.major, locale));
+	}
 	if (presentation.dimension === "mass") {
 		return localiseParseResult(
 			parseMeasurementEntry(
@@ -75,6 +79,9 @@ export function measurementInputOf(
 	presentation: MeasurementPresentation,
 	locale: string | undefined,
 ): MeasurementEntry {
+	if (presentation.dimension === "rate_bpm") {
+		return { major: String(canonicalValue), minor: "" };
+	}
 	if (presentation.dimension === "mass") {
 		return measurementEntryOf(
 			canonicalValue,

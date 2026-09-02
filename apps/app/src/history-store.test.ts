@@ -183,7 +183,7 @@ describe("history store", () => {
 		expect(day.unknown).toEqual([unknownWheel]);
 	});
 
-	it("retains manual and imported measurement provenance while selecting the import", () => {
+	it("retains manual and imported measurement provenance while selecting the manual reading", () => {
 		const manual = observation("manual-weight", "weight", 80);
 		const imported: DailyMetric = {
 			id: "imported-weight",
@@ -209,13 +209,13 @@ describe("history store", () => {
 				id: manual.id,
 				formattedValue: "80.0 kg",
 				source: "user",
-				selected: false,
+				selected: true,
 			}),
 			expect.objectContaining({
 				id: imported.id,
 				formattedValue: "79.0 kg",
 				source: "health_connect",
-				selected: true,
+				selected: false,
 			}),
 		]);
 	});

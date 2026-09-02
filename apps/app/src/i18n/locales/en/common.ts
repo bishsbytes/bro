@@ -70,6 +70,7 @@ export const common = {
 		unitIn: "inches",
 		unitFt: "feet",
 		unitPercent: "percent",
+		unitBpm: "beats per minute",
 	},
 	consumption: {
 		/** Context keeps room for languages whose generic serving word differs. */

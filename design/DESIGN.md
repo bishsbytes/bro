@@ -164,29 +164,53 @@ why, one secondary button. Never apologetic, never cute.
 **Alert callout:** 2px alert left border, alert-tint fill, factual sentence plus
 possible causes plus a route to a real person (GP). Max one per screen.
 
-**Measurements (tape sites):** the body-measurements screen is a stack of
-baseline gauges and a change list, never a radar. Do not build a radar, polygon,
-or spider chart from body measurements — different units on shared spokes
-manufacture a score, which is judgement UI.
+**Body:** organise review by what a signal means, capture by how it is taken,
+and treat manual/connected sources as provenance rather than navigation. The
+overview uses compact baseline-change rows rather than promoting weight as the
+definition of the body domain: Measurements contains weight, body fat, and tape
+sites; Heart & fitness contains resting heart rate. Each group presents its rows
+inside one surface card. Tapping any row opens that metric's detail screen. The
+detail screen uses the full baseline gauge inside its hero card, with the one
+permitted 56px value.
+
+- One contextual "Log body" action offers standalone weight, a measurement
+  session, and standalone resting heart rate when each is tracked. Do not put
+  entry fields or a separate log button beside every overview metric.
+- A measurement session holds all tracked tape sites and body fat, with weight
+  available when tracked. Every field is optional and one save writes whichever
+  readings were taken at a shared capture time. Weight also remains available
+  on its own because its cadence commonly differs.
+- Manual and connected readings share one history. Always show source as
+  secondary metadata. A deliberate manual reading supplies that day's value
+  when an import for the same metric and day also exists; retain both readings
+  and their provenance.
+- Resting heart rate, not generic instantaneous heart rate, is the current
+  fitness signal. It supports both manual entry in bpm and health-platform
+  imports.
+- A future progress photo may attach to a measurement session. It remains the
+  user's record: never analyse it into a body score, reshape a figure from it,
+  or use it as judgement UI.
+
+**Measurements (tape sites):** tape sites join the compact baseline-change list,
+never a selected-site hero, radar, polygon, or spider chart. Different units on
+shared spokes manufacture a score, which is judgement UI.
 
 - The measurements screen draws no body. A figure on the screen a man reads his
   own numbers on invites him to see a shape being scored, which is the trap the
   whole product avoids.
-- Tape sites are rows. Selecting one opens its compact baseline gauge, which
-  shows the previous measurement as a 1px dashed `--body` marker at 65% opacity
-  — solid = this measurement, dashed/hollow = previous, same legend as the wheel.
+- Every tape-site row carries a compact baseline gauge: a hairline track, band
+  tint, hollow `--body` circle for the previous reading, and filled circle for
+  the current reading. Its signed delta is right-aligned in tabular `--ink`, and
+  the comparison date stays on the row because sites may be taped on different
+  schedules. Tapping the row opens that site's detail screen; overview taps
+  never select or replace a separate hero. Deltas are never red/green and never
+  carry praise or concern.
 - Untracked sites do not render at all: no empty rows, no grey prompts, no
-  "complete your profile". Adding a site lives in the overflow menu only. A site
-  that is tracked but not yet taped keeps its row, because that row is where the
-  first reading is entered.
-- Weight and body fat are not tape sites. Weight takes the screen's one 56px
-  metric; body fat appears only in the change list, only if tracked.
-- Change list ("Since last time"): per site, a dumbbell mark — hairline track,
-  band tint, hollow `--body` circle for previous, filled for current — with the
-  delta right-aligned in tabular `--ink` as a signed value ("−1.5 cm"), and the
-  date it is measured from on the row itself, since each site is taped on its
-  own schedule. Deltas are NEVER colored red/green and never carry arrows,
-  praise, or concern: direction is not a verdict.
+  "complete your profile". A site that is tracked but not yet taped keeps its
+  row so it is included in the next measurement session.
+- Weight and body fat are not tape sites. They use the same compact
+  baseline-change row as tape sites; body fat still joins the measurement
+  session.
 - Population reference ranges (BMI, waist-to-height) are off by default,
   enabled only by explicit setting, rendered as a caption line of context and
   never as a colored zone on any gauge. A trend crossing a clinically

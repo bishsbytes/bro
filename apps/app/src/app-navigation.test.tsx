@@ -257,7 +257,7 @@ describe("app entry", () => {
 
 		await fireEvent.press(view.getByLabelText(/^Body, tab/));
 		await waitFor(() => expect(router.getPathname()).toBe("/body"));
-		expect(await view.findByText("Nothing taped yet")).toBeTruthy();
+		expect(await view.findByText("No measurements tracked")).toBeTruthy();
 		expect(view.getByLabelText("Settings")).toBeTruthy();
 
 		await press(view, "Life");

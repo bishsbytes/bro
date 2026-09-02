@@ -9,8 +9,8 @@ export const body = {
 	},
 	measurements: {
 		title: "Measurements",
-		emptyTitle: "Nothing taped yet",
-		emptyBody: "Manage measurements to add a tape site.",
+		emptyTitle: "No measurements tracked",
+		emptyBody: "Manage body data to choose the measurements shown here.",
 		nothingLogged: "Nothing logged yet",
 		/** Names the origin of an imported reading. */
 		source: "Source: {{name}}",
@@ -18,8 +18,32 @@ export const body = {
 		stopTracking: "Stop tracking {{name}}",
 		enterPlaceholder: "Enter {{unit}}",
 		logMetric: "Log {{name}}",
-		save: "Save measurement",
-		dismissLogA11y: "Close {{name}} entry",
+	},
+	log: {
+		open: "Log body",
+		title: "Log body",
+		intro: "Choose what you measured. Connected data appears automatically.",
+		weight: "Weight",
+		weightDetail: "Record one weight reading",
+		session: "Take measurements",
+		sessionDetail: "Tape sites and body fat, with weight if you took it",
+		heartRate: "Resting heart rate",
+		heartRateDetail: "Record a resting pulse in beats per minute",
+		sessionFormIntro:
+			"Enter whichever readings you took. Blank fields will be left unchanged.",
+		singleFormIntro: "Enter the reading you took.",
+		saveSession: "Save measurements",
+		saveReading: "Save reading",
+		back: "Back to log options",
+		dismissA11y: "Close body log",
+		emptyTitle: "Nothing is ready to log",
+		emptyBody: "Choose the body data you want to track first.",
+	},
+	heart: {
+		title: "Heart & fitness",
+		emptyTitle: "No heart data tracked",
+		emptyBody:
+			"Track resting heart rate manually or connect a supported health platform.",
 	},
 	measuring: {
 		link: "How to measure",
@@ -43,11 +67,11 @@ export const body = {
 		},
 	},
 	sites: {
-		manage: "Manage measurements",
-		title: "Measurements",
-		sectionTitle: "Tape sites",
-		intro: "Choose the measurements you want to keep on this screen.",
-		dismissA11y: "Close measurements",
+		manage: "Manage body data",
+		title: "Body data",
+		intro:
+			"Choose the measurements and fitness signals to keep on this screen.",
+		dismissA11y: "Close body data",
 	},
 	reading: {
 		/** {{when}} is a day: "Today", "Yesterday", or "3 Aug". */
@@ -76,6 +100,7 @@ export const body = {
 		since: "since {{when}}",
 		first: "first reading",
 		notLogged: "nothing logged",
+		meta: "{{source}} · {{comparison}}",
 		/** Change is typeset with a sign and never coloured: direction is not a verdict. */
 		down: "−{{value}}",
 		up: "+{{value}}",
@@ -83,12 +108,6 @@ export const body = {
 		/** Spoken form of a change row: the name, then the sentence it stands for. */
 		rowA11y: "{{name}}. {{change}}",
 	},
-	/** {{name}} is a measurement name. */
-	open: "Open {{name}}",
-	/** Renders in capitals; see the note on eyebrows in the review catalogue. */
-	latestEyebrow: "LATEST",
-	noneLoggedPrompt: "Log this measurement from your daily check-in.",
-	noneImported: "No imported measurements yet.",
 	/** {{when}} is a date and time, {{source}} names where the reading came from. */
 	latestWithSource: "{{when}} · Source: {{source}}",
 	readOnly:

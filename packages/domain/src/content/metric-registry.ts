@@ -51,6 +51,7 @@ export type UserEnterableMeasurementSlug =
 	| "weight"
 	| "waist"
 	| "body_fat"
+	| "resting_heart_rate"
 	| TapeSiteSlug;
 /**
  * A place a tape measure goes, in the order a tailor works down the body. The
@@ -77,11 +78,17 @@ export const TAPE_SITE_SLUGS = [
 export function isTapeSiteSlug(slug: string): slug is TapeSiteSlug {
 	return (TAPE_SITE_SLUGS as readonly string[]).includes(slug);
 }
-export type UserEnterableMeasurementDimension = "mass" | "length" | "fraction";
-export type ImportedOnlyMeasurementSlug =
-	| "sleep_duration"
-	| "steps"
-	| "resting_heart_rate";
+export type UserEnterableMeasurementDimension =
+	| "mass"
+	| "length"
+	| "fraction"
+	| "rate_bpm";
+export type BodyMetricGroup = "measurements" | "heart_fitness";
+export type ManualMeasurementCapture =
+	| "standalone"
+	| "measurement_session"
+	| "both";
+export type ImportedOnlyMeasurementSlug = "sleep_duration" | "steps";
 export type ConsumptionDerivedMeasurementSlug =
 	| "alcohol_intake"
 	| "caffeine_intake"
@@ -156,14 +163,18 @@ type MeasurementMetricDefinitionBase = MetricDefinitionBase & {
 	unitPreferenceDimension?: UnitPreferenceDimension;
 	/** A display form deliberately fixed for this metric. */
 	fixedDisplayUnit?: DisplayUnit;
+	/** Whether a connected health platform may supply this metric. */
+	healthImport: boolean;
 };
 
 export type UserEnterableMeasurementMetricDefinition =
 	MeasurementMetricDefinitionBase & {
 		slug: UserEnterableMeasurementSlug;
-		aggregation: "last";
+		aggregation: "last" | "mean";
 		dimension: UserEnterableMeasurementDimension;
 		userEnterable: true;
+		bodyGroup: BodyMetricGroup;
+		manualCapture: ManualMeasurementCapture;
 	};
 
 export type ImportedOnlyMeasurementMetricDefinition =
@@ -294,6 +305,7 @@ const consumptionMeasurement = (
 	sensitive,
 	userEnterable: false,
 	measurementSource: "consumption",
+	healthImport: false,
 	deprecated: false,
 	defaultPosition,
 	...display,
@@ -304,6 +316,12 @@ const measurement = (
 	label: string,
 	dimension: UserEnterableMeasurementDimension,
 	defaultPosition: number,
+	options: {
+		bodyGroup: BodyMetricGroup;
+		manualCapture: ManualMeasurementCapture;
+		healthImport?: boolean;
+		aggregation?: "last" | "mean";
+	},
 ): UserEnterableMeasurementMetricDefinition => ({
 	slug,
 	label,
@@ -311,10 +329,13 @@ const measurement = (
 	scaleMin: null,
 	scaleMax: null,
 	category: null,
-	aggregation: "last",
+	aggregation: options.aggregation ?? "last",
 	dimension,
 	sensitive: true,
 	userEnterable: true,
+	bodyGroup: options.bodyGroup,
+	manualCapture: options.manualCapture,
+	healthImport: options.healthImport ?? false,
 	deprecated: false,
 	defaultPosition,
 });
@@ -337,6 +358,7 @@ const importedMeasurement = (
 	dimension,
 	sensitive,
 	userEnterable: false,
+	healthImport: true,
 	deprecated: false,
 	defaultPosition,
 });
@@ -388,29 +410,53 @@ export const METRIC_REGISTRY = [
 	tag("anxiety", "Anxiety", "mind", 23),
 	tag("family_time", "Family time", "social", 24),
 	tag("conflict", "Conflict", "social", 25),
-	measurement("weight", "Weight", "mass", 0),
-	measurement("waist", "Waist", "length", 1),
-	measurement("body_fat", "Body fat", "fraction", 2),
+	measurement("weight", "Weight", "mass", 0, {
+		bodyGroup: "measurements",
+		manualCapture: "both",
+		healthImport: true,
+	}),
+	measurement("waist", "Waist", "length", 1, {
+		bodyGroup: "measurements",
+		manualCapture: "measurement_session",
+	}),
+	measurement("body_fat", "Body fat", "fraction", 2, {
+		bodyGroup: "measurements",
+		manualCapture: "measurement_session",
+		healthImport: true,
+	}),
 	// Tape sites join at the end of the measurement positions rather than in
 	// anatomical order: a default position is what an overlay-less metric sorts
 	// by, so renumbering the three originals would order new installs
 	// differently from every existing one. The body screen orders the sites by
 	// TAPE_SITE_SLUGS instead.
-	measurement("neck", "Neck", "length", 14),
-	measurement("chest", "Chest", "length", 15),
-	measurement("bicep", "Bicep", "length", 16),
-	measurement("hip", "Hip", "length", 17),
-	measurement("thigh", "Thigh", "length", 18),
+	measurement("neck", "Neck", "length", 14, {
+		bodyGroup: "measurements",
+		manualCapture: "measurement_session",
+	}),
+	measurement("chest", "Chest", "length", 15, {
+		bodyGroup: "measurements",
+		manualCapture: "measurement_session",
+	}),
+	measurement("bicep", "Bicep", "length", 16, {
+		bodyGroup: "measurements",
+		manualCapture: "measurement_session",
+	}),
+	measurement("hip", "Hip", "length", 17, {
+		bodyGroup: "measurements",
+		manualCapture: "measurement_session",
+	}),
+	measurement("thigh", "Thigh", "length", 18, {
+		bodyGroup: "measurements",
+		manualCapture: "measurement_session",
+	}),
 	importedMeasurement("sleep_duration", "Sleep", "time", "sum", 3, false),
 	importedMeasurement("steps", "Steps", "count", "sum", 4, false),
-	importedMeasurement(
-		"resting_heart_rate",
-		"Resting heart rate",
-		"rate_bpm",
-		"mean",
-		5,
-		true,
-	),
+	measurement("resting_heart_rate", "Resting heart rate", "rate_bpm", 5, {
+		bodyGroup: "heart_fitness",
+		manualCapture: "standalone",
+		healthImport: true,
+		aggregation: "mean",
+	}),
 	consumptionMeasurement("alcohol_intake", "Alcohol", "mass", 6, true, {
 		unitPreferenceDimension: "alcohol",
 	}),

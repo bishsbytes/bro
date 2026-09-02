@@ -1,12 +1,14 @@
 import {
-	type Dimension,
 	type DisplayUnit,
 	type FractionDisplayUnit,
 	isDisplayUnitForDimension,
 	type LengthDisplayUnit,
 	type MassDisplayUnit,
 } from "@bro/domain";
-import type { UserEnterableMeasurementSlug } from "@bro/domain/metric-registry";
+import type {
+	UserEnterableMeasurementDimension,
+	UserEnterableMeasurementSlug,
+} from "@bro/domain/metric-registry";
 
 type MeasurementPresentationBase = {
 	metricSlug: UserEnterableMeasurementSlug;
@@ -34,6 +36,10 @@ export type MeasurementPresentation =
 	| (MeasurementPresentationBase & {
 			dimension: "fraction";
 			displayUnit: FractionDisplayUnit;
+	  })
+	| (MeasurementPresentationBase & {
+			dimension: "rate_bpm";
+			displayUnit: "bpm";
 	  });
 
 /**
@@ -44,26 +50,32 @@ export type MeasurementPresentation =
 export function toMeasurementPresentation(
 	metricSlug: UserEnterableMeasurementSlug,
 	label: string,
-	dimension: Dimension,
-	displayUnit: DisplayUnit,
+	dimension: UserEnterableMeasurementDimension,
+	displayUnit: DisplayUnit | null,
 ): MeasurementPresentation {
 	if (
 		dimension === "mass" &&
+		displayUnit !== null &&
 		isDisplayUnitForDimension(dimension, displayUnit)
 	) {
 		return { metricSlug, label, dimension, displayUnit };
 	}
 	if (
 		dimension === "length" &&
+		displayUnit !== null &&
 		isDisplayUnitForDimension(dimension, displayUnit)
 	) {
 		return { metricSlug, label, dimension, displayUnit };
 	}
 	if (
 		dimension === "fraction" &&
+		displayUnit !== null &&
 		isDisplayUnitForDimension(dimension, displayUnit)
 	) {
 		return { metricSlug, label, dimension, displayUnit };
+	}
+	if (dimension === "rate_bpm" && displayUnit === null) {
+		return { metricSlug, label, dimension, displayUnit: "bpm" };
 	}
 	throw new TypeError(`Unit ${displayUnit} does not measure ${dimension}.`);
 }
