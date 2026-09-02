@@ -1,8 +1,14 @@
 import { KILOGRAMS_PER_POUND } from "@bro/domain";
 import { fireEvent, render } from "@testing-library/react-native";
-import type { BodyOverview } from "./body/body-store";
+import { type StyleProp, StyleSheet, type TextStyle } from "react-native";
+import type {
+	BodyMetricBaseline,
+	BodyMetricSummary,
+	BodyOverview,
+} from "./body/body-store";
 import { i18n } from "./i18n";
 import { BodyScreen } from "./screens/body/body-screen";
+import { lightTheme } from "./theme/unistyles";
 
 const mockPush = jest.fn();
 
@@ -19,6 +25,7 @@ jest.mock("react-native-safe-area-context", () => {
 	const { View } =
 		jest.requireActual<typeof import("react-native")>("react-native");
 	return {
+		useSafeAreaInsets: () => ({ top: 0, bottom: 0, left: 0, right: 0 }),
 		SafeAreaView: ({
 			edges = [],
 			...props
@@ -33,51 +40,143 @@ jest.mock("react-native-safe-area-context", () => {
 	};
 });
 
-function weightOverview(tracked: boolean): BodyOverview {
+const EMPTY_BASELINE: BodyMetricBaseline = {
+	current: null,
+	previous: null,
+	direction: "none",
+	changeFormatted: null,
+	usualRange: null,
+	rail: null,
+	readingCount: 0,
+};
+
+/** A waist taped twice, a centimetre and a half down, inside its own range. */
+const TAPED_WAIST: BodyMetricBaseline = {
+	current: {
+		value: 0.865,
+		formatted: "86.5 cm",
+		observedAt: Date.parse("2026-09-02T08:00:00.000Z"),
+		localDay: "2026-09-02",
+	},
+	previous: {
+		value: 0.88,
+		formatted: "88.0 cm",
+		observedAt: Date.parse("2026-08-03T08:00:00.000Z"),
+		localDay: "2026-08-03",
+	},
+	direction: "down",
+	changeFormatted: "1.5 cm",
+	usualRange: {
+		min: 0.85,
+		max: 0.88,
+		minFormatted: "85.0 cm",
+		maxFormatted: "88.0 cm",
+	},
+	rail: {
+		min: 0.84,
+		max: 0.89,
+		minFormatted: "84.0 cm",
+		maxFormatted: "89.0 cm",
+	},
+	readingCount: 6,
+};
+
+/** A bicep taped twice, four millimetres up. */
+const TAPED_BICEP: BodyMetricBaseline = {
+	current: {
+		value: 0.368,
+		formatted: "36.8 cm",
+		observedAt: Date.parse("2026-09-02T08:00:00.000Z"),
+		localDay: "2026-09-02",
+	},
+	previous: {
+		value: 0.364,
+		formatted: "36.4 cm",
+		observedAt: Date.parse("2026-08-03T08:00:00.000Z"),
+		localDay: "2026-08-03",
+	},
+	direction: "up",
+	changeFormatted: "0.4 cm",
+	usualRange: null,
+	rail: {
+		min: 0.36,
+		max: 0.372,
+		minFormatted: "36.0 cm",
+		maxFormatted: "37.2 cm",
+	},
+	readingCount: 2,
+};
+
+function metric(overrides: Partial<BodyMetricSummary>): BodyMetricSummary {
 	return {
-		inputLocale: "en-GB",
-		metrics: [
-			{
-				metricSlug: "weight",
-				label: "Weight",
-				dimension: "mass",
-				displayUnit: "st",
-				userEnterable: true,
-				editablePresentation: {
-					metricSlug: "weight",
-					label: "Weight",
-					dimension: "mass",
-					displayUnit: "st",
-				},
-				tracked,
-				visible: true,
-				hasImportedData: false,
-				position: 0,
-				latest: null,
-				latestFormatted: null,
-				series: { observedDayCount: 0 },
-				activeGoal: null,
-			},
-		],
-	} as unknown as BodyOverview;
+		metricSlug: "waist",
+		label: "Waist",
+		dimension: "length",
+		displayUnit: "cm",
+		userEnterable: true,
+		editablePresentation: {
+			metricSlug: "waist",
+			label: "Waist",
+			dimension: "length",
+			displayUnit: "cm",
+		},
+		tracked: true,
+		visible: true,
+		hasImportedData: false,
+		position: 1,
+		latest: null,
+		latestFormatted: null,
+		series: { observedDayCount: 0 },
+		baseline: EMPTY_BASELINE,
+		activeGoal: null,
+		...overrides,
+	} as unknown as BodyMetricSummary;
 }
 
-const emptyOverview = { metrics: [], inputLocale: "en-GB" } as BodyOverview;
+function weightMetric(tracked: boolean): BodyMetricSummary {
+	return metric({
+		metricSlug: "weight",
+		label: "Weight",
+		dimension: "mass",
+		displayUnit: "st",
+		editablePresentation: {
+			metricSlug: "weight",
+			label: "Weight",
+			dimension: "mass",
+			displayUnit: "st",
+		},
+		tracked,
+		position: 0,
+	});
+}
+
+function overviewOf(metrics: BodyMetricSummary[]): BodyOverview {
+	return { inputLocale: "en-GB", metrics };
+}
+
+function mountedWith(
+	overview: BodyOverview,
+	store: Partial<Parameters<typeof BodyScreen>[0]["store"]> = {},
+) {
+	return render(
+		<BodyScreen
+			store={{
+				loadOverview: jest.fn(async () => overview),
+				setTracked: jest.fn(),
+				recordMeasurement: jest.fn(),
+				...store,
+			}}
+		/>,
+	);
+}
 
 describe("Body screen", () => {
 	beforeEach(() => jest.clearAllMocks());
 
 	it("records a tracked measurement in canonical units", async () => {
-		const recordMeasurement = jest.fn(async () => weightOverview(true));
-		const screen = await render(
-			<BodyScreen
-				store={{
-					loadOverview: jest.fn(async () => weightOverview(true)),
-					setTracked: jest.fn(),
-					recordMeasurement,
-				}}
-			/>,
-		);
+		const overview = overviewOf([weightMetric(true)]);
+		const recordMeasurement = jest.fn(async () => overview);
+		const screen = await mountedWith(overview, { recordMeasurement });
 
 		await fireEvent.changeText(
 			await screen.findByLabelText("Weight (stones)"),
@@ -101,17 +200,11 @@ describe("Body screen", () => {
 			true,
 			true,
 		);
-		const recordMeasurement = jest.fn(async () => weightOverview(true));
+		const recordMeasurement = jest.fn();
 		try {
-			const screen = await render(
-				<BodyScreen
-					store={{
-						loadOverview: jest.fn(async () => weightOverview(true)),
-						setTracked: jest.fn(),
-						recordMeasurement,
-					}}
-				/>,
-			);
+			const screen = await mountedWith(overviewOf([weightMetric(true)]), {
+				recordMeasurement,
+			});
 
 			await fireEvent.changeText(
 				await screen.findByLabelText("Weight (stones)"),
@@ -134,32 +227,154 @@ describe("Body screen", () => {
 		}
 	});
 
-	it("offers entry only once a measurement is tracked", async () => {
-		const screen = await render(
-			<BodyScreen
-				store={{
-					loadOverview: jest.fn(async () => weightOverview(false)),
-					setTracked: jest.fn(),
-					recordMeasurement: jest.fn(),
-				}}
-			/>,
+	it("leaves an untracked site off the screen until it is added", async () => {
+		const setTracked = jest.fn(async () =>
+			overviewOf([
+				metric({ metricSlug: "chest", label: "Chest", position: 15 }),
+			]),
+		);
+		const screen = await mountedWith(
+			overviewOf([
+				metric({
+					metricSlug: "chest",
+					label: "Chest",
+					position: 15,
+					tracked: false,
+					visible: false,
+				}),
+			]),
+			{ setTracked },
 		);
 
-		expect(await screen.findByLabelText("Track Weight")).toBeTruthy();
-		expect(screen.queryByLabelText("Weight (stones)")).toBeNull();
-		expect(screen.queryByLabelText("Log Weight")).toBeNull();
+		expect(await screen.findByText("Nothing taped yet")).toBeTruthy();
+		expect(screen.queryByLabelText("Chest. Nothing logged yet")).toBeNull();
+		expect(screen.queryByLabelText("Chest (cm)")).toBeNull();
+
+		await fireEvent.press(screen.getAllByLabelText("Add a site")[0]);
+		await fireEvent.press(screen.getByLabelText("Track Chest"));
+
+		expect(setTracked).toHaveBeenCalledWith("chest", true);
+		// A site with nothing taped yet still lists: it is where the first
+		// reading gets entered.
+		expect(
+			await screen.findByLabelText("Chest. Nothing logged yet"),
+		).toBeTruthy();
+		expect(screen.getByLabelText("Chest (cm)")).toBeTruthy();
+	});
+
+	it("reads a taped site against the user's own range without a verdict", async () => {
+		const screen = await mountedWith(
+			overviewOf([metric({ baseline: TAPED_WAIST })]),
+		);
+
+		expect(
+			await screen.findByLabelText(
+				"Waist, 86.5 cm. Inside your usual 85.0 cm–88.0 cm. 1.5 cm down since 3 Aug.",
+			),
+		).toBeTruthy();
+		expect(
+			screen.getByText(
+				"Inside your usual 85.0 cm–88.0 cm. 1.5 cm down since 3 Aug.",
+			),
+		).toBeTruthy();
+		expect(screen.getByText("−1.5 cm")).toBeTruthy();
+		expect(screen.getByText("since 3 Aug")).toBeTruthy();
+		expect(
+			screen.getByLabelText("Waist. 1.5 cm down since 3 Aug."),
+		).toBeTruthy();
+	});
+
+	it("moves the gauge to the measurement the user taps", async () => {
+		const screen = await mountedWith(
+			overviewOf([
+				metric({ baseline: TAPED_WAIST }),
+				metric({
+					metricSlug: "neck",
+					label: "Neck",
+					position: 14,
+					editablePresentation: {
+						metricSlug: "neck",
+						label: "Neck",
+						dimension: "length",
+						displayUnit: "cm",
+					},
+				}),
+			]),
+		);
+
+		// The list reads down the body, so the neck is selected before the waist.
+		expect(await screen.findByLabelText("Neck (cm)")).toBeTruthy();
+		await fireEvent.press(
+			screen.getByLabelText("Waist. 1.5 cm down since 3 Aug."),
+		);
+
+		expect(screen.getByLabelText("Waist (cm)")).toBeTruthy();
+		expect(screen.queryByLabelText("Neck (cm)")).toBeNull();
+	});
+
+	it("marks the selected row and colours neither direction of change", async () => {
+		const screen = await mountedWith(
+			overviewOf([
+				metric({ baseline: TAPED_WAIST }),
+				metric({
+					metricSlug: "bicep",
+					label: "Bicep",
+					position: 16,
+					baseline: TAPED_BICEP,
+				}),
+			]),
+		);
+
+		const bicepRow = "Bicep. 0.4 cm up since 3 Aug.";
+		const waistRow = "Waist. 1.5 cm down since 3 Aug.";
+		// The bicep is taped above the waist, so the list opens on it.
+		expect(
+			(await screen.findByLabelText(bicepRow)).props.accessibilityState,
+		).toMatchObject({ selected: true });
+		expect(
+			screen.getByLabelText(waistRow).props.accessibilityState,
+		).toMatchObject({ selected: false });
+
+		await fireEvent.press(screen.getByLabelText(waistRow));
+		expect(
+			screen.getByLabelText(waistRow).props.accessibilityState,
+		).toMatchObject({ selected: true });
+
+		const inkOf = (style: StyleProp<TextStyle>) =>
+			StyleSheet.flatten(style)?.color;
+		expect(inkOf(screen.getByText("−1.5 cm").props.style)).toBe(
+			lightTheme.colors.ink,
+		);
+		expect(inkOf(screen.getByText("+0.4 cm").props.style)).toBe(
+			lightTheme.colors.ink,
+		);
+	});
+
+	it("opens a measurement's own history from its panel", async () => {
+		const screen = await mountedWith(
+			overviewOf([metric({ baseline: TAPED_WAIST })]),
+		);
+
+		await fireEvent.press(await screen.findByText("Open Waist"));
+
+		expect(mockPush).toHaveBeenCalledWith({
+			pathname: "/body/[slug]",
+			params: { slug: "waist" },
+		});
+	});
+
+	it("sends the user to the measuring guide rather than drawing a body", async () => {
+		const screen = await mountedWith(
+			overviewOf([metric({ baseline: TAPED_WAIST })]),
+		);
+
+		await fireEvent.press(await screen.findByText("How to measure"));
+
+		expect(mockPush).toHaveBeenCalledWith("/body/measuring");
 	});
 
 	it("leaves the bottom safe area to the tab navigator", async () => {
-		const screen = await render(
-			<BodyScreen
-				store={{
-					loadOverview: jest.fn(async () => emptyOverview),
-					setTracked: jest.fn(),
-					recordMeasurement: jest.fn(),
-				}}
-			/>,
-		);
+		const screen = await mountedWith(overviewOf([]));
 
 		expect(await screen.findByTestId("safe-area-")).toBeTruthy();
 		expect(screen.queryByTestId("safe-area-bottom")).toBeNull();

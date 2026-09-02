@@ -1,0 +1,447 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>bro — measurements proposal</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Archivo:wght@400;500;600;700&family=Source+Serif+4:opsz,wght@8..60,400&display=swap" rel="stylesheet">
+<style>
+:root {
+  --canvas:#E9E9E4; --surface:#F5F5F1; --surface-sunk:#E1E2DC;
+  --line:#D3D5CD; --line-strong:#B9BCB2;
+  --ink:#23282B; --ink-2:#5C6469; --ink-3:#8B9297; --ink-invert:#F5F5F1;
+  --body:#667F5B; --body-tint:#E0E6DC; --alert:#93564A;
+  --accent-h:235; --accent-c:0.055;
+  --accent: oklch(48% var(--accent-c) var(--accent-h));
+  --sans:'Archivo',-apple-system,BlinkMacSystemFont,sans-serif;
+  --serif:'Source Serif 4',Georgia,serif;
+  --t-caption:.75rem; --t-small:.8125rem; --t-body:.9375rem; --t-lead:1.0625rem;
+  --t-h3:1.3125rem; --t-h2:1.6875rem; --t-h1:2.5rem; --t-metric:3.5rem;
+  --s1:4px; --s2:8px; --s3:12px; --s4:16px; --s5:24px; --s6:32px; --s7:48px; --s8:64px; --s9:96px;
+  --r-sm:3px; --r-md:6px; --r-lg:10px; --r-pill:999px;
+  --dur:160ms; --ease:cubic-bezier(.2,.6,.3,1);
+}
+[data-theme="dark"] {
+  --canvas:#191C1E; --surface:#212528; --surface-sunk:#141719;
+  --line:#313739; --line-strong:#454C4F;
+  --ink:#E4E5E1; --ink-2:#A0A7AA; --ink-3:#767D81; --ink-invert:#191C1E;
+  --body:#98AF8B; --body-tint:#2A332A; --alert:#C08375;
+  --accent: oklch(78% calc(var(--accent-c) * 1.15) var(--accent-h));
+}
+* { box-sizing:border-box; }
+body { margin:0; background:var(--canvas); color:var(--ink); font-family:var(--sans); font-size:var(--t-body); line-height:1.55; -webkit-font-smoothing:antialiased; }
+h1,h2,h3,h4 { margin:0; font-weight:600; letter-spacing:-.015em; line-height:1.18; }
+p { margin:0; }
+button { font:inherit; color:inherit; }
+:focus-visible { outline:2px solid var(--accent); outline-offset:2px; border-radius:var(--r-sm); }
+.num { font-variant-numeric:tabular-nums; }
+.wrap { max-width:1080px; margin:0 auto; padding:0 var(--s5); }
+
+.topbar { position:sticky; top:0; z-index:20; background:color-mix(in srgb,var(--canvas) 88%,transparent); backdrop-filter:blur(8px); border-bottom:1px solid var(--line); }
+.topbar__in { max-width:1080px; margin:0 auto; padding:var(--s3) var(--s5); display:flex; align-items:center; gap:var(--s4); }
+.wordmark { font-weight:700; letter-spacing:-.03em; font-size:var(--t-lead); }
+.wordmark span { color:var(--ink-3); font-weight:400; }
+.themetoggle { margin-left:auto; border:1px solid var(--line-strong); background:transparent; border-radius:var(--r-pill); padding:5px var(--s3); font-size:var(--t-small); cursor:pointer; color:var(--ink-2); }
+
+section { padding:var(--s9) 0 0; }
+.sec-head { display:flex; align-items:baseline; gap:var(--s3); margin-bottom:var(--s5); padding-bottom:var(--s3); border-bottom:1px solid var(--line); }
+.sec-head h2 { font-size:var(--t-h2); }
+.sec-head p { color:var(--ink-3); font-size:var(--t-small); margin-left:auto; }
+.note { color:var(--ink-2); font-size:var(--t-small); max-width:62ch; }
+.lede { font-family:var(--serif); font-size:var(--t-lead); line-height:1.6; color:var(--ink-2); max-width:54ch; }
+.grid2 { display:grid; grid-template-columns:1fr 1fr; gap:var(--s5) var(--s7); }
+@media (max-width:760px){ .grid2 { grid-template-columns:1fr; } }
+.p h4 { font-size:var(--t-body); margin-bottom:var(--s1); }
+.p p { color:var(--ink-2); font-size:var(--t-small); max-width:48ch; }
+
+.panel { background:var(--surface); border:1px solid var(--line); border-radius:var(--r-lg); }
+
+/* ---- phone mock ---- */
+.stage { display:grid; grid-template-columns:minmax(0,380px) 1fr; gap:var(--s7); align-items:start; }
+@media (max-width:860px){ .stage { grid-template-columns:1fr; } }
+.phone { border:1px solid var(--line-strong); border-radius:22px; background:var(--canvas); padding:var(--s4); overflow:hidden; }
+.phone__top { display:flex; align-items:baseline; gap:var(--s2); padding-bottom:var(--s4); }
+.phone__top h5 { margin:0; font-size:var(--t-h3); font-weight:600; letter-spacing:-.02em; }
+.phone__top span { margin-left:auto; font-size:var(--t-caption); color:var(--ink-3); }
+.phone__body { display:grid; gap:var(--s4); }
+
+/* gauge (compact, from the system, + previous marker) */
+.gauge { --gc:var(--body); }
+.gauge__label { font-size:var(--t-small); color:var(--ink-2); margin-bottom:var(--s2); display:flex; }
+.gauge__label span { margin-left:auto; color:var(--ink-3); font-size:var(--t-caption); }
+.gauge__value { display:flex; align-items:baseline; gap:var(--s2); }
+.gauge__value b { font-size:var(--t-h2); font-weight:600; letter-spacing:-.02em; line-height:1; font-variant-numeric:tabular-nums; }
+.gauge__unit { font-size:var(--t-small); color:var(--ink-3); }
+.gauge__rail { position:relative; height:16px; margin-top:var(--s3); border-bottom:1px solid var(--line-strong); }
+.gauge__ticks { position:absolute; inset:auto 0 0 0; height:6px; background-image:repeating-linear-gradient(to right,var(--line-strong) 0 1px,transparent 1px 10%); opacity:.8; }
+.gauge__band { position:absolute; bottom:0; height:100%; background:var(--gc); opacity:.16; border-left:1px solid var(--gc); border-right:1px solid var(--gc); }
+.gauge__marker { position:absolute; bottom:-1px; width:2px; height:16px; background:var(--gc); transform:translateX(-1px); }
+.gauge__marker::after { content:""; position:absolute; top:-5px; left:50%; width:8px; height:8px; background:var(--gc); transform:translateX(-50%) rotate(45deg); }
+.gauge__prev { position:absolute; bottom:-1px; height:16px; width:0; border-left:1px dashed var(--gc); opacity:.65; }
+.gauge__scale { display:flex; justify-content:space-between; font-size:var(--t-caption); color:var(--ink-3); font-variant-numeric:tabular-nums; margin-top:var(--s2); }
+.gauge__read { font-size:var(--t-small); color:var(--ink-2); margin-top:var(--s3); }
+.gauge__read em { font-style:normal; color:var(--gc); font-weight:500; }
+
+/* figure */
+.figure { display:block; width:100%; height:auto; }
+.figure .mannequin { stroke:var(--line-strong); }
+.figure .site { cursor:pointer; }
+.figure .site .tape { stroke:var(--ink-3); stroke-width:1.2; stroke-dasharray:4 4; }
+.figure .site .tick { stroke:var(--body); stroke-width:2; opacity:0; }
+.figure .site .lbl { font-family:var(--sans); font-size:12px; fill:var(--ink-3); }
+.figure .site .leader { stroke:var(--line); stroke-width:1; }
+.figure .site:hover .lbl { fill:var(--ink-2); }
+.figure .site.on .tape { stroke:var(--body); stroke-width:2; stroke-dasharray:none; }
+.figure .site.on .tick { opacity:1; }
+.figure .site.on .lbl { fill:var(--body); font-weight:600; }
+.figure .hit { fill:transparent; stroke:none; }
+
+/* change list */
+.rows { border-top:1px solid var(--line); }
+.row { display:flex; align-items:center; gap:var(--s3); padding:var(--s3) var(--s4); border:0; border-bottom:1px solid var(--line); background:none; width:100%; text-align:left; cursor:pointer; }
+.row:last-child { border-bottom:0; }
+.row:hover { background:var(--surface-sunk); }
+.row[aria-pressed="true"] .row__name { color:var(--body); font-weight:500; }
+.row__name { font-size:var(--t-body); width:64px; flex:none; }
+.db { flex:1; position:relative; height:14px; max-width:150px; }
+.db__track { position:absolute; top:7px; left:0; right:0; border-top:1px solid var(--line); }
+.db__band { position:absolute; top:2px; height:11px; background:var(--body); opacity:.14; }
+.db__prev { position:absolute; top:3px; width:8px; height:8px; border:1.5px solid var(--body); border-radius:50%; background:var(--surface); transform:translateX(-4px); opacity:.75; }
+.db__now { position:absolute; top:3px; width:9px; height:9px; border-radius:50%; background:var(--body); transform:translateX(-4px); }
+.row__delta { margin-left:auto; font-variant-numeric:tabular-nums; font-size:var(--t-small); color:var(--ink); width:70px; text-align:right; }
+.row__delta span { color:var(--ink-3); }
+
+.panel__head { padding:var(--s4) var(--s4) 0; display:flex; align-items:baseline; }
+.panel__head h4 { font-size:var(--t-body); }
+.panel__head span { margin-left:auto; font-size:var(--t-caption); color:var(--ink-3); }
+
+.voice { display:grid; grid-template-columns:1fr 1fr; border:1px solid var(--line); border-radius:var(--r-md); overflow:hidden; }
+.voice > div { padding:var(--s3) var(--s4); border-bottom:1px solid var(--line); font-size:var(--t-small); }
+.voice > div:nth-child(odd) { border-right:1px solid var(--line); }
+.voice .no { color:var(--ink-3); text-decoration:line-through; text-decoration-color:var(--line-strong); }
+.voice__h { font-weight:500; background:var(--surface-sunk); color:var(--ink-2)!important; text-decoration:none!important; }
+
+footer { margin-top:var(--s9); padding:var(--s6) 0 var(--s8); border-top:1px solid var(--line); color:var(--ink-3); font-size:var(--t-small); }
+@media (prefers-reduced-motion:reduce){ *{transition-duration:.01ms!important} }
+</style>
+</head>
+<body>
+
+<div class="topbar">
+  <div class="topbar__in">
+    <div class="wordmark">bro. <span>measurements proposal</span></div>
+    <button class="themetoggle" id="themeBtn" aria-pressed="false">Dark</button>
+  </div>
+</div>
+
+<div class="wrap">
+
+  <section style="padding-top:var(--s8)">
+    <h1 style="font-size:var(--t-h1); max-width:22ch">Measured like a tailor, not scored like a contest.</h1>
+    <p class="lede" style="margin-top:var(--s4)">
+      The wheel works because its eight axes share one subjective scale. Body
+      measurements don't — a waist and a bicep have different units, different
+      ranges, and opposite ideas of "up". So this screen borrows from the one
+      profession that has measured men's bodies for centuries without ever
+      judging them: tailoring. Tape sites on a neutral pattern block, each read
+      against your own usual range.
+    </p>
+    <p class="note" style="margin-top:var(--s5); border-left:2px solid var(--line-strong); padding-left:var(--s4)">
+      <strong style="font-weight:600; color:var(--ink)">Where this landed, 2 September 2026.</strong>
+      Built as proposed — baseline gauge with a dashed previous marker, dumbbell
+      change list, uncoloured deltas — with one change: the figure came off the
+      measurements screen. A body drawn beside a man's own readings invites him
+      to see a shape being scored, which is the trap this proposal exists to
+      avoid. The pattern block is now a "how to measure" page reached from that
+      screen: it shows every tape site whether or not he tracks it, answers where
+      the tape goes, and carries no readings at all. DESIGN.md is authoritative.
+    </p>
+  </section>
+
+  <section>
+    <div class="sec-head"><h2>Why not another wheel</h2><p>The obvious idea, rejected</p></div>
+    <div class="grid2">
+      <div class="p">
+        <h4>A radar needs one scale</h4>
+        <p>Normalising centimetres, kilograms and percentages onto shared spokes
+          manufactures comparability that doesn't exist. Whatever maths you choose,
+          the polygon's area starts to read as a score.</p>
+      </div>
+      <div class="p">
+        <h4>A body is not a shape to optimise</h4>
+        <p>A measurement polygon is literally a silhouette of numbers — bigger here,
+          smaller there. That's judgement UI wearing a chart costume, and it points
+          straight at the comparison spiral this product exists to avoid.</p>
+      </div>
+    </div>
+  </section>
+
+  <section>
+    <div class="sec-head"><h2>The proposal</h2><p>Interactive — tap a tape site or a row</p></div>
+
+    <div class="stage">
+      <div class="phone">
+        <div class="phone__top"><h5>Measurements</h5><span>Wed 2 Sep</span></div>
+        <div class="phone__body">
+
+          <div class="gauge">
+            <div class="gauge__label">Weight <span>measured this morning</span></div>
+            <div class="gauge__value"><b class="num">82.4</b><span class="gauge__unit">kg</span></div>
+            <div class="gauge__rail">
+              <div class="gauge__ticks"></div>
+              <div class="gauge__band" style="left:39.3%; width:17.9%"></div>
+              <div class="gauge__prev" style="left:49.3%"></div>
+              <div class="gauge__marker" style="left:45.7%"></div>
+            </div>
+            <div class="gauge__scale"><span>76</span><span>90</span></div>
+          </div>
+
+          <svg class="figure" viewBox="0 0 380 540" role="group" aria-label="Tape sites">
+            <g class="mannequin" fill="none" stroke-width="11" stroke-linecap="round" stroke-linejoin="round">
+              <circle cx="190" cy="46" r="24"/>
+              <path d="M140,100 C136,148 162,178 160,203 C157,232 154,238 154,264
+                       C154,330 158,420 162,500 L182,500 C184,420 186,360 190,318
+                       C194,360 196,420 198,500 L218,500 C222,420 226,330 226,264
+                       C226,238 223,232 220,203 C218,178 244,148 240,100
+                       C230,91 150,91 140,100 Z"/>
+              <path d="M132,116 C118,162 114,210 112,256"/>
+              <path d="M248,116 C262,162 266,210 268,256"/>
+            </g>
+            <!-- one group per tape site; JS toggles .on -->
+            <g class="site" data-site="neck" role="button" tabindex="0" aria-label="Neck">
+              <line class="leader" x1="216" y1="86" x2="276" y2="86"/>
+              <line class="tape" x1="166" y1="86" x2="214" y2="86"/>
+              <line class="tick" x1="166" y1="80" x2="166" y2="92"/>
+              <line class="tick" x1="214" y1="80" x2="214" y2="92"/>
+              <text class="lbl" x="282" y="90">Neck</text>
+              <rect class="hit" x="150" y="72" width="230" height="28"/>
+            </g>
+            <g class="site" data-site="chest" role="button" tabindex="0" aria-label="Chest">
+              <line class="leader" x1="236" y1="150" x2="276" y2="150"/>
+              <line class="tape" x1="146" y1="150" x2="234" y2="150"/>
+              <line class="tick" x1="146" y1="144" x2="146" y2="156"/>
+              <line class="tick" x1="234" y1="144" x2="234" y2="156"/>
+              <text class="lbl" x="282" y="154">Chest</text>
+              <rect class="hit" x="132" y="136" width="248" height="28"/>
+            </g>
+            <g class="site" data-site="bicep" role="button" tabindex="0" aria-label="Bicep">
+              <line class="leader" x1="100" y1="178" x2="86" y2="178"/>
+              <line class="tape" x1="102" y1="178" x2="130" y2="178"/>
+              <line class="tick" x1="102" y1="172" x2="102" y2="184"/>
+              <line class="tick" x1="130" y1="172" x2="130" y2="184"/>
+              <text class="lbl" x="80" y="182" text-anchor="end">Bicep</text>
+              <rect class="hit" x="30" y="164" width="120" height="28"/>
+            </g>
+            <g class="site" data-site="waist" role="button" tabindex="0" aria-label="Waist">
+              <line class="leader" x1="224" y1="205" x2="276" y2="205"/>
+              <line class="tape" x1="158" y1="205" x2="222" y2="205"/>
+              <line class="tick" x1="158" y1="199" x2="158" y2="211"/>
+              <line class="tick" x1="222" y1="199" x2="222" y2="211"/>
+              <text class="lbl" x="282" y="209">Waist</text>
+              <rect class="hit" x="144" y="191" width="236" height="28"/>
+            </g>
+            <g class="site" data-site="hip" role="button" tabindex="0" aria-label="Hip">
+              <line class="leader" x1="232" y1="262" x2="276" y2="262"/>
+              <line class="tape" x1="150" y1="262" x2="230" y2="262"/>
+              <line class="tick" x1="150" y1="256" x2="150" y2="268"/>
+              <line class="tick" x1="230" y1="256" x2="230" y2="268"/>
+              <text class="lbl" x="282" y="266">Hip</text>
+              <rect class="hit" x="136" y="248" width="244" height="28"/>
+            </g>
+            <g class="site" data-site="thigh" role="button" tabindex="0" aria-label="Thigh">
+              <line class="leader" x1="154" y1="345" x2="86" y2="345"/>
+              <line class="tape" x1="156" y1="345" x2="186" y2="345"/>
+              <line class="tick" x1="156" y1="339" x2="156" y2="351"/>
+              <line class="tick" x1="186" y1="339" x2="186" y2="351"/>
+              <text class="lbl" x="80" y="349" text-anchor="end">Thigh</text>
+              <rect class="hit" x="30" y="331" width="160" height="28"/>
+            </g>
+          </svg>
+
+          <div class="panel" style="background:var(--surface)">
+            <div class="panel__body" style="padding:var(--s4)">
+              <div class="gauge gauge--site">
+                <div class="gauge__label" id="gLabel">Waist <span>taped 2 Sep</span></div>
+                <div class="gauge__value"><b class="num" id="gValue">86.5</b><span class="gauge__unit" id="gUnit">cm</span></div>
+                <div class="gauge__rail">
+                  <div class="gauge__ticks"></div>
+                  <div class="gauge__band" id="gBand"></div>
+                  <div class="gauge__prev" id="gPrev"></div>
+                  <div class="gauge__marker" id="gMarker"></div>
+                </div>
+                <div class="gauge__scale"><span id="gMin"></span><span id="gMax"></span></div>
+                <p class="gauge__read" id="gRead"></p>
+              </div>
+            </div>
+          </div>
+
+          <div class="panel">
+            <div class="panel__head"><h4>Since 3 Aug</h4><span>○ then · ● now</span></div>
+            <div class="rows" id="rows"></div>
+          </div>
+
+        </div>
+      </div>
+
+      <div style="display:grid; gap:var(--s5); align-content:start">
+        <div class="p">
+          <h4>The figure is a substrate, not a portrait</h4>
+          <p>The mannequin draws in the same hairline grey as the wheel's grid — it's
+            the chart paper, not the data. Tape lines carry the information. The block
+            never resembles the user, never changes shape with his numbers, and never
+            renders fat or muscle. It is the same neutral pattern block for every man
+            in the app.</p>
+        </div>
+        <div class="p">
+          <h4>The wheel's conventions carry over</h4>
+          <p>Solid means this measurement, dashed or hollow means the previous one —
+            identical to the wheel's legend, so a user who has done one review already
+            knows how to read this screen. The band is his usual range, exactly as it
+            is everywhere else in the app.</p>
+        </div>
+        <div class="p">
+          <h4>Deltas are ink, never red or green</h4>
+          <p>For one man a falling waist is the goal; for another, gaining mass is.
+            Direction is not a verdict, so change is typeset in ink with a sign, and
+            the sentence underneath states fact: "1.5 cm down since 3 August."</p>
+        </div>
+        <div class="p">
+          <h4>Weight and body fat stay off the figure</h4>
+          <p>They aren't tape sites, so pinning them to anatomy would be false
+            precision. Weight takes the screen's one big number; body fat lives in
+            the change list, and only if the user tracks it.</p>
+        </div>
+        <div class="p">
+          <h4>Every site is optional</h4>
+          <p>Untracked sites don't render as empty rows or grey prompts — they simply
+            aren't there. A man who only tapes his waist sees one line on the block.
+            Adding a site happens from the overflow, never from a nudge.</p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section>
+    <div class="sec-head"><h2>Copy for this screen</h2><p>Same voice, one new trap</p></div>
+    <p class="note" style="margin-bottom:var(--s5)">
+      Measurement screens are where fitness apps start coaching. The trap here is
+      praise disguised as neutrality — "down 1.5 cm 🎉" — and its mirror, concern
+      disguised as neutrality. Both assume a goal the user never stated.
+    </p>
+    <div class="voice">
+      <div class="voice__h">Write</div>
+      <div class="voice__h">Not</div>
+      <div>1.5 cm down since 3 August.</div>
+      <div class="no">Great progress — keep it up! 🎉</div>
+      <div>Inside your usual 85–88.</div>
+      <div class="no">You're in the healthy zone</div>
+      <div>No tape for chest this month.</div>
+      <div class="no">Don't forget to measure your chest!</div>
+      <div>Add a site</div>
+      <div class="no">Complete your body profile</div>
+    </div>
+    <p class="note" style="margin-top:var(--s4)">
+      Population reference ranges (BMI bands, "ideal" waist-to-height) are off by
+      default and live behind an explicit setting, framed as context, never as a
+      coloured zone on the gauge. If a trend crosses a clinically meaningful
+      threshold, that is the alert component's job — factual, at most once, with a
+      route to a GP — not this screen's.
+    </p>
+  </section>
+
+  <footer>Proposal: tailor's-diagram measurements screen for bro — tape sites on a neutral pattern block, baseline gauges per site, dumbbell change list. Interactive mock above.</footer>
+</div>
+
+<script>
+  const root = document.documentElement;
+  const btn = document.getElementById('themeBtn');
+  btn.addEventListener('click', () => {
+    const dark = root.getAttribute('data-theme') === 'dark';
+    root.setAttribute('data-theme', dark ? 'light' : 'dark');
+    btn.textContent = dark ? 'Dark' : 'Light';
+    btn.setAttribute('aria-pressed', String(!dark));
+  });
+
+  const SITES = {
+    waist: { name:'Waist', v:86.5, prev:88.0, unit:'cm', min:80, max:96, band:[85,88],   read:'Inside your usual <em>85–88</em>, and 1.5 cm down since 3 Aug.' },
+    chest: { name:'Chest', v:102.0, prev:101.2, unit:'cm', min:94, max:110, band:[100,103], read:'Inside your usual <em>100–103</em>.' },
+    neck:  { name:'Neck',  v:39.5, prev:39.5, unit:'cm', min:36, max:44, band:[38.5,40.5], read:'Unchanged since 3 Aug, inside your usual <em>38.5–40.5</em>.' },
+    bicep: { name:'Bicep', v:36.8, prev:36.4, unit:'cm', min:32, max:41, band:[35.5,37],  read:'Inside your usual <em>35.5–37</em>.' },
+    hip:   { name:'Hip',   v:98.2, prev:98.6, unit:'cm', min:92, max:106, band:[97.5,99.5], read:'Inside your usual <em>97.5–99.5</em>.' },
+    thigh: { name:'Thigh', v:58.4, prev:58.1, unit:'cm', min:52, max:65, band:[57,59.5],  read:'Inside your usual <em>57–59.5</em>.' },
+    fat:   { name:'Body fat', v:18.2, prev:18.6, unit:'%', min:12, max:26, band:[17.5,19.5], read:'Inside your usual <em>17.5–19.5</em>.' }
+  };
+  const pct = (s, x) => ((x - s.min) / (s.max - s.min) * 100);
+  const fmt = n => (Math.round(n * 10) / 10).toFixed(1);
+
+  function selectSite(key) {
+    const s = SITES[key];
+    document.querySelectorAll('.figure .site').forEach(g =>
+      g.classList.toggle('on', g.dataset.site === key));
+    document.querySelectorAll('#rows .row').forEach(r =>
+      r.setAttribute('aria-pressed', String(r.dataset.site === key)));
+    document.getElementById('gLabel').innerHTML = s.name + ' <span>taped 2 Sep</span>';
+    document.getElementById('gValue').textContent = fmt(s.v);
+    document.getElementById('gUnit').textContent = s.unit;
+    const b = document.getElementById('gBand');
+    b.style.left = pct(s, s.band[0]) + '%';
+    b.style.width = (pct(s, s.band[1]) - pct(s, s.band[0])) + '%';
+    document.getElementById('gPrev').style.left = pct(s, s.prev) + '%';
+    document.getElementById('gMarker').style.left = pct(s, s.v) + '%';
+    document.getElementById('gMin').textContent = s.min;
+    document.getElementById('gMax').textContent = s.max;
+    document.getElementById('gRead').innerHTML = s.read;
+  }
+
+  // change list
+  const rows = document.getElementById('rows');
+  for (const key of ['waist','chest','bicep','hip','thigh','neck','fat']) {
+    const s = SITES[key];
+    const d = s.v - s.prev;
+    const delta = d === 0 ? '<span>no change</span>'
+      : (d > 0 ? '+' : '\u2212') + fmt(Math.abs(d)) + ' <span>' + s.unit + '</span>';
+    const row = document.createElement('button');
+    row.className = 'row'; row.dataset.site = key;
+    row.setAttribute('aria-pressed', String(key === 'waist'));
+    row.innerHTML =
+      '<span class="row__name">' + s.name + '</span>' +
+      '<span class="db">' +
+        '<span class="db__track"></span>' +
+        '<span class="db__band" style="left:' + pct(s, s.band[0]) + '%; width:' + (pct(s, s.band[1]) - pct(s, s.band[0])) + '%"></span>' +
+        '<span class="db__prev" style="left:' + pct(s, s.prev) + '%"></span>' +
+        '<span class="db__now" style="left:' + pct(s, s.v) + '%"></span>' +
+      '</span>' +
+      '<span class="row__delta num">' + delta + '</span>';
+    if (key !== 'fat') row.addEventListener('click', () => selectSite(key));
+    else row.addEventListener('click', () => {
+      document.querySelectorAll('.figure .site').forEach(g => g.classList.remove('on'));
+      document.querySelectorAll('#rows .row').forEach(r => r.setAttribute('aria-pressed', String(r.dataset.site === 'fat')));
+      const s2 = SITES.fat;
+      document.getElementById('gLabel').innerHTML = s2.name + ' <span>calipers, 2 Sep</span>';
+      document.getElementById('gValue').textContent = fmt(s2.v);
+      document.getElementById('gUnit').textContent = s2.unit;
+      const b2 = document.getElementById('gBand');
+      b2.style.left = pct(s2, s2.band[0]) + '%';
+      b2.style.width = (pct(s2, s2.band[1]) - pct(s2, s2.band[0])) + '%';
+      document.getElementById('gPrev').style.left = pct(s2, s2.prev) + '%';
+      document.getElementById('gMarker').style.left = pct(s2, s2.v) + '%';
+      document.getElementById('gMin').textContent = s2.min;
+      document.getElementById('gMax').textContent = s2.max;
+      document.getElementById('gRead').innerHTML = s2.read;
+    });
+    rows.appendChild(row);
+  }
+
+  // figure interaction
+  document.querySelectorAll('.figure .site').forEach(g => {
+    const go = () => selectSite(g.dataset.site);
+    g.addEventListener('click', go);
+    g.addEventListener('keydown', e => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); go(); } });
+  });
+
+  selectSite('waist');
+</script>
+</body>
+</html>

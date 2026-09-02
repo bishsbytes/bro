@@ -11,6 +11,7 @@ export const navigation = {
 	root: {
 		lifeAreas: "Life areas",
 		measurement: "Measurement",
+		measuring: "How to measure",
 		signIn: "Sign in",
 		signUp: "Create account",
 	},

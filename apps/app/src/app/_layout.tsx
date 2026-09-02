@@ -126,6 +126,10 @@ function RootNavigator() {
 					name="body/[slug]"
 					options={{ title: t("root.measurement") }}
 				/>
+				<Stack.Screen
+					name="body/measuring"
+					options={{ title: t("root.measuring") }}
+				/>
 				<Stack.Screen name="challenges" options={{ headerShown: false }} />
 			</Stack.Protected>
 			<Stack.Screen name="sign-in" options={{ title: t("root.signIn") }} />

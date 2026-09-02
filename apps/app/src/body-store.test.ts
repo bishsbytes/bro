@@ -54,11 +54,23 @@ describe("body store", () => {
 			"weight",
 			"waist",
 			"body_fat",
+			"neck",
+			"chest",
+			"bicep",
+			"hip",
+			"thigh",
 		]);
-		expect(fresh.metrics).toMatchObject([
+		expect(fresh.metrics.slice(0, 3)).toMatchObject([
 			{ metricSlug: "weight", tracked: false, displayUnit: "st" },
 			{ metricSlug: "waist", tracked: false, displayUnit: "cm" },
 			{ metricSlug: "body_fat", tracked: false, displayUnit: "%" },
+		]);
+		expect(fresh.metrics.slice(3, 8)).toMatchObject([
+			{ metricSlug: "neck", tracked: false, displayUnit: "cm" },
+			{ metricSlug: "chest", tracked: false, displayUnit: "cm" },
+			{ metricSlug: "bicep", tracked: false, displayUnit: "cm" },
+			{ metricSlug: "hip", tracked: false, displayUnit: "cm" },
+			{ metricSlug: "thigh", tracked: false, displayUnit: "cm" },
 		]);
 
 		const enabled = await store.setTracked("weight", true);
@@ -81,7 +93,9 @@ describe("body store", () => {
 		const store = new BodyStore(db);
 
 		expect(await store.loadMetric("resting_heart_rate")).toBeNull();
-		expect((await store.loadOverview()).metrics).toHaveLength(3);
+		expect(
+			(await store.loadOverview()).metrics.map(({ metricSlug }) => metricSlug),
+		).not.toContain("resting_heart_rate");
 	});
 
 	it("merges imported body values, exposes resting heart rate read-only, and resolves goals", async () => {
@@ -126,6 +140,11 @@ describe("body store", () => {
 			"waist",
 			"body_fat",
 			"resting_heart_rate",
+			"neck",
+			"chest",
+			"bicep",
+			"hip",
+			"thigh",
 		]);
 		expect(overview.metrics[0]).toMatchObject({
 			metricSlug: "weight",
@@ -135,7 +154,11 @@ describe("body store", () => {
 			latestFormatted: "79.0 kg",
 			latest: { source: "health_connect", value: 79 },
 		});
-		expect(overview.metrics.at(-1)).toMatchObject({
+		expect(
+			overview.metrics.find(
+				({ metricSlug }) => metricSlug === "resting_heart_rate",
+			),
+		).toMatchObject({
 			metricSlug: "resting_heart_rate",
 			userEnterable: false,
 			visible: true,
@@ -261,6 +284,54 @@ describe("body store", () => {
 		expect((await store.loadMetric("weight"))?.goals[0]?.status).toBe(
 			"abandoned",
 		);
+	});
+
+	it("reads a tape site against its own range, in the unit it is shown in", async () => {
+		const observations = new databaseApp.ObservationRepository(db);
+		for (const [index, [localDay, metres]] of [
+			["2026-06-08", 0.9],
+			["2026-06-29", 0.895],
+			["2026-07-20", 0.885],
+			["2026-08-03", 0.88],
+			["2026-09-02", 0.865],
+		].entries()) {
+			await observations.create({
+				metricSlug: "waist",
+				value: metres as number,
+				scaleMin: null,
+				scaleMax: null,
+				observedAt: Date.parse(`${localDay}T08:0${index}:00.000Z`),
+				localDay: localDay as string,
+				tzOffsetMinutes: 0,
+				source: "user",
+				sourceRecordId: null,
+				assessmentId: null,
+			});
+		}
+		const store = new BodyStore(
+			db,
+			() => new Date("2026-09-02T12:00:00.000Z"),
+			() => "en-GB",
+		);
+		await store.setTracked("waist", true);
+
+		const waist = (await store.loadOverview()).metrics.find(
+			({ metricSlug }) => metricSlug === "waist",
+		);
+
+		expect(waist?.baseline).toMatchObject({
+			current: { formatted: "86.5 cm", localDay: "2026-09-02" },
+			previous: { formatted: "88.0 cm", localDay: "2026-08-03" },
+			direction: "down",
+			changeFormatted: "1.5 cm",
+			readingCount: 5,
+		});
+		expect(waist?.baseline.usualRange).toMatchObject({
+			minFormatted: "88.0 cm",
+			maxFormatted: "89.5 cm",
+		});
+		expect(waist?.baseline.rail?.min).toBeLessThan(0.865);
+		expect(waist?.baseline.rail?.max).toBeGreaterThan(0.9);
 	});
 
 	it("records a typed measurement against the day it was entered", async () => {

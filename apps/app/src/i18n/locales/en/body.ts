@@ -3,27 +3,82 @@ export const body = {
 	notFoundBody: "This measurement is not available.",
 	backToBody: "Back to Body",
 	overview: {
-		intro: "Keep the measurements that matter in view.",
+		intro: "Every reading is measured against your own usual range.",
 		loadFailed: "Your measurements could not be loaded",
 		loadFailedBody: "Try again.",
-		/** Renders in capitals; see the note on eyebrows in the review catalogue. */
-		eyebrow: "YOUR BODY",
 	},
 	measurements: {
 		title: "Measurements",
-		more: "More measurements",
-		emptyTitle: "No body metrics tracked",
-		emptyBody: "Turn on a measurement below to log it here and see its trend.",
-		/** {{when}} is either an observation date or a local day. */
-		latest: "Latest {{value}} · {{when}}",
+		emptyTitle: "Nothing taped yet",
+		emptyBody: "Add a site to read it against your own range.",
 		nothingLogged: "Nothing logged yet",
 		/** Names the origin of an imported reading. */
 		source: "Source: {{name}}",
 		track: "Track {{name}}",
 		stopTracking: "Stop tracking {{name}}",
 		enterPlaceholder: "Enter {{unit}}",
-		enterIn: "Enter in {{unit}}",
 		logMetric: "Log {{name}}",
+	},
+	measuring: {
+		link: "How to measure",
+		intro: "Tap a site to see where the tape goes.",
+		/** Spoken name for a site on the guide's figure. */
+		siteA11y: "{{name}}, how to measure",
+		everySiteTitle: "Every site",
+		everySite:
+			"Measure at the same time of day, before eating, with the tape flat against the skin and level all the way round. Pull it snug without pressing in.",
+		sites: {
+			neck: "Just below the Adam's apple, with the tape sloping slightly down at the front.",
+			chest:
+				"Around the fullest part, level under the armpits, arms down, at the end of a normal breath out.",
+			bicep:
+				"Around the fullest part of the upper arm, hanging relaxed at your side.",
+			waist:
+				"Around the navel, standing normally, at the end of a normal breath out. Do not hold it in.",
+			hip: "Feet together, around the fullest part of the buttocks.",
+			thigh:
+				"Around the fullest part of the upper thigh, just under the buttock, with your weight even on both feet.",
+		},
+	},
+	sites: {
+		add: "Add a site",
+		title: "Sites",
+		intro: "What you tape is up to you. Anything off leaves this screen.",
+		dismissA11y: "Close sites",
+	},
+	reading: {
+		/** {{when}} is a day: "Today", "Yesterday", or "3 Aug". */
+		taped: "Taped {{when}}",
+		measured: "Measured {{when}}",
+		imported: "{{source}}, {{when}}",
+	},
+	read: {
+		/** The band under the marker is the user's own range, never a target. */
+		insideUsual: "Inside your usual {{min}}–{{max}}.",
+		outsideUsual: "Outside your usual {{min}}–{{max}}.",
+		noRange: "Not enough readings yet for a usual range.",
+		down: "{{value}} down since {{when}}.",
+		up: "{{value}} up since {{when}}.",
+		unchanged: "Unchanged since {{when}}.",
+		first: "First reading.",
+		/** Joins the range line to the change line; reorder freely per language. */
+		joined: "{{range}} {{change}}",
+		/** Spoken form of a gauge: name, reading, then the same sentence shown. */
+		gaugeA11y: "{{name}}, {{value}}. {{read}}",
+	},
+	change: {
+		title: "Since last time",
+		/** Hollow mark is the previous reading, filled is this one. */
+		legend: "○ then · ● now",
+		since: "since {{when}}",
+		first: "first reading",
+		notLogged: "nothing logged",
+		/** Change is typeset with a sign and never coloured: direction is not a verdict. */
+		down: "−{{value}}",
+		up: "+{{value}}",
+		none: "no change",
+		/** Spoken form of a change row: the name, then the sentence it stands for. */
+		rowA11y: "{{name}}. {{change}}",
 	},
 	/** {{name}} is a measurement name. */
 	open: "Open {{name}}",

@@ -1,24 +1,26 @@
-import type { MeasurementEntry } from "@bro/domain";
+import { localDayOf, type MeasurementEntry } from "@bro/domain";
+import { isTapeSiteSlug, TAPE_SITE_SLUGS } from "@bro/domain/metric-registry";
+import { formatLocalDayLabelShort } from "@bro/logic";
 import { router } from "expo-router";
 import type { TFunction } from "i18next";
 import { useCallback, useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { View } from "react-native";
 import {
-	type BodyGoalProgress,
+	type BodyMetricSummary,
 	type BodyStore,
 	createBodyStore,
 	type MeasurementPresentation,
 } from "../../body/body-store";
 import { AppText } from "../../components/app-text";
+import { BaselineGauge } from "../../components/baseline-gauge";
 import { Button } from "../../components/button";
 import { Card } from "../../components/card";
 import { EmptyState } from "../../components/empty-state";
 import { MeasurementField } from "../../components/measurement-field";
+import { OptionSheet } from "../../components/option-sheet";
 import { LoadingScreen, Screen } from "../../components/screen";
 import { SectionHeader } from "../../components/section-header";
-import { ThemedSwitch } from "../../components/themed-switch";
-import { TrendChart } from "../../components/trend-chart";
 import { healthPlatformLabel } from "../../health/platform-label";
 import { toMessage } from "../../lib/errors";
 import { useFocusStoreLoad } from "../../lib/use-store-load";
@@ -28,44 +30,146 @@ import {
 	parseMeasurementInput,
 } from "../../measurements/measurement-entry";
 import { StyleSheet } from "../../theme/unistyles";
+import {
+	type MeasurementChange,
+	MeasurementChangeList,
+} from "./measurement-change-list";
 
 type BodyScreenProps = {
 	store?: Pick<BodyStore, "loadOverview" | "setTracked" | "recordMeasurement">;
 };
 
-function observedLabel(observedAt: number): string {
-	return new Date(observedAt).toLocaleDateString(undefined, {
-		day: "numeric",
-		month: "short",
-		year: "numeric",
+type BodyText = TFunction<["body", "common"]>;
+
+const WEIGHT_SLUG = "weight";
+
+function dayLabel(
+	localDay: string,
+	todayLocalDay: string,
+	locale: string | undefined,
+): string {
+	return formatLocalDayLabelShort(localDay, todayLocalDay, locale);
+}
+
+/** How and when the reading was taken — taped by hand, or brought in by a platform. */
+function readingMeta(
+	t: BodyText,
+	metric: BodyMetricSummary,
+	todayLocalDay: string,
+	locale: string | undefined,
+): string | null {
+	const current = metric.baseline.current;
+	if (!current) return null;
+	const when = dayLabel(current.localDay, todayLocalDay, locale);
+	const platform =
+		metric.latest && metric.latest.source !== "user"
+			? healthPlatformLabel(metric.latest.source)
+			: null;
+	if (platform) return t("body:reading.imported", { source: platform, when });
+	if (isTapeSiteSlug(metric.metricSlug)) {
+		return t("body:reading.taped", { when });
+	}
+	return t("body:reading.measured", { when });
+}
+
+/** The sentence naming the change since the reading before, with no verdict on it. */
+function changeSentence(
+	t: BodyText,
+	metric: BodyMetricSummary,
+	todayLocalDay: string,
+	locale: string | undefined,
+): string {
+	const { current, previous, direction, changeFormatted } = metric.baseline;
+	if (!current) return t("body:measurements.nothingLogged");
+	if (!previous) return t("body:read.first");
+	const when = dayLabel(previous.localDay, todayLocalDay, locale);
+	if (direction === "none" || !changeFormatted) {
+		return t("body:read.unchanged", { when });
+	}
+	return t(`body:read.${direction}`, { value: changeFormatted, when });
+}
+
+/** The gauge's one-line read: where this reading sits, then how far it moved. */
+function readLine(
+	t: BodyText,
+	metric: BodyMetricSummary,
+	todayLocalDay: string,
+	locale: string | undefined,
+): string | null {
+	const { current, usualRange } = metric.baseline;
+	if (!current) return null;
+	const range = usualRange
+		? t(
+				current.value >= usualRange.min && current.value <= usualRange.max
+					? "body:read.insideUsual"
+					: "body:read.outsideUsual",
+				{ min: usualRange.minFormatted, max: usualRange.maxFormatted },
+			)
+		: t("body:read.noRange");
+	return t("body:read.joined", {
+		range,
+		change: changeSentence(t, metric, todayLocalDay, locale),
 	});
 }
 
-function sourceLabel(t: TFunction<"body">, source: string): string {
-	return healthPlatformLabel(source) ?? t("sourceYou");
+function MetricGauge({
+	metric,
+	valueVariant,
+	todayLocalDay,
+	locale,
+}: {
+	metric: BodyMetricSummary;
+	valueVariant: "metric" | "score";
+	todayLocalDay: string;
+	locale: string | undefined;
+}) {
+	const { t } = useTranslation(["body", "common"]);
+	const { baseline } = metric;
+	if (!baseline.current || !baseline.rail) {
+		return (
+			<AppText color="muted">{t("body:measurements.nothingLogged")}</AppText>
+		);
+	}
+	const read = readLine(t, metric, todayLocalDay, locale);
+
+	return (
+		<BaselineGauge
+			label={metric.label}
+			meta={readingMeta(t, metric, todayLocalDay, locale)}
+			value={baseline.current.formatted}
+			valueVariant={valueVariant}
+			rail={baseline.rail}
+			railLabels={{
+				min: baseline.rail.minFormatted,
+				max: baseline.rail.maxFormatted,
+			}}
+			band={baseline.usualRange}
+			current={baseline.current.value}
+			previous={baseline.previous?.value ?? null}
+			read={read}
+			accessibilityLabel={t("body:read.gaugeA11y", {
+				name: metric.label,
+				value: baseline.current.formatted,
+				read: read ?? "",
+			})}
+		/>
+	);
 }
 
-function goalLine(t: TFunction<"body">, goal: BodyGoalProgress): string {
-	const target = t("goal.target", { value: goal.targetFormatted });
-	if (goal.targetReached) {
-		return t("goal.targetWithNote", {
-			target,
-			note: t("goal.targetReached"),
-		});
-	}
-	if (goal.progressPercent === null) {
-		return target;
-	}
-	return t("goal.targetWithNote", {
-		target,
-		note: t("goal.percentComplete", { percent: goal.progressPercent }),
-	});
-}
-
+/**
+ * Measurements, drawn the way a tailor takes them: tape sites on a neutral
+ * pattern block, each read against the range that is usual for this user.
+ *
+ * There is deliberately no shape to compare — no radar, no polygon, no score.
+ * A waist and a bicep have different units and opposite ideas of "up", so the
+ * only honest comparison a measurement has is with its own history.
+ */
 export function BodyScreen({ store }: BodyScreenProps) {
 	const { t } = useTranslation(["body", "common"]);
 	const body = useMemo(() => store ?? createBodyStore(), [store]);
 	const [busySlug, setBusySlug] = useState<string | null>(null);
+	const [selection, setSelection] = useState<string | null>(null);
+	const [editingSites, setEditingSites] = useState(false);
 	const [entries, setEntries] = useState<Record<string, MeasurementEntry>>({});
 	const [entryErrors, setEntryErrors] = useState<Record<string, string>>({});
 	const {
@@ -76,12 +180,14 @@ export function BodyScreen({ store }: BodyScreenProps) {
 		setData: setOverview,
 		setError,
 	} = useFocusStoreLoad(useCallback(() => body.loadOverview(), [body]));
+	const todayLocalDay = localDayOf(new Date());
 
 	async function setTracked(metricSlug: string, enabled: boolean) {
 		setBusySlug(metricSlug);
 		setError(null);
 		try {
 			setOverview(await body.setTracked(metricSlug, enabled));
+			if (enabled) setSelection(metricSlug);
 		} catch (caught) {
 			setError(toMessage(caught));
 		} finally {
@@ -137,8 +243,8 @@ export function BodyScreen({ store }: BodyScreenProps) {
 		return (
 			<Screen centered padded>
 				<EmptyState
-					title={t("overview.loadFailed")}
-					body={error ?? t("overview.loadFailedBody")}
+					title={t("body:overview.loadFailed")}
+					body={error ?? t("body:overview.loadFailedBody")}
 					actionLabel={t("common:actions.tryAgain")}
 					onAction={() => void reload()}
 					tone="danger"
@@ -147,154 +253,222 @@ export function BodyScreen({ store }: BodyScreenProps) {
 		);
 	}
 
+	const locale = overview.inputLocale;
 	const visible = overview.metrics.filter((metric) => metric.visible);
-	const untracked = overview.metrics.filter((metric) => !metric.visible);
+	const weight = visible.find((metric) => metric.metricSlug === WEIGHT_SLUG);
+	// Tape sites read down the body rather than by tracking order: the figure is
+	// the index, so the list beneath it has to agree with the drawing.
+	const sites = TAPE_SITE_SLUGS.flatMap((slug) => {
+		const metric = visible.find((candidate) => candidate.metricSlug === slug);
+		return metric ? [metric] : [];
+	});
+	// Weight is not a tape site and neither is body fat, so neither goes on the
+	// figure. Everything except weight can still be read and compared here.
+	const listed = [
+		...sites,
+		...visible.filter(
+			(metric) =>
+				metric.metricSlug !== WEIGHT_SLUG && !isTapeSiteSlug(metric.metricSlug),
+		),
+	];
+	const selected =
+		listed.find((metric) => metric.metricSlug === selection) ??
+		listed[0] ??
+		null;
+
+	function changeCell(metric: BodyMetricSummary): string {
+		const { current, previous, direction, changeFormatted } = metric.baseline;
+		if (!current || !previous) return t("common:emDash");
+		if (direction === "none" || !changeFormatted) return t("body:change.none");
+		return t(`body:change.${direction}`, { value: changeFormatted });
+	}
+
+	// A site the user has added but not yet taped stays in the list: it is the
+	// only place he can enter the first reading. An untracked site is absent.
+	const changes: MeasurementChange[] = listed.map((metric) => ({
+		slug: metric.metricSlug,
+		label: metric.label,
+		since: !metric.baseline.current
+			? t("body:change.notLogged")
+			: metric.baseline.previous
+				? t("body:change.since", {
+						when: dayLabel(
+							metric.baseline.previous.localDay,
+							todayLocalDay,
+							locale,
+						),
+					})
+				: t("body:change.first"),
+		change: changeCell(metric),
+		rail: metric.baseline.rail,
+		band: metric.baseline.usualRange,
+		current: metric.baseline.current?.value ?? null,
+		previous: metric.baseline.previous?.value ?? null,
+		accessibilityLabel: t("body:change.rowA11y", {
+			name: metric.label,
+			change: changeSentence(t, metric, todayLocalDay, locale),
+		}),
+	}));
+
+	function entryFor(metric: BodyMetricSummary) {
+		const presentation = metric.editablePresentation;
+		if (!metric.tracked || !presentation) return null;
+		return (
+			<View style={styles.entry}>
+				<MeasurementField
+					label={metric.label}
+					unit={presentation.displayUnit}
+					entry={entries[metric.metricSlug] ?? EMPTY_ENTRY}
+					onChangeEntry={(entry) => updateEntry(metric.metricSlug, entry)}
+					placeholder={t("body:measurements.enterPlaceholder", {
+						unit: presentation.displayUnit,
+					})}
+					error={entryErrors[metric.metricSlug]}
+				/>
+				<Button
+					label={t("body:measurements.logMetric", { name: metric.label })}
+					loading={busySlug === metric.metricSlug}
+					disabled={busySlug !== null}
+					onPress={() =>
+						void recordMeasurement(metric.metricSlug, presentation)
+					}
+				/>
+			</View>
+		);
+	}
+
+	function openMetric(metric: BodyMetricSummary) {
+		return (
+			<Button
+				label={t("body:open", { name: metric.label })}
+				variant="text"
+				onPress={() =>
+					router.push({
+						pathname: "/body/[slug]",
+						params: { slug: metric.metricSlug },
+					})
+				}
+			/>
+		);
+	}
 
 	return (
-		<Screen scroll padded gap="lg">
-			<AppText color="muted">{t("overview.intro")}</AppText>
+		<Screen scroll padded gap="xl">
+			<AppText color="muted">{t("body:overview.intro")}</AppText>
 
 			{error ? <AppText color="danger">{error}</AppText> : null}
 
+			{weight ? (
+				<View style={styles.section}>
+					<MetricGauge
+						metric={weight}
+						valueVariant="metric"
+						todayLocalDay={todayLocalDay}
+						locale={locale}
+					/>
+					{entryFor(weight)}
+					{weight.activeGoal ? (
+						<AppText variant="caption" color="muted">
+							{t("body:goal.target", {
+								value: weight.activeGoal.targetFormatted,
+							})}
+						</AppText>
+					) : null}
+					{openMetric(weight)}
+				</View>
+			) : null}
+
 			<View style={styles.section}>
 				<SectionHeader
-					title={t("measurements.title")}
-					eyebrow={t("overview.eyebrow")}
+					title={t("body:measurements.title")}
+					action={
+						<Button
+							label={t("body:sites.add")}
+							variant="text"
+							disabled={busySlug !== null}
+							onPress={() => setEditingSites(true)}
+						/>
+					}
 				/>
-				{visible.length === 0 ? (
-					<EmptyState
-						title={t("measurements.emptyTitle")}
-						body={t("measurements.emptyBody")}
-					/>
-				) : null}
 
-				{visible.map((metric) => (
-					<Card key={metric.metricSlug} style={styles.metricCard}>
-						<View style={styles.heading}>
-							<View style={styles.grow}>
-								<AppText variant="section">{metric.label}</AppText>
-								{metric.latest ? (
-									<>
-										<AppText color="muted">
-											{t("measurements.latest", {
-												value: metric.latestFormatted ?? t("common:emDash"),
-												when:
-													metric.latest.source === "user"
-														? observedLabel(metric.latest.observedAt)
-														: metric.latest.localDay,
-											})}
-										</AppText>
-										{metric.hasImportedData ? (
-											<AppText variant="micro" color="subtle">
-												{t("measurements.source", {
-													name: sourceLabel(t, metric.latest.source),
-												})}
-											</AppText>
-										) : null}
-									</>
-								) : (
-									<AppText color="muted">
-										{t("measurements.nothingLogged")}
-									</AppText>
-								)}
-							</View>
-							{metric.userEnterable ? (
-								<ThemedSwitch
-									accessibilityLabel={
-										metric.tracked
-											? t("measurements.stopTracking", { name: metric.label })
-											: t("measurements.track", { name: metric.label })
-									}
-									value={metric.tracked}
-									disabled={busySlug !== null}
-									onValueChange={(enabled) =>
-										void setTracked(metric.metricSlug, enabled)
-									}
-								/>
-							) : null}
-						</View>
-
-						{metric.tracked && metric.editablePresentation ? (
-							<View style={styles.entry}>
-								<MeasurementField
-									label={metric.label}
-									unit={metric.editablePresentation.displayUnit}
-									entry={entries[metric.metricSlug] ?? EMPTY_ENTRY}
-									onChangeEntry={(entry) =>
-										updateEntry(metric.metricSlug, entry)
-									}
-									placeholder={t("measurements.enterPlaceholder", {
-										unit: metric.editablePresentation.displayUnit,
-									})}
-									error={entryErrors[metric.metricSlug]}
-								/>
-								<Button
-									label={t("measurements.logMetric", { name: metric.label })}
-									loading={busySlug === metric.metricSlug}
-									disabled={busySlug !== null}
-									onPress={() => {
-										const presentation = metric.editablePresentation;
-										if (presentation) {
-											void recordMeasurement(metric.metricSlug, presentation);
-										}
-									}}
-								/>
-							</View>
-						) : null}
-
-						{metric.series.observedDayCount > 0 ? (
-							<TrendChart series={metric.series} height={100} />
-						) : null}
-
-						{metric.activeGoal ? (
-							<AppText variant="caption" color="brand">
-								{goalLine(t, metric.activeGoal)}
+				{selected ? (
+					<Card style={styles.panel}>
+						<MetricGauge
+							metric={selected}
+							valueVariant={weight ? "score" : "metric"}
+							todayLocalDay={todayLocalDay}
+							locale={locale}
+						/>
+						{entryFor(selected)}
+						{selected.activeGoal ? (
+							<AppText variant="caption" color="muted">
+								{t("body:goal.target", {
+									value: selected.activeGoal.targetFormatted,
+								})}
 							</AppText>
 						) : null}
-
-						<Button
-							label={t("open", { name: metric.label })}
-							variant="secondary"
-							onPress={() =>
-								router.push({
-									pathname: "/body/[slug]",
-									params: { slug: metric.metricSlug },
-								})
-							}
-						/>
+						{openMetric(selected)}
 					</Card>
-				))}
+				) : (
+					<EmptyState
+						title={t("body:measurements.emptyTitle")}
+						body={t("body:measurements.emptyBody")}
+						actionLabel={t("body:sites.add")}
+						onAction={() => setEditingSites(true)}
+					/>
+				)}
+
+				{changes.length > 0 ? (
+					<>
+						<View style={styles.changeHeading}>
+							<AppText variant="label">{t("body:change.title")}</AppText>
+							<AppText variant="micro" color="subtle">
+								{t("body:change.legend")}
+							</AppText>
+						</View>
+						<MeasurementChangeList
+							changes={changes}
+							selectedSlug={selected?.metricSlug ?? null}
+							onSelect={setSelection}
+						/>
+					</>
+				) : null}
+
+				<Button
+					label={t("body:measuring.link")}
+					variant="text"
+					onPress={() => router.push("/body/measuring")}
+				/>
 			</View>
 
-			{untracked.length > 0 ? (
-				<View style={styles.section}>
-					<SectionHeader
-						title={t("measurements.more")}
-						eyebrow={t("overview.eyebrow")}
-					/>
-					{untracked.map((metric) => (
-						<Card key={metric.metricSlug} style={styles.heading}>
-							<View style={styles.grow}>
-								<AppText variant="label">{metric.label}</AppText>
-								{metric.displayUnit ? (
-									<AppText variant="caption" color="muted">
-										{t("measurements.enterIn", { unit: metric.displayUnit })}
-									</AppText>
-								) : null}
-							</View>
-							<ThemedSwitch
-								accessibilityLabel={t("measurements.track", {
-									name: metric.label,
-								})}
-								value={false}
-								disabled={busySlug !== null}
-								onValueChange={(enabled) =>
-									void setTracked(metric.metricSlug, enabled)
-								}
-							/>
-						</Card>
-					))}
-				</View>
+			{editingSites ? (
+				<OptionSheet
+					visible
+					selection="multiple"
+					title={t("body:sites.title")}
+					intro={t("body:sites.intro")}
+					closeAccessibilityLabel={t("body:sites.dismissA11y")}
+					options={overview.metrics
+						.filter((metric) => metric.userEnterable)
+						.map((metric) => ({
+							value: metric.metricSlug,
+							label: metric.label,
+							accessibilityLabel: metric.tracked
+								? t("body:measurements.stopTracking", { name: metric.label })
+								: t("body:measurements.track", { name: metric.label }),
+						}))}
+					selected={overview.metrics
+						.filter((metric) => metric.tracked)
+						.map((metric) => metric.metricSlug)}
+					disabled={busySlug !== null}
+					onSelect={(metricSlug) => {
+						const metric = overview.metrics.find(
+							(candidate) => candidate.metricSlug === metricSlug,
+						);
+						if (metric) void setTracked(metricSlug, !metric.tracked);
+					}}
+					onClose={() => setEditingSites(false)}
+				/>
 			) : null}
 		</Screen>
 	);
@@ -302,15 +476,14 @@ export function BodyScreen({ store }: BodyScreenProps) {
 
 const styles = StyleSheet.create((theme) => ({
 	section: { gap: theme.spacing.md },
-	metricCard: { gap: theme.spacing.md },
+	panel: { gap: theme.spacing.md },
 	entry: { gap: theme.spacing.sm },
-	heading: {
+	changeHeading: {
 		flexDirection: "row",
-		alignItems: "center",
+		alignItems: "baseline",
 		justifyContent: "space-between",
 		gap: theme.spacing.md,
 	},
-	grow: { flex: 1, gap: theme.spacing.xs },
 }));
 
 export default BodyScreen;

@@ -47,7 +47,36 @@ export type TagSlug =
 	| "anxiety"
 	| "family_time"
 	| "conflict";
-export type UserEnterableMeasurementSlug = "weight" | "waist" | "body_fat";
+export type UserEnterableMeasurementSlug =
+	| "weight"
+	| "waist"
+	| "body_fat"
+	| TapeSiteSlug;
+/**
+ * A place a tape measure goes, in the order a tailor works down the body. The
+ * body screen draws these on its pattern block; the order is the drawing's, so
+ * it lives with the catalogue rather than with the geometry.
+ */
+export type TapeSiteSlug =
+	| "neck"
+	| "chest"
+	| "bicep"
+	| "waist"
+	| "hip"
+	| "thigh";
+
+export const TAPE_SITE_SLUGS = [
+	"neck",
+	"chest",
+	"bicep",
+	"waist",
+	"hip",
+	"thigh",
+] as const satisfies readonly TapeSiteSlug[];
+
+export function isTapeSiteSlug(slug: string): slug is TapeSiteSlug {
+	return (TAPE_SITE_SLUGS as readonly string[]).includes(slug);
+}
 export type UserEnterableMeasurementDimension = "mass" | "length" | "fraction";
 export type ImportedOnlyMeasurementSlug =
 	| "sleep_duration"
@@ -362,6 +391,16 @@ export const METRIC_REGISTRY = [
 	measurement("weight", "Weight", "mass", 0),
 	measurement("waist", "Waist", "length", 1),
 	measurement("body_fat", "Body fat", "fraction", 2),
+	// Tape sites join at the end of the measurement positions rather than in
+	// anatomical order: a default position is what an overlay-less metric sorts
+	// by, so renumbering the three originals would order new installs
+	// differently from every existing one. The body screen orders the sites by
+	// TAPE_SITE_SLUGS instead.
+	measurement("neck", "Neck", "length", 14),
+	measurement("chest", "Chest", "length", 15),
+	measurement("bicep", "Bicep", "length", 16),
+	measurement("hip", "Hip", "length", 17),
+	measurement("thigh", "Thigh", "length", 18),
 	importedMeasurement("sleep_duration", "Sleep", "time", "sum", 3, false),
 	importedMeasurement("steps", "Steps", "count", "sum", 4, false),
 	importedMeasurement(

@@ -119,6 +119,31 @@ describe("metric registry", () => {
 				dimension: "fraction",
 			}),
 			expect.objectContaining({
+				slug: "neck",
+				label: "Neck",
+				dimension: "length",
+			}),
+			expect.objectContaining({
+				slug: "chest",
+				label: "Chest",
+				dimension: "length",
+			}),
+			expect.objectContaining({
+				slug: "bicep",
+				label: "Bicep",
+				dimension: "length",
+			}),
+			expect.objectContaining({
+				slug: "hip",
+				label: "Hip",
+				dimension: "length",
+			}),
+			expect.objectContaining({
+				slug: "thigh",
+				label: "Thigh",
+				dimension: "length",
+			}),
+			expect.objectContaining({
 				slug: "sleep_duration",
 				dimension: "time",
 				aggregation: "sum",

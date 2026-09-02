@@ -90,9 +90,13 @@ describe("body metrics flow", () => {
 		const router = renderRouter("src/app", { initialUrl: "/body" });
 		const view = await router;
 		await act(async () => undefined);
-		expect(await view.findByText("No body metrics tracked")).toBeTruthy();
+		expect(await view.findByText("Nothing taped yet")).toBeTruthy();
 
-		await fireEvent(view.getByLabelText("Track Weight"), "valueChange", true);
+		await fireEvent.press(view.getAllByLabelText("Add a site")[0]);
+		await fireEvent.press(await view.findByLabelText("Track Weight"));
+		await fireEvent.press(
+			view.getByTestId("modal-sheet-backdrop", { includeHiddenElements: true }),
+		);
 		expect(await view.findByText("Nothing logged yet")).toBeTruthy();
 
 		await fireEvent.changeText(
@@ -101,13 +105,13 @@ describe("body metrics flow", () => {
 		);
 		await fireEvent.changeText(view.getByLabelText("Weight (pounds)"), "4");
 		await fireEvent.press(view.getByLabelText("Log Weight"));
-		expect(await view.findByText(/Latest 12 st 4 lb/)).toBeTruthy();
+		expect(await view.findByText("12 st 4 lb")).toBeTruthy();
 
 		await act(async () => expoRouter.replace("/insights"));
 		expect(await view.findByText("Latest 12 st 4 lb")).toBeTruthy();
 		expect(view.getByLabelText("weight trend chart")).toBeTruthy();
 		await act(async () => expoRouter.replace("/body"));
-		expect(await view.findByText(/Latest 12 st 4 lb/)).toBeTruthy();
+		expect(await view.findByText("12 st 4 lb")).toBeTruthy();
 		await fireEvent.press(view.getByText("Open Weight"));
 		expect(await view.findByText("12 st 4 lb")).toBeTruthy();
 
@@ -141,7 +145,7 @@ describe("body metrics flow", () => {
 		);
 		await fireEvent.changeText(view.getByLabelText("Weight (pounds)"), "3");
 		await fireEvent.press(view.getByLabelText("Log Weight"));
-		expect(await view.findByText(/Latest 12 st 3 lb/)).toBeTruthy();
+		expect(await view.findByText("12 st 3 lb")).toBeTruthy();
 
 		await act(async () => expoRouter.replace("/body/weight"));
 		expect(await view.findByText("12 st 3 lb")).toBeTruthy();
@@ -192,7 +196,7 @@ describe("body metrics flow", () => {
 		).toBe(canonicalGoal);
 
 		await act(async () => expoRouter.replace("/body"));
-		expect(await view.findByText(/Latest 77.1 kg/)).toBeTruthy();
+		expect(await view.findByText("77.1 kg")).toBeTruthy();
 		await act(async () => expoRouter.replace("/body/weight"));
 		expect(await view.findByText(/Achieved: target 76.2 kg/)).toBeTruthy();
 		await act(async () => expoRouter.replace("/insights"));

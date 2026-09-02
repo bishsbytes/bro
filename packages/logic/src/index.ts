@@ -136,6 +136,15 @@ export {
 	renderInsightTeaserProgress,
 } from "./insight/presentation";
 export {
+	MEASUREMENT_BASELINE_MIN_READINGS,
+	MEASUREMENT_BASELINE_MIN_SPAN_DAYS,
+	MEASUREMENT_BASELINE_WINDOW_DAYS,
+	type MeasurementBaseline,
+	type MeasurementRange,
+	type MeasurementReading,
+	resolveMeasurementBaseline,
+} from "./measurements/baseline";
+export {
 	type MeasurementPresentation,
 	toMeasurementPresentation,
 } from "./measurements/presentation";

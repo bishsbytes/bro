@@ -17,14 +17,19 @@ import {
 } from "@bro/domain/metric-registry";
 import {
 	buildTrendSeries,
+	formatMetricDelta,
 	formatMetricValue,
 	goalStatus,
 	importedDailyMetricAsObservation,
 	isHealthMetricSlug,
+	type MeasurementBaseline,
 	type MeasurementPresentation,
+	type MeasurementRange,
+	type MeasurementReading,
 	metricDisplayUnit,
 	type ResolvedGoalProgress,
 	resolveGoalProgress,
+	resolveMeasurementBaseline,
 	resolveMetricObservations,
 	type TrendSeries,
 	toMeasurementPresentation,
@@ -45,6 +50,37 @@ export type BodyMetricPresentation = {
 
 export type BodyGoalProgress = ResolvedGoalProgress;
 
+export type BodyMetricReading = {
+	value: number;
+	formatted: string;
+	observedAt: number;
+	localDay: string;
+};
+
+export type BodyMetricRange = {
+	min: number;
+	max: number;
+	minFormatted: string;
+	maxFormatted: string;
+};
+
+/**
+ * One measurement read against itself: where it sits now, where it sat last
+ * time, and the range it usually occupies. Direction is carried separately from
+ * magnitude so no caller has to parse a sign out of formatted copy — and so
+ * nothing here can be mistaken for a verdict on which way is better.
+ */
+export type BodyMetricBaseline = {
+	current: BodyMetricReading | null;
+	previous: BodyMetricReading | null;
+	direction: "up" | "down" | "none";
+	/** Null when the change is too small to render at the unit's resolution. */
+	changeFormatted: string | null;
+	usualRange: BodyMetricRange | null;
+	rail: BodyMetricRange | null;
+	readingCount: number;
+};
+
 export type BodyMetricSummary = BodyMetricPresentation & {
 	userEnterable: boolean;
 	editablePresentation: MeasurementPresentation | null;
@@ -55,6 +91,7 @@ export type BodyMetricSummary = BodyMetricPresentation & {
 	latest: Observation | null;
 	latestFormatted: string | null;
 	series: TrendSeries;
+	baseline: BodyMetricBaseline;
 	activeGoal: BodyGoalProgress | null;
 };
 
@@ -102,6 +139,61 @@ function formatPresentedMeasurement(
 		locale,
 		unitWords(),
 	);
+}
+
+/**
+ * Dresses a computed baseline in the user's own units. Formatting happens here
+ * rather than in the screen because every number on this screen — reading, band
+ * edge, rail end, change — has to agree about locale and display unit.
+ */
+function presentBaseline(
+	baseline: MeasurementBaseline,
+	presentation: BodyMetricPresentation,
+	locale: string | undefined,
+): BodyMetricBaseline {
+	const format = (value: number) =>
+		formatPresentedMeasurement(value, presentation, locale);
+	const asReading = (reading: MeasurementReading | null) =>
+		reading ? { ...reading, formatted: format(reading.value) } : null;
+	const asRange = (range: MeasurementRange | null) =>
+		range
+			? {
+					...range,
+					minFormatted: format(range.min),
+					maxFormatted: format(range.max),
+				}
+			: null;
+	const resolved = resolveMetric(presentation.metricSlug);
+	if (resolved.kind !== "known" || resolved.metric.kind !== "measurement") {
+		throw new TypeError(`Unknown measurement slug: ${presentation.metricSlug}`);
+	}
+	const changeFormatted =
+		baseline.delta === null || baseline.delta === 0
+			? null
+			: formatMetricDelta(
+					resolved.metric,
+					Math.abs(baseline.delta),
+					presentation.displayUnit,
+					locale,
+					unitWords(),
+				);
+
+	return {
+		current: asReading(baseline.current),
+		previous: asReading(baseline.previous),
+		// A change too small to show at the unit's resolution reads as no change,
+		// which is what the user would see on the tape.
+		direction:
+			baseline.delta === null || baseline.delta === 0 || !changeFormatted
+				? "none"
+				: baseline.delta > 0
+					? "up"
+					: "down",
+		changeFormatted,
+		usualRange: asRange(baseline.usualRange),
+		rail: asRange(baseline.rail),
+		readingCount: baseline.readingCount,
+	};
 }
 
 function ascendingObservations(rows: readonly Observation[]): Observation[] {
@@ -459,6 +551,11 @@ export class BodyStore {
 						metric,
 						throughLocalDay,
 						BODY_TREND_PERIOD,
+					),
+					baseline: presentBaseline(
+						resolveMeasurementBaseline(resolvedRows, throughLocalDay),
+						presentation,
+						inputLocale,
 					),
 					activeGoal:
 						metricGoals.find((progress) => progress.status === "active") ??

@@ -164,6 +164,53 @@ why, one secondary button. Never apologetic, never cute.
 **Alert callout:** 2px alert left border, alert-tint fill, factual sentence plus
 possible causes plus a route to a real person (GP). Max one per screen.
 
+**Measurements (tape sites):** the body-measurements screen is a stack of
+baseline gauges and a change list, never a radar. Do not build a radar, polygon,
+or spider chart from body measurements — different units on shared spokes
+manufacture a score, which is judgement UI.
+
+- The measurements screen draws no body. A figure on the screen a man reads his
+  own numbers on invites him to see a shape being scored, which is the trap the
+  whole product avoids.
+- Tape sites are rows. Selecting one opens its compact baseline gauge, which
+  shows the previous measurement as a 1px dashed `--body` marker at 65% opacity
+  — solid = this measurement, dashed/hollow = previous, same legend as the wheel.
+- Untracked sites do not render at all: no empty rows, no grey prompts, no
+  "complete your profile". Adding a site lives in the overflow menu only. A site
+  that is tracked but not yet taped keeps its row, because that row is where the
+  first reading is entered.
+- Weight and body fat are not tape sites. Weight takes the screen's one 56px
+  metric; body fat appears only in the change list, only if tracked.
+- Change list ("Since last time"): per site, a dumbbell mark — hairline track,
+  band tint, hollow `--body` circle for previous, filled for current — with the
+  delta right-aligned in tabular `--ink` as a signed value ("−1.5 cm"), and the
+  date it is measured from on the row itself, since each site is taped on its
+  own schedule. Deltas are NEVER colored red/green and never carry arrows,
+  praise, or concern: direction is not a verdict.
+- Population reference ranges (BMI, waist-to-height) are off by default,
+  enabled only by explicit setting, rendered as a caption line of context and
+  never as a colored zone on any gauge. A trend crossing a clinically
+  meaningful threshold is the alert component's job (once, factual, route to
+  a GP), not this screen's.
+- Copy follows the Write/Never table; the trap specific to this screen is
+  praise or concern disguised as neutrality. Write "1.5 cm down since
+  3 August", never "Great progress!" or "You're in the healthy zone".
+
+**Measuring guide (tailor's diagram):** the pattern-block figure lives on its own
+"how to measure" page, reached from the measurements screen. It answers where the
+tape goes and nothing else — it carries no readings, so no number a man has
+recorded is ever pinned to a drawing of a body.
+
+- The figure draws in `--line-strong` (it is chart paper, like the wheel's
+  grid). It is the same fixed block for every user: never reshaped by his
+  numbers, never resembling him, never rendering fat or muscle.
+- Tape sites are horizontal lines at neck, chest, bicep, waist, hip, thigh, and
+  every site is shown whether or not the user tracks it — this is reference, not
+  his data. Unselected: 1.2px dashed `--ink-3` with `--ink-3` label. Selected:
+  2px solid `--body` with end ticks and `--body` label. Tap targets ≥ 44px tall.
+- Selecting a site states, in plain sentences, where to put the tape and how to
+  hold it. Instructions, never technique coaching or a reason to measure.
+
 ## Voice
 
 Describe, don't judge. Ask, don't cheer. Assume an adult who already knows he
@@ -221,3 +268,5 @@ as an alert chip or push notification.
 - [ ] New copy passes the Write/Never table; no exclamation marks or emoji.
 - [ ] Spacing and radius values are on-scale.
 - [ ] Keyboard + focus + reduced-motion verified; contrast checked both themes.
+- [ ] No radar/polygon of body measurements; deltas uncolored; no population zones on gauges.
+- [ ] No body figure on a screen that shows the user's own readings.
