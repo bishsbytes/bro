@@ -1,3 +1,4 @@
+import type { DayNote } from "@bro/database-app";
 import { localDayOf, shiftLocalDay, type WeekStartDay } from "@bro/domain";
 import {
 	CHECK_IN_SLOTS,
@@ -24,7 +25,7 @@ import { AppText } from "../../components/app-text";
 import { Button } from "../../components/button";
 import { Card } from "../../components/card";
 import { DayPager } from "../../components/day-pager";
-import { FormField } from "../../components/form-field";
+import { EmptyState } from "../../components/empty-state";
 import { LoadingIndicator } from "../../components/loading-indicator";
 import { LoadingScreen, Screen } from "../../components/screen";
 import { SectionHeader } from "../../components/section-header";
@@ -137,6 +138,8 @@ type PastDaySectionProps = {
 	routineBusy: string | null;
 	onToggleHabit: (habitId: string) => void;
 	onEdit: () => void;
+	onAddNote: () => void;
+	onOpenNotes: () => void;
 };
 
 type PastDaySnapshot = {
@@ -154,6 +157,53 @@ type PastDaySnapshot = {
  */
 const PAST_DAY_CACHE_LIMIT = 7;
 
+function JournalNotesSection({
+	notes,
+	loading = false,
+	onAddNote,
+	onOpenNotes,
+}: {
+	notes: readonly DayNote[];
+	loading?: boolean;
+	onAddNote: () => void;
+	onOpenNotes: () => void;
+}) {
+	const { t } = useTranslation("notes");
+
+	return (
+		<View style={styles.section}>
+			<SectionHeader
+				title={t("journal.title")}
+				action={
+					<TouchableOpacity
+						accessibilityRole="button"
+						style={styles.notesAction}
+						onPress={onOpenNotes}
+					>
+						<AppText variant="label" color="brand">
+							{t("actions.viewAll")}
+						</AppText>
+					</TouchableOpacity>
+				}
+			/>
+			{loading ? <LoadingIndicator /> : null}
+			{!loading && notes.length === 0 ? (
+				<EmptyState
+					title={t("journal.emptyTitle")}
+					body={t("journal.emptyBody")}
+					actionLabel={t("actions.add")}
+					onAction={onAddNote}
+				/>
+			) : null}
+			{notes.map((note) => (
+				<Card key={note.id}>
+					<AppText variant="lead">{note.body}</AppText>
+				</Card>
+			))}
+		</View>
+	);
+}
+
 function PastDaySection({
 	localDay,
 	todayLocalDay,
@@ -165,6 +215,8 @@ function PastDaySection({
 	routineBusy,
 	onToggleHabit,
 	onEdit,
+	onAddNote,
+	onOpenNotes,
 }: PastDaySectionProps) {
 	const { t } = useTranslation("home");
 
@@ -257,18 +309,11 @@ function PastDaySection({
 							))}
 						</View>
 					) : null}
-					{day.notes.length > 0 ? (
-						<View style={styles.section}>
-							<SectionHeader title={t("notes.title")} />
-							{day.notes.map((note) => (
-								<Card key={note.id}>
-									<AppText variant="lead" color="muted">
-										{note.body}
-									</AppText>
-								</Card>
-							))}
-						</View>
-					) : null}
+					<JournalNotesSection
+						notes={day.notes}
+						onAddNote={onAddNote}
+						onOpenNotes={onOpenNotes}
+					/>
 				</>
 			) : null}
 			{habits && habits.habits.length > 0 ? (
@@ -421,21 +466,15 @@ export function HomeScreen({
 		null,
 	);
 	const [selectedTags, setSelectedTags] = useState<string[]>([]);
-	const [note, setNote] = useState("");
 	const [error, setError] = useState<string | null>(null);
+	const [todayNotes, setTodayNotes] = useState<DayNote[] | null>(null);
 	// Only the latest tag toggle may apply its result, and a reload must not
 	// pull the chips back to a set the user has already moved on from.
 	const tagRequestRef = useRef(0);
 	const tagsInFlightRef = useRef(0);
-	// The note field is the user's draft until they save it; a background reload
-	// may only refill it while it matches what was last loaded or saved.
-	const savedNoteRef = useRef("");
-	// Every read and write returns a whole snapshot of the day, so a slow one
-	// must not land on top of a newer one — a note save in flight while a
-	// check-in commits would otherwise put the day back as it was.
+	// Every write returns a whole snapshot of the day, so a slow one must not land
+	// on top of a newer one.
 	const todayWriteRef = useRef(0);
-	const [savingNote, setSavingNote] = useState(false);
-	const noteDirty = note !== savedNoteRef.current;
 
 	const load = useCallback(async () => {
 		setError(null);
@@ -448,11 +487,7 @@ export function HomeScreen({
 			if (tagsInFlightRef.current === 0) {
 				setSelectedTags(loaded.selectedTagSlugs);
 			}
-			const previouslySaved = savedNoteRef.current;
-			savedNoteRef.current = loaded.note;
-			setNote((current) =>
-				current === previouslySaved ? loaded.note : current,
-			);
+			setTodayNotes(loaded.notes ?? []);
 		} catch (caught) {
 			setError(toMessage(caught));
 		}
@@ -766,25 +801,6 @@ export function HomeScreen({
 		router.push(`/check-in?slot=${slot}` as Href);
 	}
 
-	async function saveNote() {
-		if (savingNote) return;
-		setSavingNote(true);
-		setError(null);
-		todayWriteRef.current += 1;
-		const stamp = todayWriteRef.current;
-		try {
-			const saved = await checkIns.saveDayNote(note);
-			savedNoteRef.current = saved.note;
-			setNote(saved.note);
-			if (stamp !== todayWriteRef.current) return;
-			setToday(saved);
-		} catch (caught) {
-			setError(toMessage(caught));
-		} finally {
-			setSavingNote(false);
-		}
-	}
-
 	if ((!today || !weekStart) && !error) {
 		return <LoadingScreen variant="tab" />;
 	}
@@ -906,27 +922,6 @@ export function HomeScreen({
 			</View>
 		) : null;
 
-	const noteSection = (
-		<View style={styles.section}>
-			<SectionHeader title={t("note.title")} />
-			<FormField
-				label={t("note.field")}
-				value={note}
-				onChangeText={setNote}
-				placeholder={t("note.placeholder")}
-				multiline
-			/>
-			{noteDirty ? (
-				<Button
-					label={t("note.save")}
-					variant="secondary"
-					loading={savingNote}
-					onPress={() => void saveNote()}
-				/>
-			) : null}
-		</View>
-	);
-
 	function renderPagerDay(localDay: string) {
 		const past = pastDays.get(localDay);
 		return (
@@ -948,6 +943,13 @@ export function HomeScreen({
 						routineBusy={routineBusy}
 						onToggleHabit={(habitId) => void togglePastHabit(localDay, habitId)}
 						onEdit={() => router.push(`/history/${localDay}` as Href)}
+						onAddNote={() =>
+							router.push({
+								pathname: "/notes/new",
+								params: { localDay },
+							})
+						}
+						onOpenNotes={() => router.push("/notes")}
 					/>
 				) : (
 					<>
@@ -1082,7 +1084,17 @@ export function HomeScreen({
 							</AppText>
 						) : null}
 						{tagsSection}
-						{noteSection}
+						<JournalNotesSection
+							notes={todayNotes ?? []}
+							loading={todayNotes === null}
+							onAddNote={() =>
+								router.push({
+									pathname: "/notes/new",
+									params: { localDay },
+								})
+							}
+							onOpenNotes={() => router.push("/notes")}
+						/>
 					</>
 				)}
 			</Screen>
@@ -1121,6 +1133,10 @@ const styles = StyleSheet.create((theme) => ({
 	stockCard: { gap: theme.spacing.sm, marginBottom: theme.spacing.xl },
 	routineCard: { gap: theme.spacing.sm, marginBottom: theme.spacing.xl },
 	section: { marginBottom: theme.spacing.xl, gap: theme.spacing.md },
+	notesAction: {
+		minHeight: theme.control.buttonMinHeight,
+		justifyContent: "center",
+	},
 	measurementSummaryCard: { gap: theme.spacing.xs },
 	measurementSummaryHeader: {
 		width: "100%",

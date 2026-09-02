@@ -110,6 +110,7 @@ function RootNavigator() {
 				<Stack.Screen name="check-in" options={{ headerShown: false }} />
 				<Stack.Screen name="review" options={{ headerShown: false }} />
 				<Stack.Screen name="history" options={{ headerShown: false }} />
+				<Stack.Screen name="notes" options={{ headerShown: false }} />
 				<Stack.Screen name="insights" options={{ headerShown: false }} />
 				<Stack.Screen name="settings" options={{ headerShown: false }} />
 				<Stack.Screen name="drinks" options={{ headerShown: false }} />

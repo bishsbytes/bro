@@ -8,12 +8,6 @@ export const home = {
 		title: "What happened",
 		hint: "Tap anything that applied today.",
 	},
-	note: {
-		title: "Note",
-		field: "Note (optional)",
-		placeholder: "Anything worth remembering?",
-		save: "Save note",
-	},
 	measurements: {
 		title: "Measurements",
 		/** Shown when a measurement matched the previous day exactly. */
@@ -23,9 +17,6 @@ export const home = {
 		unchanged: "Same as previous day",
 		higher: "{{delta}} higher than previous day",
 		lower: "{{delta}} lower than previous day",
-	},
-	notes: {
-		title: "Notes",
 	},
 	habits: {
 		title: "Habits",

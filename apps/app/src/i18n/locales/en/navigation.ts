@@ -32,6 +32,11 @@ export const navigation = {
 		index: "History",
 		day: "Day",
 	},
+	notes: {
+		index: "Notes",
+		new: "New note",
+		addA11y: "Add note",
+	},
 	habits: {
 		index: "Habits",
 		detail: "Habit record",
@@ -62,6 +67,8 @@ export const navigation = {
 	quickLog: {
 		open: "Log",
 		title: "What would you like to log?",
+		note: "Note",
+		noteDetail: "Write something about today or another day",
 		food: "Food",
 		foodDetail: "Search foods or enter nutrition yourself",
 		drink: "Drink",

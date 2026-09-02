@@ -16,18 +16,22 @@ describe("quick log fab", () => {
 		jest.clearAllMocks();
 	});
 
-	it("offers three actions and no smoking one until it is switched on", async () => {
+	it("offers note and universal log actions without assuming smoking", async () => {
 		const view = await render(
 			<QuickLogFab bottom={24} isNicotineEnabled={async () => false} />,
 		);
 
 		await fireEvent.press(view.getByLabelText("Log"));
 
+		expect(view.getByText("Note")).toBeTruthy();
 		expect(view.getByText("Food")).toBeTruthy();
 		expect(view.getByText("Drink")).toBeTruthy();
 		expect(view.getByText("Check-in")).toBeTruthy();
 		// Smoking is a minority behaviour: it is not offered unasked.
 		await waitFor(() => expect(view.queryByText("Smoke or vape")).toBeNull());
+
+		await fireEvent.press(view.getByLabelText("Note"));
+		expect(router.push).toHaveBeenCalledWith("/notes/new");
 	});
 
 	it("offers the smoking action once the stream is tracked", async () => {

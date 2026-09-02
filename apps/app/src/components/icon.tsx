@@ -55,6 +55,7 @@ const ICONS = {
 	food: UtensilsCrossed,
 	insights: ChartLine,
 	journal: Sun,
+	note: NotebookPen,
 	"life-area": CircleDashed,
 	"life-career": Briefcase,
 	"life-environment": House,

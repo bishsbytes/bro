@@ -49,6 +49,7 @@ const emptyToday: TodayCheckIn = {
 	availableMeasurements: [],
 	loggedMeasurements: [],
 	inputLocale: "en-GB",
+	notes: [],
 	note: "",
 };
 
@@ -395,50 +396,69 @@ describe("home screen", () => {
 		expect(store.saveCheckIn).not.toHaveBeenCalled();
 	});
 
-	it("saves the day note only once it is edited", async () => {
-		const store = checkInStore();
+	it("prompts for a note when the journal day has none", async () => {
 		const screen = await render(
 			<HomeScreen
 				{...supportingProps()}
+				historyStore={{
+					loadDay: jest.fn(async (localDay: string) => ({
+						...historyDay(localDay),
+						notes:
+							localDay === "2026-08-14"
+								? []
+								: [
+										{
+											id: `note-${localDay}`,
+											localDay,
+											body: "A past note",
+											createdAt: 1,
+											updatedAt: 1,
+										},
+									],
+					})),
+				}}
 				habitsStore={habitsStore()}
-				store={store}
+				store={checkInStore()}
 			/>,
 		);
 		await screen.findByText("Morning");
 
-		expect(screen.queryByText("Save note")).toBeNull();
-		await fireEvent.changeText(
-			screen.getByLabelText("Note (optional)"),
-			"Strong finish",
-		);
-		await fireEvent.press(screen.getByText("Save note"));
+		expect(await screen.findByText("What's on your mind?")).toBeTruthy();
+		await fireEvent.press(screen.getByText("Add note"));
 
-		await waitFor(() =>
-			expect(store.saveDayNote).toHaveBeenCalledWith("Strong finish"),
-		);
+		expect(router.push).toHaveBeenCalledWith({
+			pathname: "/notes/new",
+			params: { localDay: "2026-08-14" },
+		});
 	});
 
-	it("keeps an unsaved note through a background reload", async () => {
-		const store = checkInStore();
+	it("shows every note saved for the journal day", async () => {
+		const notes = [
+			{
+				id: "note-1",
+				localDay: "2026-08-14",
+				body: "First thought",
+				createdAt: 1,
+				updatedAt: 1,
+			},
+			{
+				id: "note-2",
+				localDay: "2026-08-14",
+				body: "Another thought",
+				createdAt: 2,
+				updatedAt: 2,
+			},
+		];
 		const screen = await render(
 			<HomeScreen
 				{...supportingProps()}
 				habitsStore={habitsStore()}
-				store={store}
+				store={checkInStore({ ...emptyToday, notes })}
 			/>,
 		);
-		await screen.findByText("Morning");
-		await fireEvent.changeText(
-			screen.getByLabelText("Note (optional)"),
-			"Half-typed thought",
-		);
 
-		await act(async () => triggerFocus?.());
-
-		expect(screen.getByLabelText("Note (optional)").props.value).toBe(
-			"Half-typed thought",
-		);
-		expect(screen.getByText("Save note")).toBeTruthy();
+		expect(await screen.findByText("First thought")).toBeTruthy();
+		expect(screen.getByText("Another thought")).toBeTruthy();
 	});
 
 	it("shows a past-day summary without the check-in form", async () => {

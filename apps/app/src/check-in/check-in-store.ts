@@ -1,4 +1,5 @@
 import {
+	type DayNote,
 	DayNoteRepository,
 	getDb,
 	HabitRepository,
@@ -57,6 +58,8 @@ export type TodayCheckIn = {
 	availableMeasurements: CheckInMeasurement[];
 	loggedMeasurements: LoggedCheckInMeasurement[];
 	inputLocale: string | undefined;
+	notes: DayNote[];
+	/** @deprecated Use notes when rendering the day. */
 	note: string;
 };
 
@@ -329,6 +332,7 @@ export class CheckInStore {
 			),
 			loggedMeasurements,
 			inputLocale,
+			notes,
 			note: notes[0]?.body ?? "",
 		};
 	}

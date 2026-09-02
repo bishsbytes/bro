@@ -139,14 +139,14 @@ describe("daily check-in flow", () => {
 		// Each sitting is written whole, in one transaction of its own.
 		expect(transaction).toHaveBeenCalledTimes(2);
 
-		// Tags and the note describe the day, and each save its own write.
+		// Tags describe the day from the journal. Notes use the focused composer.
 		await fireEvent.press(view.getByLabelText("Outdoors"));
 		await act(async () => undefined);
 		expect(transaction).toHaveBeenCalledTimes(3);
-		await fireEvent.changeText(
-			view.getByPlaceholderText("Anything worth remembering?"),
-			"Strong finish",
-		);
+		await fireEvent.press(view.getByLabelText("Log"));
+		await fireEvent.press(view.getByLabelText("Note"));
+		expect(await view.findByText("What's on your mind?")).toBeTruthy();
+		await fireEvent.changeText(view.getByLabelText("Note"), "Strong finish");
 		await fireEvent.press(view.getByText("Save note"));
 		await act(async () => undefined);
 		expect(await notes.listByDay(localDay)).toMatchObject([

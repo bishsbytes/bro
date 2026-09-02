@@ -14,6 +14,7 @@ import { intake } from "./en/intake";
 import { life } from "./en/life";
 import { navigation } from "./en/navigation";
 import { nicotine } from "./en/nicotine";
+import { notes } from "./en/notes";
 import { notifications } from "./en/notifications";
 import { onboarding } from "./en/onboarding";
 import { privacy } from "./en/privacy";
@@ -48,6 +49,7 @@ export const resources = {
 		life,
 		navigation,
 		nicotine,
+		notes,
 		notifications,
 		onboarding,
 		privacy,

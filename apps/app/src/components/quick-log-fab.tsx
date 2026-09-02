@@ -93,6 +93,12 @@ export function QuickLogFab({
 				<AppText variant="section">{t("quickLog.title")}</AppText>
 				<View style={styles.actions}>
 					<QuickLogAction
+						icon="note"
+						title={t("quickLog.note")}
+						detail={t("quickLog.noteDetail")}
+						onPress={() => choose("/notes/new")}
+					/>
+					<QuickLogAction
 						icon="food"
 						title={t("quickLog.food")}
 						detail={t("quickLog.foodDetail")}

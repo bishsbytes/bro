@@ -34,6 +34,7 @@ const today: TodayCheckIn = {
 	availableMeasurements: [],
 	loggedMeasurements: [],
 	inputLocale: "en-GB",
+	notes: [],
 	note: "",
 };
 

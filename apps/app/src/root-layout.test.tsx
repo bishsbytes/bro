@@ -36,6 +36,7 @@ jest.mock("./check-in/check-in-store", () => ({
 			availableMeasurements: [],
 			loggedMeasurements: [],
 			inputLocale: "en-GB",
+			notes: [],
 			note: "",
 		}),
 		loadCheckInDays: async () => new Set(),
