@@ -168,10 +168,10 @@ possible causes plus a route to a real person (GP). Max one per screen.
 and treat manual/connected sources as provenance rather than navigation. The
 overview uses compact baseline-change rows rather than promoting weight as the
 definition of the body domain: Measurements contains weight, body fat, and tape
-sites; Heart & fitness contains resting heart rate. Each group presents its rows
-inside one surface card. Tapping any row opens that metric's detail screen. The
-detail screen uses the full baseline gauge inside its hero card, with the one
-permitted 56px value.
+sites; Health & fitness contains sleep, steps, and resting heart rate. Each group
+presents its rows inside one surface card. Tapping any row opens that metric's
+detail screen. The detail screen uses the full baseline gauge inside its hero
+card, with the one permitted 56px value.
 
 - The shared quick-log FAB is available on the Body tab and offers Body as a
   destination. Its Body action replaces the content inside that same sheet with

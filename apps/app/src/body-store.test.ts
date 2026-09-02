@@ -54,6 +54,8 @@ describe("body store", () => {
 			"weight",
 			"waist",
 			"body_fat",
+			"sleep_duration",
+			"steps",
 			"resting_heart_rate",
 			"neck",
 			"chest",
@@ -66,7 +68,19 @@ describe("body store", () => {
 			{ metricSlug: "waist", tracked: false, displayUnit: "cm" },
 			{ metricSlug: "body_fat", tracked: false, displayUnit: "%" },
 		]);
-		expect(fresh.metrics.slice(3, 9)).toMatchObject([
+		expect(fresh.metrics.slice(3, 11)).toMatchObject([
+			{
+				metricSlug: "sleep_duration",
+				tracked: false,
+				visible: true,
+				displayUnit: null,
+			},
+			{
+				metricSlug: "steps",
+				tracked: false,
+				visible: true,
+				displayUnit: null,
+			},
 			{
 				metricSlug: "resting_heart_rate",
 				tracked: false,
@@ -140,6 +154,18 @@ describe("body store", () => {
 			value: 62,
 			source: "health_connect",
 		});
+		await daily.upsert({
+			metricSlug: "sleep_duration",
+			localDay: "2026-08-15",
+			value: 25_200,
+			source: "health_connect",
+		});
+		await daily.upsert({
+			metricSlug: "steps",
+			localDay: "2026-08-15",
+			value: 8_500,
+			source: "health_connect",
+		});
 		const store = new BodyStore(
 			db,
 			() => now,
@@ -151,6 +177,8 @@ describe("body store", () => {
 			"weight",
 			"waist",
 			"body_fat",
+			"sleep_duration",
+			"steps",
 			"resting_heart_rate",
 			"neck",
 			"chest",
@@ -173,8 +201,31 @@ describe("body store", () => {
 		).toMatchObject({
 			metricSlug: "resting_heart_rate",
 			userEnterable: true,
+			bodyGroup: "health_fitness",
 			visible: true,
 			latestFormatted: "62 bpm",
+		});
+		expect(
+			overview.metrics.find(
+				({ metricSlug }) => metricSlug === "sleep_duration",
+			),
+		).toMatchObject({
+			metricSlug: "sleep_duration",
+			userEnterable: false,
+			bodyGroup: "health_fitness",
+			manualCapture: null,
+			visible: true,
+			latestFormatted: "7 h 0 m",
+		});
+		expect(
+			overview.metrics.find(({ metricSlug }) => metricSlug === "steps"),
+		).toMatchObject({
+			metricSlug: "steps",
+			userEnterable: false,
+			bodyGroup: "health_fitness",
+			manualCapture: null,
+			visible: true,
+			latestFormatted: "8,500",
 		});
 
 		const weight = await store.loadMetric("weight");

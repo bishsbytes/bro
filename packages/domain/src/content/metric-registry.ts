@@ -83,7 +83,7 @@ export type UserEnterableMeasurementDimension =
 	| "length"
 	| "fraction"
 	| "rate_bpm";
-export type BodyMetricGroup = "measurements" | "heart_fitness";
+export type BodyMetricGroup = "measurements" | "health_fitness";
 export type ManualMeasurementCapture =
 	| "standalone"
 	| "measurement_session"
@@ -183,6 +183,7 @@ export type ImportedOnlyMeasurementMetricDefinition =
 		aggregation: "sum" | "mean";
 		dimension: IntrinsicDimension;
 		userEnterable: false;
+		bodyGroup: "health_fitness";
 	};
 
 export type ConsumptionDerivedMeasurementMetricDefinition =
@@ -359,6 +360,7 @@ const importedMeasurement = (
 	sensitive,
 	userEnterable: false,
 	healthImport: true,
+	bodyGroup: "health_fitness",
 	deprecated: false,
 	defaultPosition,
 });
@@ -452,7 +454,7 @@ export const METRIC_REGISTRY = [
 	importedMeasurement("sleep_duration", "Sleep", "time", "sum", 3, false),
 	importedMeasurement("steps", "Steps", "count", "sum", 4, false),
 	measurement("resting_heart_rate", "Resting heart rate", "rate_bpm", 5, {
-		bodyGroup: "heart_fitness",
+		bodyGroup: "health_fitness",
 		manualCapture: "standalone",
 		healthImport: true,
 		aggregation: "mean",

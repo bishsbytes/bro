@@ -39,11 +39,11 @@ export const body = {
 		emptyTitle: "Nothing is ready to log",
 		emptyBody: "Choose the body data you want to track first.",
 	},
-	heart: {
-		title: "Heart & fitness",
-		emptyTitle: "No heart data tracked",
+	healthFitness: {
+		title: "Health & fitness",
+		emptyTitle: "No health or fitness data",
 		emptyBody:
-			"Track resting heart rate manually or connect a supported health platform.",
+			"Track resting heart rate or connect a supported health platform.",
 	},
 	measuring: {
 		link: "How to measure",

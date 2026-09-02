@@ -5,6 +5,7 @@ import type { TFunction } from "i18next";
 import { useTranslation } from "react-i18next";
 import type { BodyMetricSummary } from "../../body/body-store";
 import { BaselineGauge } from "../../components/baseline-gauge";
+import { dataDomainForMetric } from "../../components/trend-chart";
 import { healthPlatformLabel } from "../../health/platform-label";
 
 type BodyText = TFunction<["body", "common"]>;
@@ -140,6 +141,7 @@ export function BodyBaselineGauge({
 				value: baseline.current?.formatted ?? t("common:emDash"),
 				read,
 			})}
+			domain={dataDomainForMetric(metric.metricSlug)}
 		/>
 	);
 }

@@ -11,6 +11,7 @@ import {
 import { type DisplayUnit, localDayOf, systemLocale } from "@bro/domain";
 import {
 	type BodyMetricGroup,
+	listImportedOnlyMeasurements,
 	listUserEnterableMeasurements,
 	type ManualMeasurementCapture,
 	type MeasurementMetricDefinition,
@@ -49,7 +50,7 @@ export type BodyMetricPresentation = {
 	dimension: MeasurementMetricDefinition["dimension"];
 	displayUnit: DisplayUnit | null;
 	bodyGroup: BodyMetricGroup;
-	manualCapture: ManualMeasurementCapture;
+	manualCapture: ManualMeasurementCapture | null;
 	healthImport: boolean;
 };
 
@@ -519,7 +520,10 @@ export class BodyStore {
 		);
 		const throughLocalDay = localDayOf(this.now());
 
-		const metrics = listUserEnterableMeasurements();
+		const metrics = [
+			...listUserEnterableMeasurements(),
+			...listImportedOnlyMeasurements(),
+		];
 
 		return metrics
 			.map((metric) => {
@@ -543,7 +547,8 @@ export class BodyStore {
 					dimension: metric.dimension,
 					displayUnit,
 					bodyGroup: metric.bodyGroup,
-					manualCapture: metric.manualCapture,
+					manualCapture:
+						"manualCapture" in metric ? metric.manualCapture : null,
 					healthImport: metric.healthImport,
 				};
 				const metricRows = observations.filter(

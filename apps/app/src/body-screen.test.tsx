@@ -144,7 +144,7 @@ function restingHeartRateMetric(tracked: boolean): BodyMetricSummary {
 		},
 		tracked,
 		position: 5,
-		bodyGroup: "heart_fitness",
+		bodyGroup: "health_fitness",
 		manualCapture: "standalone",
 		healthImport: true,
 	});
@@ -322,8 +322,46 @@ describe("Body screen", () => {
 		expect(
 			await screen.findByLabelText("Resting heart rate. First reading."),
 		).toBeTruthy();
-		expect(screen.getByTestId("body-heart-card")).toBeTruthy();
+		expect(screen.getByTestId("body-health-fitness-card")).toBeTruthy();
 		expect(screen.queryByTestId("baseline-gauge")).toBeNull();
+	});
+
+	it("groups sleep and steps with resting heart rate under Health & fitness", async () => {
+		const sleep = metric({
+			metricSlug: "sleep_duration",
+			label: "Sleep",
+			dimension: "time",
+			displayUnit: null,
+			bodyGroup: "health_fitness",
+			manualCapture: null,
+			userEnterable: false,
+			editablePresentation: null,
+			tracked: false,
+			position: 3,
+		});
+		const steps = metric({
+			metricSlug: "steps",
+			label: "Steps",
+			dimension: "count",
+			displayUnit: null,
+			bodyGroup: "health_fitness",
+			manualCapture: null,
+			userEnterable: false,
+			editablePresentation: null,
+			tracked: false,
+			position: 4,
+		});
+		const screen = await mountedWith(
+			overviewOf([sleep, steps, restingHeartRateMetric(true)]),
+		);
+
+		expect(await screen.findByText("Health & fitness")).toBeTruthy();
+		expect(screen.getByLabelText("Sleep. Nothing logged yet")).toBeTruthy();
+		expect(screen.getByLabelText("Steps. Nothing logged yet")).toBeTruthy();
+		expect(
+			screen.getByLabelText("Resting heart rate. Nothing logged yet"),
+		).toBeTruthy();
+		expect(screen.getByTestId("body-health-fitness-card")).toBeTruthy();
 	});
 
 	it("leaves an untracked site off the screen until it is added", async () => {
@@ -432,10 +470,10 @@ describe("Body screen", () => {
 		);
 		const neckRow = screen.getByLabelText("Neck. Nothing logged yet");
 		expect(
-			NativeStyleSheet.flatten(waistRow.props.style).borderBottomWidth,
+			NativeStyleSheet.flatten(neckRow.props.style).borderBottomWidth,
 		).toBe(1);
 		expect(
-			NativeStyleSheet.flatten(neckRow.props.style).borderBottomWidth,
+			NativeStyleSheet.flatten(waistRow.props.style).borderBottomWidth,
 		).toBe(0);
 		await fireEvent.press(waistRow);
 

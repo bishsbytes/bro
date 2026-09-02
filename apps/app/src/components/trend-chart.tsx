@@ -5,7 +5,7 @@ import { useUnistyles } from "../theme/unistyles";
 
 export type DataDomain = "mind" | "body" | "sleep" | "load";
 
-function inferDomain(metricSlug: string): DataDomain {
+export function dataDomainForMetric(metricSlug: string): DataDomain {
 	if (metricSlug.includes("sleep")) return "sleep";
 	if (
 		["mood", "stress", "energy", "motivation", "productivity", "libido"].some(
@@ -31,7 +31,8 @@ export function TrendChart({
 }) {
 	const { theme } = useUnistyles();
 	const { t } = useTranslation("common");
-	const dataColor = theme.colors[domain ?? inferDomain(series.metricSlug)];
+	const dataColor =
+		theme.colors[domain ?? dataDomainForMetric(series.metricSlug)];
 	return (
 		<Svg
 			accessibilityLabel={t("a11y.trendChart", { metric: series.metricSlug })}

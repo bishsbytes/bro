@@ -26,6 +26,7 @@ import { MeasurementField } from "../../components/measurement-field";
 import { OptionSheet } from "../../components/option-sheet";
 import { LoadingScreen, Screen } from "../../components/screen";
 import { SectionHeader } from "../../components/section-header";
+import { dataDomainForMetric } from "../../components/trend-chart";
 import { healthPlatformLabel } from "../../health/platform-label";
 import { toMessage } from "../../lib/errors";
 import { useFocusStoreLoad } from "../../lib/use-store-load";
@@ -432,7 +433,6 @@ export function BodyScreen({ store }: BodyScreenProps) {
 	const metricBySlug = new Map(
 		overview.metrics.map((metric) => [metric.metricSlug, metric]),
 	);
-	const restingHeartRate = metricBySlug.get(RESTING_HEART_RATE_SLUG) ?? null;
 	// Tape sites read down the body rather than by tracking order.
 	const sites = TAPE_SITE_SLUGS.flatMap((slug) => {
 		const metric = metricBySlug.get(slug);
@@ -488,6 +488,7 @@ export function BodyScreen({ store }: BodyScreenProps) {
 			band: metric.baseline.usualRange,
 			current: current?.value ?? null,
 			previous: previous?.value ?? null,
+			domain: dataDomainForMetric(metric.metricSlug),
 			accessibilityLabel: t("body:change.rowA11y", {
 				name: metric.label,
 				change: changeSentence(t, metric, todayLocalDay, locale),
@@ -495,9 +496,9 @@ export function BodyScreen({ store }: BodyScreenProps) {
 		};
 	}
 	const measurementChanges = measurementRows.map(changeOf);
-	const heartChanges = restingHeartRate?.visible
-		? [changeOf(restingHeartRate)]
-		: [];
+	const healthFitnessChanges = overview.metrics
+		.filter((metric) => metric.bodyGroup === "health_fitness" && metric.visible)
+		.map(changeOf);
 
 	return (
 		<Screen scroll padded gap="xl">
@@ -561,21 +562,24 @@ export function BodyScreen({ store }: BodyScreenProps) {
 			</View>
 
 			<View style={styles.section}>
-				<SectionHeader title={t("body:heart.title")} />
-				{heartChanges.length > 0 ? (
-					<Card testID="body-heart-card" style={styles.listCard}>
+				<SectionHeader title={t("body:healthFitness.title")} />
+				{healthFitnessChanges.length > 0 ? (
+					<Card testID="body-health-fitness-card" style={styles.listCard}>
 						<View style={styles.changeHeading}>
 							<AppText variant="label">{t("body:change.title")}</AppText>
 							<AppText variant="micro" color="subtle">
 								{t("body:change.legend")}
 							</AppText>
 						</View>
-						<MeasurementChangeList changes={heartChanges} onOpen={openMetric} />
+						<MeasurementChangeList
+							changes={healthFitnessChanges}
+							onOpen={openMetric}
+						/>
 					</Card>
 				) : (
 					<EmptyState
-						title={t("body:heart.emptyTitle")}
-						body={t("body:heart.emptyBody")}
+						title={t("body:healthFitness.emptyTitle")}
+						body={t("body:healthFitness.emptyBody")}
 						actionLabel={t("body:sites.manage")}
 						onAction={() => setEditingSites(true)}
 					/>

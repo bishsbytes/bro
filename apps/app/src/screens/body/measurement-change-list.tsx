@@ -1,6 +1,7 @@
 import { Pressable, View } from "react-native";
 import { AppText } from "../../components/app-text";
 import type { GaugeRange } from "../../components/baseline-gauge";
+import type { DataDomain } from "../../components/trend-chart";
 import { StyleSheet, useUnistyles } from "../../theme/unistyles";
 
 export type MeasurementChange = {
@@ -14,6 +15,7 @@ export type MeasurementChange = {
 	band: GaugeRange | null;
 	current: number | null;
 	previous: number | null;
+	domain: DataDomain;
 	accessibilityLabel: string;
 };
 
@@ -75,7 +77,7 @@ export function MeasurementChangeList({
 								style={[
 									styles.band,
 									{
-										backgroundColor: theme.colors.body,
+										backgroundColor: theme.colors[change.domain],
 										left: `${position(change.band.min, change.rail)}%`,
 										width: `${Math.max(
 											position(change.band.max, change.rail) -
@@ -91,7 +93,7 @@ export function MeasurementChangeList({
 								style={[
 									styles.previous,
 									{
-										borderColor: theme.colors.body,
+										borderColor: theme.colors[change.domain],
 										left: `${position(change.previous, change.rail)}%`,
 									},
 								]}
@@ -102,7 +104,7 @@ export function MeasurementChangeList({
 								style={[
 									styles.current,
 									{
-										backgroundColor: theme.colors.body,
+										backgroundColor: theme.colors[change.domain],
 										left: `${position(change.current, change.rail)}%`,
 									},
 								]}

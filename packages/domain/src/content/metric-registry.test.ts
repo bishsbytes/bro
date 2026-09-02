@@ -215,11 +215,13 @@ describe("metric registry", () => {
 				slug: "sleep_duration",
 				userEnterable: false,
 				sensitive: false,
+				bodyGroup: "health_fitness",
 			}),
 			expect.objectContaining({
 				slug: "steps",
 				userEnterable: false,
 				sensitive: false,
+				bodyGroup: "health_fitness",
 			}),
 		]);
 		expect(resolveMetric("resting_heart_rate")).toMatchObject({
@@ -228,7 +230,7 @@ describe("metric registry", () => {
 				userEnterable: true,
 				dimension: "rate_bpm",
 				aggregation: "mean",
-				bodyGroup: "heart_fitness",
+				bodyGroup: "health_fitness",
 				manualCapture: "standalone",
 				healthImport: true,
 			},
