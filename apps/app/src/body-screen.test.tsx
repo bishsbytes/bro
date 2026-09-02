@@ -250,7 +250,7 @@ describe("Body screen", () => {
 		expect(screen.queryByLabelText("Chest. Nothing logged yet")).toBeNull();
 		expect(screen.queryByLabelText("Chest (cm)")).toBeNull();
 
-		await fireEvent.press(screen.getAllByLabelText("Add a site")[0]);
+		await fireEvent.press(screen.getAllByLabelText("Manage measurements")[0]);
 		await fireEvent.press(screen.getByLabelText("Track Chest"));
 
 		expect(setTracked).toHaveBeenCalledWith("chest", true);
@@ -282,6 +282,35 @@ describe("Body screen", () => {
 		expect(
 			screen.getByLabelText("Waist. 1.5 cm down since 3 Aug."),
 		).toBeTruthy();
+		expect(screen.getByTestId("gauge-unit").props.children).toBe(" cm");
+	});
+
+	it("keeps body fat in the change list without making it a tape-site gauge", async () => {
+		const bodyFat = metric({
+			metricSlug: "body_fat",
+			label: "Body fat",
+			dimension: "fraction",
+			displayUnit: "%",
+			editablePresentation: {
+				metricSlug: "body_fat",
+				label: "Body fat",
+				dimension: "fraction",
+				displayUnit: "%",
+			},
+			position: 2,
+		});
+		const screen = await mountedWith(overviewOf([bodyFat]));
+
+		const row = await screen.findByLabelText("Body fat. Nothing logged yet");
+		expect(row.props.accessibilityState.selected).toBeUndefined();
+		expect(screen.queryByLabelText("Body fat (%)")).toBeNull();
+		expect(screen.getByText("Nothing taped yet")).toBeTruthy();
+
+		await fireEvent.press(row);
+		expect(mockPush).toHaveBeenCalledWith({
+			pathname: "/body/[slug]",
+			params: { slug: "body_fat" },
+		});
 	});
 
 	it("moves the gauge to the measurement the user taps", async () => {

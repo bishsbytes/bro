@@ -6,6 +6,8 @@ import { StyleSheet, useUnistyles } from "../../theme/unistyles";
 export type MeasurementChange = {
 	slug: string;
 	label: string;
+	/** Only tape-site rows control the compact gauge. */
+	selectable: boolean;
 	/** When the reading it is compared against was taken, e.g. "since 3 Aug". */
 	since: string | null;
 	/** The change itself, signed and in the user's units, or a stand-in for none. */
@@ -21,6 +23,7 @@ type MeasurementChangeListProps = {
 	changes: readonly MeasurementChange[];
 	selectedSlug: string | null;
 	onSelect: (slug: string) => void;
+	onOpen: (slug: string) => void;
 };
 
 const MARK_SIZE = 9;
@@ -43,6 +46,7 @@ export function MeasurementChangeList({
 	changes,
 	selectedSlug,
 	onSelect,
+	onOpen,
 }: MeasurementChangeListProps) {
 	const { theme } = useUnistyles();
 
@@ -54,9 +58,11 @@ export function MeasurementChangeList({
 					<Pressable
 						key={change.slug}
 						accessibilityRole="button"
-						accessibilityState={{ selected }}
+						accessibilityState={change.selectable ? { selected } : undefined}
 						accessibilityLabel={change.accessibilityLabel}
-						onPress={() => onSelect(change.slug)}
+						onPress={() =>
+							change.selectable ? onSelect(change.slug) : onOpen(change.slug)
+						}
 						style={[styles.row, selected && styles.rowSelected]}
 					>
 						<View style={styles.name}>

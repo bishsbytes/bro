@@ -43,6 +43,24 @@ type BodyText = TFunction<["body", "common"]>;
 
 const WEIGHT_SLUG = "weight";
 
+function gaugeValueParts(metric: BodyMetricSummary): {
+	value: string;
+	unit: string | null;
+} {
+	const formatted = metric.baseline.current?.formatted;
+	const displayUnit = metric.displayUnit;
+	if (!formatted || !displayUnit) return { value: formatted ?? "", unit: null };
+	if (displayUnit === "%" && formatted.endsWith("%")) {
+		return { value: formatted.slice(0, -1), unit: "%" };
+	}
+	const unitStart = formatted.indexOf(` ${displayUnit}`);
+	if (unitStart < 0) return { value: formatted, unit: null };
+	return {
+		value: formatted.slice(0, unitStart),
+		unit: formatted.slice(unitStart + 1),
+	};
+}
+
 function dayLabel(
 	localDay: string,
 	todayLocalDay: string,
@@ -131,12 +149,14 @@ function MetricGauge({
 		);
 	}
 	const read = readLine(t, metric, todayLocalDay, locale);
+	const displayed = gaugeValueParts(metric);
 
 	return (
 		<BaselineGauge
 			label={metric.label}
 			meta={readingMeta(t, metric, todayLocalDay, locale)}
-			value={baseline.current.formatted}
+			value={displayed.value}
+			unit={displayed.unit}
 			valueVariant={valueVariant}
 			rail={baseline.rail}
 			railLabels={{
@@ -256,15 +276,14 @@ export function BodyScreen({ store }: BodyScreenProps) {
 	const locale = overview.inputLocale;
 	const visible = overview.metrics.filter((metric) => metric.visible);
 	const weight = visible.find((metric) => metric.metricSlug === WEIGHT_SLUG);
-	// Tape sites read down the body rather than by tracking order: the figure is
-	// the index, so the list beneath it has to agree with the drawing.
+	// Tape sites read down the body rather than by tracking order.
 	const sites = TAPE_SITE_SLUGS.flatMap((slug) => {
 		const metric = visible.find((candidate) => candidate.metricSlug === slug);
 		return metric ? [metric] : [];
 	});
-	// Weight is not a tape site and neither is body fat, so neither goes on the
-	// figure. Everything except weight can still be read and compared here.
-	const listed = [
+	// Non-tape metrics can state their change, but only a tape-site row controls
+	// the compact gauge above it. Body fat therefore remains list-only.
+	const changeMetrics = [
 		...sites,
 		...visible.filter(
 			(metric) =>
@@ -272,9 +291,7 @@ export function BodyScreen({ store }: BodyScreenProps) {
 		),
 	];
 	const selected =
-		listed.find((metric) => metric.metricSlug === selection) ??
-		listed[0] ??
-		null;
+		sites.find((metric) => metric.metricSlug === selection) ?? sites[0] ?? null;
 
 	function changeCell(metric: BodyMetricSummary): string {
 		const { current, previous, direction, changeFormatted } = metric.baseline;
@@ -285,9 +302,10 @@ export function BodyScreen({ store }: BodyScreenProps) {
 
 	// A site the user has added but not yet taped stays in the list: it is the
 	// only place he can enter the first reading. An untracked site is absent.
-	const changes: MeasurementChange[] = listed.map((metric) => ({
+	const changes: MeasurementChange[] = changeMetrics.map((metric) => ({
 		slug: metric.metricSlug,
 		label: metric.label,
+		selectable: isTapeSiteSlug(metric.metricSlug),
 		since: !metric.baseline.current
 			? t("body:change.notLogged")
 			: metric.baseline.previous
@@ -338,16 +356,16 @@ export function BodyScreen({ store }: BodyScreenProps) {
 	}
 
 	function openMetric(metric: BodyMetricSummary) {
+		const navigate = () =>
+			router.push({
+				pathname: "/body/[slug]",
+				params: { slug: metric.metricSlug },
+			});
 		return (
 			<Button
 				label={t("body:open", { name: metric.label })}
 				variant="text"
-				onPress={() =>
-					router.push({
-						pathname: "/body/[slug]",
-						params: { slug: metric.metricSlug },
-					})
-				}
+				onPress={navigate}
 			/>
 		);
 	}
@@ -383,7 +401,7 @@ export function BodyScreen({ store }: BodyScreenProps) {
 					title={t("body:measurements.title")}
 					action={
 						<Button
-							label={t("body:sites.add")}
+							label={t("body:sites.manage")}
 							variant="text"
 							disabled={busySlug !== null}
 							onPress={() => setEditingSites(true)}
@@ -413,7 +431,7 @@ export function BodyScreen({ store }: BodyScreenProps) {
 					<EmptyState
 						title={t("body:measurements.emptyTitle")}
 						body={t("body:measurements.emptyBody")}
-						actionLabel={t("body:sites.add")}
+						actionLabel={t("body:sites.manage")}
 						onAction={() => setEditingSites(true)}
 					/>
 				)}
@@ -430,6 +448,12 @@ export function BodyScreen({ store }: BodyScreenProps) {
 							changes={changes}
 							selectedSlug={selected?.metricSlug ?? null}
 							onSelect={setSelection}
+							onOpen={(metricSlug) =>
+								router.push({
+									pathname: "/body/[slug]",
+									params: { slug: metricSlug },
+								})
+							}
 						/>
 					</>
 				) : null}

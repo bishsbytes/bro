@@ -9,8 +9,10 @@ type BaselineGaugeProps = {
 	label: string;
 	/** When and how the reading was taken, e.g. "Taped 2 Sep". */
 	meta?: string | null;
-	/** The reading itself, already formatted in the user's units. */
+	/** The formatted numeric portion of the reading. */
 	value: string;
+	/** Unit copy kept out of metric type, e.g. "cm" or "st 4 lb". */
+	unit?: string | null;
 	/** The 56px size is one per screen, so the caller decides who gets it. */
 	valueVariant?: "metric" | "score";
 	rail: GaugeRange;
@@ -46,6 +48,7 @@ export function BaselineGauge({
 	label,
 	meta,
 	value,
+	unit,
 	valueVariant = "score",
 	rail,
 	railLabels,
@@ -77,7 +80,14 @@ export function BaselineGauge({
 					</AppText>
 				) : null}
 			</View>
-			<AppText variant={valueVariant}>{value}</AppText>
+			<AppText variant={valueVariant}>
+				{value}
+				{unit ? (
+					<AppText testID="gauge-unit" variant="caption" color="subtle">
+						{` ${unit}`}
+					</AppText>
+				) : null}
+			</AppText>
 			<View style={styles.rail}>
 				{Array.from({ length: TICK_COUNT }, (_unused, index) => (
 					<View

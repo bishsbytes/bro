@@ -92,7 +92,7 @@ describe("body metrics flow", () => {
 		await act(async () => undefined);
 		expect(await view.findByText("Nothing taped yet")).toBeTruthy();
 
-		await fireEvent.press(view.getAllByLabelText("Add a site")[0]);
+		await fireEvent.press(view.getAllByLabelText("Manage measurements")[0]);
 		await fireEvent.press(await view.findByLabelText("Track Weight"));
 		await fireEvent.press(
 			view.getByTestId("modal-sheet-backdrop", { includeHiddenElements: true }),

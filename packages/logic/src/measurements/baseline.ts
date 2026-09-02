@@ -73,7 +73,7 @@ function padded(values: readonly number[]): MeasurementRange {
 	// A single repeated reading has no span to pad from, so the rail falls back
 	// to a share of the value itself and keeps the marker off the end stop.
 	const padding = span > 0 ? span * 0.15 : Math.abs(min) * 0.05 || 1;
-	return { min: min - padding, max: max + padding };
+	return { min: Math.max(0, min - padding), max: max + padding };
 }
 
 /**
@@ -88,7 +88,9 @@ export function resolveMeasurementBaseline(
 	throughLocalDay: string,
 	windowDays: number = MEASUREMENT_BASELINE_WINDOW_DAYS,
 ): MeasurementBaseline {
-	const sorted = ascending(rows);
+	const sorted = ascending(rows).filter(
+		(row) => row.localDay <= throughLocalDay,
+	);
 	const current = sorted.at(-1) ?? null;
 	const previous = sorted.at(-2) ?? null;
 	if (!current) {

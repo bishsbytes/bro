@@ -10,7 +10,7 @@ export const body = {
 	measurements: {
 		title: "Measurements",
 		emptyTitle: "Nothing taped yet",
-		emptyBody: "Add a site to read it against your own range.",
+		emptyBody: "Manage measurements to add a tape site.",
 		nothingLogged: "Nothing logged yet",
 		/** Names the origin of an imported reading. */
 		source: "Source: {{name}}",
@@ -41,10 +41,10 @@ export const body = {
 		},
 	},
 	sites: {
-		add: "Add a site",
-		title: "Sites",
-		intro: "What you tape is up to you. Anything off leaves this screen.",
-		dismissA11y: "Close sites",
+		manage: "Manage measurements",
+		title: "Measurements",
+		intro: "Choose the measurements you want to keep on this screen.",
+		dismissA11y: "Close measurements",
 	},
 	reading: {
 		/** {{when}} is a day: "Today", "Yesterday", or "3 Aug". */

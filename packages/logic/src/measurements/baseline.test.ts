@@ -72,6 +72,29 @@ describe("measurement baseline", () => {
 		expect(baseline.previous?.localDay).toBe("2026-08-03");
 	});
 
+	it("ignores readings after the requested local-day cutoff", () => {
+		const baseline = resolveMeasurementBaseline(
+			[
+				reading("previous", "2026-08-03", 88),
+				reading("current", "2026-09-02", 86.5),
+				reading("future", "2026-09-03", 140),
+			],
+			"2026-09-02",
+		);
+
+		expect(baseline.current).toMatchObject({
+			value: 86.5,
+			localDay: "2026-09-02",
+		});
+		expect(baseline.previous).toMatchObject({
+			value: 88,
+			localDay: "2026-08-03",
+		});
+		expect(baseline.delta).toBe(-1.5);
+		expect(baseline.readingCount).toBe(2);
+		expect(baseline.rail?.max).toBeLessThan(140);
+	});
+
 	it("withholds a band until there are enough readings across enough days", () => {
 		const days = ["2026-08-05", "2026-08-19", "2026-09-02"];
 		const sparse = resolveMeasurementBaseline(
@@ -145,5 +168,20 @@ describe("measurement baseline", () => {
 		expect(baseline.usualRange).toEqual({ min: 40, max: 40 });
 		expect(baseline.rail).toEqual({ min: 38, max: 42 });
 		expect(baseline.delta).toBe(0);
+	});
+
+	it("never pads a non-negative measurement below zero", () => {
+		const zero = resolveMeasurementBaseline(
+			[reading("zero", "2026-09-02", 0)],
+			"2026-09-02",
+		);
+		expect(zero.rail).toEqual({ min: 0, max: 1 });
+
+		const wide = resolveMeasurementBaseline(
+			[reading("low", "2026-08-03", 1), reading("high", "2026-09-02", 100)],
+			"2026-09-02",
+		);
+		expect(wide.rail?.min).toBe(0);
+		expect(wide.rail?.max).toBeGreaterThan(100);
 	});
 });

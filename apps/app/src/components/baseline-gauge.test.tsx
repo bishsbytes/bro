@@ -1,5 +1,11 @@
 import { render } from "@testing-library/react-native";
-import { type StyleProp, StyleSheet, type ViewStyle } from "react-native";
+import {
+	type StyleProp,
+	StyleSheet,
+	type TextStyle,
+	type ViewStyle,
+} from "react-native";
+import { lightTheme } from "../theme/unistyles";
 import { BaselineGauge } from "./baseline-gauge";
 
 function flat(style: StyleProp<ViewStyle>): ViewStyle {
@@ -11,7 +17,8 @@ describe("BaselineGauge", () => {
 		const view = await render(
 			<BaselineGauge
 				label="Waist"
-				value="86.5 cm"
+				value="86.5"
+				unit="cm"
 				rail={{ min: 80, max: 100 }}
 				railLabels={{ min: "80.0 cm", max: "100.0 cm" }}
 				band={{ min: 85, max: 90 }}
@@ -34,7 +41,8 @@ describe("BaselineGauge", () => {
 		const view = await render(
 			<BaselineGauge
 				label="Waist"
-				value="120.0 cm"
+				value="120.0"
+				unit="cm"
 				rail={{ min: 80, max: 100 }}
 				railLabels={{ min: "80.0 cm", max: "100.0 cm" }}
 				current={120}
@@ -55,7 +63,8 @@ describe("BaselineGauge", () => {
 		const view = await render(
 			<BaselineGauge
 				label="Neck"
-				value="39.5 cm"
+				value="39.5"
+				unit="cm"
 				rail={{ min: 38, max: 41 }}
 				railLabels={{ min: "38.0 cm", max: "41.0 cm" }}
 				current={39.5}
@@ -66,5 +75,25 @@ describe("BaselineGauge", () => {
 		expect(view.queryByTestId("gauge-band")).toBeNull();
 		expect(view.queryByTestId("gauge-previous")).toBeNull();
 		expect(view.getByTestId("gauge-marker")).toBeTruthy();
+	});
+
+	it("renders the unit with caption typography", async () => {
+		const view = await render(
+			<BaselineGauge
+				label="Waist"
+				value="86.5"
+				unit="cm"
+				rail={{ min: 80, max: 100 }}
+				railLabels={{ min: "80.0 cm", max: "100.0 cm" }}
+				current={86.5}
+				accessibilityLabel="Waist, 86.5 cm"
+			/>,
+		);
+
+		const unitStyle = StyleSheet.flatten(
+			view.getByTestId("gauge-unit").props.style as StyleProp<TextStyle>,
+		);
+		expect(unitStyle?.fontSize).toBe(lightTheme.typography.caption.fontSize);
+		expect(unitStyle?.fontSize).not.toBe(lightTheme.typography.metric.fontSize);
 	});
 });
