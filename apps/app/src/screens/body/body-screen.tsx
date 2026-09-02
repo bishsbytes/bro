@@ -18,6 +18,7 @@ import { Button } from "../../components/button";
 import { Card } from "../../components/card";
 import { EmptyState } from "../../components/empty-state";
 import { MeasurementField } from "../../components/measurement-field";
+import { ModalSheet } from "../../components/modal-sheet";
 import { OptionSheet } from "../../components/option-sheet";
 import { LoadingScreen, Screen } from "../../components/screen";
 import { SectionHeader } from "../../components/section-header";
@@ -190,6 +191,7 @@ export function BodyScreen({ store }: BodyScreenProps) {
 	const [busySlug, setBusySlug] = useState<string | null>(null);
 	const [selection, setSelection] = useState<string | null>(null);
 	const [editingSites, setEditingSites] = useState(false);
+	const [loggingSlug, setLoggingSlug] = useState<string | null>(null);
 	const [entries, setEntries] = useState<Record<string, MeasurementEntry>>({});
 	const [entryErrors, setEntryErrors] = useState<Record<string, string>>({});
 	const {
@@ -248,6 +250,7 @@ export function BodyScreen({ store }: BodyScreenProps) {
 				await body.recordMeasurement(metricSlug, parsed.canonicalValue),
 			);
 			setEntries((current) => ({ ...current, [metricSlug]: EMPTY_ENTRY }));
+			setLoggingSlug(null);
 		} catch (caught) {
 			setError(toMessage(caught));
 		} finally {
@@ -292,6 +295,10 @@ export function BodyScreen({ store }: BodyScreenProps) {
 	];
 	const selected =
 		sites.find((metric) => metric.metricSlug === selection) ?? sites[0] ?? null;
+	const loggingMetric = overview.metrics.find(
+		(metric) => metric.metricSlug === loggingSlug,
+	);
+	const loggingPresentation = loggingMetric?.editablePresentation ?? null;
 
 	function changeCell(metric: BodyMetricSummary): string {
 		const { current, previous, direction, changeFormatted } = metric.baseline;
@@ -328,30 +335,19 @@ export function BodyScreen({ store }: BodyScreenProps) {
 		}),
 	}));
 
-	function entryFor(metric: BodyMetricSummary) {
+	function logButtonFor(metric: BodyMetricSummary) {
 		const presentation = metric.editablePresentation;
 		if (!metric.tracked || !presentation) return null;
 		return (
-			<View style={styles.entry}>
-				<MeasurementField
-					label={metric.label}
-					unit={presentation.displayUnit}
-					entry={entries[metric.metricSlug] ?? EMPTY_ENTRY}
-					onChangeEntry={(entry) => updateEntry(metric.metricSlug, entry)}
-					placeholder={t("body:measurements.enterPlaceholder", {
-						unit: presentation.displayUnit,
-					})}
-					error={entryErrors[metric.metricSlug]}
-				/>
-				<Button
-					label={t("body:measurements.logMetric", { name: metric.label })}
-					loading={busySlug === metric.metricSlug}
-					disabled={busySlug !== null}
-					onPress={() =>
-						void recordMeasurement(metric.metricSlug, presentation)
-					}
-				/>
-			</View>
+			<Button
+				label={t("body:measurements.logMetric", { name: metric.label })}
+				variant="secondary"
+				disabled={busySlug !== null}
+				onPress={() => {
+					setError(null);
+					setLoggingSlug(metric.metricSlug);
+				}}
+			/>
 		);
 	}
 
@@ -376,26 +372,6 @@ export function BodyScreen({ store }: BodyScreenProps) {
 
 			{error ? <AppText color="danger">{error}</AppText> : null}
 
-			{weight ? (
-				<View style={styles.section}>
-					<MetricGauge
-						metric={weight}
-						valueVariant="metric"
-						todayLocalDay={todayLocalDay}
-						locale={locale}
-					/>
-					{entryFor(weight)}
-					{weight.activeGoal ? (
-						<AppText variant="caption" color="muted">
-							{t("body:goal.target", {
-								value: weight.activeGoal.targetFormatted,
-							})}
-						</AppText>
-					) : null}
-					{openMetric(weight)}
-				</View>
-			) : null}
-
 			<View style={styles.section}>
 				<SectionHeader
 					title={t("body:measurements.title")}
@@ -409,32 +385,55 @@ export function BodyScreen({ store }: BodyScreenProps) {
 					}
 				/>
 
-				{selected ? (
-					<Card style={styles.panel}>
+				{weight ? (
+					<View style={styles.measurement}>
 						<MetricGauge
-							metric={selected}
-							valueVariant={weight ? "score" : "metric"}
+							metric={weight}
+							valueVariant="metric"
 							todayLocalDay={todayLocalDay}
 							locale={locale}
 						/>
-						{entryFor(selected)}
-						{selected.activeGoal ? (
+						{logButtonFor(weight)}
+						{weight.activeGoal ? (
 							<AppText variant="caption" color="muted">
 								{t("body:goal.target", {
-									value: selected.activeGoal.targetFormatted,
+									value: weight.activeGoal.targetFormatted,
 								})}
 							</AppText>
 						) : null}
-						{openMetric(selected)}
-					</Card>
-				) : (
-					<EmptyState
-						title={t("body:measurements.emptyTitle")}
-						body={t("body:measurements.emptyBody")}
-						actionLabel={t("body:sites.manage")}
-						onAction={() => setEditingSites(true)}
-					/>
-				)}
+						{openMetric(weight)}
+					</View>
+				) : null}
+
+				<View style={styles.tapeSites}>
+					<AppText variant="section">{t("body:sites.sectionTitle")}</AppText>
+					{selected ? (
+						<Card style={styles.panel}>
+							<MetricGauge
+								metric={selected}
+								valueVariant={weight ? "score" : "metric"}
+								todayLocalDay={todayLocalDay}
+								locale={locale}
+							/>
+							{logButtonFor(selected)}
+							{selected.activeGoal ? (
+								<AppText variant="caption" color="muted">
+									{t("body:goal.target", {
+										value: selected.activeGoal.targetFormatted,
+									})}
+								</AppText>
+							) : null}
+							{openMetric(selected)}
+						</Card>
+					) : (
+						<EmptyState
+							title={t("body:measurements.emptyTitle")}
+							body={t("body:measurements.emptyBody")}
+							actionLabel={t("body:sites.manage")}
+							onAction={() => setEditingSites(true)}
+						/>
+					)}
+				</View>
 
 				{changes.length > 0 ? (
 					<>
@@ -494,14 +493,56 @@ export function BodyScreen({ store }: BodyScreenProps) {
 					onClose={() => setEditingSites(false)}
 				/>
 			) : null}
+
+			{loggingMetric && loggingPresentation ? (
+				<ModalSheet
+					visible
+					onClose={() => setLoggingSlug(null)}
+					closeAccessibilityLabel={t("body:measurements.dismissLogA11y", {
+						name: loggingMetric.label,
+					})}
+				>
+					<View style={styles.logSheet}>
+						<AppText variant="section">
+							{t("body:measurements.logMetric", { name: loggingMetric.label })}
+						</AppText>
+						<MeasurementField
+							label={loggingMetric.label}
+							unit={loggingPresentation.displayUnit}
+							entry={entries[loggingMetric.metricSlug] ?? EMPTY_ENTRY}
+							onChangeEntry={(entry) =>
+								updateEntry(loggingMetric.metricSlug, entry)
+							}
+							placeholder={t("body:measurements.enterPlaceholder", {
+								unit: loggingPresentation.displayUnit,
+							})}
+							error={entryErrors[loggingMetric.metricSlug]}
+						/>
+						{error ? <AppText color="danger">{error}</AppText> : null}
+						<Button
+							label={t("body:measurements.save")}
+							loading={busySlug === loggingMetric.metricSlug}
+							disabled={busySlug !== null}
+							onPress={() =>
+								void recordMeasurement(
+									loggingMetric.metricSlug,
+									loggingPresentation,
+								)
+							}
+						/>
+					</View>
+				</ModalSheet>
+			) : null}
 		</Screen>
 	);
 }
 
 const styles = StyleSheet.create((theme) => ({
 	section: { gap: theme.spacing.md },
+	measurement: { gap: theme.spacing.md },
+	tapeSites: { gap: theme.spacing.md, marginTop: theme.spacing.lg },
 	panel: { gap: theme.spacing.md },
-	entry: { gap: theme.spacing.sm },
+	logSheet: { gap: theme.spacing.lg },
 	changeHeading: {
 		flexDirection: "row",
 		alignItems: "baseline",

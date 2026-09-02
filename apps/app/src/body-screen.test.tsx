@@ -178,18 +178,17 @@ describe("Body screen", () => {
 		const recordMeasurement = jest.fn(async () => overview);
 		const screen = await mountedWith(overview, { recordMeasurement });
 
-		await fireEvent.changeText(
-			await screen.findByLabelText("Weight (stones)"),
-			"12",
-		);
+		expect(screen.queryByLabelText("Weight (stones)")).toBeNull();
+		await fireEvent.press(await screen.findByLabelText("Log Weight"));
+		await fireEvent.changeText(screen.getByLabelText("Weight (stones)"), "12");
 		await fireEvent.changeText(screen.getByLabelText("Weight (pounds)"), "4");
-		await fireEvent.press(screen.getByLabelText("Log Weight"));
+		await fireEvent.press(screen.getByLabelText("Save measurement"));
 
 		expect(recordMeasurement).toHaveBeenCalledWith(
 			"weight",
 			172 * KILOGRAMS_PER_POUND,
 		);
-		expect(screen.getByLabelText("Weight (stones)").props.value).toBe("");
+		expect(screen.queryByLabelText("Weight (stones)")).toBeNull();
 	});
 
 	it("shows a field error and writes nothing for unparseable input", async () => {
@@ -206,11 +205,12 @@ describe("Body screen", () => {
 				recordMeasurement,
 			});
 
+			await fireEvent.press(await screen.findByLabelText("Log Weight"));
 			await fireEvent.changeText(
-				await screen.findByLabelText("Weight (stones)"),
+				screen.getByLabelText("Weight (stones)"),
 				"heavy",
 			);
-			await fireEvent.press(screen.getByLabelText("Log Weight"));
+			await fireEvent.press(screen.getByLabelText("Save measurement"));
 
 			expect(recordMeasurement).not.toHaveBeenCalled();
 			expect(
@@ -248,7 +248,7 @@ describe("Body screen", () => {
 
 		expect(await screen.findByText("Nothing taped yet")).toBeTruthy();
 		expect(screen.queryByLabelText("Chest. Nothing logged yet")).toBeNull();
-		expect(screen.queryByLabelText("Chest (cm)")).toBeNull();
+		expect(screen.queryByLabelText("Log Chest")).toBeNull();
 
 		await fireEvent.press(screen.getAllByLabelText("Manage measurements")[0]);
 		await fireEvent.press(screen.getByLabelText("Track Chest"));
@@ -259,7 +259,8 @@ describe("Body screen", () => {
 		expect(
 			await screen.findByLabelText("Chest. Nothing logged yet"),
 		).toBeTruthy();
-		expect(screen.getByLabelText("Chest (cm)")).toBeTruthy();
+		expect(screen.getByLabelText("Log Chest")).toBeTruthy();
+		expect(screen.queryByLabelText("Chest (cm)")).toBeNull();
 	});
 
 	it("reads a taped site against the user's own range without a verdict", async () => {
@@ -332,13 +333,13 @@ describe("Body screen", () => {
 		);
 
 		// The list reads down the body, so the neck is selected before the waist.
-		expect(await screen.findByLabelText("Neck (cm)")).toBeTruthy();
+		expect(await screen.findByLabelText("Log Neck")).toBeTruthy();
 		await fireEvent.press(
 			screen.getByLabelText("Waist. 1.5 cm down since 3 Aug."),
 		);
 
-		expect(screen.getByLabelText("Waist (cm)")).toBeTruthy();
-		expect(screen.queryByLabelText("Neck (cm)")).toBeNull();
+		expect(screen.getByLabelText("Log Waist")).toBeTruthy();
+		expect(screen.queryByLabelText("Log Neck")).toBeNull();
 	});
 
 	it("marks the selected row and colours neither direction of change", async () => {

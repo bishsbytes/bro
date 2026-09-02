@@ -18,6 +18,8 @@ export const body = {
 		stopTracking: "Stop tracking {{name}}",
 		enterPlaceholder: "Enter {{unit}}",
 		logMetric: "Log {{name}}",
+		save: "Save measurement",
+		dismissLogA11y: "Close {{name}} entry",
 	},
 	measuring: {
 		link: "How to measure",
@@ -43,6 +45,7 @@ export const body = {
 	sites: {
 		manage: "Manage measurements",
 		title: "Measurements",
+		sectionTitle: "Tape sites",
 		intro: "Choose the measurements you want to keep on this screen.",
 		dismissA11y: "Close measurements",
 	},
