@@ -46,13 +46,17 @@ export function MeasurementChangeList({
 
 	return (
 		<View>
-			{changes.map((change) => (
+			{changes.map((change, index) => (
 				<Pressable
 					key={change.slug}
 					accessibilityRole="button"
 					accessibilityLabel={change.accessibilityLabel}
 					onPress={() => onOpen(change.slug)}
-					style={({ pressed }) => [styles.row, pressed && styles.rowPressed]}
+					style={({ pressed }) => [
+						styles.row,
+						index === changes.length - 1 && styles.lastRow,
+						pressed && styles.rowPressed,
+					]}
 				>
 					<View style={styles.name}>
 						<AppText variant="label" numberOfLines={1}>
@@ -124,6 +128,7 @@ const styles = StyleSheet.create((theme) => ({
 		borderBottomWidth: 1,
 		borderBottomColor: theme.colors.line,
 	},
+	lastRow: { borderBottomWidth: 0 },
 	rowPressed: { backgroundColor: theme.colors.surfaceSunk },
 	name: { width: 96 },
 	compactGauge: { flex: 1, height: MARK_SIZE + 4, justifyContent: "center" },

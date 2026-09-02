@@ -1,5 +1,6 @@
 import { KILOGRAMS_PER_POUND } from "@bro/domain";
 import { fireEvent, render } from "@testing-library/react-native";
+import { StyleSheet as NativeStyleSheet } from "react-native";
 import { BodyLogSurfaceProvider } from "./body/body-log-surface-context";
 import type {
 	BodyMetricBaseline,
@@ -426,9 +427,17 @@ describe("Body screen", () => {
 		);
 
 		expect(screen.queryByTestId("baseline-gauge")).toBeNull();
-		await fireEvent.press(
-			await screen.findByLabelText("Waist. 1.5 cm down since 3 Aug."),
+		const waistRow = await screen.findByLabelText(
+			"Waist. 1.5 cm down since 3 Aug.",
 		);
+		const neckRow = screen.getByLabelText("Neck. Nothing logged yet");
+		expect(
+			NativeStyleSheet.flatten(waistRow.props.style).borderBottomWidth,
+		).toBe(1);
+		expect(
+			NativeStyleSheet.flatten(neckRow.props.style).borderBottomWidth,
+		).toBe(0);
+		await fireEvent.press(waistRow);
 
 		expect(mockPush).toHaveBeenCalledWith({
 			pathname: "/body/[slug]",
