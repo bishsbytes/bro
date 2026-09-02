@@ -7,6 +7,25 @@ import { NotesScreen } from "./screens/notes/notes-screen";
 type RemoveListener = (event: { preventDefault: () => void }) => void;
 
 let beforeRemove: RemoveListener | null = null;
+let mockRenderedLinkPress: ((event: { url: string }) => void) | undefined;
+
+jest.mock("react-native-enriched-markdown", () => {
+	const React = jest.requireActual<typeof import("react")>("react");
+	const shipped = jest.requireActual<
+		typeof import("react-native-enriched-markdown")
+	>("react-native-enriched-markdown/jest");
+
+	return {
+		...shipped,
+		EnrichedMarkdownText: ({
+			onLinkPress,
+			...props
+		}: React.ComponentProps<typeof shipped.EnrichedMarkdownText>) => {
+			mockRenderedLinkPress = onLinkPress;
+			return React.createElement(shipped.EnrichedMarkdownText, props);
+		},
+	};
+});
 
 jest.mock("expo-router", () => ({
 	router: { back: jest.fn(), push: jest.fn() },
@@ -80,6 +99,7 @@ describe("notes screens", () => {
 	beforeEach(() => {
 		jest.clearAllMocks();
 		beforeRemove = null;
+		mockRenderedLinkPress = undefined;
 	});
 
 	it("lists all notes under their days, newest day first", async () => {
@@ -310,6 +330,7 @@ describe("note editor", () => {
 	beforeEach(() => {
 		jest.clearAllMocks();
 		beforeRemove = null;
+		mockRenderedLinkPress = undefined;
 	});
 
 	function editor(store: Parameters<typeof EditNoteScreen>[0]["store"]) {
@@ -325,9 +346,39 @@ describe("note editor", () => {
 			deleteNote: jest.fn(),
 		});
 
-		expect(await screen.findByDisplayValue("The first thought")).toBeTruthy();
+		expect(await screen.findByText("The first thought")).toBeTruthy();
+		expect(screen.queryByLabelText("Note")).toBeNull();
+		expect(screen.getByLabelText("Edit note")).toBeTruthy();
 		// The header names the day rather than repeating "Note".
 		expect(screen.getByText("Today")).toBeTruthy();
+	});
+
+	it("opens a link from the note's reading view", async () => {
+		const openUrl = jest.fn(async () => undefined);
+		const screen = await render(
+			<EditNoteScreen
+				noteId={NOTE.id}
+				now={FIXED_NOW}
+				store={{
+					loadNote: jest.fn(async () => ({
+						...NOTE,
+						body: "[Optimisr](https://optimisr.app)",
+					})),
+					updateNote: jest.fn(),
+					deleteNote: jest.fn(),
+				}}
+				openUrl={openUrl}
+			/>,
+		);
+
+		expect(
+			await screen.findByText("[Optimisr](https://optimisr.app)"),
+		).toBeTruthy();
+		await act(async () => {
+			mockRenderedLinkPress?.({ url: "https://optimisr.app" });
+		});
+
+		expect(openUrl).toHaveBeenCalledWith("https://optimisr.app");
 	});
 
 	it("saves an edit and returns to where it was opened from", async () => {
@@ -341,6 +392,7 @@ describe("note editor", () => {
 			deleteNote: jest.fn(),
 		});
 
+		await fireEvent.press(await screen.findByLabelText("Edit note"));
 		await fireEvent.changeText(
 			await screen.findByLabelText("Note"),
 			"A second thought",
@@ -361,7 +413,8 @@ describe("note editor", () => {
 			deleteNote: jest.fn(),
 		});
 
-		await fireEvent.press(await screen.findByLabelText("Save note"));
+		await fireEvent.press(await screen.findByLabelText("Edit note"));
+		await fireEvent.press(screen.getByLabelText("Save note"));
 
 		await waitFor(() =>
 			expect(updateNote).toHaveBeenCalledWith("today-1", "The first thought"),
@@ -382,6 +435,7 @@ describe("note editor", () => {
 			<EditNoteScreen noteId="today-1" now={FIXED_NOW} store={store} />,
 		);
 
+		await fireEvent.press(await screen.findByLabelText("Edit note"));
 		await fireEvent.changeText(
 			await screen.findByLabelText("Note"),
 			"An unsaved first-note edit",
@@ -390,7 +444,8 @@ describe("note editor", () => {
 			<EditNoteScreen noteId="today-2" now={FIXED_NOW} store={store} />,
 		);
 
-		expect(await screen.findByDisplayValue("The second thought")).toBeTruthy();
+		expect(await screen.findByText("The second thought")).toBeTruthy();
+		await fireEvent.press(screen.getByLabelText("Edit note"));
 		await fireEvent.press(screen.getByLabelText("Save note"));
 		await waitFor(() =>
 			expect(updateNote).toHaveBeenCalledWith("today-2", "The second thought"),
@@ -403,6 +458,7 @@ describe("note editor", () => {
 			updateNote: jest.fn(),
 			deleteNote: jest.fn(),
 		});
+		await fireEvent.press(await screen.findByLabelText("Edit note"));
 		await fireEvent.changeText(
 			await screen.findByLabelText("Note"),
 			"A changed thought",
@@ -429,6 +485,7 @@ describe("note editor", () => {
 			deleteNote: jest.fn(),
 		});
 
+		await fireEvent.press(await screen.findByLabelText("Edit note"));
 		await fireEvent.changeText(await screen.findByLabelText("Note"), "   ");
 		await fireEvent.press(screen.getByLabelText("Save note"));
 

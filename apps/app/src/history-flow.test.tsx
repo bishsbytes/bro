@@ -185,6 +185,7 @@ describe("history and day view", () => {
 
 		await fireEvent.press(view.getByLabelText("Open note 1 of 2"));
 		await act(async () => undefined);
+		await fireEvent.press(await view.findByText("Edit note"));
 		await fireEvent.changeText(
 			await view.findByDisplayValue("First synced note"),
 			"Edited first note",

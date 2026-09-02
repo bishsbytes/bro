@@ -1,8 +1,12 @@
 import { render } from "@testing-library/react-native";
-import type { MarkdownStyle } from "react-native-enriched-markdown";
+import type {
+	LinkPressEvent,
+	MarkdownStyle,
+} from "react-native-enriched-markdown";
 import { MarkdownText } from "./markdown-text";
 
 let mockMarkdownStyle: MarkdownStyle | undefined;
+let mockOnLinkPress: ((event: LinkPressEvent) => void) | undefined;
 
 jest.mock("react-native-enriched-markdown", () => {
 	const React = jest.requireActual<typeof import("react")>("react");
@@ -13,15 +17,22 @@ jest.mock("react-native-enriched-markdown", () => {
 		...shipped,
 		EnrichedMarkdownText: ({
 			markdownStyle,
+			onLinkPress,
 			...props
 		}: React.ComponentProps<typeof shipped.EnrichedMarkdownText>) => {
 			mockMarkdownStyle = markdownStyle;
+			mockOnLinkPress = onLinkPress;
 			return React.createElement(shipped.EnrichedMarkdownText, props);
 		},
 	};
 });
 
 describe("MarkdownText", () => {
+	beforeEach(() => {
+		mockMarkdownStyle = undefined;
+		mockOnLinkPress = undefined;
+	});
+
 	it("uses the editor's continuous block rhythm", async () => {
 		await render(<MarkdownText markdown={"First\n\n- One\n- Two"} />);
 
@@ -33,5 +44,19 @@ describe("MarkdownText", () => {
 			marginTop: 0,
 			marginBottom: 0,
 		});
+	});
+
+	it("reports the URL when a rendered link is pressed", async () => {
+		const onLinkPress = jest.fn();
+		await render(
+			<MarkdownText
+				markdown="[bro](https://example.com)"
+				onLinkPress={onLinkPress}
+			/>,
+		);
+
+		mockOnLinkPress?.({ url: "https://example.com" });
+
+		expect(onLinkPress).toHaveBeenCalledWith("https://example.com");
 	});
 });

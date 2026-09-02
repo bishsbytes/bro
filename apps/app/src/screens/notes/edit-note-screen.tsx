@@ -3,12 +3,13 @@ import { formatLocalDayLabel } from "@bro/logic";
 import { router, Stack, useNavigation } from "expo-router";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
-import { View } from "react-native";
+import { Linking, ScrollView, View } from "react-native";
 import { KeyboardAvoidingView } from "react-native-keyboard-controller";
 import { AppText } from "../../components/app-text";
 import { Button } from "../../components/button";
 import { EmptyState } from "../../components/empty-state";
 import { MarkdownField } from "../../components/markdown-field";
+import { MarkdownText } from "../../components/markdown-text";
 import { LoadingScreen, StackScreen as Screen } from "../../components/screen";
 import { toMessage } from "../../lib/errors";
 import { useStoreLoad } from "../../lib/use-store-load";
@@ -19,6 +20,7 @@ type EditNoteScreenProps = {
 	noteId: string;
 	store?: Pick<NotesStore, "loadNote" | "updateNote" | "deleteNote">;
 	now?: () => Date;
+	openUrl?: (url: string) => Promise<unknown>;
 };
 
 type NoteDraft = {
@@ -30,12 +32,13 @@ type NoteDraft = {
  * One saved note, opened full screen.
  *
  * It opens as the note reads rather than with the keyboard up: most visits are
- * to re-read something, and the field is there to be tapped when they are not.
+ * to re-read something, and an explicit action moves into editing when needed.
  */
 export function EditNoteScreen({
 	noteId,
 	store,
 	now = () => new Date(),
+	openUrl = (url) => Linking.openURL(url),
 }: EditNoteScreenProps) {
 	const { t } = useTranslation("notes");
 	const { theme } = useUnistyles();
@@ -50,6 +53,7 @@ export function EditNoteScreen({
 	// when a dynamic route parameter changes, and text from one note must never
 	// become the draft for another.
 	const [draft, setDraft] = useState<NoteDraft | null>(null);
+	const [editing, setEditing] = useState(false);
 	const [saving, setSaving] = useState(false);
 	const [error, setError] = useState<string | null>(null);
 	const [confirmingDelete, setConfirmingDelete] = useState(false);
@@ -69,10 +73,20 @@ export function EditNoteScreen({
 	useEffect(() => {
 		leaving.current = false;
 		setDraft(null);
+		setEditing(false);
 		setError(null);
 		setConfirmingDelete(false);
 		setConfirmingDiscard(false);
 	}, [noteId]);
+
+	async function openLink(url: string) {
+		setError(null);
+		try {
+			await openUrl(url);
+		} catch (caught) {
+			setError(toMessage(caught));
+		}
+	}
 
 	// The header, Android back button and iOS swipe all leave through the
 	// navigator. Once words have changed, make that loss deliberate.
@@ -158,16 +172,29 @@ export function EditNoteScreen({
 				keyboardVerticalOffset={theme.spacing.md}
 				style={styles.fill}
 			>
-				<MarkdownField
-					key={note.id}
-					label={t("edit.field")}
-					showLabel={false}
-					defaultValue={note.body}
-					onChangeMarkdown={(body) => setDraft({ noteId: note.id, body })}
-					placeholder={t("edit.prompt")}
-					appearance="flush"
-					containerStyle={styles.composer}
-				/>
+				{editing ? (
+					<MarkdownField
+						key={note.id}
+						label={t("edit.field")}
+						showLabel={false}
+						defaultValue={note.body}
+						onChangeMarkdown={(body) => setDraft({ noteId: note.id, body })}
+						placeholder={t("edit.prompt")}
+						autoFocus
+						appearance="flush"
+						containerStyle={styles.composer}
+					/>
+				) : (
+					<ScrollView
+						style={styles.composer}
+						contentContainerStyle={styles.reader}
+					>
+						<MarkdownText
+							markdown={note.body}
+							onLinkPress={(url) => void openLink(url)}
+						/>
+					</ScrollView>
+				)}
 
 				{error ? (
 					<AppText color="muted" style={styles.error}>
@@ -223,11 +250,17 @@ export function EditNoteScreen({
 							onPress={() => setConfirmingDelete(true)}
 						/>
 						<Button
-							label={t("edit.save")}
+							label={t(editing ? "edit.save" : "edit.start")}
 							loading={saving}
-							disabled={empty}
+							disabled={editing && empty}
 							style={styles.action}
-							onPress={() => void save()}
+							onPress={() => {
+								if (editing) {
+									void save();
+								} else {
+									setEditing(true);
+								}
+							}}
 						/>
 					</View>
 				)}
@@ -239,6 +272,7 @@ export function EditNoteScreen({
 const styles = StyleSheet.create((theme) => ({
 	fill: { flex: 1, gap: theme.spacing.md },
 	composer: { flex: 1 },
+	reader: { paddingBottom: theme.spacing.lg },
 	error: { marginTop: theme.spacing.xs },
 	footer: { gap: theme.spacing.sm },
 	actions: { flexDirection: "row", gap: theme.spacing.md },

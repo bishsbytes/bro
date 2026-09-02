@@ -35,6 +35,7 @@ export const notes = {
 	edit: {
 		field: "Note",
 		prompt: "What's on your mind?",
+		start: "Edit note",
 		save: "Save note",
 		emptyBody: "A note cannot be left empty.",
 		delete: "Delete note",

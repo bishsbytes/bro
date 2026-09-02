@@ -9,6 +9,7 @@ type MarkdownTextProps = {
 	/** The note as it was written, in markdown. */
 	markdown: string;
 	containerStyle?: ViewStyle;
+	onLinkPress?: (url: string) => void;
 };
 
 /**
@@ -20,7 +21,11 @@ type MarkdownTextProps = {
  * written before the composer could format are plain prose, which markdown
  * renders unchanged.
  */
-export function MarkdownText({ markdown, containerStyle }: MarkdownTextProps) {
+export function MarkdownText({
+	markdown,
+	containerStyle,
+	onLinkPress,
+}: MarkdownTextProps) {
 	const { theme } = useUnistyles();
 	// Rebuilt per theme rather than memoised: `useUnistyles` already re-renders
 	// on a theme change, and this is a plain object literal either way.
@@ -60,6 +65,7 @@ export function MarkdownText({ markdown, containerStyle }: MarkdownTextProps) {
 			markdown={markdown}
 			markdownStyle={markdownStyle}
 			containerStyle={containerStyle}
+			onLinkPress={onLinkPress ? ({ url }) => onLinkPress(url) : undefined}
 			// A list row opens the note it contains, and a selectable text view would
 			// take the press and long press for itself. Off everywhere so a saved note
 			// answers a touch the same way wherever it is read.
