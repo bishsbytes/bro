@@ -61,11 +61,7 @@ import {
 type HomeScreenProps = {
 	store?: Pick<
 		CheckInStore,
-		| "loadToday"
-		| "saveCheckIn"
-		| "saveDayTags"
-		| "saveDayNote"
-		| "loadCheckInDays"
+		"loadToday" | "saveCheckIn" | "saveDayTags" | "loadCheckInDays"
 	>;
 	habitsStore?: Pick<
 		HabitsStore,
@@ -159,12 +155,10 @@ const PAST_DAY_CACHE_LIMIT = 7;
 
 function JournalNotesSection({
 	notes,
-	loading = false,
 	onAddNote,
 	onOpenNotes,
 }: {
 	notes: readonly DayNote[];
-	loading?: boolean;
 	onAddNote: () => void;
 	onOpenNotes: () => void;
 }) {
@@ -186,8 +180,7 @@ function JournalNotesSection({
 					</TouchableOpacity>
 				}
 			/>
-			{loading ? <LoadingIndicator /> : null}
-			{!loading && notes.length === 0 ? (
+			{notes.length === 0 ? (
 				<EmptyState
 					title={t("journal.emptyTitle")}
 					body={t("journal.emptyBody")}
@@ -467,7 +460,6 @@ export function HomeScreen({
 	);
 	const [selectedTags, setSelectedTags] = useState<string[]>([]);
 	const [error, setError] = useState<string | null>(null);
-	const [todayNotes, setTodayNotes] = useState<DayNote[] | null>(null);
 	// Only the latest tag toggle may apply its result, and a reload must not
 	// pull the chips back to a set the user has already moved on from.
 	const tagRequestRef = useRef(0);
@@ -487,7 +479,6 @@ export function HomeScreen({
 			if (tagsInFlightRef.current === 0) {
 				setSelectedTags(loaded.selectedTagSlugs);
 			}
-			setTodayNotes(loaded.notes ?? []);
 		} catch (caught) {
 			setError(toMessage(caught));
 		}
@@ -922,6 +913,19 @@ export function HomeScreen({
 			</View>
 		) : null;
 
+	const journalNotesSection = (
+		<JournalNotesSection
+			notes={today.notes}
+			onAddNote={() =>
+				router.push({
+					pathname: "/notes/new",
+					params: { localDay: todayLocalDay },
+				})
+			}
+			onOpenNotes={() => router.push("/notes")}
+		/>
+	);
+
 	function renderPagerDay(localDay: string) {
 		const past = pastDays.get(localDay);
 		return (
@@ -1084,17 +1088,7 @@ export function HomeScreen({
 							</AppText>
 						) : null}
 						{tagsSection}
-						<JournalNotesSection
-							notes={todayNotes ?? []}
-							loading={todayNotes === null}
-							onAddNote={() =>
-								router.push({
-									pathname: "/notes/new",
-									params: { localDay },
-								})
-							}
-							onOpenNotes={() => router.push("/notes")}
-						/>
+						{journalNotesSection}
 					</>
 				)}
 			</Screen>

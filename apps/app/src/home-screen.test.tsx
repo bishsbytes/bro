@@ -50,7 +50,6 @@ const emptyToday: TodayCheckIn = {
 	loggedMeasurements: [],
 	inputLocale: "en-GB",
 	notes: [],
-	note: "",
 };
 
 const emptyRoutines = {
@@ -147,7 +146,6 @@ function checkInStore(today = emptyToday) {
 		loadCheckInDays: jest.fn(async () => new Set<string>()),
 		saveCheckIn: jest.fn(async () => today),
 		saveDayTags: jest.fn(async () => today),
-		saveDayNote: jest.fn(async () => today),
 	};
 }
 
@@ -871,7 +869,6 @@ describe("home screen", () => {
 					loadCheckInDays: jest.fn(async () => new Set<string>()),
 					saveCheckIn: jest.fn(async () => emptyToday),
 					saveDayTags: jest.fn(async () => emptyToday),
-					saveDayNote: jest.fn(async () => emptyToday),
 				}}
 			/>,
 		);

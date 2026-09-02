@@ -1,5 +1,4 @@
 import type { DayNote } from "@bro/mobile-model";
-import type { TransactionScope } from "../transaction";
 import { BaseRepository } from "./base-repository";
 
 export type { DayNote } from "@bro/mobile-model";
@@ -21,6 +20,13 @@ function toDayNote(row: DayNoteRow): DayNote {
 		updatedAt: row.updated_at,
 	};
 }
+
+/** One page of {@link DayNoteRepository.listRecentDays}. */
+export type RecentDayNotes = {
+	notes: DayNote[];
+	/** Whether days older than the window also hold notes. */
+	hasMore: boolean;
+};
 
 export class DayNoteRepository extends BaseRepository {
 	async create(localDay: string, body: string): Promise<DayNote> {
@@ -55,6 +61,41 @@ export class DayNoteRepository extends BaseRepository {
 		return rows.map(toDayNote);
 	}
 
+	/**
+	 * Notes from the most recent `dayLimit` days that have any, newest day
+	 * first — and whether older days remain behind them.
+	 *
+	 * The window is measured in days rather than notes so a day's notes are
+	 * never split across two reads: the notes screen renders them grouped under
+	 * one date heading, and half a day under a heading would read as the whole
+	 * of it. Pass a larger `dayLimit` to widen the window.
+	 */
+	async listRecentDays(dayLimit: number): Promise<RecentDayNotes> {
+		if (!Number.isInteger(dayLimit) || dayLimit < 1 || dayLimit > 3_650) {
+			throw new RangeError("Day note window must be from 1 through 3650 days.");
+		}
+		// One day past the window answers `hasMore` without a second count query.
+		const days = await this.all<{ local_day: string }>(
+			`SELECT DISTINCT local_day FROM day_notes
+			 ORDER BY local_day DESC LIMIT ?`,
+			[dayLimit + 1],
+		);
+		const hasMore = days.length > dayLimit;
+		const windowDays = days.slice(0, dayLimit);
+		if (windowDays.length === 0) {
+			return { notes: [], hasMore: false };
+		}
+		const oldest = windowDays[windowDays.length - 1].local_day;
+		const rows = await this.all<DayNoteRow>(
+			`SELECT id, local_day, body, created_at, updated_at
+			 FROM day_notes
+			 WHERE local_day >= ?
+			 ORDER BY local_day DESC, created_at ASC, id ASC`,
+			[oldest],
+		);
+		return { notes: rows.map(toDayNote), hasMore };
+	}
+
 	async listBetweenDays(
 		fromLocalDay: string,
 		throughLocalDay: string,
@@ -67,51 +108,6 @@ export class DayNoteRepository extends BaseRepository {
 			[fromLocalDay, throughLocalDay],
 		);
 		return rows.map(toDayNote);
-	}
-
-	/**
-	 * Writes the day's single note, replacing any note already there.
-	 *
-	 * Pass `scope` to join a transaction the caller already holds, for a note
-	 * that must land with the rest of a larger domain write.
-	 */
-	async upsertForDay(
-		localDay: string,
-		body: string,
-		scope?: TransactionScope,
-	): Promise<DayNote> {
-		return await this.transaction(
-			async () => await this.upsert(localDay, body),
-			scope,
-		);
-	}
-
-	private async upsert(localDay: string, body: string): Promise<DayNote> {
-		const existing = await this.first<DayNoteRow>(
-			`SELECT id, local_day, body, created_at, updated_at
-			 FROM day_notes WHERE local_day = ?
-			 ORDER BY created_at ASC, id ASC LIMIT 1`,
-			[localDay],
-		);
-		const now = this.now();
-
-		if (existing) {
-			await this.run(
-				"UPDATE day_notes SET body = ?, updated_at = ? WHERE id = ?",
-				[body, now, existing.id],
-			);
-			return toDayNote({ ...existing, body, updated_at: now });
-		}
-
-		const note: DayNote = {
-			id: this.createId(now),
-			localDay,
-			body,
-			createdAt: now,
-			updatedAt: now,
-		};
-		await this.insert(note);
-		return note;
 	}
 
 	async update(id: string, body: string): Promise<DayNote | null> {

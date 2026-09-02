@@ -36,13 +36,22 @@ export function NewNoteScreen({
 	const [body, setBody] = useState("");
 	const [saving, setSaving] = useState(false);
 	const [error, setError] = useState<string | null>(null);
+	const empty = body.trim().length === 0;
 
 	async function save() {
-		if (saving) return;
+		if (saving || empty) return;
 		setSaving(true);
 		setError(null);
 		try {
-			await notes.createNote(localDay, body);
+			const saved = await notes.createNote(localDay, body);
+			if (!saved) {
+				// The store keeps nothing for a blank body. The button is disabled
+				// until there is something to keep, so this is a race the composer
+				// lost rather than a dead end to close the screen on.
+				setError(t("new.emptyBody"));
+				setSaving(false);
+				return;
+			}
 			router.back();
 		} catch (caught) {
 			setError(toMessage(caught));
@@ -75,6 +84,7 @@ export function NewNoteScreen({
 			<Button
 				label={t("new.save")}
 				loading={saving}
+				disabled={empty}
 				onPress={() => void save()}
 			/>
 		</Screen>

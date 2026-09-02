@@ -89,6 +89,7 @@ export {
 export {
 	type DayNote,
 	DayNoteRepository,
+	type RecentDayNotes,
 } from "./repositories/day-note-repository";
 export {
 	type FoodCacheEntry,

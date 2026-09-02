@@ -410,7 +410,7 @@ describe("product repositories", () => {
 		await expect(repository.findById(recipe.id)).resolves.toBeNull();
 	});
 
-	it("upserts the UI note while retaining manufactured duplicates", async () => {
+	it("keeps a day's notes in the order they were written", async () => {
 		let now = 1_000;
 		let nextId = 0;
 		const repository = new databaseApp.DayNoteRepository(db, {
@@ -420,25 +420,54 @@ describe("product repositories", () => {
 				return `note-${nextId}`;
 			},
 		});
-		const first = await repository.upsertForDay("2026-08-14", "First");
+		const first = await repository.create("2026-08-14", "First");
 
 		now = 2_000;
-		const updated = await repository.upsertForDay("2026-08-14", "Updated");
-		expect(updated).toMatchObject({
-			id: first.id,
-			createdAt: 1_000,
-			updatedAt: 2_000,
-			body: "Updated",
-		});
+		const second = await repository.create("2026-08-14", "Second");
+		expect(await repository.listByDay("2026-08-14")).toEqual([first, second]);
 
 		now = 3_000;
-		const duplicate = await repository.create(
-			"2026-08-14",
-			"Replicated duplicate",
-		);
-		expect(await repository.listByDay("2026-08-14")).toHaveLength(2);
-		await expect(repository.delete(duplicate.id)).resolves.toBe(true);
-		expect(await repository.listByDay("2026-08-14")).toEqual([updated]);
+		const edited = await repository.update(first.id, "Edited");
+		expect(edited).toMatchObject({
+			id: first.id,
+			createdAt: 1_000,
+			updatedAt: 3_000,
+			body: "Edited",
+		});
+
+		await expect(repository.delete(second.id)).resolves.toBe(true);
+		expect(await repository.listByDay("2026-08-14")).toEqual([edited]);
+	});
+
+	it("windows recent days whole, and says when older ones remain", async () => {
+		let nextId = 0;
+		const repository = new databaseApp.DayNoteRepository(db, {
+			now: () => 1_000,
+			createId: () => {
+				nextId += 1;
+				return `windowed-${nextId}`;
+			},
+		});
+		for (const localDay of ["2026-07-01", "2026-07-02", "2026-07-03"]) {
+			await repository.create(localDay, `${localDay} first`);
+			await repository.create(localDay, `${localDay} second`);
+		}
+
+		const page = await repository.listRecentDays(2);
+		// Two days, both of them whole — a day is never split across a window.
+		expect(page.hasMore).toBe(true);
+		expect(page.notes.map((note) => note.body)).toEqual([
+			"2026-07-03 first",
+			"2026-07-03 second",
+			"2026-07-02 first",
+			"2026-07-02 second",
+		]);
+
+		const all = await repository.listRecentDays(30);
+		expect(all.hasMore).toBe(false);
+		expect(all.notes).toHaveLength(6);
+
+		await expect(repository.listRecentDays(0)).rejects.toThrow(RangeError);
 	});
 
 	it("stamps added_at and removed_at only on enable/disable transitions", async () => {

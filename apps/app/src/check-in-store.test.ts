@@ -230,16 +230,18 @@ describe("check-in store", () => {
 		);
 	});
 
-	it("deletes the day's note when the prefilled field is saved empty", async () => {
+	it("reports every note the day holds, oldest first", async () => {
 		const notes = new databaseApp.DayNoteRepository(db);
 		const store = new CheckInStore(db, () => CAPTURED_AT);
 
-		const saved = await store.saveDayNote("Keep me");
-		expect(saved.note).toBe("Keep me");
+		await notes.create(LOCAL_DAY, "First thought");
+		await notes.create(LOCAL_DAY, "Second thought");
+		await notes.create("2026-08-13", "Yesterday's thought");
 
-		const cleared = await store.saveDayNote("   ");
-		expect(cleared.note).toBe("");
-		expect(await notes.listByDay(LOCAL_DAY)).toEqual([]);
+		expect((await store.loadToday()).notes).toMatchObject([
+			{ body: "First thought" },
+			{ body: "Second thought" },
+		]);
 	});
 
 	it("writes a check-in as exactly one mood and energy pair", async () => {
@@ -264,7 +266,7 @@ describe("check-in store", () => {
 		});
 		expect(saved.sittings.evening).toBeNull();
 		expect(saved.selectedTagSlugs).toEqual([]);
-		expect(saved.note).toBe("");
+		expect(saved.notes).toEqual([]);
 		transaction.mockRestore();
 	});
 
@@ -622,20 +624,6 @@ describe("check-in store", () => {
 		);
 	});
 
-	it("clears only the note the form showed, retaining manufactured duplicates", async () => {
-		const notes = new databaseApp.DayNoteRepository(db);
-		const store = new CheckInStore(db, () => CAPTURED_AT);
-
-		await store.saveDayNote("Shown in the form");
-		const duplicate = await notes.create(LOCAL_DAY, "Replicated duplicate");
-
-		await store.saveDayNote("");
-
-		expect(await notes.listByDay(LOCAL_DAY)).toMatchObject([
-			{ id: duplicate.id, body: "Replicated duplicate" },
-		]);
-	});
-
 	it("refreshes reminders only once the check-in is committed and visible", async () => {
 		const observations = new databaseApp.ObservationRepository(db);
 		let visibleToRefresh: DatabaseApp.Observation[] = [];
@@ -651,10 +639,9 @@ describe("check-in store", () => {
 		// transaction commits and see the pair that proves the check-in happened.
 		expect(hasCompletedCheckIn(visibleToRefresh)).toBe(true);
 
-		// Neither tags nor the note change whether the day counts as checked
-		// in, so neither has a reminder schedule to reconcile.
+		// Tags do not change whether the day counts as checked in, so they have
+		// no reminder schedule to reconcile.
 		await store.saveDayTags(["training"]);
-		await store.saveDayNote("Strong finish");
 		expect(refresh).toHaveBeenCalledTimes(1);
 	});
 

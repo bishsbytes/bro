@@ -7,6 +7,8 @@ export const notes = {
 	actions: {
 		add: "Add note",
 		viewAll: "View all",
+		showOlder: "Show older notes",
+		editA11y: "Edit notes for {{day}}",
 	},
 	journal: {
 		title: "Notes",
@@ -19,5 +21,6 @@ export const notes = {
 		field: "Note",
 		placeholder: "Write something worth remembering.",
 		save: "Save note",
+		emptyBody: "Write something before saving.",
 	},
 } as const;

@@ -59,8 +59,6 @@ export type TodayCheckIn = {
 	loggedMeasurements: LoggedCheckInMeasurement[];
 	inputLocale: string | undefined;
 	notes: DayNote[];
-	/** @deprecated Use notes when rendering the day. */
-	note: string;
 };
 
 export type CheckInMeasurement = MeasurementPresentation;
@@ -333,7 +331,6 @@ export class CheckInStore {
 			loggedMeasurements,
 			inputLocale,
 			notes,
-			note: notes[0]?.body ?? "",
 		};
 	}
 
@@ -539,25 +536,6 @@ export class CheckInStore {
 				selected,
 			);
 		});
-
-		return await this.loadToday(capturedAt);
-	}
-
-	/** Replaces the day's single note; an empty body clears it. */
-	async saveDayNote(note: string): Promise<TodayCheckIn> {
-		const capturedAt = this.now();
-		const localDay = localDayOf(capturedAt);
-
-		if (note.trim().length > 0) {
-			await this.notes.upsertForDay(localDay, note);
-		} else {
-			// The form prefills the day's note, so an emptied field is an explicit
-			// clear of the note the user was shown — not an absent one.
-			const [uiNote] = await this.notes.listByDay(localDay);
-			if (uiNote) {
-				await this.notes.delete(uiNote.id);
-			}
-		}
 
 		return await this.loadToday(capturedAt);
 	}
