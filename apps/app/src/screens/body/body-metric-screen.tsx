@@ -1,6 +1,7 @@
 import type { Observation } from "@bro/database-app";
 import type { MeasurementEntry } from "@bro/domain";
-import { router } from "expo-router";
+import { isTapeSiteSlug } from "@bro/domain/metric-registry";
+import { router, Stack } from "expo-router";
 import type { TFunction } from "i18next";
 import { useCallback, useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
@@ -16,6 +17,7 @@ import { Button } from "../../components/button";
 import { Card } from "../../components/card";
 import { DateField } from "../../components/date-field";
 import { EmptyState } from "../../components/empty-state";
+import { HeaderIconButton } from "../../components/header-icon-button";
 import { MeasurementField } from "../../components/measurement-field";
 import { LoadingScreen, StackScreen as Screen } from "../../components/screen";
 import { SectionHeader } from "../../components/section-header";
@@ -259,6 +261,25 @@ export function BodyMetricScreen({ metricSlug, store }: BodyMetricScreenProps) {
 
 	return (
 		<Screen scroll padded gap="lg" keyboardShouldPersistTaps="handled">
+			<Stack.Screen
+				options={{
+					headerRight: isTapeSiteSlug(detail.metricSlug)
+						? () => (
+								<HeaderIconButton
+									icon="measure"
+									testID="measuring-guide-header-icon"
+									label={t("measuring.link")}
+									onPress={() =>
+										router.push({
+											pathname: "/body/measuring",
+											params: { site: detail.metricSlug },
+										})
+									}
+								/>
+							)
+						: undefined,
+				}}
+			/>
 			<Card style={styles.summaryCard}>
 				<BodyBaselineGauge
 					metric={detail}

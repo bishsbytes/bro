@@ -11,6 +11,7 @@ import {
 import { type DisplayUnit, localDayOf, systemLocale } from "@bro/domain";
 import {
 	type BodyMetricGroup,
+	type ImportedOnlyMeasurementMetricDefinition,
 	listImportedOnlyMeasurements,
 	listUserEnterableMeasurements,
 	type ManualMeasurementCapture,
@@ -127,11 +128,18 @@ export type BodyMetricDetail = BodyMetricSummary & {
 const BODY_TREND_PERIOD = 30;
 
 function measurementDefaults() {
-	return listUserEnterableMeasurements().map((metric) => ({
-		metricSlug: metric.slug,
-		position: metric.defaultPosition,
-		enabled: false,
-	}));
+	return [
+		...listUserEnterableMeasurements().map((metric) => ({
+			metricSlug: metric.slug,
+			position: metric.defaultPosition,
+			enabled: false,
+		})),
+		...listImportedOnlyMeasurements().map((metric) => ({
+			metricSlug: metric.slug,
+			position: metric.defaultPosition,
+			enabled: true,
+		})),
+	];
 }
 
 function formatPresentedMeasurement(
@@ -259,6 +267,22 @@ function resolveMeasurement(
 	return resolved.metric;
 }
 
+function resolveBodyMetric(
+	metricSlug: string,
+):
+	| UserEnterableMeasurementMetricDefinition
+	| ImportedOnlyMeasurementMetricDefinition {
+	const resolved = resolveMetric(metricSlug);
+	if (
+		resolved.kind !== "known" ||
+		resolved.metric.kind !== "measurement" ||
+		!("bodyGroup" in resolved.metric)
+	) {
+		throw new TypeError(`Unknown body metric slug: ${metricSlug}`);
+	}
+	return resolved.metric;
+}
+
 export class BodyStore {
 	private readonly goals: GoalRepository;
 	private readonly dailyMetrics: DailyMetricRepository;
@@ -338,7 +362,7 @@ export class BodyStore {
 		metricSlug: string,
 		enabled: boolean,
 	): Promise<BodyOverview> {
-		const metric = resolveMeasurement(metricSlug);
+		const metric = resolveBodyMetric(metricSlug);
 		const overlays = await this.trackedMetrics.listResolved(
 			measurementDefaults(),
 		);
@@ -573,7 +597,7 @@ export class BodyStore {
 					userEnterable: metric.userEnterable,
 					editablePresentation,
 					tracked,
-					visible: tracked || hasImportedData || !metric.userEnterable,
+					visible: metric.userEnterable ? tracked || hasImportedData : tracked,
 					hasImportedData,
 					position: overlay?.position ?? metric.defaultPosition,
 					latest,

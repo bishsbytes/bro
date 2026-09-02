@@ -28,9 +28,13 @@ function siteLabel(slug: TapeSiteSlug): string {
  * it does. It carries no readings, so nothing about a man's own numbers is
  * pinned to a drawing of a body.
  */
-export function MeasuringGuideScreen() {
+export function MeasuringGuideScreen({
+	initialSite = "waist",
+}: {
+	initialSite?: TapeSiteSlug;
+}) {
 	const { t } = useTranslation("body");
-	const [selected, setSelected] = useState<TapeSiteSlug>("waist");
+	const [selected, setSelected] = useState<TapeSiteSlug>(initialSite);
 
 	return (
 		<Screen scroll padded gap="lg">

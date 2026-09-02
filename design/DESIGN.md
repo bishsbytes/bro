@@ -173,6 +173,12 @@ presents its rows inside one surface card. Tapping any row opens that metric's
 detail screen. The detail screen uses the full baseline gauge inside its hero
 card, with the one permitted 56px value.
 
+- Measurements and Health & fitness each own their management action. Manage
+  measurements controls weight, body fat, and tape sites; Manage health data
+  controls manual tracking for resting heart rate and whether imported sleep
+  and steps appear on Body. The latter is only a visibility choice: it never
+  changes platform access or deletes imported data.
+
 - The shared quick-log FAB is available on the Body tab and offers Body as a
   destination. Its Body action replaces the content inside that same sheet with
   standalone weight, a measurement session, and standalone resting heart rate
@@ -223,9 +229,10 @@ shared spokes manufacture a score, which is judgement UI.
   3 August", never "Great progress!" or "You're in the healthy zone".
 
 **Measuring guide (tailor's diagram):** the pattern-block figure lives on its own
-"how to measure" page, reached from the measurements screen. It answers where the
-tape goes and nothing else — it carries no readings, so no number a man has
-recorded is ever pinned to a drawing of a body.
+"how to measure" page, reached from the top-right ruler action on any tape-site
+detail page. The guide opens on that site. It answers where the tape goes and
+nothing else — it carries no readings, so no number a man has ever pinned to a
+drawing of a body.
 
 - The figure draws in `--line-strong` (it is chart paper, like the wheel's
   grid). It is the same fixed block for every user: never reshaped by his

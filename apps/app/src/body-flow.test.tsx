@@ -92,7 +92,7 @@ describe("body metrics flow", () => {
 		await act(async () => undefined);
 		expect(await view.findByText("No measurements tracked")).toBeTruthy();
 
-		await fireEvent.press(view.getAllByLabelText("Manage body data")[0]);
+		await fireEvent.press(view.getByLabelText("Manage measurements"));
 		await fireEvent.press(await view.findByLabelText("Track Weight"));
 		await fireEvent.press(
 			view.getByTestId("modal-sheet-backdrop", { includeHiddenElements: true }),
@@ -151,6 +151,7 @@ describe("body metrics flow", () => {
 
 		await act(async () => expoRouter.replace("/body/weight"));
 		expect(await view.findByText("12 st 3 lb")).toBeTruthy();
+		expect(view.queryByLabelText("How to measure")).toBeNull();
 		const observation = (
 			await new databaseApp.ObservationRepository(db).listAll()
 		)
@@ -203,6 +204,14 @@ describe("body metrics flow", () => {
 		expect(await view.findByText(/Achieved: target 76.2 kg/)).toBeTruthy();
 		await act(async () => expoRouter.replace("/insights"));
 		expect(await view.findByText("Latest 77.1 kg")).toBeTruthy();
+
+		await act(async () => expoRouter.replace("/body/waist"));
+		await fireEvent.press(await view.findByLabelText("How to measure"));
+		expect(
+			await view.findByText(
+				"Around the navel, standing normally, at the end of a normal breath out. Do not hold it in.",
+			),
+		).toBeTruthy();
 		expect(globalThis.fetch).not.toHaveBeenCalled();
 		expect(mockedUseSession).not.toHaveBeenCalled();
 	});

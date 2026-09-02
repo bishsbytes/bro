@@ -10,7 +10,7 @@ export const body = {
 	measurements: {
 		title: "Measurements",
 		emptyTitle: "No measurements tracked",
-		emptyBody: "Manage body data to choose the measurements shown here.",
+		emptyBody: "Choose the measurements you want to keep here.",
 		nothingLogged: "Nothing logged yet",
 		/** Names the origin of an imported reading. */
 		source: "Source: {{name}}",
@@ -66,12 +66,23 @@ export const body = {
 				"Around the fullest part of the upper thigh, just under the buttock, with your weight even on both feet.",
 		},
 	},
-	sites: {
-		manage: "Manage body data",
-		title: "Body data",
-		intro:
-			"Choose the measurements and fitness signals to keep on this screen.",
-		dismissA11y: "Close body data",
+	management: {
+		measurementsAction: "Manage measurements",
+		healthAction: "Manage health data",
+		showOnBody: "Show {{name}} on Body",
+		hideFromBody: "Hide {{name}} from Body",
+		measurements: {
+			title: "Measurements",
+			intro:
+				"Choose the measurements to keep on this screen and in measurement sessions.",
+			dismissA11y: "Close measurement options",
+		},
+		health_fitness: {
+			title: "Health data",
+			intro:
+				"Track resting heart rate, and choose whether imported sleep and steps appear on Body.",
+			dismissA11y: "Close health data options",
+		},
 	},
 	reading: {
 		/** {{when}} is a day: "Today", "Yesterday", or "3 Aug". */

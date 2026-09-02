@@ -23,6 +23,7 @@ import Moon from "lucide-react-native/icons/moon";
 import NotebookPen from "lucide-react-native/icons/notebook-pen";
 import PartyPopper from "lucide-react-native/icons/party-popper";
 import Plus from "lucide-react-native/icons/plus";
+import Ruler from "lucide-react-native/icons/ruler";
 import Scale from "lucide-react-native/icons/scale";
 import Search from "lucide-react-native/icons/search";
 import Settings from "lucide-react-native/icons/settings";
@@ -79,6 +80,7 @@ const ICONS = {
 	"life-purpose": Signpost,
 	"life-sobriety": WineOff,
 	person: User,
+	measure: Ruler,
 	search: Search,
 	settings: Settings,
 	square: Square,

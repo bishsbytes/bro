@@ -1,5 +1,9 @@
 import { localDayOf, type MeasurementEntry } from "@bro/domain";
-import { isTapeSiteSlug, TAPE_SITE_SLUGS } from "@bro/domain/metric-registry";
+import {
+	type BodyMetricGroup,
+	isTapeSiteSlug,
+	TAPE_SITE_SLUGS,
+} from "@bro/domain/metric-registry";
 import { formatLocalDayLabelShort } from "@bro/logic";
 import { router } from "expo-router";
 import type { TFunction } from "i18next";
@@ -87,7 +91,7 @@ type BodyLogContentProps = {
 	onSetLogMode: (mode: LogMode) => void;
 	onUpdateEntry: (metricSlug: string, entry: MeasurementEntry) => void;
 	onSave: (metrics: readonly BodyMetricSummary[], onSaved: () => void) => void;
-	onManage: () => void;
+	onManageMeasurements: () => void;
 	onBackToQuickLog: () => void;
 	onClose: () => void;
 };
@@ -103,7 +107,7 @@ function BodyLogContent({
 	onSetLogMode,
 	onUpdateEntry,
 	onSave,
-	onManage,
+	onManageMeasurements,
 	onBackToQuickLog,
 	onClose,
 }: BodyLogContentProps) {
@@ -182,10 +186,10 @@ function BodyLogContent({
 					<EmptyState
 						title={t("body:log.emptyTitle")}
 						body={t("body:log.emptyBody")}
-						actionLabel={t("body:sites.manage")}
+						actionLabel={t("body:management.measurementsAction")}
 						onAction={() => {
 							onClose();
-							onManage();
+							onManageMeasurements();
 						}}
 					/>
 				) : null}
@@ -269,7 +273,7 @@ function BodyLogSurfaceRegistration({
 	onSetLogMode,
 	onUpdateEntry,
 	onSave,
-	onManage,
+	onManageMeasurements,
 }: BodyLogSurfaceRegistrationProps) {
 	const render = useCallback(
 		({ close, backToQuickLog }: BodyLogSurfaceControls) => (
@@ -284,7 +288,7 @@ function BodyLogSurfaceRegistration({
 				onSetLogMode={onSetLogMode}
 				onUpdateEntry={onUpdateEntry}
 				onSave={onSave}
-				onManage={onManage}
+				onManageMeasurements={onManageMeasurements}
 				onClose={close}
 				onBackToQuickLog={backToQuickLog}
 			/>
@@ -295,7 +299,7 @@ function BodyLogSurfaceRegistration({
 			entryErrors,
 			error,
 			logMode,
-			onManage,
+			onManageMeasurements,
 			onSave,
 			onSetLogMode,
 			onUpdateEntry,
@@ -320,11 +324,16 @@ export function BodyScreen({ store }: BodyScreenProps) {
 	const { t } = useTranslation(["body", "common"]);
 	const body = useMemo(() => store ?? createBodyStore(), [store]);
 	const [busySlug, setBusySlug] = useState<string | null>(null);
-	const [editingSites, setEditingSites] = useState(false);
+	const [editingGroup, setEditingGroup] = useState<BodyMetricGroup | null>(
+		null,
+	);
 	const [logMode, setLogMode] = useState<LogMode>("options");
 	const [entries, setEntries] = useState<Record<string, MeasurementEntry>>({});
 	const [entryErrors, setEntryErrors] = useState<Record<string, string>>({});
-	const openManageBodyData = useCallback(() => setEditingSites(true), []);
+	const openManageMeasurements = useCallback(
+		() => setEditingGroup("measurements"),
+		[],
+	);
 	const {
 		data: overview,
 		error,
@@ -513,7 +522,7 @@ export function BodyScreen({ store }: BodyScreenProps) {
 				onSetLogMode={setLogMode}
 				onUpdateEntry={updateEntry}
 				onSave={saveMeasurements}
-				onManage={openManageBodyData}
+				onManageMeasurements={openManageMeasurements}
 			/>
 			<AppText color="muted">{t("body:overview.intro")}</AppText>
 
@@ -523,12 +532,14 @@ export function BodyScreen({ store }: BodyScreenProps) {
 				<SectionHeader
 					title={t("body:measurements.title")}
 					action={
-						<Button
-							label={t("body:sites.manage")}
-							variant="text"
-							disabled={busySlug !== null}
-							onPress={() => setEditingSites(true)}
-						/>
+						measurementChanges.length > 0 ? (
+							<Button
+								label={t("body:management.measurementsAction")}
+								variant="text"
+								disabled={busySlug !== null}
+								onPress={openManageMeasurements}
+							/>
+						) : undefined
 					}
 				/>
 
@@ -549,20 +560,26 @@ export function BodyScreen({ store }: BodyScreenProps) {
 					<EmptyState
 						title={t("body:measurements.emptyTitle")}
 						body={t("body:measurements.emptyBody")}
-						actionLabel={t("body:sites.manage")}
-						onAction={() => setEditingSites(true)}
+						actionLabel={t("body:management.measurementsAction")}
+						onAction={openManageMeasurements}
 					/>
 				)}
-
-				<Button
-					label={t("body:measuring.link")}
-					variant="text"
-					onPress={() => router.push("/body/measuring")}
-				/>
 			</View>
 
 			<View style={styles.section}>
-				<SectionHeader title={t("body:healthFitness.title")} />
+				<SectionHeader
+					title={t("body:healthFitness.title")}
+					action={
+						healthFitnessChanges.length > 0 ? (
+							<Button
+								label={t("body:management.healthAction")}
+								variant="text"
+								disabled={busySlug !== null}
+								onPress={() => setEditingGroup("health_fitness")}
+							/>
+						) : undefined
+					}
+				/>
 				{healthFitnessChanges.length > 0 ? (
 					<Card testID="body-health-fitness-card" style={styles.listCard}>
 						<View style={styles.changeHeading}>
@@ -580,30 +597,44 @@ export function BodyScreen({ store }: BodyScreenProps) {
 					<EmptyState
 						title={t("body:healthFitness.emptyTitle")}
 						body={t("body:healthFitness.emptyBody")}
-						actionLabel={t("body:sites.manage")}
-						onAction={() => setEditingSites(true)}
+						actionLabel={t("body:management.healthAction")}
+						onAction={() => setEditingGroup("health_fitness")}
 					/>
 				)}
 			</View>
 
-			{editingSites ? (
+			{editingGroup ? (
 				<OptionSheet
 					visible
 					selection="multiple"
-					title={t("body:sites.title")}
-					intro={t("body:sites.intro")}
-					closeAccessibilityLabel={t("body:sites.dismissA11y")}
+					title={t(`body:management.${editingGroup}.title`)}
+					intro={t(`body:management.${editingGroup}.intro`)}
+					closeAccessibilityLabel={t(
+						`body:management.${editingGroup}.dismissA11y`,
+					)}
 					options={overview.metrics
-						.filter((metric) => metric.userEnterable)
+						.filter((metric) => metric.bodyGroup === editingGroup)
 						.map((metric) => ({
 							value: metric.metricSlug,
 							label: metric.label,
-							accessibilityLabel: metric.tracked
-								? t("body:measurements.stopTracking", { name: metric.label })
-								: t("body:measurements.track", { name: metric.label }),
+							accessibilityLabel: metric.userEnterable
+								? metric.tracked
+									? t("body:measurements.stopTracking", {
+											name: metric.label,
+										})
+									: t("body:measurements.track", { name: metric.label })
+								: metric.tracked
+									? t("body:management.hideFromBody", {
+											name: metric.label,
+										})
+									: t("body:management.showOnBody", {
+											name: metric.label,
+										}),
 						}))}
 					selected={overview.metrics
-						.filter((metric) => metric.tracked)
+						.filter(
+							(metric) => metric.bodyGroup === editingGroup && metric.tracked,
+						)
 						.map((metric) => metric.metricSlug)}
 					disabled={busySlug !== null}
 					onSelect={(metricSlug) => {
@@ -612,7 +643,7 @@ export function BodyScreen({ store }: BodyScreenProps) {
 						);
 						if (metric) void setTracked(metricSlug, !metric.tracked);
 					}}
-					onClose={() => setEditingSites(false)}
+					onClose={() => setEditingGroup(null)}
 				/>
 			) : null}
 		</Screen>

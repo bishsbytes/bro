@@ -42,7 +42,7 @@ describe("body store", () => {
 		mockSqlite.cleanup();
 	});
 
-	it("ships body tracking default-off and persists toggles through the overlay", async () => {
+	it("defaults imported health signals on and persists visibility choices", async () => {
 		const store = new BodyStore(
 			db,
 			() => new Date("2026-08-14T12:00:00.000Z"),
@@ -71,13 +71,13 @@ describe("body store", () => {
 		expect(fresh.metrics.slice(3, 11)).toMatchObject([
 			{
 				metricSlug: "sleep_duration",
-				tracked: false,
+				tracked: true,
 				visible: true,
 				displayUnit: null,
 			},
 			{
 				metricSlug: "steps",
-				tracked: false,
+				tracked: true,
 				visible: true,
 				displayUnit: null,
 			},
@@ -102,6 +102,16 @@ describe("body store", () => {
 			db,
 		).listResolved([{ metricSlug: "weight", position: 0, enabled: false }]);
 		expect(overlays[0]?.enabled).toBe(true);
+
+		const hidden = await store.setTracked("sleep_duration", false);
+		expect(
+			hidden.metrics.find(({ metricSlug }) => metricSlug === "sleep_duration"),
+		).toMatchObject({ tracked: false, visible: false });
+		expect(
+			(await store.loadOverview()).metrics.find(
+				({ metricSlug }) => metricSlug === "sleep_duration",
+			),
+		).toMatchObject({ tracked: false, visible: false });
 	});
 
 	it("offers resting heart rate for manual tracking before an import exists", async () => {
@@ -227,6 +237,13 @@ describe("body store", () => {
 			visible: true,
 			latestFormatted: "8,500",
 		});
+
+		const sleepRows = await daily.listByMetric("sleep_duration");
+		const hidden = await store.setTracked("sleep_duration", false);
+		expect(
+			hidden.metrics.find(({ metricSlug }) => metricSlug === "sleep_duration"),
+		).toMatchObject({ tracked: false, visible: false, hasImportedData: true });
+		expect(await daily.listByMetric("sleep_duration")).toEqual(sleepRows);
 
 		const weight = await store.loadMetric("weight");
 		expect(weight?.history).toHaveLength(2);

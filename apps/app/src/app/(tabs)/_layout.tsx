@@ -1,11 +1,12 @@
-import { type Href, router, Tabs, usePathname, useSegments } from "expo-router";
+import { router, Tabs, usePathname, useSegments } from "expo-router";
 import { useLayoutEffect, useRef } from "react";
 import { useTranslation } from "react-i18next";
-import { TouchableOpacity, View } from "react-native";
+import { View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { BodyLogSurfaceProvider } from "../../body/body-log-surface-context";
 import { AppHeader } from "../../components/app-header";
-import { Icon, type IconName } from "../../components/icon";
+import { HeaderIconButton } from "../../components/header-icon-button";
+import { Icon } from "../../components/icon";
 import { QuickLogFab } from "../../components/quick-log-fab";
 import {
 	TodayHeaderMonthProvider,
@@ -23,37 +24,6 @@ const TAB_TITLE_KEYS = {
 } as const;
 
 const TAB_BAR_CONTENT_HEIGHT = 56;
-
-function HeaderIconButton({
-	icon,
-	testID,
-	label,
-	href,
-}: {
-	icon: IconName;
-	testID: string;
-	label: string;
-	href: Href;
-}) {
-	const { theme } = useUnistyles();
-
-	return (
-		<TouchableOpacity
-			accessibilityRole="button"
-			accessibilityLabel={label}
-			hitSlop={theme.spacing.sm}
-			style={styles.headerAction}
-			onPress={() => router.push(href)}
-		>
-			<Icon
-				testID={testID}
-				name={icon}
-				color={theme.colors.text}
-				size={theme.control.avatarIconSize}
-			/>
-		</TouchableOpacity>
-	);
-}
 
 function TabShell() {
 	const { t } = useTranslation("navigation");
@@ -99,7 +69,7 @@ function TabShell() {
 								icon="insights"
 								testID="insights-header-icon"
 								label={t("tabs.openInsights")}
-								href="/insights"
+								onPress={() => router.push("/insights")}
 							/>
 						) : null
 					}
@@ -109,7 +79,7 @@ function TabShell() {
 								icon="calendar"
 								testID="history-header-icon"
 								label={t("tabs.openHistory")}
-								href="/history"
+								onPress={() => router.push("/history")}
 							/>
 						) : null
 					}
@@ -202,13 +172,4 @@ export default function TabLayout() {
 
 const styles = StyleSheet.create((theme) => ({
 	shell: { flex: 1, backgroundColor: theme.colors.background },
-	headerAction: {
-		width: theme.control.avatarSize,
-		height: theme.control.avatarSize,
-		alignItems: "center",
-		justifyContent: "center",
-		borderWidth: 0,
-		borderRadius: theme.control.avatarSize / 2,
-		backgroundColor: "transparent",
-	},
 }));

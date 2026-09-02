@@ -364,6 +364,58 @@ describe("Body screen", () => {
 		expect(screen.getByTestId("body-health-fitness-card")).toBeTruthy();
 	});
 
+	it("manages measurements and health data in separate controls", async () => {
+		const chest = metric({
+			metricSlug: "chest",
+			label: "Chest",
+			position: 15,
+			tracked: false,
+		});
+		const heartRate = restingHeartRateMetric(false);
+		const sleep = metric({
+			metricSlug: "sleep_duration",
+			label: "Sleep",
+			dimension: "time",
+			displayUnit: null,
+			bodyGroup: "health_fitness",
+			manualCapture: null,
+			userEnterable: false,
+			editablePresentation: null,
+			tracked: true,
+			position: 3,
+		});
+		const steps = metric({
+			metricSlug: "steps",
+			label: "Steps",
+			dimension: "count",
+			displayUnit: null,
+			bodyGroup: "health_fitness",
+			manualCapture: null,
+			userEnterable: false,
+			editablePresentation: null,
+			tracked: true,
+			position: 4,
+		});
+		const screen = await mountedWith(
+			overviewOf([chest, sleep, steps, heartRate]),
+		);
+
+		await fireEvent.press(await screen.findByLabelText("Manage measurements"));
+		expect(screen.getByLabelText("Track Chest")).toBeTruthy();
+		expect(screen.queryByLabelText("Track Resting heart rate")).toBeNull();
+		await fireEvent.press(
+			screen.getByTestId("modal-sheet-backdrop", {
+				includeHiddenElements: true,
+			}),
+		);
+
+		await fireEvent.press(screen.getByLabelText("Manage health data"));
+		expect(screen.getByLabelText("Track Resting heart rate")).toBeTruthy();
+		expect(screen.getByLabelText("Hide Sleep from Body")).toBeTruthy();
+		expect(screen.getByLabelText("Hide Steps from Body")).toBeTruthy();
+		expect(screen.queryByLabelText("Track Chest")).toBeNull();
+	});
+
 	it("leaves an untracked site off the screen until it is added", async () => {
 		const setTracked = jest.fn(async () =>
 			overviewOf([
@@ -387,7 +439,7 @@ describe("Body screen", () => {
 		expect(screen.queryByLabelText("Chest. Nothing logged yet")).toBeNull();
 		expect(screen.queryByLabelText("Chest (cm)")).toBeNull();
 
-		await fireEvent.press(screen.getAllByLabelText("Manage body data")[0]);
+		await fireEvent.press(screen.getByLabelText("Manage measurements"));
 		await fireEvent.press(screen.getByLabelText("Track Chest"));
 		await fireEvent.press(
 			screen.getByTestId("modal-sheet-backdrop", {
@@ -417,6 +469,7 @@ describe("Body screen", () => {
 		expect(screen.getByText("−1.5 cm")).toBeTruthy();
 		expect(screen.getByText("since 3 Aug")).toBeTruthy();
 		expect(screen.getByTestId("body-measurements-card")).toBeTruthy();
+		expect(screen.queryByText("How to measure")).toBeNull();
 	});
 
 	it("shows body fat as a compact measurement row", async () => {
@@ -481,16 +534,6 @@ describe("Body screen", () => {
 			pathname: "/body/[slug]",
 			params: { slug: "waist" },
 		});
-	});
-
-	it("sends the user to the measuring guide rather than drawing a body", async () => {
-		const screen = await mountedWith(
-			overviewOf([metric({ baseline: TAPED_WAIST })]),
-		);
-
-		await fireEvent.press(await screen.findByText("How to measure"));
-
-		expect(mockPush).toHaveBeenCalledWith("/body/measuring");
 	});
 
 	it("leaves the bottom safe area to the tab navigator", async () => {

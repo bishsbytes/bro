@@ -57,4 +57,17 @@ describe("Measuring guide", () => {
 		expect(view.queryByTestId("gauge-marker")).toBeNull();
 		expect(view.queryByText("Since last time")).toBeNull();
 	});
+
+	it("opens on the tape site that linked to the guide", async () => {
+		const view = await render(<MeasuringGuideScreen initialSite="neck" />);
+
+		expect(
+			view.getByLabelText("Neck, how to measure").props.accessibilityState,
+		).toMatchObject({ selected: true });
+		expect(
+			view.getByText(
+				"Just below the Adam's apple, with the tape sloping slightly down at the front.",
+			),
+		).toBeTruthy();
+	});
 });
