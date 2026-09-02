@@ -15,7 +15,6 @@ export type BodyLogSurfaceControls = {
 
 export type BodyLogSurface = {
 	closeAccessibilityLabel: string;
-	onDismiss: () => void;
 	render: (controls: BodyLogSurfaceControls) => ReactNode;
 };
 
@@ -56,6 +55,11 @@ export function useBodyLogSurface() {
 export function useRegisterBodyLogSurface(surface: BodyLogSurface) {
 	const { register, unregister } = useBodyLogSurface();
 
-	useEffect(() => register(surface), [register, surface]);
+	// A block body, not a concise one: an effect that returns a value is read as
+	// a cleanup function, and `register` returning something later would break
+	// here rather than where it changed.
+	useEffect(() => {
+		register(surface);
+	}, [register, surface]);
 	useEffect(() => unregister, [unregister]);
 }

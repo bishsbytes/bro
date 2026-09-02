@@ -26,6 +26,17 @@ type MeasurementChangeListProps = {
 
 const MARK_SIZE = 9;
 
+/**
+ * Whether a row has earned its marks. The rail is scaled from the metric's own
+ * readings, so before there is a usual range to place them against, two
+ * readings always land on the same two spots whatever the change was — a
+ * full-width traverse for a millimetre. Until then the row states the change in
+ * figures and leaves the track bare.
+ */
+export function hasPlottableRange(change: MeasurementChange): boolean {
+	return change.rail !== null && change.band !== null;
+}
+
 function position(value: number, rail: GaugeRange): number {
 	if (rail.max <= rail.min) return 50;
 	const fraction = (value - rail.min) / (rail.max - rail.min);
@@ -65,51 +76,60 @@ export function MeasurementChangeList({
 							{change.label}
 						</AppText>
 						{change.since ? (
-							<AppText variant="micro" color="subtle" numberOfLines={1}>
+							<AppText variant="micro" color="subtle" numberOfLines={2}>
 								{change.since}
 							</AppText>
 						) : null}
 					</View>
-					<View style={styles.compactGauge}>
-						<View style={styles.track} />
-						{change.rail && change.band ? (
-							<View
-								style={[
-									styles.band,
-									{
-										backgroundColor: theme.colors[change.domain],
-										left: `${position(change.band.min, change.rail)}%`,
-										width: `${Math.max(
-											position(change.band.max, change.rail) -
-												position(change.band.min, change.rail),
-											0,
-										)}%`,
-									},
-								]}
-							/>
-						) : null}
-						{change.rail && change.previous !== null ? (
-							<View
-								style={[
-									styles.previous,
-									{
-										borderColor: theme.colors[change.domain],
-										left: `${position(change.previous, change.rail)}%`,
-									},
-								]}
-							/>
-						) : null}
-						{change.rail && change.current !== null ? (
-							<View
-								style={[
-									styles.current,
-									{
-										backgroundColor: theme.colors[change.domain],
-										left: `${position(change.current, change.rail)}%`,
-									},
-								]}
-							/>
-						) : null}
+					{/* The column is inset by half a mark so a reading sitting on an end
+					    stop still draws inside the row rather than over its neighbour. */}
+					<View style={styles.gaugeColumn}>
+						<View style={styles.gauge}>
+							<View style={styles.track} />
+							{change.rail && change.band ? (
+								<>
+									<View
+										testID={`change-band-${change.slug}`}
+										style={[
+											styles.band,
+											{
+												backgroundColor: theme.colors[change.domain],
+												left: `${position(change.band.min, change.rail)}%`,
+												width: `${Math.max(
+													position(change.band.max, change.rail) -
+														position(change.band.min, change.rail),
+													0,
+												)}%`,
+											},
+										]}
+									/>
+									{change.previous !== null ? (
+										<View
+											testID={`change-previous-${change.slug}`}
+											style={[
+												styles.previous,
+												{
+													borderColor: theme.colors[change.domain],
+													left: `${position(change.previous, change.rail)}%`,
+												},
+											]}
+										/>
+									) : null}
+									{change.current !== null ? (
+										<View
+											testID={`change-current-${change.slug}`}
+											style={[
+												styles.current,
+												{
+													backgroundColor: theme.colors[change.domain],
+													left: `${position(change.current, change.rail)}%`,
+												},
+											]}
+										/>
+									) : null}
+								</>
+							) : null}
+						</View>
 					</View>
 					<AppText variant="caption" style={styles.change}>
 						{change.change}
@@ -132,8 +152,11 @@ const styles = StyleSheet.create((theme) => ({
 	},
 	lastRow: { borderBottomWidth: 0 },
 	rowPressed: { backgroundColor: theme.colors.surfaceSunk },
-	name: { width: 96 },
-	compactGauge: { flex: 1, height: MARK_SIZE + 4, justifyContent: "center" },
+	// Text columns are shares rather than fixed widths so a long name, a
+	// compound delta ("+1 st 2 lb") and a scaled-up font all still read.
+	name: { flex: 1.4 },
+	gaugeColumn: { flex: 1, paddingHorizontal: MARK_SIZE / 2 },
+	gauge: { height: MARK_SIZE, justifyContent: "center" },
 	track: { height: 1, backgroundColor: theme.colors.line },
 	band: {
 		position: "absolute",
@@ -159,7 +182,8 @@ const styles = StyleSheet.create((theme) => ({
 		borderRadius: MARK_SIZE / 2,
 	},
 	change: {
-		width: 84,
+		minWidth: 72,
+		flexShrink: 0,
 		textAlign: "right",
 		fontVariant: ["tabular-nums"],
 	},

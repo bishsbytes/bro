@@ -6,7 +6,6 @@ import {
 } from "@bro/domain/metric-registry";
 import { formatLocalDayLabelShort } from "@bro/logic";
 import { router } from "expo-router";
-import type { TFunction } from "i18next";
 import { useCallback, useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { View } from "react-native";
@@ -40,7 +39,9 @@ import {
 	parseMeasurementInput,
 } from "../../measurements/measurement-entry";
 import { StyleSheet } from "../../theme/unistyles";
+import { type BodyText, changeSentence } from "./baseline-copy";
 import {
+	hasPlottableRange,
 	type MeasurementChange,
 	MeasurementChangeList,
 } from "./measurement-change-list";
@@ -48,8 +49,6 @@ import {
 type BodyScreenProps = {
 	store?: Pick<BodyStore, "loadOverview" | "setTracked" | "recordMeasurements">;
 };
-
-type BodyText = TFunction<["body", "common"]>;
 
 const WEIGHT_SLUG = "weight";
 const RESTING_HEART_RATE_SLUG = "resting_heart_rate";
@@ -60,57 +59,39 @@ type LogMode =
 	| "measurements"
 	| typeof RESTING_HEART_RATE_SLUG;
 
-function changeSentence(
-	t: BodyText,
-	metric: BodyMetricSummary,
-	todayLocalDay: string,
-	locale: string | undefined,
-): string {
-	const { current, previous, direction, changeFormatted } = metric.baseline;
-	if (!current) return t("body:measurements.nothingLogged");
-	if (!previous) return t("body:read.first");
-	const when = formatLocalDayLabelShort(
-		previous.localDay,
-		todayLocalDay,
-		locale,
-	);
-	if (direction === "none" || !changeFormatted) {
-		return t("body:read.unchanged", { when });
-	}
-	return t(`body:read.${direction}`, { value: changeFormatted, when });
-}
-
 type BodyLogContentProps = {
 	t: BodyText;
 	overview: BodyOverview;
-	logMode: LogMode;
-	entries: Record<string, MeasurementEntry>;
-	entryErrors: Record<string, string>;
 	error: string | null;
 	busySlug: string | null;
-	onSetLogMode: (mode: LogMode) => void;
-	onUpdateEntry: (metricSlug: string, entry: MeasurementEntry) => void;
-	onSave: (metrics: readonly BodyMetricSummary[], onSaved: () => void) => void;
+	onSave: (
+		drafts: readonly BodyMeasurementDraft[],
+		onSaved: () => void,
+	) => void;
 	onManageMeasurements: () => void;
 	onBackToQuickLog: () => void;
 	onClose: () => void;
 };
 
+/**
+ * The body half of the quick-log sheet. It owns its own draft fields: the
+ * overview behind it holds a gauge per metric, and re-rendering that on every
+ * keystroke would be a lot of work to show one typed character.
+ */
 function BodyLogContent({
 	t,
 	overview,
-	logMode,
-	entries,
-	entryErrors,
 	error,
 	busySlug,
-	onSetLogMode,
-	onUpdateEntry,
 	onSave,
 	onManageMeasurements,
 	onBackToQuickLog,
 	onClose,
 }: BodyLogContentProps) {
+	const [logMode, setLogMode] = useState<LogMode>("options");
+	const [entries, setEntries] = useState<Record<string, MeasurementEntry>>({});
+	const [entryErrors, setEntryErrors] = useState<Record<string, string>>({});
+
 	const metricBySlug = new Map(
 		overview.metrics.map((metric) => [metric.metricSlug, metric]),
 	);
@@ -153,6 +134,42 @@ function BodyLogContent({
 		sessionCore.length > 0 ||
 		Boolean(restingHeartRate?.tracked);
 
+	function updateEntry(metricSlug: string, entry: MeasurementEntry) {
+		setEntries((current) => ({ ...current, [metricSlug]: entry }));
+		setEntryErrors((current) => {
+			if (!(metricSlug in current)) return current;
+			const next = { ...current };
+			delete next[metricSlug];
+			return next;
+		});
+	}
+
+	function save() {
+		const nextErrors: Record<string, string> = {};
+		const drafts: BodyMeasurementDraft[] = [];
+		for (const metric of logMetrics) {
+			const presentation = metric.editablePresentation;
+			const entry = entries[metric.metricSlug] ?? EMPTY_ENTRY;
+			if (!presentation || isBlankEntry(entry)) continue;
+			const parsed = parseMeasurementInput(
+				entry,
+				presentation,
+				overview.inputLocale,
+			);
+			if (!parsed.ok) {
+				nextErrors[metric.metricSlug] = parsed.error;
+				continue;
+			}
+			drafts.push({
+				metricSlug: metric.metricSlug,
+				canonicalValue: parsed.canonicalValue,
+			});
+		}
+		setEntryErrors(nextErrors);
+		if (Object.keys(nextErrors).length > 0) return;
+		onSave(drafts, onClose);
+	}
+
 	if (logMode === "options") {
 		return (
 			<View style={styles.logSheet}>
@@ -163,7 +180,7 @@ function BodyLogContent({
 						title={t("body:log.weight")}
 						detail={t("body:log.weightDetail")}
 						accessibilityLabel={t("body:log.weight")}
-						onPress={() => onSetLogMode(WEIGHT_SLUG)}
+						onPress={() => setLogMode(WEIGHT_SLUG)}
 					/>
 				) : null}
 				{sessionCore.length > 0 ? (
@@ -171,7 +188,7 @@ function BodyLogContent({
 						title={t("body:log.session")}
 						detail={t("body:log.sessionDetail")}
 						accessibilityLabel={t("body:log.session")}
-						onPress={() => onSetLogMode("measurements")}
+						onPress={() => setLogMode("measurements")}
 					/>
 				) : null}
 				{restingHeartRate?.tracked ? (
@@ -179,7 +196,7 @@ function BodyLogContent({
 						title={t("body:log.heartRate")}
 						detail={t("body:log.heartRateDetail")}
 						accessibilityLabel={t("body:log.heartRate")}
-						onPress={() => onSetLogMode(RESTING_HEART_RATE_SLUG)}
+						onPress={() => setLogMode(RESTING_HEART_RATE_SLUG)}
 					/>
 				) : null}
 				{!hasLogOptions ? (
@@ -219,6 +236,19 @@ function BodyLogContent({
 					? t("body:log.sessionFormIntro")
 					: t("body:log.singleFormIntro")}
 			</AppText>
+			{/* The guide belongs where the tape is about to go round, not on the
+			    overview: this is the moment a man wants to know where the waist is. */}
+			{logMode === "measurements" ? (
+				<Button
+					label={t("body:measuring.link")}
+					variant="text"
+					disabled={busySlug !== null}
+					onPress={() => {
+						onClose();
+						router.push("/body/measuring");
+					}}
+				/>
+			) : null}
 			{logMetrics.map((metric) => {
 				const presentation = metric.editablePresentation;
 				if (!presentation) return null;
@@ -228,7 +258,7 @@ function BodyLogContent({
 						label={metric.label}
 						unit={presentation.displayUnit}
 						entry={entries[metric.metricSlug] ?? EMPTY_ENTRY}
-						onChangeEntry={(entry) => onUpdateEntry(metric.metricSlug, entry)}
+						onChangeEntry={(entry) => updateEntry(metric.metricSlug, entry)}
 						placeholder={t("body:measurements.enterPlaceholder", {
 							unit: presentation.displayUnit,
 						})}
@@ -245,13 +275,13 @@ function BodyLogContent({
 				}
 				loading={busySlug === "body-log"}
 				disabled={busySlug !== null}
-				onPress={() => onSave(logMetrics, onClose)}
+				onPress={save}
 			/>
 			<Button
 				label={t("body:log.back")}
 				variant="text"
 				disabled={busySlug !== null}
-				onPress={() => onSetLogMode("options")}
+				onPress={() => setLogMode("options")}
 			/>
 		</View>
 	);
@@ -265,13 +295,8 @@ type BodyLogSurfaceRegistrationProps = Omit<
 function BodyLogSurfaceRegistration({
 	t,
 	overview,
-	logMode,
-	entries,
-	entryErrors,
 	error,
 	busySlug,
-	onSetLogMode,
-	onUpdateEntry,
 	onSave,
 	onManageMeasurements,
 }: BodyLogSurfaceRegistrationProps) {
@@ -280,44 +305,55 @@ function BodyLogSurfaceRegistration({
 			<BodyLogContent
 				t={t}
 				overview={overview}
-				logMode={logMode}
-				entries={entries}
-				entryErrors={entryErrors}
 				error={error}
 				busySlug={busySlug}
-				onSetLogMode={onSetLogMode}
-				onUpdateEntry={onUpdateEntry}
 				onSave={onSave}
 				onManageMeasurements={onManageMeasurements}
 				onClose={close}
 				onBackToQuickLog={backToQuickLog}
 			/>
 		),
-		[
-			busySlug,
-			entries,
-			entryErrors,
-			error,
-			logMode,
-			onManageMeasurements,
-			onSave,
-			onSetLogMode,
-			onUpdateEntry,
-			overview,
-			t,
-		],
+		[busySlug, error, onManageMeasurements, onSave, overview, t],
 	);
-	const onDismiss = useCallback(() => onSetLogMode("options"), [onSetLogMode]);
 	const surface = useMemo(
-		() => ({
-			closeAccessibilityLabel: t("body:log.dismissA11y"),
-			onDismiss,
-			render,
-		}),
-		[onDismiss, render, t],
+		() => ({ closeAccessibilityLabel: t("body:log.dismissA11y"), render }),
+		[render, t],
 	);
 	useRegisterBodyLogSurface(surface);
 	return null;
+}
+
+/**
+ * One group's rows under a shared column heading. The legend is passed rather
+ * than repeated per card: it is a screen-wide convention, and stating it twice
+ * makes two sibling groups read as two unrelated widgets.
+ */
+function ChangeCard({
+	t,
+	testID,
+	changes,
+	legend,
+	onOpen,
+}: {
+	t: BodyText;
+	testID: string;
+	changes: readonly MeasurementChange[];
+	legend: boolean;
+	onOpen: (slug: string) => void;
+}) {
+	return (
+		<Card testID={testID} style={styles.listCard}>
+			<View style={styles.changeHeading}>
+				<AppText variant="label">{t("body:change.title")}</AppText>
+				{legend ? (
+					<AppText variant="micro" color="subtle">
+						{t("body:change.legend")}
+					</AppText>
+				) : null}
+			</View>
+			<MeasurementChangeList changes={changes} onOpen={onOpen} />
+		</Card>
+	);
 }
 
 export function BodyScreen({ store }: BodyScreenProps) {
@@ -327,9 +363,6 @@ export function BodyScreen({ store }: BodyScreenProps) {
 	const [editingGroup, setEditingGroup] = useState<BodyMetricGroup | null>(
 		null,
 	);
-	const [logMode, setLogMode] = useState<LogMode>("options");
-	const [entries, setEntries] = useState<Record<string, MeasurementEntry>>({});
-	const [entryErrors, setEntryErrors] = useState<Record<string, string>>({});
 	const openManageMeasurements = useCallback(
 		() => setEditingGroup("measurements"),
 		[],
@@ -356,47 +389,12 @@ export function BodyScreen({ store }: BodyScreenProps) {
 		}
 	}
 
-	const updateEntry = useCallback(function updateEntry(
-		metricSlug: string,
-		entry: MeasurementEntry,
-	) {
-		setEntries((current) => ({ ...current, [metricSlug]: entry }));
-		setEntryErrors((current) => {
-			if (!(metricSlug in current)) return current;
-			const next = { ...current };
-			delete next[metricSlug];
-			return next;
-		});
-	}, []);
-
 	const saveMeasurements = useCallback(
 		async function saveMeasurements(
-			metrics: readonly BodyMetricSummary[],
+			drafts: readonly BodyMeasurementDraft[],
 			onSaved: () => void,
 		) {
 			if (!overview || busySlug) return;
-			const nextErrors: Record<string, string> = {};
-			const drafts: BodyMeasurementDraft[] = [];
-			for (const metric of metrics) {
-				const presentation = metric.editablePresentation;
-				const entry = entries[metric.metricSlug] ?? EMPTY_ENTRY;
-				if (!presentation || isBlankEntry(entry)) continue;
-				const parsed = parseMeasurementInput(
-					entry,
-					presentation,
-					overview.inputLocale,
-				);
-				if (!parsed.ok) {
-					nextErrors[metric.metricSlug] = parsed.error;
-					continue;
-				}
-				drafts.push({
-					metricSlug: metric.metricSlug,
-					canonicalValue: parsed.canonicalValue,
-				});
-			}
-			setEntryErrors(nextErrors);
-			if (Object.keys(nextErrors).length > 0) return;
 			if (drafts.length === 0) {
 				onSaved();
 				return;
@@ -405,11 +403,6 @@ export function BodyScreen({ store }: BodyScreenProps) {
 			setError(null);
 			try {
 				setOverview(await body.recordMeasurements(drafts));
-				setEntries((current) => {
-					const next = { ...current };
-					for (const draft of drafts) next[draft.metricSlug] = EMPTY_ENTRY;
-					return next;
-				});
 				onSaved();
 			} catch (caught) {
 				setError(toMessage(caught));
@@ -417,7 +410,7 @@ export function BodyScreen({ store }: BodyScreenProps) {
 				setBusySlug(null);
 			}
 		},
-		[body, busySlug, entries, overview, setError, setOverview],
+		[body, busySlug, overview, setError, setOverview],
 	);
 
 	if (loading) {
@@ -481,17 +474,19 @@ export function BodyScreen({ store }: BodyScreenProps) {
 						),
 					})
 				: t("body:change.first");
-		const source = metric.latest
-			? (healthPlatformLabel(metric.latest.source) ?? t("body:sourceYou"))
-			: null;
-		const since =
-			current && source
-				? t("body:change.meta", { source, comparison })
-				: comparison;
+		// Only an imported reading names its source here. "You" is the default a
+		// man already assumes, and spending the row's second line on it pushed the
+		// comparison date — the part that differs per site — out of the column.
+		const platform =
+			current && metric.latest && metric.latest.source !== "user"
+				? healthPlatformLabel(metric.latest.source)
+				: null;
 		return {
 			slug: metric.metricSlug,
 			label: metric.label,
-			since,
+			since: platform
+				? t("body:change.meta", { source: platform, comparison })
+				: comparison,
 			change,
 			rail: metric.baseline.rail,
 			band: metric.baseline.usualRange,
@@ -508,19 +503,17 @@ export function BodyScreen({ store }: BodyScreenProps) {
 	const healthFitnessChanges = overview.metrics
 		.filter((metric) => metric.bodyGroup === "health_fitness" && metric.visible)
 		.map(changeOf);
+	// The legend describes marks, so it goes on the first card that draws any.
+	const measurementsDrawMarks = measurementChanges.some(hasPlottableRange);
+	const healthFitnessDrawsMarks = healthFitnessChanges.some(hasPlottableRange);
 
 	return (
 		<Screen scroll padded gap="xl">
 			<BodyLogSurfaceRegistration
 				t={t}
 				overview={overview}
-				logMode={logMode}
-				entries={entries}
-				entryErrors={entryErrors}
 				error={error}
 				busySlug={busySlug}
-				onSetLogMode={setLogMode}
-				onUpdateEntry={updateEntry}
 				onSave={saveMeasurements}
 				onManageMeasurements={openManageMeasurements}
 			/>
@@ -544,18 +537,13 @@ export function BodyScreen({ store }: BodyScreenProps) {
 				/>
 
 				{measurementChanges.length > 0 ? (
-					<Card testID="body-measurements-card" style={styles.listCard}>
-						<View style={styles.changeHeading}>
-							<AppText variant="label">{t("body:change.title")}</AppText>
-							<AppText variant="micro" color="subtle">
-								{t("body:change.legend")}
-							</AppText>
-						</View>
-						<MeasurementChangeList
-							changes={measurementChanges}
-							onOpen={openMetric}
-						/>
-					</Card>
+					<ChangeCard
+						t={t}
+						testID="body-measurements-card"
+						changes={measurementChanges}
+						legend={measurementsDrawMarks}
+						onOpen={openMetric}
+					/>
 				) : (
 					<EmptyState
 						title={t("body:measurements.emptyTitle")}
@@ -581,18 +569,13 @@ export function BodyScreen({ store }: BodyScreenProps) {
 					}
 				/>
 				{healthFitnessChanges.length > 0 ? (
-					<Card testID="body-health-fitness-card" style={styles.listCard}>
-						<View style={styles.changeHeading}>
-							<AppText variant="label">{t("body:change.title")}</AppText>
-							<AppText variant="micro" color="subtle">
-								{t("body:change.legend")}
-							</AppText>
-						</View>
-						<MeasurementChangeList
-							changes={healthFitnessChanges}
-							onOpen={openMetric}
-						/>
-					</Card>
+					<ChangeCard
+						t={t}
+						testID="body-health-fitness-card"
+						changes={healthFitnessChanges}
+						legend={!measurementsDrawMarks && healthFitnessDrawsMarks}
+						onOpen={openMetric}
+					/>
 				) : (
 					<EmptyState
 						title={t("body:healthFitness.emptyTitle")}

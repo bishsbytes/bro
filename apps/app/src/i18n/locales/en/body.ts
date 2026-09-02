@@ -3,7 +3,8 @@ export const body = {
 	notFoundBody: "This measurement is not available.",
 	backToBody: "Back to Body",
 	overview: {
-		intro: "Every reading is measured against your own usual range.",
+		intro:
+			"Every reading is measured against itself. Once a measurement has a few readings behind it, a row shows the range it usually sits in.",
 		loadFailed: "Your measurements could not be loaded",
 		loadFailedBody: "Try again.",
 	},
@@ -74,7 +75,7 @@ export const body = {
 		measurements: {
 			title: "Measurements",
 			intro:
-				"Choose the measurements to keep on this screen and in measurement sessions.",
+				"Choose the measurements to keep on this screen and in measurement sessions. A measurement your health platform supplies stays here either way.",
 			dismissA11y: "Close measurement options",
 		},
 		health_fitness: {
@@ -111,6 +112,7 @@ export const body = {
 		since: "since {{when}}",
 		first: "first reading",
 		notLogged: "nothing logged",
+		/** Only an imported reading names its source on a row; "you" is assumed. */
 		meta: "{{source}} · {{comparison}}",
 		/** Change is typeset with a sign and never coloured: direction is not a verdict. */
 		down: "−{{value}}",

@@ -472,6 +472,83 @@ describe("Body screen", () => {
 		expect(screen.queryByText("How to measure")).toBeNull();
 	});
 
+	it("leaves the track bare until a measurement has a usual range", async () => {
+		// Two readings scale the rail to themselves, so marks would sit on the
+		// same two spots whatever the change was. The figures still state it.
+		const secondReading = metric({
+			baseline: {
+				...TAPED_WAIST,
+				usualRange: null,
+				readingCount: 2,
+			},
+		});
+		const screen = await mountedWith(overviewOf([secondReading]));
+
+		expect(
+			await screen.findByLabelText("Waist. 1.5 cm down since 3 Aug."),
+		).toBeTruthy();
+		expect(screen.getByText("−1.5 cm")).toBeTruthy();
+		expect(screen.queryByTestId("change-current-waist")).toBeNull();
+		expect(screen.queryByTestId("change-previous-waist")).toBeNull();
+		expect(screen.queryByTestId("change-band-waist")).toBeNull();
+		// Nothing on the screen is marked, so the legend has nothing to explain.
+		expect(screen.queryByText("○ then · ● now")).toBeNull();
+	});
+
+	it("draws the marks and states the legend once a range exists", async () => {
+		const screen = await mountedWith(
+			overviewOf([
+				metric({ baseline: TAPED_WAIST }),
+				restingHeartRateMetric(true),
+			]),
+		);
+
+		expect(await screen.findByTestId("change-current-waist")).toBeTruthy();
+		expect(screen.getByTestId("change-previous-waist")).toBeTruthy();
+		expect(screen.getByTestId("change-band-waist")).toBeTruthy();
+		// One legend for the screen, on the first card that draws marks, not one
+		// per card: the two groups are siblings, not unrelated widgets.
+		expect(screen.getAllByText("○ then · ● now")).toHaveLength(1);
+		expect(screen.getAllByText("Since last time")).toHaveLength(2);
+	});
+
+	it("names a source on a row only when the reading was imported", async () => {
+		const imported = metric({
+			baseline: TAPED_WAIST,
+			// Only the source is read on a row; the rest of the observation is not.
+			latest: { source: "healthkit" } as BodyMetricSummary["latest"],
+		});
+		const screen = await mountedWith(
+			overviewOf([
+				imported,
+				metric({
+					metricSlug: "neck",
+					label: "Neck",
+					position: 14,
+					baseline: TAPED_WAIST,
+				}),
+			]),
+		);
+
+		expect(await screen.findByText("Apple Health · since 3 Aug")).toBeTruthy();
+		// A reading the man took himself does not spend the row on saying so.
+		expect(screen.getByText("since 3 Aug")).toBeTruthy();
+		expect(screen.queryByText("You · since 3 Aug")).toBeNull();
+	});
+
+	it("offers the measuring guide from the session it is needed in", async () => {
+		const screen = await mountedWith(
+			overviewOf([metric({ metricSlug: "waist", label: "Waist" })]),
+		);
+
+		expect(screen.queryByLabelText("How to measure")).toBeNull();
+		await openBodyLog(screen);
+		await fireEvent.press(screen.getByLabelText("Take measurements"));
+		await fireEvent.press(screen.getByLabelText("How to measure"));
+
+		expect(mockPush).toHaveBeenCalledWith("/body/measuring");
+	});
+
 	it("shows body fat as a compact measurement row", async () => {
 		const bodyFat = metric({
 			metricSlug: "body_fat",

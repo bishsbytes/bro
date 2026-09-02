@@ -17,13 +17,10 @@ jest.mock("react-native-safe-area-context", () => ({
 	useSafeAreaInsets: () => ({ top: 0, right: 0, bottom: 24, left: 0 }),
 }));
 
-const mockBodyDismiss = jest.fn();
-
 function RegisteredBodyLog() {
 	const surface = useMemo(
 		() => ({
 			closeAccessibilityLabel: "Close body log",
-			onDismiss: mockBodyDismiss,
 			render: ({ backToQuickLog }: { backToQuickLog: () => void }) => (
 				<>
 					<Text>Body log options</Text>

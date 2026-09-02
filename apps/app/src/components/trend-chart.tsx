@@ -1,3 +1,4 @@
+import type { MeasurementSlug } from "@bro/domain/metric-registry";
 import type { TrendSeries } from "@bro/logic";
 import { useTranslation } from "react-i18next";
 import Svg, { Circle, Line, Polyline } from "react-native-svg";
@@ -5,7 +6,21 @@ import { useUnistyles } from "../theme/unistyles";
 
 export type DataDomain = "mind" | "body" | "sleep" | "load";
 
+/**
+ * Domains the slug heuristic below cannot infer. Body metrics carry a group in
+ * the registry, so their ink is stated rather than guessed: everything in
+ * Measurements is `--body`, and the Health & fitness signals take their own, so
+ * the two cards on Body do not end up sharing one colour by accident.
+ */
+const STATED_DOMAINS: Partial<Record<MeasurementSlug, DataDomain>> = {
+	sleep_duration: "sleep",
+	steps: "load",
+	resting_heart_rate: "load",
+};
+
 export function dataDomainForMetric(metricSlug: string): DataDomain {
+	const stated = STATED_DOMAINS[metricSlug as MeasurementSlug];
+	if (stated) return stated;
 	if (metricSlug.includes("sleep")) return "sleep";
 	if (
 		["mood", "stress", "energy", "motivation", "productivity", "libido"].some(

@@ -1,14 +1,11 @@
 import { localDayOf } from "@bro/domain";
 import { isTapeSiteSlug } from "@bro/domain/metric-registry";
-import { formatLocalDayLabelShort } from "@bro/logic";
-import type { TFunction } from "i18next";
 import { useTranslation } from "react-i18next";
 import type { BodyMetricSummary } from "../../body/body-store";
 import { BaselineGauge } from "../../components/baseline-gauge";
 import { dataDomainForMetric } from "../../components/trend-chart";
 import { healthPlatformLabel } from "../../health/platform-label";
-
-type BodyText = TFunction<["body", "common"]>;
+import { type BodyText, changeSentence, dayLabel } from "./baseline-copy";
 
 function gaugeValueParts(metric: BodyMetricSummary): {
 	value: string;
@@ -32,14 +29,6 @@ function gaugeValueParts(metric: BodyMetricSummary): {
 	};
 }
 
-function dayLabel(
-	localDay: string,
-	todayLocalDay: string,
-	locale: string | undefined,
-): string {
-	return formatLocalDayLabelShort(localDay, todayLocalDay, locale);
-}
-
 /** How and when the reading was taken — taped by hand, or brought in by a platform. */
 function readingMeta(
 	t: BodyText,
@@ -59,23 +48,6 @@ function readingMeta(
 		return t("body:reading.taped", { when });
 	}
 	return t("body:reading.measured", { when });
-}
-
-/** The sentence naming the change since the reading before, with no verdict on it. */
-function changeSentence(
-	t: BodyText,
-	metric: BodyMetricSummary,
-	todayLocalDay: string,
-	locale: string | undefined,
-): string {
-	const { current, previous, direction, changeFormatted } = metric.baseline;
-	if (!current) return t("body:measurements.nothingLogged");
-	if (!previous) return t("body:read.first");
-	const when = dayLabel(previous.localDay, todayLocalDay, locale);
-	if (direction === "none" || !changeFormatted) {
-		return t("body:read.unchanged", { when });
-	}
-	return t(`body:read.${direction}`, { value: changeFormatted, when });
 }
 
 /** The gauge's one-line read: where this reading sits, then how far it moved. */

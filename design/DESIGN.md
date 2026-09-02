@@ -178,6 +178,13 @@ card, with the one permitted 56px value.
   controls manual tracking for resting heart rate and whether imported sleep
   and steps appear on Body. The latter is only a visibility choice: it never
   changes platform access or deletes imported data.
+- Untracking a metric a connected platform supplies stops manual entry for it;
+  the row stays, because the readings still arrive. Say so in the management
+  sheet rather than leaving the control looking broken.
+- Each group carries its own ink so the two cards are not one colour by
+  accident: Measurements is `--body` throughout, and the Health & fitness
+  signals take `--sleep` and `--load`. Body metrics are grouped in the registry,
+  so state the domain from the group rather than inferring it from the slug.
 
 - The shared quick-log FAB is available on the Body tab and offers Body as a
   destination. Its Body action replaces the content inside that same sheet with
@@ -213,6 +220,20 @@ shared spokes manufacture a score, which is judgement UI.
   schedules. Tapping the row opens that site's detail screen; overview taps
   never select or replace a separate hero. Deltas are never red/green and never
   carry praise or concern.
+- The marks appear only once the metric has a usual range. The rail is scaled
+  from the metric's own readings, so with two of them the marks land on the same
+  two spots whatever the change was — a full-width traverse for a millimetre.
+  The compact row carries no rail labels to correct that reading, so until there
+  is a range, the row shows the bare track and states the change in figures.
+  The full gauge, which prints its rail ends, has no such restriction.
+- The hollow/filled legend is stated once per screen, on the first card that
+  draws marks, and not at all when no row does. Repeating it per card makes two
+  sibling groups read as two unrelated widgets.
+- Row columns are proportional, never fixed pixel widths: a name, a compound
+  delta ("+1 st 2 lb") and a scaled-up system font all have to survive. Only an
+  imported reading names its source on a row — "you" is the assumption already,
+  and spending the second line on it pushes out the comparison date, which is
+  the part that differs per site. Full provenance belongs on the detail screen.
 - Untracked sites do not render at all: no empty rows, no grey prompts, no
   "complete your profile". A site that is tracked but not yet taped keeps its
   row so it is included in the next measurement session.
@@ -229,10 +250,12 @@ shared spokes manufacture a score, which is judgement UI.
   3 August", never "Great progress!" or "You're in the healthy zone".
 
 **Measuring guide (tailor's diagram):** the pattern-block figure lives on its own
-"how to measure" page, reached from the top-right ruler action on any tape-site
-detail page. The guide opens on that site. It answers where the tape goes and
-nothing else — it carries no readings, so no number a man has ever pinned to a
-drawing of a body.
+"how to measure" page, reached from the measurement session's own link and from
+the top-right ruler action on any tape-site detail page, which opens the guide on
+that site. The session link is the one that matters: it is the moment the tape is
+about to go round. It answers where the tape goes and nothing else — it carries
+no readings, so no number a man has recorded is ever pinned to a drawing of a
+body.
 
 - The figure draws in `--line-strong` (it is chart paper, like the wheel's
   grid). It is the same fixed block for every user: never reshaped by his

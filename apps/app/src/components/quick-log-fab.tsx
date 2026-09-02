@@ -63,14 +63,14 @@ export function QuickLogFab({
 	const [nicotineEnabled, setNicotineEnabled] = useState(false);
 	const { surface: bodyLogSurface } = useBodyLogSurface();
 
+	// Leaving the body page unmounts the surface's content, which is what
+	// discards its half-typed draft; there is nothing here to reset.
 	function closeSheet() {
-		if (page === "body") bodyLogSurface?.onDismiss();
 		setOpen(false);
 		setPage("options");
 	}
 
 	function backToQuickLog() {
-		bodyLogSurface?.onDismiss();
 		setPage("options");
 	}
 
