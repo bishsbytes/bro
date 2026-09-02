@@ -1,8 +1,9 @@
 import type { ComponentProps } from "react";
 import { useTranslation } from "react-i18next";
-import { TouchableOpacity } from "react-native";
-import { StyleSheet } from "../theme/unistyles";
+import { TouchableOpacity, View } from "react-native";
+import { StyleSheet, useUnistyles } from "../theme/unistyles";
 import { AppText } from "./app-text";
+import { Icon } from "./icon";
 import { MarkdownText } from "./markdown-text";
 
 type NoteRowProps = Omit<
@@ -12,7 +13,7 @@ type NoteRowProps = Omit<
 	markdown: string;
 	createdAt: number;
 	updatedAt: number;
-	last?: boolean;
+	first?: boolean;
 };
 
 /**
@@ -24,11 +25,12 @@ export function NoteRow({
 	markdown,
 	createdAt,
 	updatedAt,
-	last = false,
+	first = false,
 	style,
 	...props
 }: NoteRowProps) {
 	const { t } = useTranslation("notes");
+	const { theme } = useUnistyles();
 	const edited = updatedAt > createdAt;
 	const time = new Date(edited ? updatedAt : createdAt).toLocaleTimeString([], {
 		hour: "2-digit",
@@ -39,32 +41,46 @@ export function NoteRow({
 		<TouchableOpacity
 			accessibilityRole="button"
 			activeOpacity={0.72}
-			style={[styles.row, last && styles.lastRow, style]}
+			style={[styles.row, first && styles.firstRow, style]}
 			{...props}
 		>
-			<MarkdownText markdown={markdown} containerStyle={styles.preview} />
-			<AppText variant="micro" color="subtle">
-				{t(edited ? "row.editedAt" : "row.addedAt", { time })}
-			</AppText>
+			<View style={styles.content}>
+				<MarkdownText markdown={markdown} containerStyle={styles.preview} />
+				<AppText variant="micro" color="subtle">
+					{t(edited ? "row.editedAt" : "row.addedAt", { time })}
+				</AppText>
+			</View>
+			<Icon
+				name="chevron-right"
+				size={24}
+				color={theme.colors.ink3}
+				testID="note-row-chevron"
+			/>
 		</TouchableOpacity>
 	);
 }
 
 const styles = StyleSheet.create((theme) => ({
 	row: {
+		flexDirection: "row",
+		alignItems: "center",
 		minHeight: theme.control.buttonMinHeight,
 		justifyContent: "center",
-		gap: theme.spacing.xs,
+		gap: theme.spacing.md,
 		paddingVertical: theme.spacing.md,
 		borderBottomWidth: 1,
 		borderBottomColor: theme.colors.line,
 		backgroundColor: theme.colors.canvas,
 	},
+	firstRow: {
+		borderTopWidth: 1,
+		borderTopColor: theme.colors.line,
+	},
+	content: { flex: 1, gap: theme.spacing.xs },
 	// Two lines plus the largest gap a pair of formatted list items can carry.
 	// A fixed preview viewport keeps list rows level without flattening Markdown.
 	preview: {
 		height: theme.typography.lead.lineHeight * 2 + theme.spacing.xs,
 		overflow: "hidden",
 	},
-	lastRow: { borderBottomWidth: 0 },
 }));

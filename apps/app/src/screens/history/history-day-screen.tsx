@@ -139,7 +139,7 @@ function DayNoteRow({
 			markdown={note.body}
 			createdAt={note.createdAt}
 			updatedAt={note.updatedAt}
-			last={position === count}
+			first={position === 1}
 			onPress={() => router.push(`/notes/${note.id}` as Href)}
 		/>
 	);

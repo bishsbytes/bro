@@ -11,6 +11,7 @@ describe("NoteRow", () => {
 				markdown="A thought"
 				createdAt={Date.parse("2026-09-02T10:15:00.000Z")}
 				updatedAt={Date.parse("2026-09-02T10:15:00.000Z")}
+				first
 				onPress={jest.fn()}
 			/>,
 		);
@@ -20,12 +21,15 @@ describe("NoteRow", () => {
 		);
 		expect(style).toMatchObject({
 			minHeight: lightTheme.control.buttonMinHeight,
+			borderTopWidth: 1,
+			borderTopColor: lightTheme.colors.line,
 			borderBottomWidth: 1,
 			borderBottomColor: lightTheme.colors.line,
 			backgroundColor: lightTheme.colors.canvas,
 		});
 		expect(style.borderWidth).toBeUndefined();
 		expect(style.borderRadius).toBeUndefined();
+		expect(screen.getByTestId("note-row-chevron")).toBeTruthy();
 		expect(screen.getByText(/^Added /)).toBeTruthy();
 		expect(
 			NativeStyleSheet.flatten(screen.getByText("A thought").props.style),
@@ -35,14 +39,13 @@ describe("NoteRow", () => {
 		});
 	});
 
-	it("does not draw a separator after the final note", async () => {
+	it("keeps the bottom boundary after the final note", async () => {
 		const screen = await render(
 			<NoteRow
 				accessibilityLabel="Open final note"
 				markdown="Last thought"
 				createdAt={Date.parse("2026-09-02T10:15:00.000Z")}
 				updatedAt={Date.parse("2026-09-02T11:30:00.000Z")}
-				last
 				onPress={jest.fn()}
 			/>,
 		);
@@ -51,7 +54,12 @@ describe("NoteRow", () => {
 			NativeStyleSheet.flatten(
 				screen.getByLabelText("Open final note").props.style,
 			).borderBottomWidth,
-		).toBe(0);
+		).toBe(1);
+		expect(
+			NativeStyleSheet.flatten(
+				screen.getByLabelText("Open final note").props.style,
+			).borderTopWidth,
+		).toBeUndefined();
 		expect(screen.getByText(/^Edited /)).toBeTruthy();
 	});
 });

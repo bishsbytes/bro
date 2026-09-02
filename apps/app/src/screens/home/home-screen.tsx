@@ -206,7 +206,7 @@ function JournalNotesSection({
 								markdown={note.body}
 								createdAt={note.createdAt}
 								updatedAt={note.updatedAt}
-								last={index === notes.length - 1}
+								first={index === 0}
 								onPress={() => router.push(`/notes/${note.id}` as Href)}
 							/>
 						);
