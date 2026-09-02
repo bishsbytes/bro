@@ -457,6 +457,8 @@ describe("home screen", () => {
 
 		expect(await screen.findByText("First thought")).toBeTruthy();
 		expect(screen.getByText("Another thought")).toBeTruthy();
+		expect(screen.getByLabelText("Open note 1 of 2 from Today")).toBeTruthy();
+		expect(screen.getByLabelText("Open note 2 of 2 from Today")).toBeTruthy();
 	});
 
 	it("shows a past-day summary without the check-in form", async () => {

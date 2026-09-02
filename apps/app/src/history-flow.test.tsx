@@ -183,7 +183,7 @@ describe("history and day view", () => {
 		await waitFor(() => expect(view.queryByText("Stress")).toBeNull());
 		expect(await observations.findById(tag.id)).toBeNull();
 
-		await fireEvent.press(view.getAllByLabelText("Open note")[0]);
+		await fireEvent.press(view.getByLabelText("Open note 1 of 2"));
 		await act(async () => undefined);
 		await fireEvent.changeText(
 			await view.findByDisplayValue("First synced note"),
@@ -199,7 +199,7 @@ describe("history and day view", () => {
 		// as it was when the screen opened.
 		expect(await view.findByText("Edited first note")).toBeTruthy();
 
-		await fireEvent.press(view.getAllByLabelText("Open note")[0]);
+		await fireEvent.press(view.getByLabelText("Open note 1 of 2"));
 		await act(async () => undefined);
 		await fireEvent.press(view.getByText("Delete note"));
 		await fireEvent.press(view.getByText("Delete note"));

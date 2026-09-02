@@ -85,11 +85,15 @@ export function NotesScreen({
 				return (
 					<View key={localDay} style={styles.day}>
 						<SectionHeader title={dayLabel} />
-						{dayNotes.map((note) => (
+						{dayNotes.map((note, index) => (
 							<TouchableOpacity
 								key={note.id}
 								accessibilityRole="button"
-								accessibilityLabel={t("actions.openA11y", { day: dayLabel })}
+								accessibilityLabel={t("actions.openA11y", {
+									day: dayLabel,
+									position: index + 1,
+									count: dayNotes.length,
+								})}
 								onPress={() => router.push(`/notes/${note.id}` as Href)}
 							>
 								<Card>

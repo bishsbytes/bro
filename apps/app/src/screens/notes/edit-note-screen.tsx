@@ -1,7 +1,7 @@
 import { localDayOf } from "@bro/domain";
 import { formatLocalDayLabel } from "@bro/logic";
-import { router, Stack } from "expo-router";
-import { useCallback, useMemo, useState } from "react";
+import { router, Stack, useNavigation } from "expo-router";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { View } from "react-native";
 import { KeyboardAvoidingView } from "react-native-keyboard-controller";
@@ -21,6 +21,11 @@ type EditNoteScreenProps = {
 	now?: () => Date;
 };
 
+type NoteDraft = {
+	noteId: string;
+	body: string;
+};
+
 /**
  * One saved note, opened full screen.
  *
@@ -34,21 +39,56 @@ export function EditNoteScreen({
 }: EditNoteScreenProps) {
 	const { t } = useTranslation("notes");
 	const { theme } = useUnistyles();
+	const navigation = useNavigation();
 	const notes = useMemo(() => store ?? createNotesStore(), [store]);
 	const {
 		data: note,
 		error: loadError,
 		loading,
 	} = useStoreLoad(useCallback(() => notes.loadNote(noteId), [notes, noteId]));
-	// Seeded on the first render that has the note, so a save carries the whole
-	// body even when nothing was typed.
-	const [body, setBody] = useState<string | null>(null);
+	// A draft names the note it belongs to. Expo Router can reuse this component
+	// when a dynamic route parameter changes, and text from one note must never
+	// become the draft for another.
+	const [draft, setDraft] = useState<NoteDraft | null>(null);
 	const [saving, setSaving] = useState(false);
 	const [error, setError] = useState<string | null>(null);
 	const [confirmingDelete, setConfirmingDelete] = useState(false);
+	const [confirmingDiscard, setConfirmingDiscard] = useState(false);
+	const leaving = useRef(false);
 
-	const edited = body ?? note?.body ?? "";
+	const draftBody =
+		draft !== null && draft.noteId === note?.id ? draft.body : null;
+	const edited = draftBody ?? note?.body ?? "";
 	const empty = edited.trim().length === 0;
+	const dirty =
+		note !== null &&
+		note !== undefined &&
+		draftBody !== null &&
+		draftBody !== note.body;
+
+	useEffect(() => {
+		leaving.current = false;
+		setDraft(null);
+		setError(null);
+		setConfirmingDelete(false);
+		setConfirmingDiscard(false);
+	}, [noteId]);
+
+	// The header, Android back button and iOS swipe all leave through the
+	// navigator. Once words have changed, make that loss deliberate.
+	useEffect(() => {
+		return navigation.addListener("beforeRemove", (event) => {
+			if (leaving.current || !dirty) return;
+			event.preventDefault();
+			setConfirmingDelete(false);
+			setConfirmingDiscard(true);
+		});
+	}, [navigation, dirty]);
+
+	function discardChanges() {
+		leaving.current = true;
+		router.back();
+	}
 
 	async function save() {
 		if (!note || saving || empty) return;
@@ -64,6 +104,7 @@ export function EditNoteScreen({
 				setSaving(false);
 				return;
 			}
+			leaving.current = true;
 			router.back();
 		} catch (caught) {
 			setError(toMessage(caught));
@@ -77,6 +118,7 @@ export function EditNoteScreen({
 		setError(null);
 		try {
 			await notes.deleteNote(note.id);
+			leaving.current = true;
 			router.back();
 		} catch (caught) {
 			setError(toMessage(caught));
@@ -90,11 +132,7 @@ export function EditNoteScreen({
 	if (loadError) {
 		return (
 			<Screen padded>
-				<EmptyState
-					title={t("edit.loadFailed")}
-					body={loadError}
-					tone="danger"
-				/>
+				<EmptyState title={t("edit.loadFailed")} body={loadError} />
 			</Screen>
 		);
 	}
@@ -121,22 +159,41 @@ export function EditNoteScreen({
 				style={styles.fill}
 			>
 				<MarkdownField
+					key={note.id}
 					label={t("edit.field")}
 					showLabel={false}
 					defaultValue={note.body}
-					onChangeMarkdown={setBody}
+					onChangeMarkdown={(body) => setDraft({ noteId: note.id, body })}
 					placeholder={t("edit.prompt")}
 					appearance="flush"
 					containerStyle={styles.composer}
 				/>
 
 				{error ? (
-					<AppText color="danger" style={styles.error}>
+					<AppText color="muted" style={styles.error}>
 						{error}
 					</AppText>
 				) : null}
 
-				{confirmingDelete ? (
+				{confirmingDiscard ? (
+					<View style={styles.footer}>
+						<AppText color="muted">{t("edit.discardPrompt")}</AppText>
+						<View style={styles.actions}>
+							<Button
+								label={t("edit.keepEditing")}
+								variant="secondary"
+								style={styles.action}
+								onPress={() => setConfirmingDiscard(false)}
+							/>
+							<Button
+								label={t("edit.discardChanges")}
+								variant="danger"
+								style={styles.action}
+								onPress={discardChanges}
+							/>
+						</View>
+					</View>
+				) : confirmingDelete ? (
 					<View style={styles.footer}>
 						<AppText color="muted">{t("edit.deletePrompt")}</AppText>
 						<View style={styles.actions}>

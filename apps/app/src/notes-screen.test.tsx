@@ -1,11 +1,21 @@
-import { fireEvent, render, waitFor } from "@testing-library/react-native";
+import { act, fireEvent, render, waitFor } from "@testing-library/react-native";
 import { router } from "expo-router";
 import { EditNoteScreen } from "./screens/notes/edit-note-screen";
 import { NewNoteScreen } from "./screens/notes/new-note-screen";
 import { NotesScreen } from "./screens/notes/notes-screen";
 
+type RemoveListener = (event: { preventDefault: () => void }) => void;
+
+let beforeRemove: RemoveListener | null = null;
+
 jest.mock("expo-router", () => ({
 	router: { back: jest.fn(), push: jest.fn() },
+	useNavigation: () => ({
+		addListener: (event: string, listener: RemoveListener) => {
+			if (event === "beforeRemove") beforeRemove = listener;
+			return () => undefined;
+		},
+	}),
 	useFocusEffect: (effect: () => undefined | (() => void)) => {
 		const React = jest.requireActual("react");
 		React.useEffect(effect, [effect]);
@@ -31,6 +41,14 @@ jest.mock("expo-router", () => ({
 		},
 	},
 }));
+
+async function pressSystemBack() {
+	const preventDefault = jest.fn();
+	const listener = beforeRemove;
+	if (!listener) throw new Error("Expected a beforeRemove listener.");
+	await act(async () => listener({ preventDefault }));
+	return preventDefault;
+}
 
 const FIXED_NOW = () => new Date(2026, 7, 14, 12);
 
@@ -61,6 +79,7 @@ const NOTES = [
 describe("notes screens", () => {
 	beforeEach(() => {
 		jest.clearAllMocks();
+		beforeRemove = null;
 	});
 
 	it("lists all notes under their days, newest day first", async () => {
@@ -81,6 +100,8 @@ describe("notes screens", () => {
 		expect(screen.getByText("The first thought")).toBeTruthy();
 		expect(screen.getByText("The second thought")).toBeTruthy();
 		expect(screen.getByText("An older thought")).toBeTruthy();
+		expect(screen.getByLabelText("Open note 1 of 2 from Today")).toBeTruthy();
+		expect(screen.getByLabelText("Open note 2 of 2 from Today")).toBeTruthy();
 		expect(screen.queryByText("Show older notes")).toBeNull();
 	});
 
@@ -98,7 +119,7 @@ describe("notes screens", () => {
 		);
 
 		await fireEvent.press(
-			(await screen.findAllByLabelText("Open note from Today"))[0],
+			await screen.findByLabelText("Open note 1 of 2 from Today"),
 		);
 		expect(router.push).toHaveBeenCalledWith("/notes/today-1");
 	});
@@ -288,6 +309,7 @@ describe("note editor", () => {
 
 	beforeEach(() => {
 		jest.clearAllMocks();
+		beforeRemove = null;
 	});
 
 	function editor(store: Parameters<typeof EditNoteScreen>[0]["store"]) {
@@ -344,6 +366,59 @@ describe("note editor", () => {
 		await waitFor(() =>
 			expect(updateNote).toHaveBeenCalledWith("today-1", "The first thought"),
 		);
+	});
+
+	it("loads a new draft when the dynamic note route changes", async () => {
+		const loadNote = jest.fn(
+			async (id: string) => NOTES.find((note) => note.id === id) ?? null,
+		);
+		const updateNote = jest.fn(async (id: string, body: string) => ({
+			...(NOTES.find((note) => note.id === id) ?? NOTES[0]),
+			id,
+			body,
+		}));
+		const store = { loadNote, updateNote, deleteNote: jest.fn() };
+		const screen = await render(
+			<EditNoteScreen noteId="today-1" now={FIXED_NOW} store={store} />,
+		);
+
+		await fireEvent.changeText(
+			await screen.findByLabelText("Note"),
+			"An unsaved first-note edit",
+		);
+		screen.rerender(
+			<EditNoteScreen noteId="today-2" now={FIXED_NOW} store={store} />,
+		);
+
+		expect(await screen.findByDisplayValue("The second thought")).toBeTruthy();
+		await fireEvent.press(screen.getByLabelText("Save note"));
+		await waitFor(() =>
+			expect(updateNote).toHaveBeenCalledWith("today-2", "The second thought"),
+		);
+	});
+
+	it("asks before navigation discards an edit", async () => {
+		const screen = await editor({
+			loadNote: jest.fn(async () => NOTE),
+			updateNote: jest.fn(),
+			deleteNote: jest.fn(),
+		});
+		await fireEvent.changeText(
+			await screen.findByLabelText("Note"),
+			"A changed thought",
+		);
+
+		const firstBack = await pressSystemBack();
+		expect(firstBack).toHaveBeenCalledTimes(1);
+		expect(screen.getByText("Discard these changes?")).toBeTruthy();
+		expect(router.back).not.toHaveBeenCalled();
+
+		await fireEvent.press(screen.getByLabelText("Keep editing"));
+		expect(screen.queryByText("Discard these changes?")).toBeNull();
+
+		await pressSystemBack();
+		await fireEvent.press(screen.getByLabelText("Discard changes"));
+		expect(router.back).toHaveBeenCalledTimes(1);
 	});
 
 	it("will not save a note emptied out", async () => {

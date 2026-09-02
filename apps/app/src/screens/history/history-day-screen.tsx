@@ -120,7 +120,15 @@ function CheckInEditor({
 	);
 }
 
-function NoteCard({ note }: { note: DayNote }) {
+function NoteCard({
+	note,
+	position,
+	count,
+}: {
+	note: DayNote;
+	position: number;
+	count: number;
+}) {
 	const { t } = useTranslation("notes");
 
 	// Editing happens on the note's own screen, so a day stays a day's worth of
@@ -128,7 +136,7 @@ function NoteCard({ note }: { note: DayNote }) {
 	return (
 		<TouchableOpacity
 			accessibilityRole="button"
-			accessibilityLabel={t("actions.open")}
+			accessibilityLabel={t("actions.open", { position, count })}
 			onPress={() => router.push(`/notes/${note.id}` as Href)}
 		>
 			<Card>
@@ -354,8 +362,13 @@ export function HistoryDayScreen({ localDay, store }: HistoryDayScreenProps) {
 					{day.notes.length > 0 ? (
 						<SectionHeader title={t("day.notes")} />
 					) : null}
-					{day.notes.map((note) => (
-						<NoteCard key={note.id} note={note} />
+					{day.notes.map((note, index) => (
+						<NoteCard
+							key={note.id}
+							note={note}
+							position={index + 1}
+							count={day.notes.length}
+						/>
 					))}
 				</>
 			) : null}

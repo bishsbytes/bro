@@ -8,10 +8,10 @@ export const notes = {
 		add: "Add note",
 		viewAll: "View all",
 		showOlder: "Show older notes",
-		/** On a note's own card, where the day it belongs to is already on screen. */
-		open: "Open note",
-		/** In a list that spans days, where the day tells two notes apart. */
-		openA11y: "Open note from {{day}}",
+		/** On a day screen; the position distinguishes multiple notes for readers. */
+		open: "Open note {{position}} of {{count}}",
+		/** In a list spanning days; day and position together identify the note. */
+		openA11y: "Open note {{position}} of {{count}} from {{day}}",
 	},
 	journal: {
 		title: "Notes",
@@ -36,6 +36,9 @@ export const notes = {
 		delete: "Delete note",
 		deletePrompt: "Delete this note?",
 		keepNote: "Keep note",
+		discardPrompt: "Discard these changes?",
+		keepEditing: "Keep editing",
+		discardChanges: "Discard changes",
 		/** The note was deleted before this screen could open it. */
 		missing: "This note is no longer here",
 		missingBody: "It has been deleted.",

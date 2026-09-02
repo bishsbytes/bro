@@ -191,13 +191,17 @@ function JournalNotesSection({
 					onAction={onAddNote}
 				/>
 			) : null}
-			{notes.map((note) => {
+			{notes.map((note, index) => {
 				const dayLabel = formatLocalDayLabel(note.localDay, todayLocalDay);
 				return (
 					<TouchableOpacity
 						key={note.id}
 						accessibilityRole="button"
-						accessibilityLabel={t("actions.openA11y", { day: dayLabel })}
+						accessibilityLabel={t("actions.openA11y", {
+							day: dayLabel,
+							position: index + 1,
+							count: notes.length,
+						})}
 						onPress={() => router.push(`/notes/${note.id}` as Href)}
 					>
 						<Card>
