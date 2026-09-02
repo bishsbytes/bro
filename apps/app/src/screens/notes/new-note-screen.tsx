@@ -10,6 +10,7 @@ import { DayPickerButton } from "../../components/day-picker-button";
 import { MarkdownField } from "../../components/markdown-field";
 import { StackScreen as Screen } from "../../components/screen";
 import { toMessage } from "../../lib/errors";
+import { useKeyboardInset } from "../../lib/use-keyboard-inset";
 import { createNotesStore, type NotesStore } from "../../notes/notes-store";
 import { StyleSheet } from "../../theme/unistyles";
 
@@ -41,6 +42,7 @@ export function NewNoteScreen({
 	const [saving, setSaving] = useState(false);
 	const [error, setError] = useState<string | null>(null);
 	const [confirmingDiscard, setConfirmingDiscard] = useState(false);
+	const keyboardInset = useKeyboardInset();
 	const empty = body.trim().length === 0;
 
 	async function save() {
@@ -89,11 +91,13 @@ export function NewNoteScreen({
 					),
 				}}
 			/>
-			{/* The composer fills the screen and the actions sit under it, so on
-			    iOS the keyboard would cover them without this. */}
+			{/* The composer fills the screen and the formatting row and actions sit
+			    under it, so the keyboard would cover them all without this. iOS
+			    lifts them by the view below; Android, where edge-to-edge leaves the
+			    window unresized, by the inset padding. */}
 			<KeyboardAvoidingView
 				behavior={Platform.OS === "ios" ? "padding" : undefined}
-				style={styles.fill}
+				style={[styles.fill, { paddingBottom: keyboardInset }]}
 			>
 				<MarkdownField
 					label={t("new.field")}

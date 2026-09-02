@@ -19,6 +19,7 @@ import {
 	type HistoryStore,
 } from "../../history/history-store";
 import { toMessage } from "../../lib/errors";
+import { useKeyboardInset } from "../../lib/use-keyboard-inset";
 import { useStoreLoad } from "../../lib/use-store-load";
 import { StyleSheet } from "../../theme/unistyles";
 
@@ -222,6 +223,7 @@ export function HistoryDayScreen({ localDay, store }: HistoryDayScreenProps) {
 	} = useStoreLoad(
 		useCallback(() => history.loadDay(localDay), [history, localDay]),
 	);
+	const keyboardInset = useKeyboardInset();
 
 	async function mutate(work: () => Promise<HistoryDay>) {
 		setError(null);
@@ -390,6 +392,11 @@ export function HistoryDayScreen({ localDay, store }: HistoryDayScreenProps) {
 					))}
 				</>
 			) : null}
+
+			{/* Room to scroll an editor clear of the keyboard. Android leaves the
+			    window unresized under edge-to-edge, so without this the note being
+			    typed into can sit behind the keys. */}
+			<View style={{ height: keyboardInset }} />
 		</Screen>
 	);
 }
