@@ -2,6 +2,11 @@ module.exports = {
 	displayName: "@bro/app",
 	preset: "jest-expo",
 	setupFilesAfterEnv: ["<rootDir>/src/test-setup.ts"],
+	// The *-flow suites mount the whole router — sometimes twice, to prove a
+	// cold relaunch — which runs past Jest's 5s default whenever a parallel run
+	// loads the machine. The work is real, so give every suite room rather than
+	// let the heavy ones flake.
+	testTimeout: 30_000,
 	moduleNameMapper: {
 		"^react$": "<rootDir>/node_modules/react",
 		// Jest's resolver ignores the package's `exports` subpaths that Metro

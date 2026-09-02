@@ -239,5 +239,5 @@ describe("daily check-in flow", () => {
 		expect(mockSqlite.openDatabaseAsync).toHaveBeenCalledTimes(3);
 		expect(mockedUseSession).not.toHaveBeenCalled();
 		expect(globalThis.fetch).not.toHaveBeenCalled();
-	}, 30_000);
+	});
 });

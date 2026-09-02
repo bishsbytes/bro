@@ -1,7 +1,8 @@
 import { localDayOf } from "@bro/domain";
-import { type CSSProperties, useState } from "react";
+import { useState } from "react";
 import { View } from "react-native";
-import { StyleSheet, useUnistyles } from "../theme/unistyles";
+import { StyleSheet } from "../theme/unistyles";
+import { useWebPickerInputStyle } from "./web-picker-input";
 
 type DayPickerButtonProps = {
 	label: string;
@@ -25,24 +26,8 @@ export function DayPickerButton({
 	minimumDate,
 	maximumDate,
 }: DayPickerButtonProps) {
-	const { theme, rt } = useUnistyles();
 	const [focused, setFocused] = useState(false);
-	const inputStyle: CSSProperties = {
-		boxSizing: "border-box",
-		height: theme.control.buttonMinHeight,
-		borderWidth: focused ? 2 : 1,
-		borderStyle: "solid",
-		borderColor: focused ? theme.colors.accent : "transparent",
-		borderRadius: theme.radius.pill,
-		padding: `${theme.spacing.xs}px ${theme.spacing.md}px`,
-		fontSize: theme.typography.label.fontSize,
-		fontFamily: theme.typography.body.fontFamily,
-		fontVariantNumeric: "tabular-nums",
-		color: theme.colors.ink,
-		backgroundColor: "transparent",
-		colorScheme: rt.themeName === "dark" ? "dark" : "light",
-		outline: "none",
-	};
+	const inputStyle = useWebPickerInputStyle({ variant: "chip", focused });
 
 	return (
 		<View style={styles.wrapper}>
