@@ -11,6 +11,10 @@ allowBuilds:
   esbuild: true
   nx: true
   protobufjs: false
+  # Its postinstall downloads tree-sitter grammars and the RaTeX math framework.
+  # Both are switched off in package.json ("enriched-markdown"), so there is
+  # nothing for it to fetch.
+  react-native-enriched-markdown: false
   ssh2: false
   unrs-resolver: true
 autoInstallPeers: true
@@ -81,6 +85,7 @@ catalog:
   react-i18next: ^17.0.12
   react-native: 0.85.3
   react-native-edge-to-edge: ^1.8.1
+  react-native-enriched-markdown: ^1.0.2
   react-native-gesture-handler: ~2.31.2
   react-native-health-connect: 4.1.3
   react-native-nitro-modules: ^0.36.5

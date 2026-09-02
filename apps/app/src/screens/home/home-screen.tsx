@@ -27,6 +27,7 @@ import { Card } from "../../components/card";
 import { DayPager } from "../../components/day-pager";
 import { EmptyState } from "../../components/empty-state";
 import { LoadingIndicator } from "../../components/loading-indicator";
+import { MarkdownText } from "../../components/markdown-text";
 import { LoadingScreen, Screen } from "../../components/screen";
 import { SectionHeader } from "../../components/section-header";
 import { useSetTodayHeaderVisibleMonthDay } from "../../components/today-header-month-context";
@@ -190,7 +191,7 @@ function JournalNotesSection({
 			) : null}
 			{notes.map((note) => (
 				<Card key={note.id}>
-					<AppText variant="lead">{note.body}</AppText>
+					<MarkdownText markdown={note.body} />
 				</Card>
 			))}
 		</View>

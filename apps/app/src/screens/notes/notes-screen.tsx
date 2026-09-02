@@ -5,10 +5,10 @@ import { type Href, router } from "expo-router";
 import { useCallback, useMemo, useRef } from "react";
 import { useTranslation } from "react-i18next";
 import { TouchableOpacity, View } from "react-native";
-import { AppText } from "../../components/app-text";
 import { Button } from "../../components/button";
 import { Card } from "../../components/card";
 import { EmptyState } from "../../components/empty-state";
+import { MarkdownText } from "../../components/markdown-text";
 import { LoadingScreen, StackScreen as Screen } from "../../components/screen";
 import { SectionHeader } from "../../components/section-header";
 import { useFocusStoreLoad } from "../../lib/use-store-load";
@@ -93,7 +93,7 @@ export function NotesScreen({
 								onPress={() => router.push(`/history/${localDay}` as Href)}
 							>
 								<Card>
-									<AppText variant="lead">{note.body}</AppText>
+									<MarkdownText markdown={note.body} />
 								</Card>
 							</TouchableOpacity>
 						))}

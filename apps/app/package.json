@@ -2,6 +2,10 @@
 	"name": "@bro/app",
 	"version": "0.0.1",
 	"private": true,
+	"enriched-markdown": {
+		"enableCodeHighlight": false,
+		"enableMath": false
+	},
 	"main": "expo-router/entry",
 	"scripts": {
 		"eas-build-post-install": "cd ../../ && node tools/scripts/eas-build-post-install.mjs . apps/app"
@@ -55,6 +59,7 @@
 		"react-i18next": "catalog:",
 		"react-native": "catalog:",
 		"react-native-edge-to-edge": "catalog:",
+		"react-native-enriched-markdown": "catalog:",
 		"react-native-gesture-handler": "catalog:",
 		"react-native-health-connect": "catalog:",
 		"react-native-nitro-modules": "catalog:",

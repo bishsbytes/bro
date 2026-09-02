@@ -128,6 +128,14 @@ require("react-native-unistyles/mocks");
 // tokens it would under the root layout.
 require("./theme/unistyles");
 
+// The markdown note components are Fabric views whose imperative ref methods
+// dispatch native commands, so both throw under Jest. The library ships this
+// mock: it renders a plain TextInput and Text, and every ref method — the
+// toolbar's toggleBold and friends — becomes a spy.
+jest.mock("react-native-enriched-markdown", () =>
+	require("react-native-enriched-markdown/jest"),
+);
+
 // PagerView is a native container. Tests exercise its selection callback through
 // this host-view stand-in while the package owns the platform gesture behavior.
 jest.mock("react-native-pager-view", () => {

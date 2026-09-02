@@ -22,6 +22,12 @@ export const common = {
 		cancel: "Cancel",
 		done: "Done",
 	},
+	/** Text formatting controls on a note composer. */
+	format: {
+		bold: "Bold",
+		italic: "Italic",
+		list: "Bullet list",
+	},
 	ratingEnds: {
 		veryBad: "Very bad",
 		veryLow: "Very low",

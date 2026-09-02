@@ -16,6 +16,10 @@
 		"brand:check": "node tools/scripts/brand-assets.mjs --check"
 	},
 	"private": true,
+	"enriched-markdown": {
+		"enableCodeHighlight": false,
+		"enableMath": false
+	},
 	"devDependencies": {
 		"@babel/runtime": "catalog:",
 		"@biomejs/biome": "catalog:",

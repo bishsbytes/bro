@@ -1,5 +1,6 @@
 import type { LucideIcon } from "lucide-react-native";
 import Baby from "lucide-react-native/icons/baby";
+import Bold from "lucide-react-native/icons/bold";
 import Briefcase from "lucide-react-native/icons/briefcase";
 import Calendar from "lucide-react-native/icons/calendar";
 import ChartLine from "lucide-react-native/icons/chart-line";
@@ -16,6 +17,8 @@ import Heart from "lucide-react-native/icons/heart";
 import HeartPulse from "lucide-react-native/icons/heart-pulse";
 import House from "lucide-react-native/icons/house";
 import HouseHeart from "lucide-react-native/icons/house-heart";
+import Italic from "lucide-react-native/icons/italic";
+import List from "lucide-react-native/icons/list";
 import Moon from "lucide-react-native/icons/moon";
 import NotebookPen from "lucide-react-native/icons/notebook-pen";
 import PartyPopper from "lucide-react-native/icons/party-popper";
@@ -43,6 +46,7 @@ import { View } from "react-native";
 const ICONS = {
 	add: Plus,
 	body: Scale,
+	bold: Bold,
 	calendar: Calendar,
 	check: Check,
 	"check-circle": CircleCheck,
@@ -56,7 +60,9 @@ const ICONS = {
 	explore: Compass,
 	food: UtensilsCrossed,
 	insights: ChartLine,
+	italic: Italic,
 	journal: Sun,
+	list: List,
 	note: NotebookPen,
 	"life-area": CircleDashed,
 	"life-career": Briefcase,

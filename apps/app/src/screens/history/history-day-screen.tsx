@@ -6,7 +6,7 @@ import { View } from "react-native";
 import { AppText } from "../../components/app-text";
 import { Button } from "../../components/button";
 import { Card } from "../../components/card";
-import { FormField } from "../../components/form-field";
+import { MarkdownField } from "../../components/markdown-field";
 import { ScoreRow } from "../../components/score-row";
 import { LoadingScreen, StackScreen as Screen } from "../../components/screen";
 import { SectionHeader } from "../../components/section-header";
@@ -138,13 +138,12 @@ function NoteEditor({
 
 	return (
 		<Card style={styles.card}>
-			<FormField
+			<MarkdownField
 				label={t("day.note")}
 				showLabel={false}
 				accessibilityLabel={t("day.noteA11y", { id: note.id })}
-				multiline
-				value={body}
-				onChangeText={setBody}
+				defaultValue={note.body}
+				onChangeMarkdown={setBody}
 			/>
 			<View style={styles.actions}>
 				<Button

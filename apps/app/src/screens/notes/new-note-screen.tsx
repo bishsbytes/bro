@@ -7,7 +7,7 @@ import { KeyboardAvoidingView, Platform, View } from "react-native";
 import { AppText } from "../../components/app-text";
 import { Button } from "../../components/button";
 import { DayPickerButton } from "../../components/day-picker-button";
-import { FormField } from "../../components/form-field";
+import { MarkdownField } from "../../components/markdown-field";
 import { StackScreen as Screen } from "../../components/screen";
 import { toMessage } from "../../lib/errors";
 import { createNotesStore, type NotesStore } from "../../notes/notes-store";
@@ -95,16 +95,16 @@ export function NewNoteScreen({
 				behavior={Platform.OS === "ios" ? "padding" : undefined}
 				style={styles.fill}
 			>
-				<FormField
+				<MarkdownField
 					label={t("new.field")}
 					showLabel={false}
-					value={body}
-					onChangeText={setBody}
+					onChangeMarkdown={setBody}
 					placeholder={t("new.prompt")}
-					multiline
 					autoFocus
+					// The whole screen is the note, so a box drawn around it would
+					// only fence off the space it already owns.
+					appearance="flush"
 					containerStyle={styles.composer}
-					style={styles.composerInput}
 				/>
 
 				{error ? (
@@ -158,15 +158,6 @@ export function NewNoteScreen({
 const styles = StyleSheet.create((theme) => ({
 	fill: { flex: 1, gap: theme.spacing.md },
 	composer: { flex: 1 },
-	// Borderless and flush with the page: the whole screen is the note, so a
-	// box drawn around it would only fence off the space it already owns.
-	composerInput: {
-		flex: 1,
-		borderWidth: 0,
-		paddingHorizontal: 0,
-		paddingTop: 0,
-		backgroundColor: "transparent",
-	},
 	error: { marginTop: theme.spacing.xs },
 	footer: { gap: theme.spacing.sm },
 	actions: { flexDirection: "row", gap: theme.spacing.md },
