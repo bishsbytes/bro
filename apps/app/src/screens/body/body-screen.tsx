@@ -7,8 +7,13 @@ import { useCallback, useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { View } from "react-native";
 import {
+	type BodyLogSurfaceControls,
+	useRegisterBodyLogSurface,
+} from "../../body/body-log-surface-context";
+import {
 	type BodyMeasurementDraft,
 	type BodyMetricSummary,
+	type BodyOverview,
 	type BodyStore,
 	createBodyStore,
 } from "../../body/body-store";
@@ -18,7 +23,6 @@ import { Card } from "../../components/card";
 import { EmptyState } from "../../components/empty-state";
 import { ListRow } from "../../components/list-row";
 import { MeasurementField } from "../../components/measurement-field";
-import { ModalSheet } from "../../components/modal-sheet";
 import { OptionSheet } from "../../components/option-sheet";
 import { LoadingScreen, Screen } from "../../components/screen";
 import { SectionHeader } from "../../components/section-header";
@@ -49,8 +53,7 @@ type LogMode =
 	| "options"
 	| typeof WEIGHT_SLUG
 	| "measurements"
-	| typeof RESTING_HEART_RATE_SLUG
-	| null;
+	| typeof RESTING_HEART_RATE_SLUG;
 
 function changeSentence(
 	t: BodyText,
@@ -72,116 +75,42 @@ function changeSentence(
 	return t(`body:read.${direction}`, { value: changeFormatted, when });
 }
 
-export function BodyScreen({ store }: BodyScreenProps) {
-	const { t } = useTranslation(["body", "common"]);
-	const body = useMemo(() => store ?? createBodyStore(), [store]);
-	const [busySlug, setBusySlug] = useState<string | null>(null);
-	const [editingSites, setEditingSites] = useState(false);
-	const [logMode, setLogMode] = useState<LogMode>(null);
-	const [entries, setEntries] = useState<Record<string, MeasurementEntry>>({});
-	const [entryErrors, setEntryErrors] = useState<Record<string, string>>({});
-	const {
-		data: overview,
-		error,
-		loading,
-		reload,
-		setData: setOverview,
-		setError,
-	} = useFocusStoreLoad(useCallback(() => body.loadOverview(), [body]));
-	const todayLocalDay = localDayOf(new Date());
+type BodyLogContentProps = {
+	t: BodyText;
+	overview: BodyOverview;
+	logMode: LogMode;
+	entries: Record<string, MeasurementEntry>;
+	entryErrors: Record<string, string>;
+	error: string | null;
+	busySlug: string | null;
+	onSetLogMode: (mode: LogMode) => void;
+	onUpdateEntry: (metricSlug: string, entry: MeasurementEntry) => void;
+	onSave: (metrics: readonly BodyMetricSummary[], onSaved: () => void) => void;
+	onManage: () => void;
+	onBackToQuickLog: () => void;
+	onClose: () => void;
+};
 
-	async function setTracked(metricSlug: string, enabled: boolean) {
-		setBusySlug(metricSlug);
-		setError(null);
-		try {
-			setOverview(await body.setTracked(metricSlug, enabled));
-		} catch (caught) {
-			setError(toMessage(caught));
-		} finally {
-			setBusySlug(null);
-		}
-	}
-
-	function updateEntry(metricSlug: string, entry: MeasurementEntry) {
-		setEntries((current) => ({ ...current, [metricSlug]: entry }));
-		setEntryErrors((current) => {
-			if (!(metricSlug in current)) return current;
-			const next = { ...current };
-			delete next[metricSlug];
-			return next;
-		});
-	}
-
-	async function saveMeasurements(metrics: readonly BodyMetricSummary[]) {
-		if (!overview || busySlug) return;
-		const nextErrors: Record<string, string> = {};
-		const drafts: BodyMeasurementDraft[] = [];
-		for (const metric of metrics) {
-			const presentation = metric.editablePresentation;
-			const entry = entries[metric.metricSlug] ?? EMPTY_ENTRY;
-			if (!presentation || isBlankEntry(entry)) continue;
-			const parsed = parseMeasurementInput(
-				entry,
-				presentation,
-				overview.inputLocale,
-			);
-			if (!parsed.ok) {
-				nextErrors[metric.metricSlug] = parsed.error;
-				continue;
-			}
-			drafts.push({
-				metricSlug: metric.metricSlug,
-				canonicalValue: parsed.canonicalValue,
-			});
-		}
-		setEntryErrors(nextErrors);
-		if (Object.keys(nextErrors).length > 0) return;
-		if (drafts.length === 0) {
-			setLogMode(null);
-			return;
-		}
-		setBusySlug("body-log");
-		setError(null);
-		try {
-			setOverview(await body.recordMeasurements(drafts));
-			setEntries((current) => {
-				const next = { ...current };
-				for (const draft of drafts) next[draft.metricSlug] = EMPTY_ENTRY;
-				return next;
-			});
-			setLogMode(null);
-		} catch (caught) {
-			setError(toMessage(caught));
-		} finally {
-			setBusySlug(null);
-		}
-	}
-
-	if (loading) {
-		return <LoadingScreen variant="tab" />;
-	}
-
-	if (!overview) {
-		return (
-			<Screen centered padded>
-				<EmptyState
-					title={t("body:overview.loadFailed")}
-					body={error ?? t("body:overview.loadFailedBody")}
-					actionLabel={t("common:actions.tryAgain")}
-					onAction={() => void reload()}
-					tone="danger"
-				/>
-			</Screen>
-		);
-	}
-
-	const locale = overview.inputLocale;
+function BodyLogContent({
+	t,
+	overview,
+	logMode,
+	entries,
+	entryErrors,
+	error,
+	busySlug,
+	onSetLogMode,
+	onUpdateEntry,
+	onSave,
+	onManage,
+	onBackToQuickLog,
+	onClose,
+}: BodyLogContentProps) {
 	const metricBySlug = new Map(
 		overview.metrics.map((metric) => [metric.metricSlug, metric]),
 	);
 	const weight = metricBySlug.get(WEIGHT_SLUG) ?? null;
 	const restingHeartRate = metricBySlug.get(RESTING_HEART_RATE_SLUG) ?? null;
-	// Tape sites read down the body rather than by tracking order.
 	const sites = TAPE_SITE_SLUGS.flatMap((slug) => {
 		const metric = metricBySlug.get(slug);
 		return metric?.visible ? [metric] : [];
@@ -214,6 +143,301 @@ export function BodyScreen({ store }: BodyScreenProps) {
 				: logMode === RESTING_HEART_RATE_SLUG && restingHeartRate?.tracked
 					? [restingHeartRate]
 					: [];
+	const hasLogOptions =
+		Boolean(weight?.tracked) ||
+		sessionCore.length > 0 ||
+		Boolean(restingHeartRate?.tracked);
+
+	if (logMode === "options") {
+		return (
+			<View style={styles.logSheet}>
+				<AppText variant="section">{t("body:log.title")}</AppText>
+				<AppText color="muted">{t("body:log.intro")}</AppText>
+				{weight?.tracked ? (
+					<ListRow
+						title={t("body:log.weight")}
+						detail={t("body:log.weightDetail")}
+						accessibilityLabel={t("body:log.weight")}
+						onPress={() => onSetLogMode(WEIGHT_SLUG)}
+					/>
+				) : null}
+				{sessionCore.length > 0 ? (
+					<ListRow
+						title={t("body:log.session")}
+						detail={t("body:log.sessionDetail")}
+						accessibilityLabel={t("body:log.session")}
+						onPress={() => onSetLogMode("measurements")}
+					/>
+				) : null}
+				{restingHeartRate?.tracked ? (
+					<ListRow
+						title={t("body:log.heartRate")}
+						detail={t("body:log.heartRateDetail")}
+						accessibilityLabel={t("body:log.heartRate")}
+						onPress={() => onSetLogMode(RESTING_HEART_RATE_SLUG)}
+					/>
+				) : null}
+				{!hasLogOptions ? (
+					<EmptyState
+						title={t("body:log.emptyTitle")}
+						body={t("body:log.emptyBody")}
+						actionLabel={t("body:sites.manage")}
+						onAction={() => {
+							onClose();
+							onManage();
+						}}
+					/>
+				) : null}
+				<Button
+					label={t("body:log.backToQuickLog")}
+					variant="text"
+					disabled={busySlug !== null}
+					onPress={onBackToQuickLog}
+				/>
+			</View>
+		);
+	}
+
+	if (logMetrics.length === 0) return null;
+
+	return (
+		<View style={styles.logSheet}>
+			<AppText variant="section">
+				{logMode === "measurements"
+					? t("body:log.session")
+					: t("body:measurements.logMetric", {
+							name: logMetrics[0]?.label,
+						})}
+			</AppText>
+			<AppText color="muted">
+				{logMode === "measurements"
+					? t("body:log.sessionFormIntro")
+					: t("body:log.singleFormIntro")}
+			</AppText>
+			{logMetrics.map((metric) => {
+				const presentation = metric.editablePresentation;
+				if (!presentation) return null;
+				return (
+					<MeasurementField
+						key={metric.metricSlug}
+						label={metric.label}
+						unit={presentation.displayUnit}
+						entry={entries[metric.metricSlug] ?? EMPTY_ENTRY}
+						onChangeEntry={(entry) => onUpdateEntry(metric.metricSlug, entry)}
+						placeholder={t("body:measurements.enterPlaceholder", {
+							unit: presentation.displayUnit,
+						})}
+						error={entryErrors[metric.metricSlug]}
+					/>
+				);
+			})}
+			{error ? <AppText color="danger">{error}</AppText> : null}
+			<Button
+				label={
+					logMode === "measurements"
+						? t("body:log.saveSession")
+						: t("body:log.saveReading")
+				}
+				loading={busySlug === "body-log"}
+				disabled={busySlug !== null}
+				onPress={() => onSave(logMetrics, onClose)}
+			/>
+			<Button
+				label={t("body:log.back")}
+				variant="text"
+				disabled={busySlug !== null}
+				onPress={() => onSetLogMode("options")}
+			/>
+		</View>
+	);
+}
+
+type BodyLogSurfaceRegistrationProps = Omit<
+	BodyLogContentProps,
+	"onBackToQuickLog" | "onClose"
+>;
+
+function BodyLogSurfaceRegistration({
+	t,
+	overview,
+	logMode,
+	entries,
+	entryErrors,
+	error,
+	busySlug,
+	onSetLogMode,
+	onUpdateEntry,
+	onSave,
+	onManage,
+}: BodyLogSurfaceRegistrationProps) {
+	const render = useCallback(
+		({ close, backToQuickLog }: BodyLogSurfaceControls) => (
+			<BodyLogContent
+				t={t}
+				overview={overview}
+				logMode={logMode}
+				entries={entries}
+				entryErrors={entryErrors}
+				error={error}
+				busySlug={busySlug}
+				onSetLogMode={onSetLogMode}
+				onUpdateEntry={onUpdateEntry}
+				onSave={onSave}
+				onManage={onManage}
+				onClose={close}
+				onBackToQuickLog={backToQuickLog}
+			/>
+		),
+		[
+			busySlug,
+			entries,
+			entryErrors,
+			error,
+			logMode,
+			onManage,
+			onSave,
+			onSetLogMode,
+			onUpdateEntry,
+			overview,
+			t,
+		],
+	);
+	const onDismiss = useCallback(() => onSetLogMode("options"), [onSetLogMode]);
+	const surface = useMemo(
+		() => ({
+			closeAccessibilityLabel: t("body:log.dismissA11y"),
+			onDismiss,
+			render,
+		}),
+		[onDismiss, render, t],
+	);
+	useRegisterBodyLogSurface(surface);
+	return null;
+}
+
+export function BodyScreen({ store }: BodyScreenProps) {
+	const { t } = useTranslation(["body", "common"]);
+	const body = useMemo(() => store ?? createBodyStore(), [store]);
+	const [busySlug, setBusySlug] = useState<string | null>(null);
+	const [editingSites, setEditingSites] = useState(false);
+	const [logMode, setLogMode] = useState<LogMode>("options");
+	const [entries, setEntries] = useState<Record<string, MeasurementEntry>>({});
+	const [entryErrors, setEntryErrors] = useState<Record<string, string>>({});
+	const openManageBodyData = useCallback(() => setEditingSites(true), []);
+	const {
+		data: overview,
+		error,
+		loading,
+		reload,
+		setData: setOverview,
+		setError,
+	} = useFocusStoreLoad(useCallback(() => body.loadOverview(), [body]));
+	const todayLocalDay = localDayOf(new Date());
+
+	async function setTracked(metricSlug: string, enabled: boolean) {
+		setBusySlug(metricSlug);
+		setError(null);
+		try {
+			setOverview(await body.setTracked(metricSlug, enabled));
+		} catch (caught) {
+			setError(toMessage(caught));
+		} finally {
+			setBusySlug(null);
+		}
+	}
+
+	const updateEntry = useCallback(function updateEntry(
+		metricSlug: string,
+		entry: MeasurementEntry,
+	) {
+		setEntries((current) => ({ ...current, [metricSlug]: entry }));
+		setEntryErrors((current) => {
+			if (!(metricSlug in current)) return current;
+			const next = { ...current };
+			delete next[metricSlug];
+			return next;
+		});
+	}, []);
+
+	const saveMeasurements = useCallback(
+		async function saveMeasurements(
+			metrics: readonly BodyMetricSummary[],
+			onSaved: () => void,
+		) {
+			if (!overview || busySlug) return;
+			const nextErrors: Record<string, string> = {};
+			const drafts: BodyMeasurementDraft[] = [];
+			for (const metric of metrics) {
+				const presentation = metric.editablePresentation;
+				const entry = entries[metric.metricSlug] ?? EMPTY_ENTRY;
+				if (!presentation || isBlankEntry(entry)) continue;
+				const parsed = parseMeasurementInput(
+					entry,
+					presentation,
+					overview.inputLocale,
+				);
+				if (!parsed.ok) {
+					nextErrors[metric.metricSlug] = parsed.error;
+					continue;
+				}
+				drafts.push({
+					metricSlug: metric.metricSlug,
+					canonicalValue: parsed.canonicalValue,
+				});
+			}
+			setEntryErrors(nextErrors);
+			if (Object.keys(nextErrors).length > 0) return;
+			if (drafts.length === 0) {
+				onSaved();
+				return;
+			}
+			setBusySlug("body-log");
+			setError(null);
+			try {
+				setOverview(await body.recordMeasurements(drafts));
+				setEntries((current) => {
+					const next = { ...current };
+					for (const draft of drafts) next[draft.metricSlug] = EMPTY_ENTRY;
+					return next;
+				});
+				onSaved();
+			} catch (caught) {
+				setError(toMessage(caught));
+			} finally {
+				setBusySlug(null);
+			}
+		},
+		[body, busySlug, entries, overview, setError, setOverview],
+	);
+
+	if (loading) {
+		return <LoadingScreen variant="tab" />;
+	}
+
+	if (!overview) {
+		return (
+			<Screen centered padded>
+				<EmptyState
+					title={t("body:overview.loadFailed")}
+					body={error ?? t("body:overview.loadFailedBody")}
+					actionLabel={t("common:actions.tryAgain")}
+					onAction={() => void reload()}
+					tone="danger"
+				/>
+			</Screen>
+		);
+	}
+
+	const locale = overview.inputLocale;
+	const metricBySlug = new Map(
+		overview.metrics.map((metric) => [metric.metricSlug, metric]),
+	);
+	const restingHeartRate = metricBySlug.get(RESTING_HEART_RATE_SLUG) ?? null;
+	// Tape sites read down the body rather than by tracking order.
+	const sites = TAPE_SITE_SLUGS.flatMap((slug) => {
+		const metric = metricBySlug.get(slug);
+		return metric?.visible ? [metric] : [];
+	});
 	const physicalRows = overview.metrics.filter(
 		(metric) =>
 			metric.bodyGroup === "measurements" &&
@@ -275,22 +499,22 @@ export function BodyScreen({ store }: BodyScreenProps) {
 		? [changeOf(restingHeartRate)]
 		: [];
 
-	const hasLogOptions =
-		Boolean(weight?.tracked) ||
-		sessionCore.length > 0 ||
-		Boolean(restingHeartRate?.tracked);
-
 	return (
 		<Screen scroll padded gap="xl">
-			<AppText color="muted">{t("body:overview.intro")}</AppText>
-			<Button
-				label={t("body:log.open")}
-				disabled={busySlug !== null}
-				onPress={() => {
-					setError(null);
-					setLogMode("options");
-				}}
+			<BodyLogSurfaceRegistration
+				t={t}
+				overview={overview}
+				logMode={logMode}
+				entries={entries}
+				entryErrors={entryErrors}
+				error={error}
+				busySlug={busySlug}
+				onSetLogMode={setLogMode}
+				onUpdateEntry={updateEntry}
+				onSave={saveMeasurements}
+				onManage={openManageBodyData}
 			/>
+			<AppText color="muted">{t("body:overview.intro")}</AppText>
 
 			{error ? <AppText color="danger">{error}</AppText> : null}
 
@@ -387,105 +611,6 @@ export function BodyScreen({ store }: BodyScreenProps) {
 					onClose={() => setEditingSites(false)}
 				/>
 			) : null}
-
-			<ModalSheet
-				visible={logMode !== null}
-				onClose={() => setLogMode(null)}
-				closeAccessibilityLabel={t("body:log.dismissA11y")}
-			>
-				{logMode === "options" ? (
-					<View style={styles.logSheet}>
-						<AppText variant="section">{t("body:log.title")}</AppText>
-						<AppText color="muted">{t("body:log.intro")}</AppText>
-						{weight?.tracked ? (
-							<ListRow
-								title={t("body:log.weight")}
-								detail={t("body:log.weightDetail")}
-								accessibilityLabel={t("body:log.weight")}
-								onPress={() => setLogMode(WEIGHT_SLUG)}
-							/>
-						) : null}
-						{sessionCore.length > 0 ? (
-							<ListRow
-								title={t("body:log.session")}
-								detail={t("body:log.sessionDetail")}
-								accessibilityLabel={t("body:log.session")}
-								onPress={() => setLogMode("measurements")}
-							/>
-						) : null}
-						{restingHeartRate?.tracked ? (
-							<ListRow
-								title={t("body:log.heartRate")}
-								detail={t("body:log.heartRateDetail")}
-								accessibilityLabel={t("body:log.heartRate")}
-								onPress={() => setLogMode(RESTING_HEART_RATE_SLUG)}
-							/>
-						) : null}
-						{!hasLogOptions ? (
-							<EmptyState
-								title={t("body:log.emptyTitle")}
-								body={t("body:log.emptyBody")}
-								actionLabel={t("body:sites.manage")}
-								onAction={() => {
-									setLogMode(null);
-									setEditingSites(true);
-								}}
-							/>
-						) : null}
-					</View>
-				) : logMetrics.length > 0 ? (
-					<View style={styles.logSheet}>
-						<AppText variant="section">
-							{logMode === "measurements"
-								? t("body:log.session")
-								: t("body:measurements.logMetric", {
-										name: logMetrics[0]?.label,
-									})}
-						</AppText>
-						<AppText color="muted">
-							{logMode === "measurements"
-								? t("body:log.sessionFormIntro")
-								: t("body:log.singleFormIntro")}
-						</AppText>
-						{logMetrics.map((metric) => {
-							const presentation = metric.editablePresentation;
-							if (!presentation) return null;
-							return (
-								<MeasurementField
-									key={metric.metricSlug}
-									label={metric.label}
-									unit={presentation.displayUnit}
-									entry={entries[metric.metricSlug] ?? EMPTY_ENTRY}
-									onChangeEntry={(entry) =>
-										updateEntry(metric.metricSlug, entry)
-									}
-									placeholder={t("body:measurements.enterPlaceholder", {
-										unit: presentation.displayUnit,
-									})}
-									error={entryErrors[metric.metricSlug]}
-								/>
-							);
-						})}
-						{error ? <AppText color="danger">{error}</AppText> : null}
-						<Button
-							label={
-								logMode === "measurements"
-									? t("body:log.saveSession")
-									: t("body:log.saveReading")
-							}
-							loading={busySlug === "body-log"}
-							disabled={busySlug !== null}
-							onPress={() => void saveMeasurements(logMetrics)}
-						/>
-						<Button
-							label={t("body:log.back")}
-							variant="text"
-							disabled={busySlug !== null}
-							onPress={() => setLogMode("options")}
-						/>
-					</View>
-				) : null}
-			</ModalSheet>
 		</Screen>
 	);
 }

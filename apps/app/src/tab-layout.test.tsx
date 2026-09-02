@@ -123,6 +123,17 @@ describe("TabLayout", () => {
 		expect(router.push).toHaveBeenCalledWith("/food/log");
 	});
 
+	it("keeps the shared quick-log FAB on the Body overview", async () => {
+		mockPathname = "/body";
+		const screen = await render(<TabLayout />);
+
+		expect(screen.getByLabelText("Log")).toBeTruthy();
+
+		mockPathname = "/life";
+		await screen.rerender(<TabLayout />);
+		expect(screen.queryByLabelText("Log")).toBeNull();
+	});
+
 	it("ticks only when the selected bottom tab changes", async () => {
 		await render(<TabLayout />);
 		const listeners = mockTabsListeners.mock.calls[0]?.[0] as (input: {

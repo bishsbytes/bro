@@ -2,12 +2,16 @@ import { type Href, router } from "expo-router";
 import { useState } from "react";
 import { useTranslation } from "react-i18next";
 import { TouchableOpacity, View } from "react-native";
+import { useBodyLogSurface } from "../body/body-log-surface-context";
 import { playSelectionHaptic } from "../feedback/selection-haptic";
 import { isNicotineTracked } from "../substances/nicotine";
 import { StyleSheet, useUnistyles } from "../theme/unistyles";
 import { AppText } from "./app-text";
 import { Icon, type IconName } from "./icon";
+import { LoadingIndicator } from "./loading-indicator";
 import { ModalSheet } from "./modal-sheet";
+
+type QuickLogPage = "options" | "body";
 
 type QuickLogActionProps = {
 	icon: IconName;
@@ -45,19 +49,39 @@ function QuickLogAction({ icon, title, detail, onPress }: QuickLogActionProps) {
 
 export function QuickLogFab({
 	bottom,
+	bodyActive = false,
 	isNicotineEnabled = isNicotineTracked,
 }: {
 	bottom: number;
+	bodyActive?: boolean;
 	isNicotineEnabled?: () => Promise<boolean>;
 }) {
 	const { t } = useTranslation("navigation");
 	const { theme } = useUnistyles();
 	const [open, setOpen] = useState(false);
+	const [page, setPage] = useState<QuickLogPage>("options");
 	const [nicotineEnabled, setNicotineEnabled] = useState(false);
+	const { surface: bodyLogSurface } = useBodyLogSurface();
+
+	function closeSheet() {
+		if (page === "body") bodyLogSurface?.onDismiss();
+		setOpen(false);
+		setPage("options");
+	}
+
+	function backToQuickLog() {
+		bodyLogSurface?.onDismiss();
+		setPage("options");
+	}
 
 	function choose(href: Href) {
 		setOpen(false);
 		router.push(href);
+	}
+
+	function chooseBody() {
+		setPage("body");
+		if (!bodyActive) router.push("/body");
 	}
 
 	/**
@@ -87,44 +111,65 @@ export function QuickLogFab({
 
 			<ModalSheet
 				visible={open}
-				onClose={() => setOpen(false)}
-				closeAccessibilityLabel={t("quickLog.close")}
+				onClose={closeSheet}
+				closeAccessibilityLabel={
+					page === "body"
+						? (bodyLogSurface?.closeAccessibilityLabel ?? t("quickLog.close"))
+						: t("quickLog.close")
+				}
 			>
-				<AppText variant="section">{t("quickLog.title")}</AppText>
-				<View style={styles.actions}>
-					<QuickLogAction
-						icon="note"
-						title={t("quickLog.note")}
-						detail={t("quickLog.noteDetail")}
-						onPress={() => choose("/notes/new")}
-					/>
-					<QuickLogAction
-						icon="food"
-						title={t("quickLog.food")}
-						detail={t("quickLog.foodDetail")}
-						onPress={() => choose("/food/log")}
-					/>
-					<QuickLogAction
-						icon="drink"
-						title={t("quickLog.drink")}
-						detail={t("quickLog.drinkDetail")}
-						onPress={() => choose("/drinks/log")}
-					/>
-					{nicotineEnabled ? (
-						<QuickLogAction
-							icon="drink"
-							title={t("quickLog.nicotine")}
-							detail={t("quickLog.nicotineDetail")}
-							onPress={() => choose("/nicotine/log")}
-						/>
-					) : null}
-					<QuickLogAction
-						icon="check-in"
-						title={t("quickLog.checkIn")}
-						detail={t("quickLog.checkInDetail")}
-						onPress={() => choose("/check-in")}
-					/>
-				</View>
+				{page === "options" ? (
+					<>
+						<AppText variant="section">{t("quickLog.title")}</AppText>
+						<View style={styles.actions}>
+							<QuickLogAction
+								icon="note"
+								title={t("quickLog.note")}
+								detail={t("quickLog.noteDetail")}
+								onPress={() => choose("/notes/new")}
+							/>
+							<QuickLogAction
+								icon="food"
+								title={t("quickLog.food")}
+								detail={t("quickLog.foodDetail")}
+								onPress={() => choose("/food/log")}
+							/>
+							<QuickLogAction
+								icon="drink"
+								title={t("quickLog.drink")}
+								detail={t("quickLog.drinkDetail")}
+								onPress={() => choose("/drinks/log")}
+							/>
+							<QuickLogAction
+								icon="body"
+								title={t("quickLog.body")}
+								detail={t("quickLog.bodyDetail")}
+								onPress={chooseBody}
+							/>
+							{nicotineEnabled ? (
+								<QuickLogAction
+									icon="drink"
+									title={t("quickLog.nicotine")}
+									detail={t("quickLog.nicotineDetail")}
+									onPress={() => choose("/nicotine/log")}
+								/>
+							) : null}
+							<QuickLogAction
+								icon="check-in"
+								title={t("quickLog.checkIn")}
+								detail={t("quickLog.checkInDetail")}
+								onPress={() => choose("/check-in")}
+							/>
+						</View>
+					</>
+				) : bodyLogSurface ? (
+					bodyLogSurface.render({ close: closeSheet, backToQuickLog })
+				) : (
+					<View style={styles.loading}>
+						<LoadingIndicator size="large" />
+						<AppText color="muted">{t("quickLog.bodyLoading")}</AppText>
+					</View>
+				)}
 			</ModalSheet>
 		</>
 	);
@@ -143,6 +188,7 @@ const styles = StyleSheet.create((theme) => ({
 		backgroundColor: theme.colors.brand,
 	},
 	actions: { gap: theme.spacing.sm },
+	loading: { alignItems: "center", gap: theme.spacing.md },
 	actionRow: {
 		minHeight: 76,
 		flexDirection: "row",

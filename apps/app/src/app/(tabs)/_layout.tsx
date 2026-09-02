@@ -3,6 +3,7 @@ import { useLayoutEffect, useRef } from "react";
 import { useTranslation } from "react-i18next";
 import { TouchableOpacity, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
+import { BodyLogSurfaceProvider } from "../../body/body-log-surface-context";
 import { AppHeader } from "../../components/app-header";
 import { Icon, type IconName } from "../../components/icon";
 import { QuickLogFab } from "../../components/quick-log-fab";
@@ -179,9 +180,10 @@ function TabShell() {
 					}}
 				/>
 			</Tabs>
-			{pathname === "/" || pathname === "/intake" ? (
+			{pathname === "/" || pathname === "/intake" || pathname === "/body" ? (
 				<QuickLogFab
 					bottom={TAB_BAR_CONTENT_HEIGHT + insets.bottom + theme.spacing.lg}
+					bodyActive={pathname === "/body"}
 				/>
 			) : null}
 		</View>
@@ -190,9 +192,11 @@ function TabShell() {
 
 export default function TabLayout() {
 	return (
-		<TodayHeaderMonthProvider>
-			<TabShell />
-		</TodayHeaderMonthProvider>
+		<BodyLogSurfaceProvider>
+			<TodayHeaderMonthProvider>
+				<TabShell />
+			</TodayHeaderMonthProvider>
+		</BodyLogSurfaceProvider>
 	);
 }
 

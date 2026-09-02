@@ -75,6 +75,9 @@ export const navigation = {
 		foodDetail: "Search foods or enter nutrition yourself",
 		drink: "Drink",
 		drinkDetail: "Water, caffeine, alcohol, or another drink",
+		body: "Body",
+		bodyDetail: "Weight, measurements, or resting heart rate",
+		bodyLoading: "Loading body data",
 		/** Only offered once the smoking log is switched on; see the FAB. */
 		nicotine: "Smoke or vape",
 		nicotineDetail: "A cigarette, a vape, or something else",

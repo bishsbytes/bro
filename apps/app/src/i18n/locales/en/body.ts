@@ -20,7 +20,6 @@ export const body = {
 		logMetric: "Log {{name}}",
 	},
 	log: {
-		open: "Log body",
 		title: "Log body",
 		intro: "Choose what you measured. Connected data appears automatically.",
 		weight: "Weight",
@@ -35,6 +34,7 @@ export const body = {
 		saveSession: "Save measurements",
 		saveReading: "Save reading",
 		back: "Back to log options",
+		backToQuickLog: "Back to log menu",
 		dismissA11y: "Close body log",
 		emptyTitle: "Nothing is ready to log",
 		emptyBody: "Choose the body data you want to track first.",

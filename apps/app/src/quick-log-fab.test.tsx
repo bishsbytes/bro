@@ -1,5 +1,11 @@
 import { fireEvent, render, waitFor } from "@testing-library/react-native";
 import { router } from "expo-router";
+import { useMemo } from "react";
+import { Button, Text } from "react-native";
+import {
+	BodyLogSurfaceProvider,
+	useRegisterBodyLogSurface,
+} from "./body/body-log-surface-context";
 import { QuickLogFab } from "./components/quick-log-fab";
 
 jest.mock("expo-router", () => ({
@@ -10,6 +16,26 @@ jest.mock("react-native-safe-area-context", () => ({
 	...jest.requireActual("react-native-safe-area-context"),
 	useSafeAreaInsets: () => ({ top: 0, right: 0, bottom: 24, left: 0 }),
 }));
+
+const mockBodyDismiss = jest.fn();
+
+function RegisteredBodyLog() {
+	const surface = useMemo(
+		() => ({
+			closeAccessibilityLabel: "Close body log",
+			onDismiss: mockBodyDismiss,
+			render: ({ backToQuickLog }: { backToQuickLog: () => void }) => (
+				<>
+					<Text>Body log options</Text>
+					<Button title="Back to log menu" onPress={backToQuickLog} />
+				</>
+			),
+		}),
+		[],
+	);
+	useRegisterBodyLogSurface(surface);
+	return null;
+}
 
 describe("quick log fab", () => {
 	beforeEach(() => {
@@ -26,12 +52,54 @@ describe("quick log fab", () => {
 		expect(view.getByText("Note")).toBeTruthy();
 		expect(view.getByText("Food")).toBeTruthy();
 		expect(view.getByText("Drink")).toBeTruthy();
+		expect(view.getByText("Body")).toBeTruthy();
 		expect(view.getByText("Check-in")).toBeTruthy();
 		// Smoking is a minority behaviour: it is not offered unasked.
 		await waitFor(() => expect(view.queryByText("Smoke or vape")).toBeNull());
 
 		await fireEvent.press(view.getByLabelText("Note"));
 		expect(router.push).toHaveBeenCalledWith("/notes/new");
+	});
+
+	it("uses the open quick-log sheet for Body sub-navigation", async () => {
+		const view = await render(
+			<BodyLogSurfaceProvider>
+				<QuickLogFab
+					bottom={24}
+					bodyActive
+					isNicotineEnabled={async () => false}
+				/>
+				<RegisteredBodyLog />
+			</BodyLogSurfaceProvider>,
+		);
+
+		await fireEvent.press(view.getByLabelText("Log"));
+		const sheetBackdrop = view.getByTestId("modal-sheet-backdrop");
+		await fireEvent.press(view.getByLabelText("Body"));
+
+		expect(view.getByText("Body log options")).toBeTruthy();
+		expect(view.queryByText("What would you like to log?")).toBeNull();
+		expect(view.getByTestId("modal-sheet-backdrop")).toBe(sheetBackdrop);
+		expect(router.push).not.toHaveBeenCalled();
+
+		await fireEvent.press(view.getByText("Back to log menu"));
+		expect(view.getByText("What would you like to log?")).toBeTruthy();
+		expect(view.getByTestId("modal-sheet-backdrop")).toBe(sheetBackdrop);
+	});
+
+	it("moves to Body before opening its log from another tab", async () => {
+		const view = await render(
+			<BodyLogSurfaceProvider>
+				<QuickLogFab bottom={24} isNicotineEnabled={async () => false} />
+				<RegisteredBodyLog />
+			</BodyLogSurfaceProvider>,
+		);
+
+		await fireEvent.press(view.getByLabelText("Log"));
+		await fireEvent.press(view.getByLabelText("Body"));
+
+		expect(router.push).toHaveBeenCalledWith("/body");
+		expect(view.getByText("Body log options")).toBeTruthy();
 	});
 
 	it("offers the smoking action once the stream is tracked", async () => {

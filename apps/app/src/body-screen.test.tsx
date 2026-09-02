@@ -1,10 +1,12 @@
 import { KILOGRAMS_PER_POUND } from "@bro/domain";
 import { fireEvent, render } from "@testing-library/react-native";
+import { BodyLogSurfaceProvider } from "./body/body-log-surface-context";
 import type {
 	BodyMetricBaseline,
 	BodyMetricSummary,
 	BodyOverview,
 } from "./body/body-store";
+import { QuickLogFab } from "./components/quick-log-fab";
 import { i18n } from "./i18n";
 import { BodyScreen } from "./screens/body/body-screen";
 
@@ -156,15 +158,27 @@ function mountedWith(
 	store: Partial<Parameters<typeof BodyScreen>[0]["store"]> = {},
 ) {
 	return render(
-		<BodyScreen
-			store={{
-				loadOverview: jest.fn(async () => overview),
-				setTracked: jest.fn(),
-				recordMeasurements: jest.fn(),
-				...store,
-			}}
-		/>,
+		<BodyLogSurfaceProvider>
+			<QuickLogFab
+				bottom={24}
+				bodyActive
+				isNicotineEnabled={async () => false}
+			/>
+			<BodyScreen
+				store={{
+					loadOverview: jest.fn(async () => overview),
+					setTracked: jest.fn(),
+					recordMeasurements: jest.fn(),
+					...store,
+				}}
+			/>
+		</BodyLogSurfaceProvider>,
 	);
+}
+
+async function openBodyLog(screen: Awaited<ReturnType<typeof mountedWith>>) {
+	await fireEvent.press(await screen.findByLabelText("Log"));
+	await fireEvent.press(screen.getByLabelText("Body"));
 }
 
 describe("Body screen", () => {
@@ -176,7 +190,7 @@ describe("Body screen", () => {
 		const screen = await mountedWith(overview, { recordMeasurements });
 
 		expect(screen.queryByLabelText("Weight (stones)")).toBeNull();
-		await fireEvent.press(await screen.findByLabelText("Log body"));
+		await openBodyLog(screen);
 		await fireEvent.press(screen.getByLabelText("Weight"));
 		await fireEvent.changeText(screen.getByLabelText("Weight (stones)"), "12");
 		await fireEvent.changeText(screen.getByLabelText("Weight (pounds)"), "4");
@@ -205,7 +219,7 @@ describe("Body screen", () => {
 				recordMeasurements,
 			});
 
-			await fireEvent.press(await screen.findByLabelText("Log body"));
+			await openBodyLog(screen);
 			await fireEvent.press(screen.getByLabelText("Weight"));
 			await fireEvent.changeText(
 				screen.getByLabelText("Weight (stones)"),
@@ -248,7 +262,7 @@ describe("Body screen", () => {
 		const recordMeasurements = jest.fn(async () => overview);
 		const screen = await mountedWith(overview, { recordMeasurements });
 
-		await fireEvent.press(await screen.findByLabelText("Log body"));
+		await openBodyLog(screen);
 		await fireEvent.press(screen.getByLabelText("Take measurements"));
 		await fireEvent.changeText(screen.getByLabelText("Body fat (%)"), "18");
 		await fireEvent.changeText(screen.getByLabelText("Waist (cm)"), "86");
@@ -268,7 +282,7 @@ describe("Body screen", () => {
 		expect(
 			await screen.findByLabelText("Resting heart rate. Nothing logged yet"),
 		).toBeTruthy();
-		await fireEvent.press(screen.getByLabelText("Log body"));
+		await openBodyLog(screen);
 		await fireEvent.press(screen.getByLabelText("Resting heart rate"));
 		await fireEvent.changeText(
 			screen.getByLabelText("Resting heart rate (bpm)"),
@@ -348,7 +362,7 @@ describe("Body screen", () => {
 		expect(
 			await screen.findByLabelText("Chest. Nothing logged yet"),
 		).toBeTruthy();
-		await fireEvent.press(screen.getByLabelText("Log body"));
+		await openBodyLog(screen);
 		await fireEvent.press(screen.getByLabelText("Take measurements"));
 		expect(screen.getByLabelText("Chest (cm)")).toBeTruthy();
 	});

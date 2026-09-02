@@ -101,7 +101,8 @@ describe("body metrics flow", () => {
 			await view.findByLabelText("Weight. Nothing logged yet"),
 		).toBeTruthy();
 
-		await fireEvent.press(view.getByLabelText("Log body"));
+		await fireEvent.press(view.getByLabelText("Log"));
+		await fireEvent.press(view.getByLabelText("Body"));
 		await fireEvent.press(view.getByLabelText("Weight"));
 		await fireEvent.changeText(view.getByLabelText("Weight (stones)"), "12");
 		await fireEvent.changeText(view.getByLabelText("Weight (pounds)"), "4");
@@ -140,7 +141,8 @@ describe("body metrics flow", () => {
 		});
 
 		await act(async () => expoRouter.replace("/body"));
-		await fireEvent.press(await view.findByLabelText("Log body"));
+		await fireEvent.press(await view.findByLabelText("Log"));
+		await fireEvent.press(view.getByLabelText("Body"));
 		await fireEvent.press(view.getByLabelText("Weight"));
 		await fireEvent.changeText(view.getByLabelText("Weight (stones)"), "12");
 		await fireEvent.changeText(view.getByLabelText("Weight (pounds)"), "3");

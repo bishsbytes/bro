@@ -173,9 +173,11 @@ inside one surface card. Tapping any row opens that metric's detail screen. The
 detail screen uses the full baseline gauge inside its hero card, with the one
 permitted 56px value.
 
-- One contextual "Log body" action offers standalone weight, a measurement
-  session, and standalone resting heart rate when each is tracked. Do not put
-  entry fields or a separate log button beside every overview metric.
+- The shared quick-log FAB is available on the Body tab and offers Body as a
+  destination. Its Body action replaces the content inside that same sheet with
+  standalone weight, a measurement session, and standalone resting heart rate
+  when each is tracked; sub-navigation never swaps to a second sheet. Do not put
+  entry fields or a separate log button on the overview or beside every metric.
 - A measurement session holds all tracked tape sites and body fat, with weight
   available when tracked. Every field is optional and one save writes whichever
   readings were taken at a shared capture time. Weight also remains available
