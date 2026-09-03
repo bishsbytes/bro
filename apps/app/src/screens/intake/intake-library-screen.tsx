@@ -32,6 +32,7 @@ import {
 import { toMessage } from "../../lib/errors";
 import { useFocusStoreLoad } from "../../lib/use-store-load";
 import { StyleSheet } from "../../theme/unistyles";
+import { IntakeRow, RowPanel } from "./intake-rows";
 
 type IntakeLibraryScreenProps = {
 	store?: Pick<LibraryStore, "list" | "saveItem" | "saveRecipe" | "delete">;
@@ -103,7 +104,10 @@ function NutritionFields({
 					containerStyle={styles.grow}
 				/>
 			</View>
-			{more ? (
+			{/* A drink's volume and strength are its first facts, and units are
+			    worked out from them rather than typed; anything else waits behind
+			    the disclosure so a quick custom food stays quick. */}
+			{kind === "drink" || more ? (
 				<>
 					<View style={styles.row}>
 						<FormField
@@ -121,13 +125,20 @@ function NutritionFields({
 							containerStyle={styles.grow}
 						/>
 					</View>
-					<FormField
-						label={t("free.caffeine")}
-						value={inputs.caffeineMg ?? ""}
-						onChangeText={(caffeineMg) => set({ caffeineMg })}
-						keyboardType="decimal-pad"
-					/>
+					{kind === "drink" ? (
+						<AppText variant="caption" color="muted">
+							{t("library.abvHelp")}
+						</AppText>
+					) : null}
 				</>
+			) : null}
+			{more ? (
+				<FormField
+					label={t("free.caffeine")}
+					value={inputs.caffeineMg ?? ""}
+					onChangeText={(caffeineMg) => set({ caffeineMg })}
+					keyboardType="decimal-pad"
+				/>
 			) : null}
 			<Button
 				label={more ? t("library.fewerNutrients") : t("library.moreNutrients")}
@@ -461,6 +472,19 @@ export function IntakeLibraryScreen({
 							}
 						/>
 					</View>
+					{editing.id ? (
+						<Button
+							label={t("intake:library.delete")}
+							accessibilityLabel={t("intake:library.deleteA11y", { name })}
+							variant="text"
+							tone="danger"
+							disabled={busy}
+							onPress={() => {
+								const { id } = editing;
+								if (id) void mutate(() => library.delete(id));
+							}}
+						/>
+					) : null}
 				</Card>
 			) : (
 				<View style={styles.section}>
@@ -477,49 +501,66 @@ export function IntakeLibraryScreen({
 					{data.items.length === 0 ? (
 						<AppText color="muted">{t("intake:library.empty")}</AppText>
 					) : (
-						data.items.map((consumable) => (
-							<Card key={consumable.id} style={styles.itemRow}>
-								<View style={styles.grow}>
-									<AppText variant="label">{consumable.name}</AppText>
-									<AppText variant="caption" color="muted">
-										{consumable.recipe
-											? t("intake:library.recipeToggle")
-											: (consumable.brand ??
-												t(`intake:kinds.${consumable.kind}`))}
-									</AppText>
-									{consumable.source.type !== "user" ||
-									consumable.forkedFrom ? (
-										<AppText variant="micro" color="subtle">
-											{consumable.source.type === "provider"
-												? t("intake:library.source.provider", {
-														name: consumable.source.provider,
-													})
-												: consumable.forkedFrom?.type === "system"
-													? t("intake:library.source.system")
-													: t(
-															`intake:library.source.${consumable.source.type}`,
-														)}
-										</AppText>
-									) : null}
-								</View>
-								{consumable.recipe === null ? (
-									<Button
-										label={t("intake:library.edit")}
-										variant="text"
+						<RowPanel testID="intake-library">
+							{data.items.map((consumable, index) => {
+								const sourceNote =
+									consumable.source.type !== "user" || consumable.forkedFrom
+										? consumable.source.type === "provider"
+											? t("intake:library.source.provider", {
+													name: consumable.source.provider,
+												})
+											: consumable.forkedFrom?.type === "system"
+												? t("intake:library.source.system")
+												: t(`intake:library.source.${consumable.source.type}`)
+										: null;
+								const meta = [
+									consumable.recipe
+										? t("intake:library.recipeToggle")
+										: (consumable.brand ??
+											t(`intake:kinds.${consumable.kind}`)),
+									sourceNote,
+								]
+									.filter(Boolean)
+									.join(" · ");
+								// A recipe has no editor yet, so its row keeps a delete
+								// control; an item opens its editor, where delete lives.
+								return consumable.recipe === null ? (
+									<IntakeRow
+										key={consumable.id}
+										title={consumable.name}
+										meta={meta}
+										chevron
+										last={index === data.items.length - 1}
+										disabled={busy}
+										accessibilityLabel={t("intake:library.editA11y", {
+											name: consumable.name,
+										})}
 										onPress={() => startEdit("item", consumable)}
 									/>
-								) : null}
-								<Button
-									label={t("intake:library.delete")}
-									variant="text"
-									tone="danger"
-									disabled={busy}
-									onPress={() =>
-										void mutate(() => library.delete(consumable.id))
-									}
-								/>
-							</Card>
-						))
+								) : (
+									<IntakeRow
+										key={consumable.id}
+										title={consumable.name}
+										meta={meta}
+										last={index === data.items.length - 1}
+										action={
+											<Button
+												label={t("intake:library.delete")}
+												accessibilityLabel={t("intake:library.deleteA11y", {
+													name: consumable.name,
+												})}
+												variant="text"
+												tone="danger"
+												disabled={busy}
+												onPress={() =>
+													void mutate(() => library.delete(consumable.id))
+												}
+											/>
+										}
+									/>
+								);
+							})}
+						</RowPanel>
 					)}
 					<AppText variant="micro" color="subtle">
 						{t("intake:library.licenceNotice")}
@@ -536,11 +577,6 @@ const styles = StyleSheet.create((theme) => ({
 	wrap: { flexDirection: "row", flexWrap: "wrap", gap: theme.spacing.sm },
 	grow: { flex: 1 },
 	ingredientRow: {
-		flexDirection: "row",
-		alignItems: "center",
-		gap: theme.spacing.sm,
-	},
-	itemRow: {
 		flexDirection: "row",
 		alignItems: "center",
 		gap: theme.spacing.sm,

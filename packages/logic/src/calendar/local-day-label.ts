@@ -24,16 +24,17 @@ function formatted(
 	}).format(new Date(`${localDay}T00:00:00.000Z`));
 }
 
-/** "Today", "Yesterday", or a locale-formatted weekday-and-date label. */
-export function formatLocalDayLabel(
+/**
+ * The weekday-and-date label with no relative substitution: "Thursday
+ * 3 September" even when that is today. For the line under a "Today" heading,
+ * where the date itself is the point.
+ */
+export function formatLocalDayDate(
 	localDay: string,
 	todayLocalDay: string,
 	locale?: string,
 ): string {
 	assertLocalDays(localDay, todayLocalDay);
-	const relative = relativeLabel(localDay, todayLocalDay);
-	if (relative) return relative;
-
 	const sameYear = localDay.slice(0, 4) === todayLocalDay.slice(0, 4);
 	return formatted(
 		localDay,
@@ -44,6 +45,19 @@ export function formatLocalDayLabel(
 			year: sameYear ? undefined : "numeric",
 		},
 		locale,
+	);
+}
+
+/** "Today", "Yesterday", or a locale-formatted weekday-and-date label. */
+export function formatLocalDayLabel(
+	localDay: string,
+	todayLocalDay: string,
+	locale?: string,
+): string {
+	assertLocalDays(localDay, todayLocalDay);
+	return (
+		relativeLabel(localDay, todayLocalDay) ??
+		formatLocalDayDate(localDay, todayLocalDay, locale)
 	);
 }
 

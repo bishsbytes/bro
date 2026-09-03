@@ -71,15 +71,17 @@ jest.mock("./body/body-store", () => ({
 
 jest.mock("./intake/intake-store", () => ({
 	createIntakeStore: () => ({
-		loadToday: async () => ({
-			localDay: "2026-08-14",
+		loadDay: async (localDay: string) => ({
+			localDay,
+			dayLabel: "Today",
+			dayDate: "Friday 14 August",
+			isToday: true,
 			defaultTime: "12:00",
 			enabledKinds: ["food", "drink"],
 			events: [],
+			entries: [],
 			metrics: [],
 			totals: [],
-			recents: [],
-			recentLocalDays: [],
 		}),
 	}),
 }));
@@ -249,9 +251,7 @@ describe("app entry", () => {
 
 		await fireEvent.press(view.getByLabelText(/^Intake, tab/));
 		await waitFor(() => expect(router.getPathname()).toBe("/intake"));
-		expect(
-			await view.findByText("Everything you took in today, in one place."),
-		).toBeTruthy();
+		expect(await view.findByText("Summary")).toBeTruthy();
 		expect(view.getByLabelText("Settings")).toBeTruthy();
 
 		await fireEvent.press(view.getByLabelText(/^Body, tab/));

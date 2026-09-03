@@ -267,6 +267,61 @@ body.
 - Selecting a site states, in plain sentences, where to put the tape and how to
   hold it. Instructions, never technique coaching or a reason to measure.
 
+**Intake (food, drink, caffeine, alcohol, smoking):** a time-stamped stream
+read against the user's own usual — never a budget, never meal slots.
+
+- **Day view:** one compact baseline gauge per tracked total (energy, alcohol
+  units, caffeine mg, cigarettes), each against the user's usual band. NEVER
+  render "remaining", a daily budget, a progress-toward-goal bar, or red
+  states on intake. The read line states the usual band as fact: "Your days
+  usually land between 2,100 and 2,600."
+- **Bimodal usuals:** where a total is zero most days (alcohol, cigarettes),
+  the read names both modes: "Most of your days: none. Drinking days usually
+  land 2–5." Never average across the zeros.
+- **Entries are rows, not cards:** hairline rows in one panel — time, name,
+  meta, right-aligned value in tabular ink. Identical items at the same
+  sitting group into one row ("2 × pint"), never duplicate rows.
+- **No meal slots.** Entries carry a timestamp, not a breakfast/lunch/dinner
+  bucket. Time-of-day structure emerges from the timeline.
+- **Rough entries are first-class.** "About 600 kcal" with a free-text label
+  is a complete, respectable entry. Rough values render with a ~ prefix and
+  propagate as a soft range band around the gauge marker (`--gc` at 28%
+  opacity). The app NEVER nags a rough entry toward precision; offer
+  "tighten it later or never" once, then silence.
+- **Logger:** recents-first, ranked by time of day; a recent chip logs in one
+  tap at the remembered portion. The detail sheet (portion stepper with
+  ½/1/2/custom, Now/Earlier) opens only on request. Global search is the
+  fallback, never the front door.
+- **Library and recipes:** items need only a name — everything else optional
+  ("Enter at least one value" for nutrition). Drinks get an ABV field; units
+  compute from ABV × volume, never hand-entered. Recipes are built by picking
+  library items, declare "makes N <portion-word>", recalculate per portion
+  when N changes, and propagate ingredient roughness to the per-portion
+  values. A saved recipe logs like any single item.
+- **Smoking:** counts, timing distribution (morning/afternoon/evening strip in
+  `--load`), last-one timestamp, and spend — all stated flat. NO smoke-free
+  streaks, day counters, or milestone celebrations: a lapse after a streak
+  reads as total loss and kills the habit of logging. If the user records an
+  intention, show it in his own words (serif) and report facts against it in
+  the same voice whether the number rose or fell. "Support for stopping"
+  links to real services (NHS); it never opens in-app coaching.
+- **Cross-domain pattern lines** (intake ↔ sleep, mood, heart rate) are
+  observations, always past-tense and hedged to the data: "On days with 3+
+  drinks, your sleep has averaged 55 minutes shorter." Never causal, never
+  imperative, never a suggestion. Minimum ~10 qualifying days before a line
+  may render.
+- **Never couple intake to exercise.** No "earned", no "burn it off", no
+  activity-adjusted budgets, no compensation prompts. This coupling is the
+  arithmetic of disordered eating and is banned outright.
+- **Guidelines are opt-in context:** NHS unit guidance and reference intakes
+  sit behind the same setting as population ranges, render as one caption
+  line, and never appear as coloured zones. Clinically meaningful sustained
+  patterns are the alert component's job — once, factual, route to a GP.
+- **Copy traps for this surface:** never "cheat", "guilt-free", "sinful",
+  "clean", "naughty", or any moralised food language; never praise or scold a
+  total; a day with no entries reads "No entries yesterday", never a broken
+  streak.
+
 ## Voice
 
 Describe, don't judge. Ask, don't cheer. Assume an adult who already knows he
@@ -326,3 +381,6 @@ as an alert chip or push notification.
 - [ ] Keyboard + focus + reduced-motion verified; contrast checked both themes.
 - [ ] No radar/polygon of body measurements; deltas uncolored; no population zones on gauges.
 - [ ] No body figure on a screen that shows the user's own readings.
+- [ ] No budgets/remaining/red on intake; rough entries render with ~ and range; repeats grouped.
+- [ ] No streaks or celebrations on smoking; intention reported factually in both directions.
+- [ ] No intake↔exercise coupling anywhere; pattern lines past-tense, observational, ≥10 days of data.

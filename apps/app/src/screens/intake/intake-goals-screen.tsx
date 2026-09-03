@@ -22,7 +22,8 @@ type IntakeGoalsScreenProps = {
 };
 
 /**
- * A daily target on a tracked total, stated and never graded. Walking a
+ * A target on a tracked total, stated against its seven-day average and never
+ * graded: no percentage of the way, no reached or missed, no colour. Walking a
  * ceiling down week by week is how someone tapers; the catalogue's at-most
  * habits cover the days that should be zero.
  */
@@ -95,17 +96,6 @@ export function IntakeGoalsScreen({ store }: IntakeGoalsScreenProps) {
 										current: active.currentFormatted ?? t("common:emDash"),
 									})}
 								</AppText>
-								{active.targetReached ? (
-									<AppText variant="caption" color="brand">
-										{t("intake:goals.targetReached")}
-									</AppText>
-								) : active.progressPercent !== null ? (
-									<AppText variant="caption" color="brand">
-										{t("intake:goals.percentComplete", {
-											percent: active.progressPercent,
-										})}
-									</AppText>
-								) : null}
 								<View style={styles.row}>
 									<Button
 										label={t("intake:goals.achieve")}

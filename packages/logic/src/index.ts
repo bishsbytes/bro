@@ -12,6 +12,7 @@
  */
 
 export {
+	formatLocalDayDate,
 	formatLocalDayLabel,
 	formatLocalDayLabelShort,
 } from "./calendar/local-day-label";

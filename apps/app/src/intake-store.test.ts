@@ -230,8 +230,23 @@ describe("intake store", () => {
 		expect(edited.quantity).toBe(0.5);
 
 		const day = await store.loadDay("2026-09-02");
-		expect(day.recentLocalDays).toEqual(["2026-09-01"]);
-		expect(day.recents).toHaveLength(2);
+		expect(day.dayLabel).toBe("Today");
+		expect(day.dayDate).toBe("Wednesday 2 September");
+		expect((await store.loadLog()).recents).toHaveLength(2);
+
+		// A recent logged again at another quantity is the same thing, scaled.
+		const doubled = await store.repeatEvent(
+			original.id,
+			{ localDay: "2026-09-02", time: "09:00" },
+			2,
+		);
+		expect(doubled.quantity).toBe(2);
+		expect(doubled.volumeL).toBeCloseTo(0.5, 12);
+		expect(doubled.constituents.caffeine).toBeCloseTo(
+			(original.constituents.caffeine ?? 0) * 2,
+			15,
+		);
+		await store.deleteEvent(doubled.id);
 		await store.deleteEvent(edited.id);
 		expect((await store.loadDay("2026-09-02")).events).toEqual([]);
 		await expect(store.deleteEvent(edited.id)).rejects.toThrow(
@@ -324,6 +339,155 @@ describe("intake store", () => {
 		});
 		await expect(store.achieveGoal(goal.id)).resolves.toMatchObject({
 			achievedAt: expect.any(Number),
+		});
+	});
+	it("groups the same thing at one sitting into one row and states what it added", async () => {
+		await settings.setTracked("energy_intake", true);
+		await settings.setTracked("ethanol_intake", true);
+		const pint = (time: string) =>
+			store.log(
+				{ type: "system", key: "drink:lager-4_5" },
+				{ type: "portion", portionId: "pint-uk", quantity: 1 },
+				{ localDay: "2026-09-02", time },
+			);
+		await pint("18:17");
+		await store.log(
+			{ type: "system", key: "drink:filter-coffee" },
+			{ type: "portion", portionId: "mug-250ml", quantity: 1 },
+			{ localDay: "2026-09-02", time: "07:40" },
+		);
+		await pint("18:40");
+		// The same pint hours later is another sitting.
+		await pint("22:30");
+
+		const day = await store.loadToday();
+		expect(day.events).toHaveLength(4);
+		expect(
+			day.entries.map(({ time, name, meta, value }) => ({
+				time,
+				name,
+				meta,
+				value,
+			})),
+		).toEqual([
+			{
+				time: "07:40",
+				name: "Filter coffee",
+				meta: expect.stringMatching(/^1 × /),
+				value: "3 kcal",
+			},
+			{
+				time: "18:17",
+				name: "Lager, 4.5%",
+				meta: "2 × pint",
+				value: "489 kcal · 5.1 units",
+			},
+			{
+				time: "22:30",
+				name: "Lager, 4.5%",
+				meta: "1 × pint",
+				value: "244 kcal · 2.6 units",
+			},
+		]);
+		expect(day.entries[1]?.events.map(({ event }) => event.quantity)).toEqual([
+			1, 1,
+		]);
+		expect(day.entries[1]?.accessibilityLabel).toBe(
+			"Lager, 4.5%, 2 × pint, 489 kcal · 5.1 units, at 18:17",
+		);
+	});
+
+	it("ranks recents by how close their time of day is to now", async () => {
+		await store.log(
+			{ type: "system", key: "drink:filter-coffee" },
+			{ type: "portion", portionId: "mug-250ml", quantity: 1 },
+			{ localDay: "2026-09-01", time: "07:40" },
+		);
+		await store.log(
+			{ type: "system", key: "drink:cola" },
+			{ type: "portion", portionId: "can-330ml", quantity: 1 },
+			{ localDay: "2026-09-01", time: "13:00" },
+		);
+		await store.log(
+			{ type: "system", key: "drink:lager-4_5" },
+			{ type: "portion", portionId: "pint-uk", quantity: 1 },
+			{ localDay: "2026-09-01", time: "18:17" },
+		);
+
+		now = new Date(2026, 8, 2, 19, 30);
+		expect(
+			(await store.loadLog()).recents.map(({ event }) => event.name),
+		).toEqual(["Lager, 4.5%", "Cola", "Filter coffee"]);
+		now = new Date(2026, 8, 2, 8, 0);
+		expect(
+			(await store.loadLog()).recents.map(({ event }) => event.name),
+		).toEqual(["Filter coffee", "Cola", "Lager, 4.5%"]);
+	});
+
+	it("states a usual range after fourteen logged days, and both modes for a total that is zero most days", async () => {
+		await settings.setTracked("energy_intake", true);
+		await settings.setTracked("ethanol_intake", true);
+		const days = Array.from({ length: 14 }, (_, index) =>
+			databaseApp === undefined
+				? ""
+				: new Date(Date.UTC(2026, 7, 20 + index)).toISOString().slice(0, 10),
+		);
+		const drinkingDays = new Set([days[1], days[4], days[8], days[12]]);
+		for (const localDay of days.slice(0, 13)) {
+			await store.log(
+				{ type: "system", key: "drink:cola" },
+				{ type: "portion", portionId: "can-330ml", quantity: 1 },
+				{ localDay, time: "12:00" },
+			);
+			if (drinkingDays.has(localDay)) {
+				await store.log(
+					{ type: "system", key: "drink:lager-4_5" },
+					{ type: "portion", portionId: "pint-uk", quantity: 1 },
+					{ localDay, time: "19:00" },
+				);
+			}
+		}
+
+		// Thirteen logged days: the number alone, no band, no guess.
+		let energy = (await store.loadToday()).totals.find(
+			({ metric }) => metric.slug === "energy_intake",
+		);
+		expect(energy).toMatchObject({
+			dayValue: null,
+			dayValueParts: null,
+			gauge: null,
+			read: null,
+			meta: "so far today",
+			domain: "body",
+		});
+
+		await store.log(
+			{ type: "system", key: "drink:cola" },
+			{ type: "portion", portionId: "can-330ml", quantity: 1 },
+			{ localDay: "2026-09-02", time: "12:00" },
+		);
+		const day = await store.loadToday();
+		energy = day.totals.find(({ metric }) => metric.slug === "energy_intake");
+		expect(energy?.dayValueParts).toEqual({ value: "139", unit: "kcal" });
+		expect(energy?.read).toMatch(
+			/^Your days usually land between \d+ and \d+\.$/,
+		);
+		expect(energy?.gauge?.band.min).toBeCloseTo(138.6, 6);
+		// The rail ends on a round number past the band: 322 × 1.15 rounds up to 400.
+		expect(energy?.gauge?.rail).toEqual({ min: 0, max: 400 });
+		expect(energy?.gauge?.railLabels).toEqual({ min: "0", max: "400" });
+
+		// Alcohol on four of fourteen days: the read names both modes and, with
+		// too few drinking days for a band, draws nothing. Today's cola carries
+		// alcohol as a measured zero, which is a fact about the can, not a gap.
+		const alcohol = day.totals.find(
+			({ metric }) => metric.slug === "ethanol_intake",
+		);
+		expect(alcohol).toMatchObject({
+			domain: "load",
+			dayValue: 0,
+			gauge: null,
+			read: "Most of your days: none.",
 		});
 	});
 });

@@ -70,6 +70,25 @@ jest.mock("expo-splash-screen", () => ({
 }));
 
 const databaseApp: typeof DatabaseApp = jest.requireActual("@bro/database-app");
+const { setImmediate: realSetImmediate } =
+	jest.requireActual<typeof import("node:timers")>("node:timers");
+
+/**
+ * Waits for a pushed screen to show its data. The router keeps Jest on fake
+ * timers, which the navigator's transition needs advancing, while the screen's
+ * first read settles on the real event loop; each turn drives both inside act
+ * so the resulting state lands in a render.
+ */
+async function settle(found: () => unknown): Promise<void> {
+	for (let turn = 0; turn < 200; turn += 1) {
+		if (found()) return;
+		await act(async () => {
+			await jest.advanceTimersByTimeAsync(50);
+			await new Promise((resolve) => realSetImmediate(resolve));
+		});
+	}
+	throw new Error("The screen did not settle.");
+}
 const mockedUseSession = (authClient as unknown as { useSession: jest.Mock })
 	.useSession;
 
@@ -142,53 +161,40 @@ describe("intake flow", () => {
 			(await events.listRecent(["nicotine"]))[0]?.constituents.nicotine,
 		).toBeCloseTo(1.2e-6, 12);
 
-		// Something else: a complete event with no library row behind it.
+		// The lager just logged is a recent chip: one tap logs it again at the
+		// remembered portion, with no sheet.
 		await fireEvent.press(view.getByLabelText("Show Smoke or vape"));
-		await fireEvent.press(view.getByText("Log an item that is not listed."));
+		await fireEvent.press(await view.findByLabelText("Log Lager, 4.5% again"));
+		expect(await view.findByText("Lager, 4.5% added")).toBeTruthy();
+		expect(await events.listAll()).toHaveLength(3);
+
+		// Something else: a complete event with no library row behind it.
+		await fireEvent.press(view.getByLabelText("Something else"));
 		await fireEvent.changeText(view.getByLabelText("What was it?"), "Oat bar");
 		await fireEvent.changeText(view.getByLabelText("Energy (kcal)"), "210");
 		await fireEvent.press(view.getByText("Log it"));
 		expect(await view.findByText("Oat bar added")).toBeTruthy();
-		expect(await events.listAll()).toHaveLength(3);
+		expect(await events.listAll()).toHaveLength(4);
 
-		// The tab: one stream, one energy total, everything logged in order.
+		// The tab: one stream, one energy total against nothing but itself, the
+		// two pints as one row, everything else in order.
 		await act(async () => expoRouter.replace("/intake"));
-		expect(await view.findByText("454 kcal")).toBeTruthy();
+		expect(await view.findByLabelText("Energy intake, 699 kcal.")).toBeTruthy();
+		expect(view.queryByText(/remaining|left today|budget/i)).toBeNull();
+		// The shared FAB is the way in; the card carries no log button.
+		expect(view.getByLabelText("Log")).toBeTruthy();
+		expect(view.queryByText("Log something")).toBeNull();
+		await fireEvent.press(view.getByLabelText("Logged"));
+		expect(await view.findByText("2 × pint")).toBeTruthy();
+		expect(view.getAllByText("Lager, 4.5%")).toHaveLength(1);
 		expect(view.getByText("Cigarette")).toBeTruthy();
 		expect(view.getByText("Oat bar")).toBeTruthy();
-		expect(view.queryByText(/remaining|left today/i)).toBeNull();
 
-		// Correct the record: quantity is the only lever, and totals re-derive.
-		await fireEvent.press(view.getByLabelText("Edit Oat bar"));
-		const [today] = await events.listAll();
-		if (!today) throw new Error("Expected a logged event.");
-		await waitFor(() =>
-			expect(router.getPathname()).toBe(`/intake/${today.localDay}`),
-		);
-		const quantityFields = await view.findAllByLabelText("Quantity");
-		const oatBarIndex = (
-			await view.findAllByText(/Oat bar|Cigarette|Lager/)
-		).findIndex((node) => node.props.children === "Oat bar");
-		await fireEvent.changeText(
-			quantityFields[oatBarIndex] ?? quantityFields[0],
-			"2",
-		);
-		await fireEvent.press(
-			view.getAllByText("Save changes")[oatBarIndex] ??
-				view.getAllByText("Save changes")[0],
-		);
-		await waitFor(async () => {
-			const oatBar = (await events.listAll()).find(
-				({ name }) => name === "Oat bar",
-			);
-			expect(oatBar).toMatchObject({
-				quantity: 2,
-				constituents: { energy: 420 },
-			});
-		});
-
-		// A daily goal, parsed in the unit being read.
-		await act(async () => expoRouter.replace("/intake/goals"));
+		// A goal, parsed in the unit being read. The router's test renderer runs
+		// on fake timers while the goals screen's first read settles on the real
+		// event loop, so the pushed screen is settled by hand.
+		await act(async () => expoRouter.push("/intake/goals"));
+		await settle(() => view.queryByText("Set goal for Energy intake"));
 		await fireEvent.press(await view.findByText("Set goal for Energy intake"));
 		await fireEvent.changeText(view.getByLabelText("Target (kcal)"), "600");
 		await fireEvent.press(view.getByText("Save goal"));
@@ -201,6 +207,30 @@ describe("intake flow", () => {
 				targetValue: 600,
 			}),
 		);
+		await act(async () => expoRouter.back());
+		await act(async () => {
+			await jest.advanceTimersByTimeAsync(300);
+		});
+		await waitFor(() => expect(router.getPathname()).toBe("/intake"));
+
+		// Correct the record in place: quantity is the only lever, and totals
+		// re-derive.
+		await fireEvent.press(view.getByLabelText(/^Oat bar,/));
+		await fireEvent.changeText(await view.findByLabelText("Quantity"), "2");
+		await fireEvent.press(view.getByText("Save changes"));
+		await waitFor(async () => {
+			const oatBar = (await events.listAll()).find(
+				({ name }) => name === "Oat bar",
+			);
+			expect(oatBar).toMatchObject({
+				quantity: 2,
+				constituents: { energy: 420 },
+			});
+		});
+
+		await fireEvent.press(view.getByLabelText("Summary"));
+		expect(await view.findByLabelText("Energy intake, 909 kcal.")).toBeTruthy();
+		expect(router.getPathname()).toBe("/intake");
 
 		// Switching the stream off hides its chip and its catalogue; the logged
 		// smoke stays stored.

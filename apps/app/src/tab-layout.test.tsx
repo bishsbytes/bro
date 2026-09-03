@@ -123,10 +123,14 @@ describe("TabLayout", () => {
 		expect(router.push).toHaveBeenCalledWith("/intake/log?kind=food");
 	});
 
-	it("keeps the shared quick-log FAB on the Body overview", async () => {
+	it("keeps the shared quick-log FAB on the Body and Intake tabs", async () => {
 		mockPathname = "/body";
 		const screen = await render(<TabLayout />);
 
+		expect(screen.getByLabelText("Log")).toBeTruthy();
+
+		mockPathname = "/intake";
+		await screen.rerender(<TabLayout />);
 		expect(screen.getByLabelText("Log")).toBeTruthy();
 
 		mockPathname = "/life";

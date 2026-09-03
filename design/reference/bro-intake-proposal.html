@@ -1,0 +1,542 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>bro — intake proposal</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Archivo:wght@400;500;600;700&family=Source+Serif+4:opsz,wght@8..60,400&display=swap" rel="stylesheet">
+<style>
+:root {
+  --canvas:#E9E9E4; --surface:#F5F5F1; --surface-sunk:#E1E2DC;
+  --line:#D3D5CD; --line-strong:#B9BCB2;
+  --ink:#23282B; --ink-2:#5C6469; --ink-3:#8B9297; --ink-invert:#F5F5F1;
+  --body:#667F5B; --body-tint:#E0E6DC;
+  --load:#A0803F; --load-tint:#EBE4D3;
+  --sleep:#6F6A85; --alert:#93564A; --alert-tint:#EEDFDB;
+  --accent-h:235; --accent-c:0.055;
+  --accent: oklch(48% var(--accent-c) var(--accent-h));
+  --on-accent: oklch(97% calc(var(--accent-c) * .15) var(--accent-h));
+  --accent-tint: oklch(92% calc(var(--accent-c) * .42) var(--accent-h));
+  --sans:'Archivo',-apple-system,BlinkMacSystemFont,sans-serif;
+  --serif:'Source Serif 4',Georgia,serif;
+  --t-caption:.75rem; --t-small:.8125rem; --t-body:.9375rem; --t-lead:1.0625rem;
+  --t-h3:1.3125rem; --t-h2:1.6875rem; --t-h1:2.5rem; --t-metric:3.5rem;
+  --s1:4px; --s2:8px; --s3:12px; --s4:16px; --s5:24px; --s6:32px; --s7:48px; --s8:64px; --s9:96px;
+  --r-sm:3px; --r-md:6px; --r-lg:10px; --r-pill:999px;
+}
+[data-theme="dark"] {
+  --canvas:#191C1E; --surface:#212528; --surface-sunk:#141719;
+  --line:#313739; --line-strong:#454C4F;
+  --ink:#E4E5E1; --ink-2:#A0A7AA; --ink-3:#767D81; --ink-invert:#191C1E;
+  --body:#98AF8B; --body-tint:#2A332A;
+  --load:#C7A96C; --load-tint:#332E22;
+  --sleep:#A29BBB; --alert:#C08375; --alert-tint:#382723;
+  --accent: oklch(78% calc(var(--accent-c) * 1.15) var(--accent-h));
+  --on-accent: oklch(18% calc(var(--accent-c) * .3) var(--accent-h));
+  --accent-tint: oklch(30% calc(var(--accent-c) * .75) var(--accent-h));
+}
+* { box-sizing:border-box; }
+body { margin:0; background:var(--canvas); color:var(--ink); font-family:var(--sans); font-size:var(--t-body); line-height:1.55; -webkit-font-smoothing:antialiased; }
+h1,h2,h3,h4,h5 { margin:0; font-weight:600; letter-spacing:-.015em; line-height:1.18; }
+p { margin:0; }
+button { font:inherit; color:inherit; }
+:focus-visible { outline:2px solid var(--accent); outline-offset:2px; border-radius:var(--r-sm); }
+.num { font-variant-numeric:tabular-nums; }
+.wrap { max-width:1080px; margin:0 auto; padding:0 var(--s5); }
+
+.topbar { position:sticky; top:0; z-index:20; background:color-mix(in srgb,var(--canvas) 88%,transparent); backdrop-filter:blur(8px); border-bottom:1px solid var(--line); }
+.topbar__in { max-width:1080px; margin:0 auto; padding:var(--s3) var(--s5); display:flex; align-items:center; gap:var(--s4); }
+.wordmark { font-weight:700; letter-spacing:-.03em; font-size:var(--t-lead); }
+.wordmark span { color:var(--ink-3); font-weight:400; }
+.themetoggle { margin-left:auto; border:1px solid var(--line-strong); background:transparent; border-radius:var(--r-pill); padding:5px var(--s3); font-size:var(--t-small); cursor:pointer; color:var(--ink-2); }
+
+section { padding:var(--s9) 0 0; }
+.sec-head { display:flex; align-items:baseline; gap:var(--s3); margin-bottom:var(--s5); padding-bottom:var(--s3); border-bottom:1px solid var(--line); }
+.sec-head h2 { font-size:var(--t-h2); }
+.sec-head p { color:var(--ink-3); font-size:var(--t-small); margin-left:auto; }
+.note { color:var(--ink-2); font-size:var(--t-small); max-width:62ch; }
+.lede { font-family:var(--serif); font-size:var(--t-lead); line-height:1.6; color:var(--ink-2); max-width:56ch; }
+.grid2 { display:grid; grid-template-columns:1fr 1fr; gap:var(--s5) var(--s7); }
+@media (max-width:760px){ .grid2 { grid-template-columns:1fr; } }
+.p h4 { font-size:var(--t-body); margin-bottom:var(--s1); }
+.p p { color:var(--ink-2); font-size:var(--t-small); max-width:48ch; }
+
+.panel { background:var(--surface); border:1px solid var(--line); border-radius:var(--r-lg); }
+.panel__head { padding:var(--s3) var(--s4) 0; display:flex; align-items:baseline; }
+.panel__head h6 { margin:0; font-size:var(--t-small); font-weight:600; }
+.panel__head span { margin-left:auto; font-size:var(--t-caption); color:var(--ink-3); }
+
+/* phone mocks */
+.mockgrid { display:grid; grid-template-columns:repeat(2, minmax(0,360px)); gap:var(--s6) var(--s7); justify-content:start; }
+@media (max-width:800px){ .mockgrid { grid-template-columns:1fr; } }
+.mockcell { display:grid; gap:var(--s4); align-content:start; }
+.mockcell > h3 { font-size:var(--t-h3); }
+.mockcell > .note { max-width:none; }
+.phone { border:1px solid var(--line-strong); border-radius:22px; background:var(--canvas); padding:var(--s4); overflow:hidden; }
+.phone__top { display:flex; align-items:baseline; gap:var(--s2); padding-bottom:var(--s4); }
+.phone__top h5 { font-size:var(--t-h3); letter-spacing:-.02em; }
+.phone__top span { margin-left:auto; font-size:var(--t-caption); color:var(--ink-3); }
+.phone__body { display:grid; gap:var(--s4); }
+
+/* gauge (compact) */
+.gauge { --gc:var(--body); }
+.gauge--load { --gc:var(--load); }
+.gauge__label { font-size:var(--t-small); color:var(--ink-2); margin-bottom:var(--s1); display:flex; }
+.gauge__label span { margin-left:auto; color:var(--ink-3); font-size:var(--t-caption); }
+.gauge__value { display:flex; align-items:baseline; gap:var(--s2); }
+.gauge__value b { font-size:var(--t-h3); font-weight:600; letter-spacing:-.02em; line-height:1.1; font-variant-numeric:tabular-nums; }
+.gauge__value b i { font-style:normal; font-weight:400; color:var(--ink-3); font-size:var(--t-small); }
+.gauge__rail { position:relative; height:14px; margin-top:var(--s2); border-bottom:1px solid var(--line-strong); }
+.gauge__ticks { position:absolute; inset:auto 0 0 0; height:5px; background-image:repeating-linear-gradient(to right,var(--line-strong) 0 1px,transparent 1px 10%); opacity:.8; }
+.gauge__band { position:absolute; bottom:0; height:100%; background:var(--gc); opacity:.16; border-left:1px solid var(--gc); border-right:1px solid var(--gc); }
+.gauge__marker { position:absolute; bottom:-1px; width:2px; height:14px; background:var(--gc); transform:translateX(-1px); }
+.gauge__marker::after { content:""; position:absolute; top:-4px; left:50%; width:7px; height:7px; background:var(--gc); transform:translateX(-50%) rotate(45deg); }
+/* uncertainty: a soft range around the marker instead of a point */
+.gauge__fuzz { position:absolute; bottom:0; height:100%; background:var(--gc); opacity:.28; }
+.gauge__scale { display:flex; justify-content:space-between; font-size:var(--t-caption); color:var(--ink-3); font-variant-numeric:tabular-nums; margin-top:var(--s1); }
+.gauge__read { font-size:var(--t-small); color:var(--ink-2); margin-top:var(--s2); }
+.gauge__read em { font-style:normal; color:var(--gc); font-weight:500; }
+
+/* timeline rows */
+.rows { border-top:1px solid var(--line); }
+.row { display:flex; align-items:center; gap:var(--s3); padding:var(--s3) var(--s3); border:0; border-bottom:1px solid var(--line); background:none; width:100%; text-align:left; cursor:pointer; }
+.row:last-child { border-bottom:0; }
+.row:hover { background:var(--surface-sunk); }
+.row time { font-size:var(--t-caption); color:var(--ink-3); width:40px; flex:none; font-variant-numeric:tabular-nums; }
+.row__main { min-width:0; }
+.row__name { font-size:var(--t-small); display:block; }
+.row__meta { font-size:var(--t-caption); color:var(--ink-3); display:block; }
+.row__val { margin-left:auto; font-size:var(--t-caption); color:var(--ink-3); font-variant-numeric:tabular-nums; text-align:right; flex:none; }
+
+/* logger */
+.search { display:flex; align-items:center; gap:var(--s2); border:1px solid var(--line-strong); border-radius:var(--r-md); padding:9px var(--s3); color:var(--ink-3); font-size:var(--t-body); background:var(--surface); }
+.quick { display:flex; flex-wrap:wrap; gap:var(--s2); }
+.quick button { border:1px solid var(--line-strong); border-radius:var(--r-pill); padding:6px var(--s3); font-size:var(--t-small); background:var(--surface); cursor:pointer; }
+.quick button b { font-weight:600; }
+.quick button span { color:var(--ink-3); }
+.stepper { display:flex; align-items:center; gap:var(--s3); }
+.stepper button { width:36px; height:36px; border:1px solid var(--line-strong); border-radius:var(--r-md); background:var(--surface); font-size:var(--t-lead); cursor:pointer; line-height:1; }
+.stepper b { font-size:var(--t-h3); font-variant-numeric:tabular-nums; min-width:76px; text-align:center; }
+.seg { display:inline-flex; border:1px solid var(--line-strong); border-radius:var(--r-md); overflow:hidden; }
+.seg button { padding:6px var(--s3); font-size:var(--t-small); background:transparent; border:0; border-right:1px solid var(--line-strong); cursor:pointer; color:var(--ink-2); }
+.seg button:last-child { border-right:0; }
+.seg button[aria-pressed="true"] { background:var(--accent); color:var(--on-accent); }
+.btn { display:inline-flex; align-items:center; justify-content:center; border-radius:var(--r-md); padding:10px var(--s4); font-size:var(--t-body); font-weight:500; cursor:pointer; border:1px solid transparent; background:transparent; }
+.btn--primary { background:var(--accent); color:var(--on-accent); }
+.btn--secondary { border-color:var(--line-strong); }
+.btn--quiet { color:var(--ink-2); }
+.btn--full { width:100%; }
+.field { display:grid; gap:var(--s1); }
+.field label { font-size:var(--t-small); color:var(--ink-2); }
+.field input { font:inherit; color:var(--ink); background:var(--surface); border:1px solid var(--line-strong); border-radius:var(--r-md); padding:9px var(--s3); width:100%; }
+.help { font-size:var(--t-caption); color:var(--ink-3); }
+
+/* smoking timing strip */
+.strip { display:grid; grid-template-columns:repeat(3,1fr); gap:var(--s2); }
+.strip figure { margin:0; display:grid; gap:var(--s1); }
+.strip .bars { height:40px; background:var(--surface-sunk); border-radius:var(--r-sm); display:flex; align-items:flex-end; padding:2px; gap:2px; }
+.strip .bars i { flex:1; background:var(--load); border-radius:2px; display:block; }
+.strip figcaption { font-size:var(--t-caption); color:var(--ink-3); text-align:center; }
+
+/* recipe */
+.ing { display:flex; align-items:baseline; gap:var(--s2); padding:var(--s2) var(--s3); border-bottom:1px solid var(--line); font-size:var(--t-small); }
+.ing:last-child { border-bottom:0; }
+.ing span:last-child { margin-left:auto; color:var(--ink-3); font-variant-numeric:tabular-nums; }
+
+/* comparison + copy tables */
+.voice { display:grid; grid-template-columns:1fr 1fr; border:1px solid var(--line); border-radius:var(--r-md); overflow:hidden; }
+.voice > div { padding:var(--s3) var(--s4); border-bottom:1px solid var(--line); font-size:var(--t-small); }
+.voice > div:nth-child(odd) { border-right:1px solid var(--line); }
+.voice .no { color:var(--ink-3); }
+.voice__h { font-weight:500; background:var(--surface-sunk); color:var(--ink-2)!important; }
+
+.rule { display:grid; grid-template-columns:22px 1fr; gap:var(--s2) var(--s3); font-size:var(--t-small); }
+.rule dt { color:var(--ink-3); }
+.rule dd { margin:0; color:var(--ink-2); }
+.rule dd b { color:var(--ink); font-weight:500; }
+
+footer { margin-top:var(--s9); padding:var(--s6) 0 var(--s8); border-top:1px solid var(--line); color:var(--ink-3); font-size:var(--t-small); }
+@media (prefers-reduced-motion:reduce){ *{transition-duration:.01ms!important} }
+</style>
+</head>
+<body>
+
+<div class="topbar">
+  <div class="topbar__in">
+    <div class="wordmark">bro. <span>intake proposal</span></div>
+    <button class="themetoggle" id="themeBtn" aria-pressed="false">Dark</button>
+  </div>
+</div>
+
+<div class="wrap">
+
+  <section style="padding-top:var(--s8)">
+    <h1 style="font-size:var(--t-h1); max-width:22ch">Rough numbers, honestly held.</h1>
+    <p class="lede" style="margin-top:var(--s4)">
+      MyFitnessPal loses men three ways: judgement (red numbers, budgets,
+      streaks), friction (searching four million junk entries to log a
+      sandwich), and fake precision (1,487 kcal presented as truth). bro wins
+      by inverting all three — a personal library that makes logging one tap,
+      totals stated as honest ranges against your own usual, and the three
+      substances every other tracker ignores treated as first-class facts:
+      alcohol, caffeine, and smoking.
+    </p>
+  </section>
+
+  <!-- ============ FIVE BETS ============ -->
+  <section>
+    <div class="sec-head"><h2>The five bets</h2><p>What "miles better" actually means</p></div>
+    <div class="grid2">
+      <div class="p">
+        <h4>1 — Your library beats their database</h4>
+        <p>A man eats and drinks the same ~40 things for 90% of his logging. bro is
+          built around his library, not a global database: recents are one tap,
+          portions remember themselves, and the search field is the fallback, not
+          the front door.</p>
+      </div>
+      <div class="p">
+        <h4>2 — Rough is honest, precise is fake</h4>
+        <p>Nobody weighs a pub lunch. bro accepts "about 600 kcal" as a legitimate
+          entry and carries the uncertainty through: the day's total renders as a
+          soft range on the gauge, not a false-precision integer. No other tracker
+          tells the truth about what it knows.</p>
+      </div>
+      <div class="p">
+        <h4>3 — Usual, not goal</h4>
+        <p>Every total reads against the user's own usual band, exactly like sleep
+          and heart rate. No budget, no remaining, no red. "Roughly 1,850 so far;
+          your days usually land 2,100–2,600" is information. "613 remaining" is a
+          verdict.</p>
+      </div>
+      <div class="p">
+        <h4>4 — Substances are first-class</h4>
+        <p>Alcohol in units, caffeine in milligrams with timing, cigarettes as
+          counts with timing and cost. MFP treats these as awkward foods; for many
+          men they're the whole reason to track. And they're what connects intake
+          to the rest of bro — sleep, mood, heart rate.</p>
+      </div>
+      <div class="p">
+        <h4>5 — Intake earns its keep by connecting</h4>
+        <p>The payoff for logging isn't a pie chart, it's pattern: "On days with
+          three or more drinks, your sleep has averaged 55 minutes shorter."
+          Observed, past-tense, never prescriptive. This is the moat — MFP has no
+          sleep, no mood, no wheel to connect to.</p>
+      </div>
+      <div class="p">
+        <h4>Never — the coupling that hurts people</h4>
+        <p>bro never shows "calories remaining", never suggests compensating, and
+          never couples intake to exercise as earning or burning off. That coupling
+          is MFP's core mechanic and it is exactly the arithmetic of disordered
+          eating. Refusing it is a feature.</p>
+      </div>
+    </div>
+  </section>
+
+  <!-- ============ MOCKS ============ -->
+  <section>
+    <div class="sec-head"><h2>The screens</h2><p>Four mocks</p></div>
+
+    <div class="mockgrid">
+
+      <!-- DAY VIEW -->
+      <div class="mockcell">
+        <h3>Intake, redesigned</h3>
+        <div class="phone">
+          <div class="phone__top"><h5>Intake</h5><span>Thu 3 Sep</span></div>
+          <div class="phone__body">
+
+            <div class="gauge">
+              <div class="gauge__label">Energy <span>so far today</span></div>
+              <div class="gauge__value"><b class="num">~1,850 <i>kcal</i></b></div>
+              <div class="gauge__rail">
+                <div class="gauge__ticks"></div>
+                <div class="gauge__band" style="left:65.6%; width:15.6%"></div>
+                <div class="gauge__fuzz" style="left:53.1%; width:8.2%"></div>
+                <div class="gauge__marker" style="left:57.8%"></div>
+              </div>
+              <div class="gauge__scale"><span>0</span><span>3,200</span></div>
+              <p class="gauge__read">Your days usually land between <em>2,100 and 2,600</em>.</p>
+            </div>
+
+            <div class="gauge gauge--load">
+              <div class="gauge__label">Alcohol <span>so far today</span></div>
+              <div class="gauge__value"><b class="num">2.6 <i>units</i></b></div>
+              <div class="gauge__rail">
+                <div class="gauge__ticks"></div>
+                <div class="gauge__band" style="left:25%; width:37.5%"></div>
+                <div class="gauge__marker" style="left:32.5%"></div>
+              </div>
+              <div class="gauge__scale"><span>0</span><span>8</span></div>
+              <p class="gauge__read">Most of your days: none. Drinking days usually land <em>2–5</em>.</p>
+            </div>
+
+            <div class="gauge">
+              <div class="gauge__label">Caffeine <span>last at 14:10</span></div>
+              <div class="gauge__value"><b class="num">180 <i>mg</i></b></div>
+              <div class="gauge__rail">
+                <div class="gauge__ticks"></div>
+                <div class="gauge__band" style="left:30%; width:35%"></div>
+                <div class="gauge__marker" style="left:45%"></div>
+              </div>
+              <div class="gauge__scale"><span>0</span><span>400</span></div>
+            </div>
+
+            <button class="btn btn--primary btn--full">Log something</button>
+
+            <div class="panel">
+              <div class="panel__head"><h6>Today</h6><span>5 entries</span></div>
+              <div class="rows">
+                <div class="row"><time>07:40</time><span class="row__main"><span class="row__name">Porridge with banana</span></span><span class="row__val">~420 kcal</span></div>
+                <div class="row"><time>07:40</time><span class="row__main"><span class="row__name">Filter coffee</span></span><span class="row__val">90 mg</span></div>
+                <div class="row"><time>13:05</time><span class="row__main"><span class="row__name">Chilli</span><span class="row__meta">1 pot · from your recipe</span></span><span class="row__val">610 kcal</span></div>
+                <div class="row"><time>14:10</time><span class="row__main"><span class="row__name">Filter coffee</span></span><span class="row__val">90 mg</span></div>
+                <div class="row"><time>18:17</time><span class="row__main"><span class="row__name">Lager, 4.5%</span><span class="row__meta">2 × pint</span></span><span class="row__val">2.6 u · ~360 kcal</span></div>
+              </div>
+            </div>
+
+          </div>
+        </div>
+        <p class="note">One gauge per tracked total, each against the user's own band —
+          the energy marker carries a soft range because two entries today were rough.
+          Entries are hairline rows on a timeline, not stacked cards, and repeat drinks
+          group into one line ("2 × pint") instead of duplicating. No meal slots: men
+          who graze or work shifts just log when it happened.</p>
+      </div>
+
+      <!-- LOGGER -->
+      <div class="mockcell">
+        <h3>The ten-second log</h3>
+        <div class="phone">
+          <div class="phone__top"><h5>Log</h5><span>18:39</span></div>
+          <div class="phone__body">
+            <div class="search">⌕&nbsp; What did you have?</div>
+
+            <div>
+              <p class="help" style="margin-bottom:var(--s2)">Usually around now</p>
+              <div class="quick">
+                <button><b>Lager</b> <span>· pint</span></button>
+                <button><b>Cider</b> <span>· pint</span></button>
+                <button><b>Crisps</b> <span>· bag</span></button>
+              </div>
+            </div>
+
+            <div class="panel">
+              <div class="panel__head"><h6>Lager, 4.5%</h6><span>pint · 2.6 units each</span></div>
+              <div style="padding:var(--s4); display:grid; gap:var(--s4)">
+                <div class="stepper">
+                  <button aria-label="One fewer">−</button>
+                  <b class="num">1 pint</b>
+                  <button aria-label="One more">+</button>
+                  <span style="font-size:var(--t-caption); color:var(--ink-3)">½ · 1 · 2 · custom</span>
+                </div>
+                <div class="field">
+                  <label>When</label>
+                  <div class="seg" role="group" aria-label="When">
+                    <button aria-pressed="true">Now</button>
+                    <button aria-pressed="false">Earlier</button>
+                  </div>
+                </div>
+                <button class="btn btn--primary btn--full">Log it</button>
+              </div>
+            </div>
+
+            <div class="panel">
+              <div class="panel__head"><h6>Or log it rough</h6></div>
+              <div style="padding:var(--s4); display:grid; gap:var(--s3)">
+                <div class="field">
+                  <input value="Big pub lunch, about 600 kcal">
+                  <span class="help">A rough entry is a real entry. You can tighten it later or never.</span>
+                </div>
+                <button class="btn btn--secondary btn--full">Log roughly</button>
+              </div>
+            </div>
+          </div>
+        </div>
+        <p class="note">Recents surface by time of day — at 18:39 his evening things come
+          first. One tap on a chip logs it at the remembered portion; the sheet only opens
+          when he wants to change something. The rough entry is the pressure valve that
+          keeps the habit alive on days he can't be bothered — which is exactly the day
+          MFP loses people.</p>
+      </div>
+
+      <!-- SMOKING -->
+      <div class="mockcell">
+        <h3>Smoking, without the sermon</h3>
+        <div class="phone">
+          <div class="phone__top"><h5>Smoking</h5><span>Thu 3 Sep</span></div>
+          <div class="phone__body">
+
+            <div class="gauge gauge--load">
+              <div class="gauge__label">This week <span>last: Tue 14:20</span></div>
+              <div class="gauge__value"><b class="num">12</b></div>
+              <div class="gauge__rail">
+                <div class="gauge__ticks"></div>
+                <div class="gauge__band" style="left:45%; width:30%"></div>
+                <div class="gauge__marker" style="left:30%"></div>
+              </div>
+              <div class="gauge__scale"><span>0</span><span>40</span></div>
+              <p class="gauge__read">Recent weeks have landed <em>18–30</em>. Last week: 19.</p>
+            </div>
+
+            <div>
+              <p class="help" style="margin-bottom:var(--s2)">When they happen</p>
+              <div class="strip">
+                <figure><div class="bars"><i style="height:20%"></i><i style="height:10%"></i><i style="height:15%"></i></div><figcaption>Morning</figcaption></figure>
+                <figure><div class="bars"><i style="height:55%"></i><i style="height:70%"></i><i style="height:60%"></i></div><figcaption>Afternoon</figcaption></figure>
+                <figure><div class="bars"><i style="height:90%"></i><i style="height:75%"></i><i style="height:85%"></i></div><figcaption>Evening</figcaption></figure>
+              </div>
+            </div>
+
+            <div class="panel">
+              <div class="panel__head"><h6>Your intention</h6><span>set by you, 12 Aug</span></div>
+              <div style="padding:var(--s3) var(--s4) var(--s4)">
+                <p style="font-family:var(--serif); font-size:var(--t-lead); line-height:1.5">"Cutting down."</p>
+                <p class="help" style="margin-top:var(--s2)">Since then: averaging 2 a day, from 3. Spend this week: £9.40.</p>
+              </div>
+            </div>
+
+            <button class="btn btn--secondary btn--full">Log one</button>
+            <button class="btn btn--quiet" style="justify-self:center">Support for stopping</button>
+          </div>
+        </div>
+        <p class="note">Counts, timing, and cost — stated flat. The intention is the
+          user's own words, and the app only ever reports facts against it, in the same
+          voice whether the number went down or up. No smoke-free streak: a streak makes
+          the first lapse feel like losing everything, which is when quit apps get
+          deleted. "Support for stopping" routes to real services (NHS), it doesn't
+          open a pep talk.</p>
+      </div>
+
+      <!-- RECIPES -->
+      <div class="mockcell">
+        <h3>Recipes: cook once, log all week</h3>
+        <div class="phone">
+          <div class="phone__top"><h5>Chilli</h5><span>your recipe</span></div>
+          <div class="phone__body">
+            <div class="field">
+              <label>Makes</label>
+              <div class="stepper">
+                <button aria-label="One fewer">−</button>
+                <b class="num">4 pots</b>
+                <button aria-label="One more">+</button>
+              </div>
+              <span class="help">Change it and every pot recalculates.</span>
+            </div>
+
+            <div class="panel">
+              <div class="panel__head"><h6>In the pan</h6><span>from your library</span></div>
+              <div>
+                <div class="ing"><span>Beef mince, 5%</span><span class="num">500 g</span></div>
+                <div class="ing"><span>Kidney beans</span><span class="num">2 tins</span></div>
+                <div class="ing"><span>Chopped tomatoes</span><span class="num">2 tins</span></div>
+                <div class="ing"><span>Rice, dry</span><span class="num">300 g</span></div>
+                <div class="ing"><span>Olive oil</span><span class="num">~2 tbsp</span></div>
+              </div>
+            </div>
+
+            <div class="gauge">
+              <div class="gauge__label">Per pot</div>
+              <div class="gauge__value"><b class="num">~610 <i>kcal · 41 g protein</i></b></div>
+              <p class="gauge__read">One rough ingredient, so the pot is rough too.</p>
+            </div>
+
+            <button class="btn btn--primary btn--full">Log 1 pot</button>
+          </div>
+        </div>
+        <p class="note">Ingredients come from his library, so building a recipe is
+          picking, not typing. The maths is per-pot automatically, uncertainty
+          propagates honestly ("~2 tbsp" makes the pot "~610"), and once saved the
+          whole thing is a one-tap log from recents. This is the workflow MFP buries
+          under four screens of per-gram data entry.</p>
+      </div>
+
+    </div>
+  </section>
+
+  <!-- ============ HEAD TO HEAD ============ -->
+  <section>
+    <div class="sec-head"><h2>Head to head</h2><p>The same moment, both apps</p></div>
+    <div class="voice">
+      <div class="voice__h">bro</div>
+      <div class="voice__h">MyFitnessPal</div>
+      <div>Roughly 1,850 so far. Your days usually land 2,100–2,600.</div>
+      <div class="no">613 calories remaining</div>
+      <div>Entry logged.</div>
+      <div class="no">You're over your sugar goal! 🔴</div>
+      <div>Lager, 4.5% · pint — one tap from recents.</div>
+      <div class="no">Search: 4,208 results for "lager"</div>
+      <div>Big pub lunch, about 600 kcal.</div>
+      <div class="no">Add food → search → select serving → confirm grams</div>
+      <div>No entries yesterday.</div>
+      <div class="no">Your 47-day streak has ended</div>
+      <div>On days with 3+ drinks, your sleep has averaged 55 minutes shorter.</div>
+      <div class="no">Complete your diary to see insights (Premium)</div>
+    </div>
+  </section>
+
+  <!-- ============ POLISH ON CURRENT BUILD ============ -->
+  <section>
+    <div class="sec-head"><h2>Notes on the current build</h2><p>From your screenshots — quick wins</p></div>
+    <div class="grid2">
+      <dl class="rule">
+        <dt>1</dt><dd><b>Rows, not stacked cards.</b> "Logged today" and "Browse" render each entry as its own bordered card; the system puts list items in one panel as hairline rows. Halves the visual weight instantly.</dd>
+        <dt>2</dt><dd><b>Group repeats.</b> Two separate "Lager, 1 × pint, 18:17" cards should be one row: "Lager, 4.5% — 2 × pint · 18:17". Logging the same thing twice must never look like a data error.</dd>
+        <dt>3</dt><dd><b>Drop the FAB.</b> It duplicates "Log something" and overlaps the library card. One clear primary action per screen.</dd>
+      </dl>
+      <dl class="rule">
+        <dt>4</dt><dd><b>Human dates.</b> "2026-09-03" is a machine format; the header should read "Thursday 3 September" with the ISO form nowhere in UI.</dd>
+        <dt>5</dt><dd><b>Keep what's right.</b> "Totals are stated without targets, allowances, or ratings", the free-text portion field, and "Enter at least one value" are all exactly on-system — carry them into the new screens untouched.</dd>
+        <dt>6</dt><dd><b>New-item form gains a unit picker.</b> Alongside portion: per-100g / per-portion toggle, and for drinks an ABV field so units compute themselves. Still nothing required beyond a name.</dd>
+      </dl>
+    </div>
+  </section>
+
+  <!-- ============ SENSITIVE DEFAULTS ============ -->
+  <section>
+    <div class="sec-head"><h2>Lines that don't move</h2><p>Where trackers do harm</p></div>
+    <div class="grid2">
+      <div class="p">
+        <h4>No remaining, no earning</h4>
+        <p>Never "calories remaining", never "you've earned", never exercise offsetting
+          intake, never a suggestion to compensate for what was logged. If a user asks
+          for a hard daily limit, that's a target — and targets stay out of bro.</p>
+      </div>
+      <div class="p">
+        <h4>Guidelines are context, opt-in</h4>
+        <p>NHS unit guidance and reference intakes live behind the same setting as
+          population ranges, rendered as a caption, never a coloured zone. A sustained
+          pattern that's clinically meaningful is the alert component's job — once,
+          factual, with a route to a GP.</p>
+      </div>
+      <div class="p">
+        <h4>Rough entries stay respectable</h4>
+        <p>The app never nags a rough entry into a precise one. "You can tighten it
+          later or never" is a promise: precision is offered, never demanded. Demanding
+          precision is how tracking tips into obsession.</p>
+      </div>
+      <div class="p">
+        <h4>Pattern lines are observations</h4>
+        <p>Cross-domain lines always read past-tense and owned by the data — "has
+          averaged", "has tended to" — and never convert into advice. The user draws
+          the conclusion; the app holds the ledger.</p>
+      </div>
+    </div>
+  </section>
+
+  <footer>Proposal: intake v2 for bro — personal-library-first logging, honest uncertainty, totals against your usual, alcohol/caffeine/smoking as first-class facts, recipes from your library. Companion DESIGN.md block ships alongside.</footer>
+</div>
+
+<script>
+  const root = document.documentElement;
+  const btn = document.getElementById('themeBtn');
+  btn.addEventListener('click', () => {
+    const dark = root.getAttribute('data-theme') === 'dark';
+    root.setAttribute('data-theme', dark ? 'light' : 'dark');
+    btn.textContent = dark ? 'Dark' : 'Light';
+    btn.setAttribute('aria-pressed', String(!dark));
+  });
+</script>
+</body>
+</html>
