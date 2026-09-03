@@ -1,0 +1,633 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="dark">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Helm — a native design language</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Instrument+Sans:wght@400;500;600;700&family=Instrument+Serif:ital@0;1&family=Geist+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+:root {
+  /* ---- Helm: dark-first, luminous data on deep slate ---- */
+  --base:#0B0F14; --s1:#121820; --s2:#1A222C; --s3:#232D39;
+  --hair:rgba(255,255,255,.08); --hair-2:rgba(255,255,255,.14);
+  --ink:#E8ECF0; --ink-2:#9AA6B2; --ink-3:#5F6B77;
+  --mind:#7FB3D5; --body:#8FBF8A; --sleep:#A99BE0; --load:#E0B45A; --alert:#E07A6A;
+  --accent-h:212; --accent-c:0.12;
+  --accent: oklch(74% var(--accent-c) var(--accent-h));
+  --accent-deep: oklch(40% calc(var(--accent-c)*.8) var(--accent-h));
+  --on-accent: oklch(16% .04 var(--accent-h));
+  --glass: rgba(26,34,44,.72);
+  --sans:'Instrument Sans',-apple-system,BlinkMacSystemFont,'SF Pro Text',sans-serif;
+  --serif:'Instrument Serif',Georgia,serif;
+  --mono:'Geist Mono','JetBrains Mono',ui-monospace,'SF Mono',monospace;
+  --r-sm:6px; --r-md:12px; --r-lg:20px; --r-xl:28px;
+}
+[data-theme="light"] {
+  --base:#EEF1F4; --s1:#F7F8FA; --s2:#FFFFFF; --s3:#E3E8ED;
+  --hair:rgba(10,20,30,.08); --hair-2:rgba(10,20,30,.14);
+  --ink:#12181F; --ink-2:#4F5B67; --ink-3:#8B96A1;
+  --mind:#3F7CA3; --body:#4E8B55; --sleep:#6E5FB8; --load:#A8791E; --alert:#B8483B;
+  --accent: oklch(50% var(--accent-c) var(--accent-h));
+  --accent-deep: oklch(88% calc(var(--accent-c)*.5) var(--accent-h));
+  --on-accent: oklch(98% .02 var(--accent-h));
+  --glass: rgba(255,255,255,.72);
+}
+* { box-sizing:border-box; }
+body { margin:0; background:var(--base); color:var(--ink); font-family:var(--sans); font-size:15px; line-height:1.5; -webkit-font-smoothing:antialiased; }
+h1,h2,h3,h4,h5 { margin:0; font-weight:600; letter-spacing:-.02em; line-height:1.12; }
+p { margin:0; }
+button { font:inherit; color:inherit; }
+.mono { font-family:var(--mono); font-variant-numeric:tabular-nums; }
+.wrap { max-width:1100px; margin:0 auto; padding:0 24px; }
+
+.topbar { position:sticky; top:0; z-index:20; background:color-mix(in srgb,var(--base) 80%,transparent); backdrop-filter:blur(14px); border-bottom:1px solid var(--hair); }
+.topbar__in { max-width:1100px; margin:0 auto; padding:12px 24px; display:flex; align-items:center; gap:16px; }
+.wordmark { font-weight:700; letter-spacing:-.03em; font-size:17px; }
+.wordmark span { color:var(--ink-3); font-weight:400; }
+.pill { border:1px solid var(--hair-2); background:transparent; border-radius:999px; padding:6px 12px; font-size:13px; cursor:pointer; color:var(--ink-2); }
+.swatchrow { display:flex; gap:8px; margin-left:auto; }
+.swatchrow button { width:18px; height:18px; border-radius:50%; padding:0; cursor:pointer; border:1px solid var(--hair-2); background:oklch(74% .12 var(--sh)); position:relative; }
+[data-theme="light"] .swatchrow button { background:oklch(50% .12 var(--sh)); }
+.swatchrow button[aria-pressed="true"]::after { content:""; position:absolute; inset:-4px; border:1px solid var(--ink-3); border-radius:50%; }
+
+section { padding:96px 0 0; }
+.sec-head { display:flex; align-items:baseline; gap:12px; margin-bottom:28px; padding-bottom:12px; border-bottom:1px solid var(--hair); }
+.sec-head h2 { font-size:28px; }
+.sec-head p { color:var(--ink-3); font-size:13px; margin-left:auto; }
+.note { color:var(--ink-2); font-size:14px; max-width:64ch; }
+.lede { font-family:var(--serif); font-size:22px; line-height:1.4; color:var(--ink-2); max-width:44ch; }
+.lede i { color:var(--ink); }
+.grid2 { display:grid; grid-template-columns:1fr 1fr; gap:24px 48px; }
+.grid3 { display:grid; grid-template-columns:repeat(3,1fr); gap:24px; }
+@media (max-width:820px){ .grid2,.grid3 { grid-template-columns:1fr; } }
+.p h4 { font-size:15px; margin-bottom:4px; }
+.p p { color:var(--ink-2); font-size:14px; max-width:48ch; }
+.p .src { font-size:12px; color:var(--ink-3); margin-top:6px; }
+.p .src a { color:var(--ink-3); }
+
+.card { background:var(--s1); border:1px solid var(--hair); border-radius:var(--r-lg); padding:24px; }
+.card--flat { background:transparent; }
+
+/* diagnosis table */
+.cmp { display:grid; grid-template-columns:1fr 1fr; border:1px solid var(--hair); border-radius:var(--r-md); overflow:hidden; }
+.cmp > div { padding:12px 16px; border-bottom:1px solid var(--hair); font-size:14px; }
+.cmp > div:nth-child(odd) { border-right:1px solid var(--hair); color:var(--ink-3); }
+.cmp__h { font-weight:500; background:var(--s2); color:var(--ink-2)!important; }
+
+/* ---- phones ---- */
+.mocks { display:grid; grid-template-columns:repeat(3, minmax(0, 340px)); gap:40px; justify-content:start; align-items:start; }
+@media (max-width:1060px){ .mocks { grid-template-columns:repeat(2, minmax(0,340px)); } }
+@media (max-width:720px){ .mocks { grid-template-columns:1fr; } }
+.mockcell { display:grid; gap:14px; }
+.mockcell h3 { font-size:19px; }
+.phone { position:relative; border-radius:44px; background:var(--base); border:1px solid var(--hair-2); padding:14px; box-shadow:0 30px 60px -30px rgba(0,0,0,.6); overflow:hidden; min-height:700px; display:flex; flex-direction:column; }
+.status { display:flex; justify-content:space-between; font-size:12px; color:var(--ink-2); padding:6px 14px 0; font-weight:500; }
+.lt { padding:18px 8px 6px; }
+.lt small { display:block; font-size:13px; color:var(--ink-3); font-weight:500; letter-spacing:.01em; }
+.lt h5 { font-size:32px; font-weight:700; letter-spacing:-.03em; }
+.pb { display:grid; gap:14px; padding:0 4px; flex:1; align-content:start; }
+
+/* dial */
+.dial { position:relative; display:grid; place-items:center; }
+.dial svg { width:100%; height:auto; display:block; }
+.dial__center { position:absolute; inset:0; display:grid; place-items:center; text-align:center; pointer-events:none; }
+.dial__v { font-family:var(--mono); font-weight:600; font-size:44px; letter-spacing:-.04em; line-height:1; }
+.dial__v small { font-size:16px; font-weight:500; color:var(--ink-3); letter-spacing:0; margin-left:2px; }
+.dial__l { font-size:13px; color:var(--ink-2); margin-top:6px; }
+.dial--mini .dial__v { font-size:20px; }
+.dial--mini .dial__v small { font-size:11px; }
+.dial--mini .dial__l { font-size:11px; margin-top:2px; }
+.minis { display:grid; grid-template-columns:repeat(3,1fr); gap:10px; }
+.minis .card { padding:10px 6px 8px; border-radius:var(--r-md); }
+.read { font-size:13px; color:var(--ink-2); text-align:center; }
+.read em { font-style:normal; color:var(--ink); }
+
+/* heading card */
+.hd { display:grid; gap:10px; }
+.hd__top { display:flex; align-items:baseline; gap:8px; }
+.hd__top h6 { margin:0; font-size:13px; color:var(--ink-3); font-weight:500; }
+.hd__top span { margin-left:auto; font-size:12px; color:var(--ink-3); }
+.hd__q { font-family:var(--serif); font-size:20px; line-height:1.25; }
+.hd__q i { color:var(--ink-2); }
+.terrain svg { width:100%; height:auto; display:block; }
+.hd__meta { display:flex; font-size:12px; color:var(--ink-3); gap:12px; }
+.hd__meta b { color:var(--ink); font-family:var(--mono); font-weight:500; }
+
+/* list */
+.list { background:var(--s1); border:1px solid var(--hair); border-radius:var(--r-lg); overflow:hidden; }
+.li { display:flex; align-items:center; gap:12px; padding:12px 14px; border-bottom:1px solid var(--hair); }
+.li:last-child { border-bottom:0; }
+.li .ic { width:32px; height:32px; border-radius:10px; display:grid; place-items:center; font-size:14px; flex:none; }
+.li .t { font-size:14px; }
+.li .m { font-size:12px; color:var(--ink-3); }
+.li .v { margin-left:auto; font-family:var(--mono); font-size:13px; color:var(--ink-2); }
+
+/* tab bar (glass) */
+.tab { margin:auto -14px -14px; padding:10px 18px 22px; display:grid; grid-template-columns:repeat(4,1fr); font-size:11px; text-align:center; color:var(--ink-3); background:var(--glass); backdrop-filter:blur(18px); border-top:1px solid var(--hair); }
+.tab b { color:var(--accent); font-weight:600; display:block; }
+.tab i { display:block; width:22px; height:22px; margin:0 auto 4px; border-radius:7px; background:currentColor; opacity:.35; }
+.tab b i { opacity:1; }
+
+/* sheet */
+.sheet { position:absolute; left:8px; right:8px; bottom:8px; border-radius:var(--r-xl); background:var(--glass); backdrop-filter:blur(24px); border:1px solid var(--hair-2); padding:12px 16px 20px; display:grid; gap:14px; box-shadow:0 -20px 60px rgba(0,0,0,.45); }
+.grab { width:36px; height:4px; border-radius:2px; background:var(--hair-2); margin:0 auto 4px; }
+.chips { display:flex; gap:8px; overflow:hidden; }
+.chip { flex:none; display:flex; align-items:center; gap:8px; padding:8px 12px; border-radius:999px; background:var(--s2); border:1px solid var(--hair); font-size:13px; }
+.chip i { width:18px; height:18px; border-radius:6px; display:block; }
+.chip.on { background:var(--accent); color:var(--on-accent); border-color:transparent; }
+.stepper { display:flex; align-items:center; justify-content:center; gap:20px; }
+.stepper button { width:52px; height:52px; border-radius:16px; background:var(--s2); border:1px solid var(--hair); font-size:24px; cursor:pointer; }
+.stepper b { font-family:var(--mono); font-size:34px; font-weight:600; letter-spacing:-.03em; min-width:110px; text-align:center; }
+.stepper b small { font-size:14px; color:var(--ink-3); font-weight:500; margin-left:4px; }
+.btn { display:inline-flex; align-items:center; justify-content:center; border-radius:14px; padding:14px 18px; font-size:16px; font-weight:600; cursor:pointer; border:0; }
+.btn--primary { background:var(--accent); color:var(--on-accent); }
+.btn--full { width:100%; }
+.dim { position:absolute; inset:0; background:rgba(0,0,0,.35); }
+
+/* mannequin dark */
+.figure { display:block; width:100%; height:auto; }
+.figure .mannequin { stroke:var(--s3); }
+.figure .tape { stroke:var(--ink-3); stroke-width:1.2; stroke-dasharray:4 4; }
+.figure .on .tape { stroke:var(--body); stroke-width:2; stroke-dasharray:none; filter:drop-shadow(0 0 6px color-mix(in srgb,var(--body) 60%,transparent)); }
+.figure .lbl { font-family:var(--sans); font-size:12px; fill:var(--ink-3); }
+.figure .on .lbl { fill:var(--body); font-weight:600; }
+.figure .val { font-family:var(--mono); font-size:11px; fill:var(--ink-2); }
+.figure .on .val { fill:var(--ink); }
+
+/* naming */
+.names { display:grid; grid-template-columns:repeat(3,1fr); gap:16px; }
+@media (max-width:820px){ .names { grid-template-columns:1fr 1fr; } }
+.name { background:var(--s1); border:1px solid var(--hair); border-radius:var(--r-lg); padding:22px 20px; display:grid; gap:8px; }
+.name .nm { font-size:34px; font-weight:700; letter-spacing:-.04em; line-height:1; }
+.name .nm i { font-style:normal; color:var(--accent); }
+.name .why { font-size:13px; color:var(--ink-2); }
+.name .risk { font-size:12px; color:var(--ink-3); }
+.name--rec { border-color:var(--accent); }
+.tag { display:inline-block; font-size:11px; padding:2px 8px; border-radius:999px; background:var(--accent-deep); color:var(--ink); }
+
+/* type specimen */
+.spec { display:grid; grid-template-columns:120px 1fr; gap:14px 24px; align-items:baseline; }
+.spec dt { font-size:12px; color:var(--ink-3); font-family:var(--mono); }
+.spec dd { margin:0; }
+
+.sw { display:grid; grid-template-columns:repeat(6,1fr); gap:10px; }
+@media (max-width:820px){ .sw { grid-template-columns:repeat(3,1fr); } }
+.sw div { border-radius:var(--r-md); padding:14px 12px; font-size:12px; min-height:84px; display:grid; align-content:end; }
+.sw div b { display:block; font-family:var(--mono); font-weight:500; font-size:11px; opacity:.8; }
+
+footer { margin-top:96px; padding:32px 0 64px; border-top:1px solid var(--hair); color:var(--ink-3); font-size:13px; }
+@media (prefers-reduced-motion:reduce){ *{animation:none!important; transition:none!important} }
+</style>
+</head>
+<body>
+
+<div class="topbar">
+  <div class="topbar__in">
+    <div class="wordmark">helm <span>design language · proposal</span></div>
+    <div class="swatchrow accents" role="group" aria-label="Accent"></div>
+    <button class="pill" id="themeBtn">Light</button>
+  </div>
+</div>
+
+<div class="wrap">
+
+  <section style="padding-top:64px">
+    <h1 style="font-size:44px; max-width:20ch">The bridge at night.</h1>
+    <p class="lede" style="margin-top:16px">
+      A ship's bridge after dark: dim surfaces, luminous instruments, a chart
+      table, and one man who has decided where he's going. <i>Helm</i> is a
+      design language for men who want control of their own numbers — dark-first,
+      built from native materials, and visual enough that a glance tells the whole
+      story.
+    </p>
+  </section>
+
+  <!-- ============ DIAGNOSIS ============ -->
+  <section>
+    <div class="sec-head"><h2>Why the current build feels like a website</h2><p>Including where I sent you wrong</p></div>
+    <p class="note" style="margin-bottom:24px">
+      The Baseline system I wrote said "lines before shadows" and "the interface
+      should read as printed". That is a page philosophy. On a phone it produces
+      bordered cards, form-shaped screens, full-width buttons and static headers —
+      which is exactly what your screenshots show. Native apps are built from
+      materials, depth, motion and gesture, not from hairlines on paper.
+    </p>
+    <div class="cmp">
+      <div class="cmp__h">Web-grounded (current)</div>
+      <div class="cmp__h">Native-grounded (Helm)</div>
+      <div>Bordered card per list item</div>
+      <div>Inset grouped lists with one surface, swipe actions on rows</div>
+      <div>Static page header with back arrow</div>
+      <div>Large title that collapses on scroll into a glass bar</div>
+      <div>New screen for every action</div>
+      <div>Bottom sheets that keep context underneath</div>
+      <div>Full-width primary button mid-page, plus a floating FAB</div>
+      <div>One action, pinned to the bottom edge above the tab bar</div>
+      <div>Numbers in body text</div>
+      <div>One hero instrument per screen, drawn large, with glow</div>
+      <div>No motion</div>
+      <div>Needles sweep in, numbers tick up, haptics confirm a log</div>
+      <div>Same layout in light and dark</div>
+      <div>Dark by default; light is a deliberate day-mode</div>
+      <div>Hand-rolled controls</div>
+      <div>Platform components: Liquid Glass on iOS 27, Material 3 Expressive on Android</div>
+    </div>
+  </section>
+
+  <!-- ============ LANDSCAPE ============ -->
+  <section>
+    <div class="sec-head"><h2>What the best apps are doing</h2><p>September 2026</p></div>
+    <div class="grid2">
+      <div class="p">
+        <h4>WHOOP — one number, then depth</h4>
+        <p>Dark UI, a single Recovery score for the morning ritual, trend charts one
+          tap deeper, and full detail only on request. Designed by an information
+          designer (Bureau Oberhaeuser), and it shows: dense data that feels simple.
+          The weakness is the green–yellow–red verdict layer.</p>
+        <p class="src">925studios design breakdown; liveworksleep 2026 feature review</p>
+      </div>
+      <div class="p">
+        <h4>Oura — polish and the long view</h4>
+        <p>The benchmark for a refined single-metric experience (Readiness) and for
+          long-term trend views. Membership-gated insight layer; Ring 5 launched for
+          preorder May 2026.</p>
+        <p class="src">askvora Oura vs Ultrahuman 2026; superage Bevel alternatives</p>
+      </div>
+      <div class="p">
+        <h4>Bevel — the aggregator men actually praise for UI</h4>
+        <p>Grew from an Apple Health dashboard into recovery, sleep, strain,
+          nutrition and biological age; core tracking went free in 2026 with a
+          $14.99/mo Pro. Reviewers who've used Athlytic and Gentler Streak call its
+          UI the best of the set.</p>
+        <p class="src">Neura Health review; justuseapp reviews</p>
+      </div>
+      <div class="p">
+        <h4>MacroFactor — logging speed as a measured metric</h4>
+        <p>Publishes a "Food Logging Speed Index": 24 actions across common
+          workflows vs Cronometer's 40. Adaptive targets from weight trend. Won Google
+          Play's "Best Everyday Essential". Lesson: count the taps, publicly.</p>
+        <p class="src">macrofactor.com comparisons, 2026</p>
+      </div>
+      <div class="p">
+        <h4>Cal AI and the photo-first wave</h4>
+        <p>Photograph the meal, get an estimate. Attracts a younger audience by
+          removing database search entirely; accuracy depends on AI portion guesses.
+          Lesson: the input method is now the product.</p>
+        <p class="src">Welling comparisons; Amy Food Journal roundup, July 2026</p>
+      </div>
+      <div class="p">
+        <h4>The platforms — no more opting out</h4>
+        <p>iOS 27 ships this month and ignores the Liquid Glass compatibility flag:
+          native components render as glass whether you like it or not, with iOS 27
+          refining borders and a lighter dark mode. Android's Material 3 Expressive
+          pushes personal colour, motion and shape. Both reward apps built from
+          platform parts.</p>
+        <p class="src">designfornative iOS 27 notes; AppleInsider; Futured</p>
+      </div>
+    </div>
+    <div class="card" style="margin-top:32px">
+      <h4 style="font-size:15px; margin-bottom:6px">The pattern, and the gap</h4>
+      <p class="note" style="max-width:none">
+        Winners are dark, score-first, native, connected across sleep/training/intake,
+        and obsessive about logging speed. Every one of them also grades the user —
+        recovery colours, readiness scores, adaptive targets, coaching. That grading is
+        where men quietly leave. Helm takes the winners' visual confidence and
+        instrument feel, and keeps the one thing none of them do: the number reads
+        against <em>your</em> usual, and the direction is one <em>you</em> set.
+      </p>
+    </div>
+  </section>
+
+  <!-- ============ THE LANGUAGE ============ -->
+  <section>
+    <div class="sec-head"><h2>Helm, defined</h2><p>Instruments now, charts over time, a heading you set</p></div>
+    <div class="grid3">
+      <div class="p">
+        <h4>Material</h4>
+        <p>Deep slate base, three elevation steps by luminance not border, glass for
+          navigation and sheets. Glow is reserved for data — a needle, a band edge,
+          a selected tape line — never for chrome.</p>
+      </div>
+      <div class="p">
+        <h4>The Dial</h4>
+        <p>The signature. A 270° open arc: hairline track, the user's usual band as a
+          luminous segment, a bright marker for now, and a notch for his heading. Open,
+          not a closing ring — nothing "completes".</p>
+      </div>
+      <div class="p">
+        <h4>Terrain</h4>
+        <p>Trends drawn as terrain: an area with contour hatching, the usual range as
+          a shaded corridor, the heading as a dashed line to reach. Mountains, not
+          bar charts.</p>
+      </div>
+      <div class="p">
+        <h4>Heading</h4>
+        <p>The ambition layer. A user writes a heading in his own words with a
+          number and a date. The app plots it and reports bearing as fact: "Waist 86.5.
+          Heading 84 by December; on the current run you'd reach it in November."</p>
+      </div>
+      <div class="p">
+        <h4>Type</h4>
+        <p>Instrument Sans for interface, Geist Mono for every readout (it's an
+          instrument — the numerals should look like one), Instrument Serif for the
+          user's own words. Large titles, tight tracking, tabular everything.</p>
+      </div>
+      <div class="p">
+        <h4>Motion and touch</h4>
+        <p>Needles sweep in with a spring on load, numbers tick, a log confirms with a
+          haptic and a chip settling into the timeline. Swipe a row to log it again,
+          long-press for portions, pull the sheet up to log.</p>
+      </div>
+    </div>
+
+    <h3 style="font-size:19px; margin:48px 0 14px">Colour</h3>
+    <div class="sw">
+      <div style="background:#0B0F14; color:#E8ECF0; border:1px solid var(--hair)">Base<b>#0B0F14</b></div>
+      <div style="background:#121820; color:#E8ECF0; border:1px solid var(--hair)">Surface 1<b>#121820</b></div>
+      <div style="background:#1A222C; color:#E8ECF0; border:1px solid var(--hair)">Surface 2<b>#1A222C</b></div>
+      <div style="background:#7FB3D5; color:#0B0F14">Mind<b>#7FB3D5</b></div>
+      <div style="background:#8FBF8A; color:#0B0F14">Body<b>#8FBF8A</b></div>
+      <div style="background:#A99BE0; color:#0B0F14">Sleep<b>#A99BE0</b></div>
+      <div style="background:#E0B45A; color:#0B0F14">Load<b>#E0B45A</b></div>
+      <div style="background:#E07A6A; color:#0B0F14">Alert<b>#E07A6A</b></div>
+      <div style="background:var(--accent); color:var(--on-accent)">Accent<b>user hue</b></div>
+      <div style="background:#EEF1F4; color:#12181F">Day base<b>#EEF1F4</b></div>
+      <div style="background:#E8ECF0; color:#0B0F14">Ink<b>#E8ECF0</b></div>
+      <div style="background:#9AA6B2; color:#0B0F14">Ink 2<b>#9AA6B2</b></div>
+    </div>
+    <p class="note" style="margin-top:12px">Domain colours keep their jobs (mind, body, sleep, load) but are lifted to luminous on dark. The user's accent keeps hue-only control, now at higher chroma so it reads as light, not paint. Alert is still risk-only and still never a personalisable colour.</p>
+
+    <h3 style="font-size:19px; margin:48px 0 14px">Type</h3>
+    <dl class="spec">
+      <dt>mono 44/600</dt><dd><span class="mono" style="font-size:44px; font-weight:600; letter-spacing:-.04em">7h 12m</span></dd>
+      <dt>sans 32/700</dt><dd><span style="font-size:32px; font-weight:700; letter-spacing:-.03em">Thursday</span></dd>
+      <dt>serif 22</dt><dd><span class="hd__q">"Waist to 84 by December."</span></dd>
+      <dt>sans 15</dt><dd>Interface default — rows, sheets, controls.</dd>
+      <dt>mono 13</dt><dd><span class="mono" style="font-size:13px; color:var(--ink-2)">54 bpm · 2.6 u · 86.5 cm</span></dd>
+    </dl>
+  </section>
+
+  <!-- ============ MOCKS ============ -->
+  <section>
+    <div class="sec-head"><h2>Three screens</h2><p>Switch accent in the top bar</p></div>
+    <div class="mocks">
+
+      <!-- TODAY -->
+      <div class="mockcell">
+        <h3>Today</h3>
+        <div class="phone">
+          <div class="status"><span>07:42</span><span>●●● ⌁ ▮</span></div>
+          <div class="lt"><small>Thursday 3 September</small><h5>Morning</h5></div>
+          <div class="pb">
+            <div class="dial" id="dialSleep"></div>
+            <p class="read">Inside your usual <em>7h–8h 20m</em>. Deep sleep a little under.</p>
+            <div class="minis">
+              <div class="card"><div class="dial dial--mini" id="dialRhr"></div></div>
+              <div class="card"><div class="dial dial--mini" id="dialLoad"></div></div>
+              <div class="card"><div class="dial dial--mini" id="dialMood"></div></div>
+            </div>
+            <div class="card hd">
+              <div class="hd__top"><h6>Heading</h6><span>set 12 Aug</span></div>
+              <p class="hd__q">Waist to 84 <i>by December.</i></p>
+              <div class="terrain" id="terrainWaist"></div>
+              <div class="hd__meta"><span>Now <b>86.5</b></span><span>Heading <b>84.0</b></span><span>On this run <b>~14 Nov</b></span></div>
+            </div>
+          </div>
+          <div class="tab"><b><i></i>Today</b><span><i></i>Intake</span><span><i></i>Body</span><span><i></i>Life</span></div>
+        </div>
+        <p class="note">One hero dial for the reading he chose to wake up to, three minis, then his heading with terrain. The whole day in one glance; everything else is a tap deeper.</p>
+      </div>
+
+      <!-- LOG SHEET -->
+      <div class="mockcell">
+        <h3>Log sheet</h3>
+        <div class="phone">
+          <div class="status"><span>18:39</span><span>●●● ⌁ ▮</span></div>
+          <div class="lt"><small>Thursday 3 September</small><h5>Intake</h5></div>
+          <div class="pb" style="opacity:.55">
+            <div class="dial" id="dialEnergy"></div>
+            <div class="list">
+              <div class="li"><span class="ic" style="background:color-mix(in srgb,var(--load) 22%,transparent); color:var(--load)">▮</span><span><span class="t">Lager, 4.5%</span><br><span class="m">2 × pint</span></span><span class="v">2.6 u</span></div>
+              <div class="li"><span class="ic" style="background:color-mix(in srgb,var(--body) 22%,transparent); color:var(--body)">▮</span><span><span class="t">Chilli</span><br><span class="m">1 pot · your recipe</span></span><span class="v">610</span></div>
+            </div>
+          </div>
+          <div class="dim"></div>
+          <div class="sheet">
+            <div class="grab"></div>
+            <div class="chips">
+              <span class="chip on"><i style="background:var(--on-accent); opacity:.5"></i>Lager · pint</span>
+              <span class="chip"><i style="background:var(--load)"></i>Cider · pint</span>
+              <span class="chip"><i style="background:var(--body)"></i>Crisps</span>
+              <span class="chip"><i style="background:var(--mind)"></i>Coffee</span>
+            </div>
+            <div class="stepper">
+              <button aria-label="Fewer">−</button>
+              <b>1<small>pint</small></b>
+              <button aria-label="More">+</button>
+            </div>
+            <p class="read" style="text-align:center">2.6 units · about 180 kcal · now</p>
+            <button class="btn btn--primary btn--full">Log it</button>
+          </div>
+        </div>
+        <p class="note">The sheet keeps Intake visible underneath — he stays where he was. Recents ranked by time of day; the selected chip is already the likely answer, so the common case is two taps: open, log.</p>
+      </div>
+
+      <!-- BODY -->
+      <div class="mockcell">
+        <h3>Body</h3>
+        <div class="phone">
+          <div class="status"><span>07:50</span><span>●●● ⌁ ▮</span></div>
+          <div class="lt"><small>Thursday 3 September</small><h5>Body</h5></div>
+          <div class="pb">
+            <div class="minis" style="grid-template-columns:1fr 1fr">
+              <div class="card"><div class="dial dial--mini" id="dialWeight"></div></div>
+              <div class="card"><div class="dial dial--mini" id="dialFat"></div></div>
+            </div>
+            <svg class="figure" viewBox="0 0 380 470" role="img" aria-label="Tape sites">
+              <g class="mannequin" fill="none" stroke-width="11" stroke-linecap="round" stroke-linejoin="round">
+                <circle cx="190" cy="46" r="24"/>
+                <path d="M140,100 C136,148 162,178 160,203 C157,232 154,238 154,264 C154,330 158,400 162,450 L182,450 C184,400 186,360 190,318 C194,360 196,400 198,450 L218,450 C222,400 226,330 226,264 C226,238 223,232 220,203 C218,178 244,148 240,100 C230,91 150,91 140,100 Z"/>
+                <path d="M132,116 C118,162 114,210 112,256"/>
+                <path d="M248,116 C262,162 266,210 268,256"/>
+              </g>
+              <g><line class="tape" x1="146" y1="150" x2="234" y2="150"/><text class="lbl" x="282" y="147">Chest</text><text class="val" x="282" y="161">102.0</text></g>
+              <g class="on"><line class="tape" x1="158" y1="205" x2="222" y2="205"/><text class="lbl" x="282" y="202">Waist</text><text class="val" x="282" y="216">86.5 · heading 84</text></g>
+              <g><line class="tape" x1="150" y1="262" x2="230" y2="262"/><text class="lbl" x="282" y="259">Hip</text><text class="val" x="282" y="273">98.2</text></g>
+              <g><line class="tape" x1="102" y1="178" x2="130" y2="178"/><text class="lbl" x="96" y="175" text-anchor="end">Bicep</text><text class="val" x="96" y="189" text-anchor="end">36.8</text></g>
+              <g><line class="tape" x1="156" y1="345" x2="186" y2="345"/><text class="lbl" x="96" y="342" text-anchor="end">Thigh</text><text class="val" x="96" y="356" text-anchor="end">58.4</text></g>
+            </svg>
+          </div>
+          <div class="tab"><span><i></i>Today</span><span><i></i>Intake</span><b><i></i>Body</b><span><i></i>Life</span></div>
+        </div>
+        <p class="note">The tailor's diagram survives the move to dark and gains a glow on the active tape. The waist line carries his heading inline — the ambition is visible exactly where the measurement is.</p>
+      </div>
+
+    </div>
+  </section>
+
+  <!-- ============ WHAT STAYS ============ -->
+  <section>
+    <div class="sec-head"><h2>What carries over, what's retired</h2><p>From Baseline</p></div>
+    <div class="grid2">
+      <div class="p">
+        <h4>Kept — because it's about the man, not the page</h4>
+        <p>Readings against your own usual. No red/green verdicts on data. No streaks
+          (a lapse must never feel like losing everything). No intake-to-exercise
+          coupling. Rough entries as first-class. Serif for his words. One alert per
+          screen, factual, with a route to a GP. Hue-only accent. Domain colours mean
+          the domain.</p>
+      </div>
+      <div class="p">
+        <h4>Changed — because ambition needs somewhere to point</h4>
+        <p>Baseline banned targets. Helm allows a <em>heading</em>: user-authored,
+          plotted, reported as bearing in flat language. The difference from a
+          MacroFactor target is that the app never moves it, never colours it, and
+          never comments on the gap beyond stating it.</p>
+      </div>
+      <div class="p">
+        <h4>Retired</h4>
+        <p>"Lines before shadows." Bone-grey canvas as default. Bordered cards for
+          list items. The horizontal rail as the hero (it survives as the compact
+          in-list gauge). Archivo and Source Serif. Full-width mid-page buttons.</p>
+      </div>
+      <div class="p">
+        <h4>Platform rules</h4>
+        <p>Build from native components: SwiftUI with Liquid Glass sheets, tab bars
+          and toolbars on iOS 27; Material 3 Expressive on Android with dynamic
+          colour honouring the user's hue. Custom drawing is reserved for the Dial,
+          Terrain and the tailor's figure — the three things that are ours.</p>
+      </div>
+    </div>
+  </section>
+
+  <!-- ============ NAMING ============ -->
+  <section>
+    <div class="sec-head"><h2>The name</h2><p>You said you're open — here's my honest view</p></div>
+    <p class="note" style="margin-bottom:24px">
+      "bro" was a fair fit for a quiet, wry, no-coaching tracker. It fights the new
+      brief. "Take control, be ambitious" is a premium, 30-to-55 positioning, and
+      "bro" caps the ceiling: it reads younger, it's a dictionary word that's hard to
+      defend, and it makes a £10-a-month subscription feel like a joke. The names
+      below all come from the same place as the design language — steering, not
+      shouting.
+    </p>
+    <div class="names">
+      <div class="name name--rec">
+        <span class="tag">Recommended</span>
+        <div class="nm">helm<i>.</i></div>
+        <p class="why">Take the helm. The person steering, the instrument he steers with, and the room the design language is set in. Short, lowercase, works as a verb.</p>
+        <p class="risk">Risk: common word; check app-store and UK/EU class 9 &amp; 42 marks before committing. A distinctive logotype carries a lot of the defensibility.</p>
+      </div>
+      <div class="name">
+        <div class="nm">keel<i>.</i></div>
+        <p class="why">The part of a ship that keeps it upright and on course. Stability, ballast, an even keel — the quieter sibling of helm.</p>
+        <p class="risk">Risk: less active; reads as steadiness more than ambition.</p>
+      </div>
+      <div class="name">
+        <div class="nm">bearing<i>.</i></div>
+        <p class="why">Your direction, and your composure. "Get your bearings." Ties directly to the heading feature.</p>
+        <p class="risk">Risk: two syllables, longer wordmark, engineering connotations.</p>
+      </div>
+      <div class="name">
+        <div class="nm">mettle<i>.</i></div>
+        <p class="why">Character under pressure. Sounds like metal, feels like resolve. The most explicitly ambitious option.</p>
+        <p class="risk">Risk: spelling ambiguity in search; slightly grand.</p>
+      </div>
+      <div class="name">
+        <div class="nm">ridge<i>.</i></div>
+        <p class="why">Terrain, altitude, the line you walk. Pairs naturally with the contour charts.</p>
+        <p class="risk">Risk: outdoor-brand territory; less about the body.</p>
+      </div>
+      <div class="name">
+        <div class="nm">bro<i>.</i></div>
+        <p class="why">Keep it if the mate-to-mate download loop is your growth engine and you're targeting under-30s. The dot-as-accent idea survives.</p>
+        <p class="risk">Risk: undercuts premium and ambition; hard trademark; ages badly.</p>
+      </div>
+    </div>
+  </section>
+
+  <footer>Helm — a native, dark-first design language for an ambitious men's health tracker. Dial, Terrain, Heading. Landscape reviewed September 2026.</footer>
+</div>
+
+<script>
+  const root = document.documentElement;
+  const btn = document.getElementById('themeBtn');
+  btn.addEventListener('click', () => {
+    const light = root.getAttribute('data-theme') === 'light';
+    root.setAttribute('data-theme', light ? 'dark' : 'light');
+    btn.textContent = light ? 'Light' : 'Dark';
+  });
+  const PRESETS = [{n:'Ice',h:212},{n:'Lichen',h:140},{n:'Amber',h:80},{n:'Ember',h:35},{n:'Violet',h:300},{n:'Teal',h:190}];
+  document.querySelectorAll('.accents').forEach(row => PRESETS.forEach(p => {
+    const b = document.createElement('button'); b.style.setProperty('--sh', p.h); b.title = p.n; b.setAttribute('aria-label', p.n);
+    b.setAttribute('aria-pressed', String(p.h === 212));
+    b.addEventListener('click', () => { root.style.setProperty('--accent-h', p.h); row.querySelectorAll('button').forEach(x => x.setAttribute('aria-pressed','false')); b.setAttribute('aria-pressed','true'); });
+    row.appendChild(b);
+  }));
+
+  // ---- Dial ----
+  const pol = (cx, cy, r, a) => { const t = (a - 90) * Math.PI / 180; return [cx + r * Math.cos(t), cy + r * Math.sin(t)]; };
+  function arc(cx, cy, r, a0, a1) {
+    const [x0, y0] = pol(cx, cy, r, a0), [x1, y1] = pol(cx, cy, r, a1);
+    return `M${x0.toFixed(2)},${y0.toFixed(2)} A${r},${r} 0 ${a1 - a0 > 180 ? 1 : 0} 1 ${x1.toFixed(2)},${y1.toFixed(2)}`;
+  }
+  function dial(el, o) {
+    const S = 200, cx = 100, cy = 104, r = 78, A0 = -135, A1 = 135, sweep = 270;
+    const ang = v => A0 + (v - o.min) / (o.max - o.min) * sweep;
+    const col = `var(--${o.domain})`;
+    const glow = `color-mix(in srgb, ${col} 55%, transparent)`;
+    let s = `<svg viewBox="0 0 ${S} ${S}" aria-label="${o.label}">`;
+    s += `<path d="${arc(cx,cy,r,A0,A1)}" fill="none" stroke="var(--hair-2)" stroke-width="${o.mini?6:8}" stroke-linecap="round"/>`;
+    // ticks
+    for (let i = 0; i <= 18; i++) { const a = A0 + i * 15; const [x0,y0] = pol(cx,cy,r-9,a), [x1,y1] = pol(cx,cy,r-13,a); s += `<line x1="${x0.toFixed(1)}" y1="${y0.toFixed(1)}" x2="${x1.toFixed(1)}" y2="${y1.toFixed(1)}" stroke="var(--ink-3)" stroke-width="1" opacity=".6"/>`; }
+    // band
+    s += `<path d="${arc(cx,cy,r,ang(o.band[0]),ang(o.band[1]))}" fill="none" stroke="${col}" stroke-width="${o.mini?6:8}" stroke-linecap="round" opacity=".28"/>`;
+    s += `<path d="${arc(cx,cy,r,ang(o.band[0]),ang(o.band[1]))}" fill="none" stroke="${col}" stroke-width="1.5" stroke-linecap="round" opacity=".9" style="filter:drop-shadow(0 0 5px ${glow})"/>`;
+    // heading notch
+    if (o.heading != null) { const a = ang(o.heading); const [x0,y0] = pol(cx,cy,r+8,a), [x1,y1] = pol(cx,cy,r+15,a); s += `<line x1="${x0.toFixed(1)}" y1="${y0.toFixed(1)}" x2="${x1.toFixed(1)}" y2="${y1.toFixed(1)}" stroke="var(--ink)" stroke-width="2" stroke-linecap="round"/>`; }
+    // marker
+    const [mx,my] = pol(cx,cy,r,ang(o.v));
+    s += `<circle cx="${mx.toFixed(1)}" cy="${my.toFixed(1)}" r="${o.mini?5:7}" fill="${col}" style="filter:drop-shadow(0 0 8px ${glow})"/>`;
+    s += `<circle cx="${mx.toFixed(1)}" cy="${my.toFixed(1)}" r="${o.mini?2:3}" fill="var(--base)"/>`;
+    // scale labels
+    if (!o.mini) { const [lx,ly] = pol(cx,cy,r+2,A0), [rx,ry] = pol(cx,cy,r+2,A1); s += `<text x="${lx-2}" y="${ly+16}" style="font-family:var(--mono)" font-size="10" fill="var(--ink-3)" text-anchor="middle">${o.min}</text><text x="${rx+2}" y="${ry+16}" style="font-family:var(--mono)" font-size="10" fill="var(--ink-3)" text-anchor="middle">${o.max}</text>`; }
+    s += `</svg>`;
+    el.innerHTML = s + `<div class="dial__center"><div><div class="dial__v">${o.display}${o.unit?`<small>${o.unit}</small>`:''}</div><div class="dial__l">${o.label}</div></div></div>`;
+  }
+  (function(){ const el=document.getElementById('dialSleep'); dial(el,{label:'Sleep',display:'7h 12m',min:4,max:10,v:7.2,band:[7,8.33],domain:'sleep'}); el.querySelectorAll('text')[0].textContent='4h'; el.querySelectorAll('text')[1].textContent='10h'; })();
+  dial(document.getElementById('dialRhr'),   { mini:true, label:'Resting', display:'54', unit:'bpm', min:44, max:72, v:54, band:[50,60], domain:'body' });
+  dial(document.getElementById('dialLoad'),  { mini:true, label:'Load 7d', display:'412', min:0, max:500, v:412, band:[110,310], domain:'load' });
+  dial(document.getElementById('dialMood'),  { mini:true, label:'Mood', display:'Okay', min:1, max:5, v:3, band:[3,4], domain:'mind' });
+  dial(document.getElementById('dialEnergy'),{ label:'Energy', display:'~1,850', unit:'kcal', min:0, max:3200, v:1850, band:[2100,2600], domain:'body' });
+  dial(document.getElementById('dialWeight'),{ mini:true, label:'Weight', display:'82.4', unit:'kg', min:76, max:90, v:82.4, band:[81.5,84], domain:'body' });
+  dial(document.getElementById('dialFat'),   { mini:true, label:'Body fat', display:'18.2', unit:'%', min:12, max:26, v:18.2, band:[17.5,19.5], domain:'body' });
+
+  // ---- Terrain ----
+  (function(){
+    const W=300,H=110, pts=[88.2,88.0,88.4,87.9,87.6,87.8,87.3,87.1,87.4,86.9,86.7,86.9,86.5,86.8,86.5];
+    const min=83,max=89.5; const x=i=>i/(pts.length-1)*W; const y=v=>H-8-(v-min)/(max-min)*(H-16);
+    let d=`M${x(0)},${y(pts[0])}`; pts.forEach((v,i)=>{ if(i) d+=` L${x(i)},${y(v)}`; });
+    const area=d+` L${W},${H} L0,${H} Z`;
+    const corridor=`M0,${y(85)} L${W},${y(85)} L${W},${y(88)} L0,${y(88)} Z`;
+    const hx = W; // heading line extends across
+    document.getElementById('terrainWaist').innerHTML = `
+      <svg viewBox="0 0 ${W} ${H}">
+        <defs>
+          <pattern id="ct" width="6" height="6" patternUnits="userSpaceOnUse" patternTransform="rotate(-20)"><line x1="0" y1="0" x2="0" y2="6" stroke="var(--body)" stroke-width="1" opacity=".22"/></pattern>
+          <linearGradient id="fade" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="var(--body)" stop-opacity=".35"/><stop offset="1" stop-color="var(--body)" stop-opacity="0"/></linearGradient>
+        </defs>
+        <path d="${corridor}" fill="var(--s3)" opacity=".7"/>
+        <path d="${area}" fill="url(#fade)"/>
+        <path d="${area}" fill="url(#ct)"/>
+        <path d="${d}" fill="none" stroke="var(--body)" stroke-width="2" stroke-linejoin="round" style="filter:drop-shadow(0 0 5px color-mix(in srgb,var(--body) 50%,transparent))"/>
+        <line x1="0" y1="${y(84)}" x2="${hx}" y2="${y(84)}" stroke="var(--ink)" stroke-width="1" stroke-dasharray="3 4" opacity=".8"/>
+        <text x="4" y="${y(84)-4}" style="font-family:var(--mono)" font-size="9" fill="var(--ink-2)">84 heading</text>
+        <text x="4" y="${y(88)-4}" style="font-family:var(--mono)" font-size="9" fill="var(--ink-3)">usual 85–88</text>
+        <circle cx="${x(pts.length-1)}" cy="${y(pts[pts.length-1])}" r="4" fill="var(--body)"/>
+      </svg>`;
+  })();
+</script>
+</body>
+</html>

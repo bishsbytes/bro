@@ -1,0 +1,819 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="dark">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Helm — components from bro</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Instrument+Sans:wght@400;500;600;700&family=Instrument+Serif:ital@0;1&family=Geist+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+:root {
+  --base:#0B0F14; --s1:#121820; --s2:#1A222C; --s3:#232D39;
+  --hair:rgba(255,255,255,.08); --hair-2:rgba(255,255,255,.14);
+  --ink:#E8ECF0; --ink-2:#9AA6B2; --ink-3:#5F6B77;
+  --mind:#7FB3D5; --body:#8FBF8A; --sleep:#A99BE0; --load:#E0B45A; --alert:#E07A6A;
+  --accent-h:212; --accent-c:0.12;
+  --accent: oklch(74% var(--accent-c) var(--accent-h));
+  --accent-deep: oklch(36% calc(var(--accent-c)*.7) var(--accent-h));
+  --on-accent: oklch(16% .04 var(--accent-h));
+  --glass: rgba(26,34,44,.74);
+  --sans:'Instrument Sans',-apple-system,BlinkMacSystemFont,sans-serif;
+  --serif:'Instrument Serif',Georgia,serif;
+  --mono:'Geist Mono','JetBrains Mono',ui-monospace,monospace;
+  --r-sm:6px; --r-md:12px; --r-lg:20px; --r-xl:28px;
+}
+[data-theme="light"] {
+  --base:#EEF1F4; --s1:#F7F8FA; --s2:#FFFFFF; --s3:#E3E8ED;
+  --hair:rgba(10,20,30,.08); --hair-2:rgba(10,20,30,.14);
+  --ink:#12181F; --ink-2:#4F5B67; --ink-3:#8B96A1;
+  --mind:#3F7CA3; --body:#4E8B55; --sleep:#6E5FB8; --load:#A8791E; --alert:#B8483B;
+  --accent: oklch(50% var(--accent-c) var(--accent-h));
+  --accent-deep: oklch(90% calc(var(--accent-c)*.45) var(--accent-h));
+  --on-accent: oklch(98% .02 var(--accent-h));
+  --glass: rgba(255,255,255,.74);
+}
+* { box-sizing:border-box; }
+body { margin:0; background:var(--base); color:var(--ink); font-family:var(--sans); font-size:15px; line-height:1.5; -webkit-font-smoothing:antialiased; }
+h1,h2,h3,h4,h5,h6 { margin:0; font-weight:600; letter-spacing:-.02em; line-height:1.15; }
+p { margin:0; } button { font:inherit; color:inherit; }
+.mono { font-family:var(--mono); font-variant-numeric:tabular-nums; }
+.wrap { max-width:1140px; margin:0 auto; padding:0 24px; }
+.topbar { position:sticky; top:0; z-index:20; background:color-mix(in srgb,var(--base) 80%,transparent); backdrop-filter:blur(14px); border-bottom:1px solid var(--hair); }
+.topbar__in { max-width:1140px; margin:0 auto; padding:12px 24px; display:flex; align-items:center; gap:16px; }
+.wordmark { font-weight:700; letter-spacing:-.03em; font-size:17px; } .wordmark span { color:var(--ink-3); font-weight:400; }
+.pill { border:1px solid var(--hair-2); background:transparent; border-radius:999px; padding:6px 12px; font-size:13px; cursor:pointer; color:var(--ink-2); }
+.swatchrow { display:flex; gap:8px; margin-left:auto; }
+.swatchrow button { width:18px; height:18px; border-radius:50%; padding:0; cursor:pointer; border:1px solid var(--hair-2); background:oklch(74% .12 var(--sh)); position:relative; }
+[data-theme="light"] .swatchrow button { background:oklch(50% .12 var(--sh)); }
+.swatchrow button[aria-pressed="true"]::after { content:""; position:absolute; inset:-4px; border:1px solid var(--ink-3); border-radius:50%; }
+
+section { padding:80px 0 0; }
+.sec-head { display:flex; align-items:baseline; gap:12px; margin-bottom:24px; padding-bottom:12px; border-bottom:1px solid var(--hair); }
+.sec-head h2 { font-size:26px; } .sec-head p { color:var(--ink-3); font-size:13px; margin-left:auto; }
+.lede { font-family:var(--serif); font-size:21px; line-height:1.4; color:var(--ink-2); max-width:50ch; }
+.note { color:var(--ink-2); font-size:13.5px; max-width:60ch; }
+
+/* component grid */
+.cg { display:grid; grid-template-columns:repeat(auto-fill, minmax(340px, 1fr)); gap:32px 36px; align-items:start; }
+.c { display:grid; gap:12px; }
+.c__h { display:flex; align-items:baseline; gap:10px; }
+.c__h h3 { font-size:17px; }
+.c__h span { font-size:12px; color:var(--ink-3); margin-left:auto; white-space:nowrap; }
+.stage { background:var(--base); border:1px solid var(--hair-2); border-radius:24px; padding:16px; display:grid; gap:12px; max-width:380px; }
+.c .note { font-size:13px; }
+.rules { font-size:12.5px; color:var(--ink-3); display:grid; gap:4px; }
+.rules b { color:var(--ink-2); font-weight:500; }
+
+/* ---- primitives ---- */
+.card { background:var(--s1); border:1px solid var(--hair); border-radius:var(--r-lg); padding:16px; }
+.card--2 { background:var(--s2); }
+.list { background:var(--s1); border:1px solid var(--hair); border-radius:var(--r-lg); overflow:hidden; }
+.li { display:flex; align-items:center; gap:12px; padding:12px 14px; border-bottom:1px solid var(--hair); }
+.li:last-child { border-bottom:0; }
+.li .ic { width:34px; height:34px; border-radius:11px; display:grid; place-items:center; flex:none; background:var(--accent-deep); color:var(--ink); font-size:14px; }
+.li .t { font-size:15px; font-weight:500; } .li .m { font-size:12.5px; color:var(--ink-3); }
+.li .v { margin-left:auto; font-family:var(--mono); font-size:13px; color:var(--ink-2); text-align:right; flex:none; }
+.li .chev { color:var(--ink-3); margin-left:auto; }
+.btn { display:inline-flex; align-items:center; justify-content:center; border-radius:14px; padding:13px 18px; font-size:15px; font-weight:600; cursor:pointer; border:0; }
+.btn--primary { background:var(--accent); color:var(--on-accent); }
+.btn--secondary { background:var(--s2); border:1px solid var(--hair-2); color:var(--ink); }
+.btn--full { width:100%; }
+.seg { display:flex; background:var(--s2); border-radius:12px; padding:3px; }
+.seg button { flex:1; border:0; background:transparent; border-radius:9px; padding:8px; font-size:13.5px; font-weight:500; color:var(--ink-2); cursor:pointer; }
+.seg button[aria-pressed="true"] { background:var(--s3); color:var(--ink); box-shadow:0 1px 3px rgba(0,0,0,.3); }
+.lt { display:flex; align-items:flex-end; gap:8px; }
+.lt small { display:block; font-size:12.5px; color:var(--ink-3); font-weight:500; }
+.lt h5 { font-size:30px; font-weight:700; letter-spacing:-.03em; }
+.lt .nav { margin-left:auto; display:flex; gap:6px; }
+.lt .nav button { width:34px; height:34px; border-radius:11px; background:var(--s2); border:1px solid var(--hair); color:var(--ink-2); cursor:pointer; }
+.tab { display:grid; grid-template-columns:repeat(4,1fr); padding:10px 8px 14px; font-size:11px; text-align:center; color:var(--ink-3); background:var(--glass); backdrop-filter:blur(18px); border:1px solid var(--hair-2); border-radius:22px; }
+.tab b { color:var(--accent); font-weight:600; display:block; }
+.tab i { display:block; width:22px; height:22px; margin:0 auto 4px; border-radius:7px; background:currentColor; opacity:.35; }
+.tab b i { opacity:1; }
+.week { display:grid; grid-template-columns:repeat(7,1fr); gap:4px; }
+.week div { text-align:center; display:grid; gap:2px; padding:8px 0 6px; border-radius:12px; }
+.week small { font-size:11px; color:var(--ink-3); font-weight:500; }
+.week b { font-family:var(--mono); font-size:15px; font-weight:500; color:var(--ink-2); }
+.week .dots { display:flex; justify-content:center; gap:3px; height:6px; margin-top:2px; }
+.week .dots i { width:5px; height:5px; border-radius:50%; display:block; }
+.week .today { background:var(--s2); border:1px solid var(--hair-2); }
+.week .today b { color:var(--accent); }
+.week .future b, .week .future small { opacity:.4; }
+.readout { display:grid; gap:2px; }
+.readout .l { font-size:12.5px; color:var(--ink-2); display:flex; } .readout .l span { margin-left:auto; color:var(--ink-3); }
+.readout .v { font-family:var(--mono); font-size:30px; font-weight:600; letter-spacing:-.03em; line-height:1.1; }
+.readout .v small { font-size:13px; color:var(--ink-3); font-weight:500; margin-left:3px; }
+.rule { font-size:12.5px; color:var(--ink-3); }
+.hero { display:grid; gap:6px; }
+.hero .l { font-size:13px; color:var(--ink-2); display:flex; } .hero .l span { margin-left:auto; color:var(--ink-3); font-size:12px; }
+.hero .v { font-family:var(--mono); font-size:56px; font-weight:600; letter-spacing:-.05em; line-height:1; }
+.rail { position:relative; height:18px; margin-top:8px; }
+.rail .tr { position:absolute; left:0; right:0; bottom:0; border-bottom:1px solid var(--hair-2); }
+.rail .tk { position:absolute; left:0; right:0; bottom:0; height:6px; background-image:repeating-linear-gradient(to right,var(--ink-3) 0 1px,transparent 1px 10%); opacity:.6; }
+.rail .bd { position:absolute; bottom:0; height:100%; background:var(--sleep); opacity:.2; border-left:1px solid var(--sleep); border-right:1px solid var(--sleep); }
+.rail .bd::after { content:""; position:absolute; inset:0; box-shadow:inset 0 0 12px color-mix(in srgb,var(--sleep) 30%,transparent); }
+.rail .mk { position:absolute; bottom:-1px; width:2px; height:18px; background:var(--sleep); transform:translateX(-1px); box-shadow:0 0 8px color-mix(in srgb,var(--sleep) 70%,transparent); }
+.rail .mk::after { content:""; position:absolute; top:-5px; left:50%; width:9px; height:9px; background:var(--sleep); transform:translateX(-50%) rotate(45deg); }
+.rail .pv { position:absolute; bottom:-1px; height:18px; border-left:1px dashed var(--sleep); opacity:.6; }
+.scale { display:flex; justify-content:space-between; font-family:var(--mono); font-size:11px; color:var(--ink-3); margin-top:6px; }
+.read { font-size:13.5px; color:var(--ink-2); } .read em { font-style:normal; color:var(--ink); }
+.terrain svg { width:100%; height:auto; display:block; }
+.db { flex:1; position:relative; height:14px; max-width:130px; }
+.db .t { position:absolute; top:7px; left:0; right:0; border-top:1px solid var(--hair-2); }
+.db .b { position:absolute; top:2px; height:11px; opacity:.2; border-radius:2px; }
+.db .p { position:absolute; top:3px; width:8px; height:8px; border-radius:50%; border:1.5px solid currentColor; background:var(--s1); transform:translateX(-4px); opacity:.7; }
+.db .n { position:absolute; top:3px; width:9px; height:9px; border-radius:50%; background:currentColor; transform:translateX(-4px); box-shadow:0 0 6px currentColor; }
+.delta { margin-left:auto; font-family:var(--mono); font-size:13px; }
+.prompt { display:grid; gap:6px; }
+.prompt h6 { font-size:15px; } .prompt p { font-size:13px; color:var(--ink-2); }
+.prompt .act { margin-top:6px; font-size:13.5px; font-weight:600; color:var(--accent); }
+.tile { display:grid; gap:4px; }
+.tile h6 { font-size:14px; } .tile small { font-size:12px; color:var(--ink-3); }
+.tile .act { font-size:13px; font-weight:600; color:var(--accent); margin-top:8px; }
+.tiles { display:grid; grid-template-columns:1fr 1fr; gap:10px; }
+.tile.done { border-color:color-mix(in srgb,var(--mind) 40%,transparent); }
+.tile.done .act { color:var(--ink-3); font-weight:500; }
+.sheet { border-radius:var(--r-xl); background:var(--glass); backdrop-filter:blur(24px); border:1px solid var(--hair-2); padding:10px 14px 16px; display:grid; gap:10px; }
+.grab { width:36px; height:4px; border-radius:2px; background:var(--hair-2); margin:0 auto 4px; }
+.sheet h6 { font-size:19px; padding:0 2px 4px; }
+.radar { display:grid; place-items:center; }
+.radar svg { width:100%; max-width:300px; height:auto; }
+.legend { display:flex; gap:16px; justify-content:center; font-size:12px; color:var(--ink-3); }
+.legend i { display:inline-block; width:18px; border-top:2px solid var(--mind); vertical-align:middle; margin-right:6px; }
+.legend i.dash { border-top-style:dashed; opacity:.6; }
+.area { display:flex; align-items:center; gap:10px; }
+.area .ic { width:30px; height:30px; border-radius:10px; background:var(--s2); display:grid; place-items:center; font-size:12px; color:var(--ink-2); }
+.area .t { font-size:15px; font-weight:500; }
+.area .tag { font-size:11px; padding:2px 8px; border-radius:999px; background:var(--accent-deep); color:var(--ink); margin-left:6px; }
+.area .sc { margin-left:auto; font-family:var(--mono); font-size:22px; font-weight:600; }
+.area .sc small { font-size:12px; color:var(--ink-3); font-weight:500; }
+.acts { display:grid; gap:6px; margin-top:10px; }
+.acts .a { font-size:13.5px; color:var(--ink-2); padding:10px 12px; background:var(--s2); border-radius:12px; display:flex; }
+.acts .a b { color:var(--ink); font-weight:500; }
+.acts .a span { margin-left:auto; color:var(--ink-3); }
+.step { text-align:center; display:grid; gap:10px; justify-items:center; }
+.step .dots { display:flex; gap:6px; } .step .dots i { width:6px; height:6px; border-radius:50%; background:var(--hair-2); } .step .dots i.on { background:var(--accent); }
+.step .ic { width:44px; height:44px; border-radius:14px; background:var(--s2); display:grid; place-items:center; color:var(--ink-2); }
+.step h6 { font-size:26px; letter-spacing:-.03em; }
+.step .big { font-family:var(--mono); font-size:64px; font-weight:600; letter-spacing:-.06em; line-height:1; color:var(--accent); }
+.step .big small { font-size:16px; color:var(--ink-3); letter-spacing:0; font-weight:500; }
+.ticks { width:100%; position:relative; height:34px; }
+.ticks .tr { position:absolute; left:0; right:0; top:16px; border-top:1px solid var(--hair-2); }
+.ticks .tk { position:absolute; top:10px; width:1px; height:12px; background:var(--ink-3); }
+.ticks .tk.on { top:4px; height:24px; width:3px; margin-left:-1px; background:var(--accent); border-radius:2px; box-shadow:0 0 8px var(--accent); }
+.ticks .lb { position:absolute; top:24px; font-family:var(--mono); font-size:10px; color:var(--ink-3); transform:translateX(-50%); }
+.ends { display:flex; justify-content:space-between; width:100%; font-size:12px; color:var(--ink-3); }
+.acct h6 { font-size:15px; } .acct p { font-size:13px; color:var(--ink-2); }
+/* check-in flow */
+.flowbar { display:flex; align-items:center; font-size:15px; color:var(--ink-2); padding:2px 2px 6px; }
+.flowbar .mono { margin:0 auto; font-size:12px; color:var(--ink-3); }
+.flowbar b { color:var(--accent); font-weight:600; }
+.eyebrow { font-size:12.5px; color:var(--ink-3); font-weight:500; }
+.mood { display:flex; align-items:flex-end; gap:8px; }
+.mood button { flex:1; border:0; border-radius:12px; background:var(--s2); color:var(--ink-2); cursor:pointer; font-size:14px; font-weight:500; display:flex; align-items:flex-end; justify-content:center; padding-bottom:12px; transition:background .16s; }
+.mood button:nth-child(1){height:56px} .mood button:nth-child(2){height:70px} .mood button:nth-child(3){height:84px} .mood button:nth-child(4){height:98px} .mood button:nth-child(5){height:112px}
+.mood button.on { background:var(--accent); color:var(--on-accent); box-shadow:0 0 18px color-mix(in srgb,var(--accent) 45%,transparent); }
+.mood--num button { font-family:var(--mono); font-size:18px; font-weight:600; }
+.skip { text-align:center; font-size:14px; color:var(--ink-3); padding-top:8px; }
+/* switches, form rows, pickers */
+.sw { margin-left:auto; width:44px; height:26px; border-radius:13px; background:var(--s3); position:relative; flex:none; }
+.sw::after { content:""; position:absolute; top:3px; left:3px; width:20px; height:20px; border-radius:50%; background:var(--ink-2); transition:left .16s; }
+.sw.on { background:var(--accent); } .sw.on::after { left:21px; background:var(--on-accent); }
+.fr { display:flex; align-items:center; gap:12px; padding:10px 14px; border-bottom:1px solid var(--hair); }
+.fr:last-child { border-bottom:0; }
+.fr label { font-size:15px; color:var(--ink); width:118px; flex:none; }
+.fr input { flex:1; min-width:0; font:inherit; font-size:15px; color:var(--ink); background:transparent; border:0; text-align:right; outline:none; }
+.fr input::placeholder { color:var(--ink-3); }
+.fr .unit { font-size:13px; color:var(--ink-3); font-family:var(--mono); }
+.fr .seg { margin-left:auto; }
+.seg--mini button { padding:5px 12px; font-size:12.5px; }
+.pk { padding:11px 6px; }
+.pk .tick { margin-left:auto; width:22px; height:22px; border-radius:50%; border:1px solid var(--hair-2); display:grid; place-items:center; font-size:12px; color:var(--on-accent); }
+.pk.on .tick { background:var(--accent); border-color:transparent; }
+.hd .hd__top { display:flex; align-items:baseline; gap:8px; }
+.hd .hd__top h6 { font-size:13px; color:var(--ink-3); font-weight:500; }
+.hd .hd__top span { margin-left:auto; font-size:12px; color:var(--ink-3); }
+.hd__q { font-family:var(--serif); font-size:21px; line-height:1.25; } .hd__q i { color:var(--ink-2); }
+.hd__meta { display:flex; font-size:12px; color:var(--ink-3); gap:12px; flex-wrap:wrap; }
+.hd__meta b { color:var(--ink); font-family:var(--mono); font-weight:500; }
+.rail .hn { position:absolute; bottom:-9px; width:2px; height:8px; background:var(--ink); transform:translateX(-1px); }
+.rail .hn::after { content:""; position:absolute; top:-4px; left:50%; width:6px; height:6px; border:1px solid var(--ink); border-radius:50%; transform:translateX(-50%); background:var(--base); }
+.acct .fine { font-size:12px; color:var(--ink-3); }
+.set { display:flex; align-items:center; gap:12px; padding:13px 14px; border-bottom:1px solid var(--hair); }
+.set:last-child { border-bottom:0; }
+.set .t { font-size:15px; } .set .m { font-size:12.5px; color:var(--ink-3); }
+.set .v { margin-left:auto; font-size:13px; color:var(--ink-2); }
+.set .v i { display:inline-block; width:12px; height:12px; border-radius:50%; background:var(--accent); vertical-align:-1px; margin-right:6px; }
+.chev { color:var(--ink-3); }
+.entry { display:flex; align-items:center; gap:12px; padding:12px 14px; }
+.entry time { font-family:var(--mono); font-size:12px; color:var(--ink-3); width:40px; flex:none; }
+.entry .t { font-size:15px; font-weight:500; } .entry .m { font-size:12.5px; color:var(--ink-3); }
+.entry .v { margin-left:auto; font-family:var(--mono); font-size:12px; color:var(--ink-2); text-align:right; line-height:1.4; }
+.swipe { display:flex; border-radius:var(--r-lg); overflow:hidden; background:var(--s1); border:1px solid var(--hair); }
+.swipe .entry { flex:1; }
+.swipe .again { background:var(--accent); color:var(--on-accent); display:grid; place-items:center; padding:0 16px; font-size:13px; font-weight:600; }
+.hist .li .t { font-family:var(--mono); font-weight:500; }
+.hist .li .m i { font-style:normal; color:var(--accent); }
+.copybook { display:grid; grid-template-columns:1fr 1fr; gap:0; border:1px solid var(--hair); border-radius:var(--r-md); overflow:hidden; }
+.copybook > div { padding:12px 16px; border-bottom:1px solid var(--hair); font-size:13.5px; }
+.copybook > div:nth-child(odd) { border-right:1px solid var(--hair); }
+.copybook .h { background:var(--s2); color:var(--ink-2); font-weight:500; }
+.copybook .keep { color:var(--ink); } .copybook .why { color:var(--ink-3); }
+@media (max-width:640px){ .copybook { grid-template-columns:1fr; } .copybook > div:nth-child(odd) { border-right:0; } }
+footer { margin-top:96px; padding:32px 0 64px; border-top:1px solid var(--hair); color:var(--ink-3); font-size:13px; }
+</style>
+</head>
+<body>
+
+<div class="topbar">
+  <div class="topbar__in">
+    <div class="wordmark">helm <span>components · from bro</span></div>
+    <div class="swatchrow accents" role="group" aria-label="Accent"></div>
+    <button class="pill" id="themeBtn">Light</button>
+  </div>
+</div>
+
+<div class="wrap">
+
+  <section style="padding-top:56px">
+    <h1 style="font-size:40px; max-width:20ch">Same app, native materials.</h1>
+    <p class="lede" style="margin-top:14px">
+      Every component below exists in bro today. Nothing here changes what the
+      product does — the information architecture, the copy that's right, and
+      the no-verdict rules all survive. What changes is the material it's made of.
+    </p>
+  </section>
+
+  <!-- ============ NAVIGATION ============ -->
+  <section>
+    <div class="sec-head"><h2>Navigation and structure</h2><p>Journal · Intake · Body · Life</p></div>
+    <div class="cg">
+
+      <div class="c">
+        <div class="c__h"><h3>Tab bar</h3><span>from: every tab</span></div>
+        <div class="stage" style="background:var(--s1)">
+          <div class="tab"><b><i></i>Journal</b><span><i></i>Intake</span><span><i></i>Body</span><span><i></i>Life</span></div>
+        </div>
+        <div class="rules">
+          <div><b>Keep</b> the four tabs and their order — the IA is right.</div>
+          <div><b>Change</b> to the platform tab bar (Liquid Glass / M3), floating and translucent, active item in the user's accent. Drop the FAB: "+" moves into the Journal large-title bar and Intake gets a pinned "Log" sheet handle.</div>
+        </div>
+      </div>
+
+      <div class="c">
+        <div class="c__h"><h3>Week strip</h3><span>from: Journal header</span></div>
+        <div class="stage">
+          <div class="lt"><div><small>September</small><h5>Journal</h5></div><div class="nav"><button>◧</button><button>+</button></div></div>
+          <div class="week">
+            <div><small>Mo</small><b>31</b><div class="dots"><i style="background:var(--sleep)"></i><i style="background:var(--body)"></i></div></div>
+            <div><small>Tu</small><b>1</b><div class="dots"><i style="background:var(--sleep)"></i><i style="background:var(--mind)"></i><i style="background:var(--load)"></i></div></div>
+            <div><small>We</small><b>2</b><div class="dots"><i style="background:var(--sleep)"></i></div></div>
+            <div class="today"><small>Th</small><b>3</b><div class="dots"><i style="background:var(--sleep)"></i><i style="background:var(--load)"></i></div></div>
+            <div class="future"><small>Fr</small><b>4</b><div class="dots"></div></div>
+            <div class="future"><small>Sa</small><b>5</b><div class="dots"></div></div>
+            <div class="future"><small>Su</small><b>6</b><div class="dots"></div></div>
+          </div>
+        </div>
+        <div class="rules">
+          <div><b>Keep</b> the seven-day strip and the marks under each day.</div>
+          <div><b>Change</b> the marks from the faint glyphs to domain-coloured dots — a day tells you what was logged before you tap it. Today is a raised tile; future days fade. Swipe the strip for weeks; tap the month for the calendar.</div>
+        </div>
+      </div>
+
+      <div class="c">
+        <div class="c__h"><h3>Day header with date nav</h3><span>from: Intake</span></div>
+        <div class="stage">
+          <div class="lt"><div><small>Thursday 3 September</small><h5>Today</h5></div><div class="nav"><button>‹</button><button style="opacity:.35">›</button></div></div>
+          <div class="seg" role="group"><button aria-pressed="true">Summary</button><button aria-pressed="false">Logged</button></div>
+        </div>
+        <div class="rules">
+          <div><b>Keep</b> the previous/next day arrows and the Summary/Logged split.</div>
+          <div><b>Change</b> the segmented control to the platform's sliding version, and let a horizontal swipe on the content also change day. Human date stays; it was already right.</div>
+        </div>
+      </div>
+
+    </div>
+  </section>
+
+  <!-- ============ JOURNAL ============ -->
+  <section>
+    <div class="sec-head"><h2>Journal</h2><p>Check-ins, routines, taking stock</p></div>
+    <div class="cg">
+
+      <div class="c">
+        <div class="c__h"><h3>Check-in tiles</h3><span>from: Journal · Check-ins</span></div>
+        <div class="stage">
+          <div class="tiles">
+            <div class="card tile done"><h6>Morning</h6><small>Checked in 07:48</small><div class="act">Okay · rested</div></div>
+            <div class="card tile"><h6>Evening</h6><small>Reflect and unwind</small><div class="act">Check in</div></div>
+          </div>
+        </div>
+        <div class="rules">
+          <div><b>Keep</b> Morning / Evening as the two anchors and the "Reflect and unwind" line.</div>
+          <div><b>Change</b> a completed tile to show what he said, in his words, instead of disappearing into a tick. The action text in accent is the only button — no bordered button inside a tile.</div>
+        </div>
+      </div>
+
+      <div class="c">
+        <div class="c__h"><h3>Prompt cards</h3><span>from: "Build a routine" · "Take stock"</span></div>
+        <div class="stage">
+          <div class="card prompt"><h6>Build a routine</h6><p>Add a habit and your journal will keep the next small action in view.</p><div class="act">Choose a habit</div></div>
+          <div class="card prompt"><h6>Take stock of the bigger picture</h6><p>Rate the areas of your life and choose where to focus next.</p><div class="act">Take stock</div></div>
+        </div>
+        <div class="rules">
+          <div><b>Keep</b> both prompts and the copy verbatim — it's plain and right.</div>
+          <div><b>Change</b> prompts to dismissible and to appear at most one at a time on the Journal. A prompt that's been dismissed twice doesn't return. The inner full-width button becomes an accent text action.</div>
+        </div>
+      </div>
+
+      <div class="c">
+        <div class="c__h"><h3>Log sheet</h3><span>from: "+" bottom sheet</span></div>
+        <div class="stage" style="background:var(--s1)">
+          <div class="sheet">
+            <div class="grab"></div>
+            <h6>What would you like to log?</h6>
+            <div class="li"><span class="ic">✎</span><span><span class="t">Note</span><br><span class="m">Write something about today or another day</span></span><span class="chev">›</span></div>
+            <div class="li"><span class="ic" style="background:color-mix(in srgb,var(--body) 22%,transparent); color:var(--body)">▮</span><span><span class="t">Food</span><br><span class="m">Search your library or enter it rough</span></span><span class="chev">›</span></div>
+            <div class="li"><span class="ic" style="background:color-mix(in srgb,var(--load) 22%,transparent); color:var(--load)">▮</span><span><span class="t">Drink</span><br><span class="m">Water, caffeine, alcohol, or another drink</span></span><span class="chev">›</span></div>
+            <div class="li"><span class="ic" style="background:color-mix(in srgb,var(--body) 22%,transparent); color:var(--body)">▮</span><span><span class="t">Body</span><br><span class="m">Weight, measurements, or resting heart rate</span></span><span class="chev">›</span></div>
+            <div class="li"><span class="ic" style="background:color-mix(in srgb,var(--mind) 22%,transparent); color:var(--mind)">▮</span><span><span class="t">Check-in</span><br><span class="m">Mood, energy, stress, and your day</span></span><span class="chev">›</span></div>
+          </div>
+        </div>
+        <div class="rules">
+          <div><b>Keep</b> the question, the five choices, and the one-line descriptions.</div>
+          <div><b>Change</b> the sheet to glass with the page visible beneath; icon tiles take the domain colour of what they log. Long-press the tab bar "+" to skip this sheet and go straight to the last thing logged.</div>
+        </div>
+      </div>
+
+    </div>
+  </section>
+
+  <!-- ============ LIFE ============ -->
+  <section>
+    <div class="sec-head"><h2>Life</h2><p>The wheel, the review, the areas</p></div>
+    <div class="cg">
+
+      <div class="c">
+        <div class="c__h"><h3>The wheel</h3><span>from: Your wheel</span></div>
+        <div class="stage">
+          <div class="lt"><div><small>Completed 3 September</small><h5>Your wheel</h5></div></div>
+          <div class="radar" id="radar"></div>
+          <div class="legend"><span><i></i>This review</span><span><i class="dash"></i>Previous</span></div>
+        </div>
+        <div class="rules">
+          <div><b>Keep</b> the eight areas, the solid-vs-dashed legend, and the icons at the vertices (platform symbols in build).</div>
+          <div><b>Change</b> the grid to hairlines on dark, the polygon to a luminous mind-blue stroke with a soft fill, and animate the shape growing from centre on first view. A tap on a vertex jumps to that area below.</div>
+        </div>
+      </div>
+
+      <div class="c">
+        <div class="c__h"><h3>Review step</h3><span>from: 1 of 8 flow</span></div>
+        <div class="stage">
+          <div class="step">
+            <div class="dots"><i class="on"></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i></div>
+            <div class="ic">▮</div>
+            <h6>Work &amp; career</h6>
+            <p class="note" style="text-align:center">1 is as low as it gets, 10 is as good as it gets.</p>
+            <div class="big">4<small>/10</small></div>
+            <div class="ticks">
+              <div class="tr"></div>
+              <div class="tk" style="left:0%"></div><div class="tk" style="left:11.1%"></div><div class="tk" style="left:22.2%"></div><div class="tk on" style="left:33.3%"></div><div class="tk" style="left:44.4%"></div><div class="tk" style="left:55.5%"></div><div class="tk" style="left:66.6%"></div><div class="tk" style="left:77.7%"></div><div class="tk" style="left:88.8%"></div><div class="tk" style="left:100%"></div>
+              <div class="lb" style="left:0%">1</div><div class="lb" style="left:100%">10</div>
+            </div>
+            <div class="ends"><span>Very low</span><span>Very good</span></div>
+            <p class="rule">Nothing is saved until you finish.</p>
+          </div>
+        </div>
+        <div class="rules">
+          <div><b>Keep</b> the eight-step dots, the 1–10 definition line, and "Nothing is saved until you finish."</div>
+          <div><b>Change</b> the scale to a drag with haptic detents and a large mono readout in accent — the number is the object, not the tick marks. Swipe between areas; no Next button.</div>
+        </div>
+      </div>
+
+      <div class="c">
+        <div class="c__h"><h3>Life area row</h3><span>from: Life areas list</span></div>
+        <div class="stage">
+          <div class="card">
+            <div class="area"><span class="ic">▮</span><span class="t">Work &amp; career<span class="tag">Focus</span></span><span class="sc">4<small>/10</small></span></div>
+            <div class="acts">
+              <div class="a"><b>Set a heading for Work &amp; career</b><span>›</span></div>
+              <div class="a">Read <b>"A clearer working week"</b><span>›</span></div>
+              <div class="a">Add habit <b>"Choose the week's priority"</b><span>›</span></div>
+            </div>
+          </div>
+        </div>
+        <div class="rules">
+          <div><b>Keep</b> the score, the Focus tag, and the three follow-ups (goal, read, habit).</div>
+          <div><b>Change</b> "Set a goal" to "Set a heading" so it's the same object as elsewhere in Helm — his words, a number, a date. The three follow-ups become quiet rows, not a bordered button plus two links.</div>
+        </div>
+      </div>
+
+    </div>
+  </section>
+
+  <!-- ============ BODY ============ -->
+  <section>
+    <div class="sec-head"><h2>Body</h2><p>Readings against themselves</p></div>
+    <div class="cg">
+
+      <div class="c">
+        <div class="c__h"><h3>Measurement hero</h3><span>from: Measurement (Sleep)</span></div>
+        <div class="stage">
+          <div class="hero">
+            <div class="l">Sleep <span>Health Connect · today</span></div>
+            <div class="v">6h 10m</div>
+            <div class="rail"><div class="tk"></div><div class="tr"></div><div class="bd" style="left:28%; width:31%"></div><div class="pv" style="left:63%"></div><div class="mk" style="left:13%"></div></div>
+            <div class="scale"><span>5h 38m</span><span>9h 42m</span></div>
+            <p class="read">Outside your usual <em>6h 47m – 8h 3m</em>. 2h 3m down since yesterday.</p>
+          </div>
+        </div>
+        <div class="rules">
+          <div><b>Keep</b> the read sentence exactly as written — it's the best copy in the app — and the dashed previous marker.</div>
+          <div><b>Change</b> the value to mono at 56, the band to a luminous segment with an inner glow, the marker to glow. On the Body tab this becomes the Dial; the horizontal rail stays for detail screens and lists.</div>
+        </div>
+      </div>
+
+      <div class="c">
+        <div class="c__h"><h3>Terrain (30 days)</h3><span>from: the dot-and-line chart</span></div>
+        <div class="stage">
+          <div class="terrain" id="terrainSleep"></div>
+          <div class="rule" style="display:flex; gap:14px"><span>usual corridor</span><span style="margin-left:auto">3 Aug – 3 Sep</span></div>
+        </div>
+        <div class="rules">
+          <div><b>Keep</b> the 30-day window.</div>
+          <div><b>Change</b> the dotted polyline (which reads as a stock chart) to Terrain: area with contour hatching, the usual range drawn as a corridor so out-of-band days are visible at a glance, no dots. Scrub to read a day; the hero value updates while scrubbing.</div>
+        </div>
+      </div>
+
+      <div class="c">
+        <div class="c__h"><h3>Since last time</h3><span>from: Body tab rows</span></div>
+        <div class="stage">
+          <div class="list">
+            <div class="li" style="padding:10px 14px 6px"><span class="m" style="font-weight:500">Since last time</span><span class="v" style="font-family:var(--sans)">○ then · ● now</span></div>
+            <div class="li" style="color:var(--body)"><span><span class="t" style="color:var(--ink)">Weight</span><br><span class="m">Health Connect · yesterday</span></span><span class="db"><span class="t"></span><span class="b" style="left:36%; width:30%; background:var(--body)"></span><span class="p" style="left:62%"></span><span class="n" style="left:48%"></span></span><span class="delta" style="color:var(--ink)">−0.5 kg</span></div>
+            <div class="li" style="color:var(--sleep)"><span><span class="t" style="color:var(--ink)">Sleep</span><br><span class="m">Health Connect · yesterday</span></span><span class="db"><span class="t"></span><span class="b" style="left:30%; width:36%; background:var(--sleep)"></span><span class="p" style="left:63%"></span><span class="n" style="left:13%"></span></span><span class="delta" style="color:var(--ink)">−2h 3m</span></div>
+            <div class="li" style="color:var(--load)"><span><span class="t" style="color:var(--ink)">Steps</span><br><span class="m">Health Connect · yesterday</span></span><span class="db"><span class="t"></span><span class="b" style="left:32%; width:28%; background:var(--load)"></span><span class="p" style="left:22%"></span><span class="n" style="left:58%"></span></span><span class="delta" style="color:var(--ink)">+7,089</span></div>
+            <div class="li" style="color:var(--body)"><span><span class="t" style="color:var(--ink)">Resting heart rate</span><br><span class="m">Health Connect · yesterday</span></span><span class="db"><span class="t"></span><span class="b" style="left:44%; width:26%; background:var(--body)"></span><span class="p" style="left:24%"></span><span class="n" style="left:28%"></span></span><span class="delta" style="color:var(--ink)">+1 bpm</span></div>
+          </div>
+        </div>
+        <div class="rules">
+          <div><b>Keep</b> the dumbbell (then → now), the band behind it, and deltas in plain ink with a sign.</div>
+          <div><b>Change</b> the "Health Connect · since Yesterday" wrap — one line, lower case "yesterday". Rows live in one surface, not two sections of bordered cards; swipe a row to open its history.</div>
+        </div>
+      </div>
+
+      <div class="c">
+        <div class="c__h"><h3>History</h3><span>from: Measurement · History</span></div>
+        <div class="stage">
+          <div class="list hist">
+            <div class="li"><span><span class="t">6h 10m</span><br><span class="m">Thu 3 Sep · Health Connect · <i>used for this day</i></span></span><span class="chev">›</span></div>
+            <div class="li"><span><span class="t">8h 13m</span><br><span class="m">Wed 2 Sep · Health Connect · <i>used for this day</i></span></span><span class="chev">›</span></div>
+            <div class="li"><span><span class="t">7h 41m</span><br><span class="m">Tue 1 Sep · Health Connect</span></span><span class="chev">›</span></div>
+          </div>
+          <p class="rule">Imported measurements are read-only in helm. Manage access in your health platform settings.</p>
+        </div>
+        <div class="rules">
+          <div><b>Keep</b> the "used for this day's value" marker and the read-only note.</div>
+          <div><b>Change</b> ISO dates to "Thu 3 Sep"; one row per reading in one list. The read-only note drops to a footer line rather than a paragraph between the chart and the list.</div>
+        </div>
+      </div>
+
+    </div>
+  </section>
+
+  <!-- ============ INTAKE ============ -->
+  <section>
+    <div class="sec-head"><h2>Intake</h2><p>Totals, entries, library</p></div>
+    <div class="cg">
+
+      <div class="c">
+        <div class="c__h"><h3>Summary readouts</h3><span>from: Intake · Summary</span></div>
+        <div class="stage">
+          <div class="card" style="display:grid; gap:14px">
+            <div class="readout"><div class="l">Energy intake <span>so far today</span></div><div class="v">489<small>kcal</small></div></div>
+            <div class="readout"><div class="l">Fluid intake <span>so far today</span></div><div class="v">1,137<small>ml</small></div></div>
+            <div class="readout"><div class="l">Alcohol <span>so far today</span></div><div class="v">5.1<small>units</small></div></div>
+            <p class="rule">A usual range appears once a total has 14 logged days.</p>
+            <p class="rule">Totals are stated without targets, allowances, or ratings.</p>
+          </div>
+        </div>
+        <div class="rules">
+          <div><b>Keep</b> both rule lines verbatim. They're a promise; make them a footer of the card, permanently.</div>
+          <div><b>Change</b> each readout to gain a compact rail once it has its 14 days — until then, the number alone. Alcohol gets the bimodal read ("Most days: none. Drinking days usually land 2–5").</div>
+        </div>
+      </div>
+
+      <div class="c">
+        <div class="c__h"><h3>Entry row with swipe</h3><span>from: Intake · Logged</span></div>
+        <div class="stage">
+          <div class="swipe">
+            <div class="entry"><time>18:17</time><span><span class="t">Lager, 4.5%</span><br><span class="m">2 × pint</span></span><span class="v">489 kcal<br>1,137 ml · 5.1 u</span></div>
+            <div class="again">Again</div>
+          </div>
+        </div>
+        <div class="rules">
+          <div><b>Keep</b> the grouping ("2 × pint") and the three-figure right column — that's already better than the first build.</div>
+          <div><b>Change</b> the right column to two lines of mono so it stops wrapping; add a swipe-right "Again" action in accent that logs the same thing now. A haptic confirms it.</div>
+        </div>
+      </div>
+
+      <div class="c">
+        <div class="c__h"><h3>Manage rows</h3><span>from: Intake · Manage</span></div>
+        <div class="stage">
+          <div class="list">
+            <div class="set"><span><span class="t">Your library</span><br><span class="m">Foods, drinks, and recipes you use often.</span></span><span class="chev">›</span></div>
+            <div class="set"><span><span class="t">Headings</span><br><span class="m">The direction you set for what you track.</span></span><span class="chev">›</span></div>
+            <div class="set"><span><span class="t">Intake settings</span><br><span class="m">Streams, what you track, and units.</span></span><span class="chev">›</span></div>
+          </div>
+        </div>
+        <div class="rules">
+          <div><b>Keep</b> the three rows.</div>
+          <div><b>Change</b> "Goals" to "Headings" for consistency with Life and Body, and move the whole Manage group behind the settings icon — it's not a daily surface and it competes with today's entries for the fold.</div>
+        </div>
+      </div>
+
+    </div>
+  </section>
+
+  <!-- ============ SETTINGS ============ -->
+  <section>
+    <div class="sec-head"><h2>Settings</h2><p>Account, appearance, data</p></div>
+    <div class="cg">
+
+      <div class="c">
+        <div class="c__h"><h3>Account block</h3><span>from: Settings · Account</span></div>
+        <div class="stage">
+          <div class="card acct" style="display:grid; gap:8px">
+            <h6>Using helm without an account</h6>
+            <p>Your data stays on this device.</p>
+            <p class="fine">Creating or signing into an account does not move or back up data on this device.</p>
+            <div style="display:grid; grid-template-columns:1fr 1fr; gap:8px; margin-top:6px">
+              <button class="btn btn--primary">Sign in</button>
+              <button class="btn btn--secondary">Create account</button>
+            </div>
+          </div>
+        </div>
+        <div class="rules">
+          <div><b>Keep</b> the honesty about what an account does and doesn't do.</div>
+          <div><b>Change</b> two stacked full-width buttons to a pair; lead with the positive fact ("stays on this device") before the caveat.</div>
+        </div>
+      </div>
+
+      <div class="c">
+        <div class="c__h"><h3>Settings rows</h3><span>from: Settings list</span></div>
+        <div class="stage">
+          <div class="list">
+            <div class="set"><span><span class="t">Appearance</span><br><span class="m">Theme and your accent for actions and selections.</span></span><span class="v"><i></i>Dark · Ice</span><span class="chev">›</span></div>
+            <div class="set"><span><span class="t">Health data</span><br><span class="m">Import from Health Connect. Stays on this device.</span></span><span class="chev">›</span></div>
+            <div class="set"><span><span class="t">Check-ins</span><br><span class="m">Choose which scores appear after Mood.</span></span><span class="chev">›</span></div>
+            <div class="set"><span><span class="t">Intake</span><br><span class="m">Streams, totals, units, and what you track.</span></span><span class="chev">›</span></div>
+            <div class="set"><span><span class="t">Units &amp; format</span><br><span class="m">Weeks and body measurements.</span></span><span class="chev">›</span></div>
+          </div>
+        </div>
+        <div class="rules">
+          <div><b>Keep</b> the groups and the value preview on Appearance ("Light · Harbour" becomes "Dark · Ice" with a swatch).</div>
+          <div><b>Change</b> five bordered cards to one inset grouped list — the single biggest "web" tell in the current build, fixed in one move.</div>
+        </div>
+      </div>
+
+    </div>
+  </section>
+
+  <!-- ============ CHECK-INS ============ -->
+  <section>
+    <div class="sec-head"><h2>Check-ins</h2><p>Mood, productivity, and the flow around them</p></div>
+    <div class="cg">
+
+      <div class="c">
+        <div class="c__h"><h3>Mood scale</h3><span>from: Evening · 1 of 3</span></div>
+        <div class="stage">
+          <div class="flowbar"><span>Close</span><span class="mono">1 of 3</span><b>Finish</b></div>
+          <div class="step" style="gap:6px">
+            <div class="dots"><i class="on"></i><i></i><i></i></div>
+            <small class="eyebrow">Evening</small>
+            <h6>Mood</h6>
+            <p class="note" style="text-align:center">How you feel as the day ends.</p>
+          </div>
+          <div class="mood">
+            <button>Low</button><button>Flat</button><button class="on">Okay</button><button>Good</button><button>Sharp</button>
+          </div>
+          <div class="ends"><span>Very bad</span><span>Very good</span></div>
+        </div>
+        <div class="rules">
+          <div><b>Keep</b> the rising tiles, the five words, and "How you feel as the day ends." This is your most distinctive control — height means value, so it works without colour.</div>
+          <div><b>Change</b> tiles to surface-2 with no border; the chosen one fills with accent and glows. Tap = haptic. Finish and the step dots in accent; "Close" stays quiet.</div>
+        </div>
+      </div>
+
+      <div class="c">
+        <div class="c__h"><h3>Numbered scale</h3><span>from: Evening · 2 of 3 · Productivity</span></div>
+        <div class="stage">
+          <div class="flowbar"><span>Back</span><span class="mono">2 of 3</span><b>Finish</b></div>
+          <div class="step" style="gap:6px">
+            <div class="dots"><i class="on"></i><i class="on"></i><i></i></div>
+            <small class="eyebrow">Evening</small>
+            <h6>Productivity</h6>
+            <p class="note" style="text-align:center">How effectively you got things done today.</p>
+          </div>
+          <div class="mood mood--num">
+            <button>1</button><button>2</button><button>3</button><button class="on">4</button><button>5</button>
+          </div>
+          <div class="ends"><span>Not productive</span><span>Very productive</span></div>
+          <div class="skip">Skip</div>
+        </div>
+        <div class="rules">
+          <div><b>Keep</b> the 1–5 range, the end labels, and Skip.</div>
+          <div><b>Change</b> the five equal boxes to the same rising tiles as Mood, with mono numerals — one control family for every check-in scale, so step 2 feels like step 1. Steps are also swipeable; Back/Finish remain for reach.</div>
+        </div>
+      </div>
+
+      <div class="c">
+        <div class="c__h"><h3>Day summary</h3><span>from: Journal · past day</span></div>
+        <div class="stage">
+          <div class="lt"><div><small>Wednesday 2 September</small><h5>Measurements</h5></div></div>
+          <div class="list">
+            <div class="li" style="color:var(--body)"><span><span class="t" style="color:var(--ink)">Body fat</span><br><span class="m">1.5 points higher than Tuesday</span></span><span class="v" style="font-size:18px; color:var(--ink); font-weight:600">33.3<small style="font-size:11px; color:var(--ink-3)">%</small></span></div>
+            <div class="li" style="color:var(--body)"><span><span class="t" style="color:var(--ink)">Resting heart rate</span><br><span class="m">5 bpm lower than Tuesday</span></span><span class="v" style="font-size:18px; color:var(--ink); font-weight:600">50<small style="font-size:11px; color:var(--ink-3)"> bpm</small></span></div>
+            <div class="li" style="color:var(--sleep)"><span><span class="t" style="color:var(--ink)">Sleep</span><br><span class="m">43 m lower than Tuesday</span></span><span class="v" style="font-size:18px; color:var(--ink); font-weight:600">8h 13m</span></div>
+            <div class="li" style="color:var(--load)"><span><span class="t" style="color:var(--ink)">Steps</span><br><span class="m">5,006 lower than Tuesday</span></span><span class="v" style="font-size:18px; color:var(--ink); font-weight:600">4,748</span></div>
+            <div class="li" style="color:var(--body)"><span><span class="t" style="color:var(--ink)">Weight</span><br><span class="m">Same as Tuesday</span></span><span class="v" style="font-size:18px; color:var(--ink); font-weight:600">15 st 2 lb</span></div>
+          </div>
+        </div>
+        <div class="rules">
+          <div><b>Keep</b> the "lower/higher than previous day" sentence and imperial support ("15 st 2 lb").</div>
+          <div><b>Fix — this is a rule break.</b> The current build shows "↑4.7%" and "↓51.3%" chips in a green tint regardless of direction. Green on a rising body-fat figure reads as approval; green on a falling step count reads as approval too. Coloured delta chips are gone: the delta lives in the sentence, in ink. Also drop <em>relative</em> percentages — "4.7%" on body fat is a change in a percentage and nobody can read it; say "1.5 points higher".</div>
+          <div><b>Change</b> five stacked cards to one list; the domain marker is the only colour. Name the day ("than Tuesday") rather than "previous day".</div>
+        </div>
+      </div>
+
+    </div>
+  </section>
+
+  <!-- ============ FORMS AND SETTINGS ============ -->
+  <section>
+    <div class="sec-head"><h2>Forms and configuration</h2><p>Streams, library, pickers, headings</p></div>
+    <div class="cg">
+
+      <div class="c">
+        <div class="c__h"><h3>Stream toggles</h3><span>from: Settings · Intake · Streams</span></div>
+        <div class="stage">
+          <p class="rule">Food and drink are always on. Anything else appears only once you switch it on here.</p>
+          <div class="list">
+            <div class="set"><span><span class="t">Supplements</span><br><span class="m">Tablets, powders, and what they contain.</span></span><span class="sw"></span></div>
+            <div class="set"><span><span class="t">Medication</span><br><span class="m">Log what you take. Nothing is scheduled or reminded.</span></span><span class="sw"></span></div>
+            <div class="set"><span><span class="t">Smoking &amp; vaping</span><br><span class="m">Cigarettes and vapes, with a nicotine total in Trends.</span></span><span class="sw on"></span></div>
+            <div class="set"><span><span class="t">Other</span><br><span class="m">Anything else you take in.</span></span><span class="sw"></span></div>
+          </div>
+        </div>
+        <div class="rules">
+          <div><b>Keep</b> every line here. "Nothing is scheduled or reminded" is a rare promise in a medication logger and it's the right one.</div>
+          <div><b>Change</b> four cards to one grouped list with platform switches (accent when on). The "Open intake" button above this list goes — settings shouldn't have a way back into the tab it came from.</div>
+        </div>
+      </div>
+
+      <div class="c">
+        <div class="c__h"><h3>New library item</h3><span>from: Your library · New item</span></div>
+        <div class="stage">
+          <div class="lt"><div><small>Your library</small><h5>New item</h5></div></div>
+          <div class="seg" role="group"><button aria-pressed="true">Item</button><button aria-pressed="false">Recipe</button></div>
+          <div class="list">
+            <div class="fr"><label>Name</label><input value="Lager, 4.5%"></div>
+            <div class="fr"><label>Kind</label><span class="seg seg--mini"><button aria-pressed="false">Food</button><button aria-pressed="true">Drink</button></span></div>
+            <div class="fr"><label>Brand</label><input placeholder="Optional"></div>
+            <div class="fr"><label>Portion</label><input value="pint" placeholder="serving, pot, tablet"></div>
+            <div class="fr"><label>ABV</label><input value="4.5" class="mono" style="max-width:80px"><span class="unit">%</span></div>
+          </div>
+          <p class="rule">Per pint · Enter at least one value.</p>
+          <div class="list">
+            <div class="fr"><label>Energy</label><input placeholder="—" class="mono" style="max-width:100px"><span class="unit">kcal</span></div>
+            <div class="fr"><label>Protein</label><input placeholder="—" class="mono" style="max-width:100px"><span class="unit">g</span></div>
+            <div class="fr"><label>Carbohydrate</label><input placeholder="—" class="mono" style="max-width:100px"><span class="unit">g</span></div>
+            <div class="fr"><label>Fat</label><input placeholder="—" class="mono" style="max-width:100px"><span class="unit">g</span></div>
+          </div>
+          <p class="rule">Units: <b style="color:var(--ink-2)">2.6 per pint</b>, worked out from ABV.</p>
+        </div>
+        <div class="rules">
+          <div><b>Keep</b> Item/Recipe, Food/Drink, free-text portion with its placeholder, and "Enter at least one value."</div>
+          <div><b>Change</b> stacked label-over-box fields to native inline rows (label left, value right) in grouped lists — the form gets half as tall. Drinks gain an ABV row and units compute themselves. Only Name is required; the save button lives in the title bar, not at the bottom of a scroll.</div>
+        </div>
+      </div>
+
+      <div class="c">
+        <div class="c__h"><h3>Measurement picker</h3><span>from: Body · Manage measurements</span></div>
+        <div class="stage" style="background:var(--s1)">
+          <div class="sheet">
+            <div class="grab"></div>
+            <h6>Measurements</h6>
+            <p class="note" style="padding:0 2px 4px">Choose what to keep on Body and in tape sessions. Anything your health platform supplies stays either way.</p>
+            <div class="li pk on"><span class="t">Weight</span><span class="m" style="margin-left:6px">from Health Connect</span><span class="tick">✓</span></div>
+            <div class="li pk on"><span class="t">Waist</span><span class="tick">✓</span></div>
+            <div class="li pk on"><span class="t">Body fat</span><span class="m" style="margin-left:6px">from Health Connect</span><span class="tick">✓</span></div>
+            <div class="li pk"><span class="t">Neck</span><span class="tick"></span></div>
+            <div class="li pk on"><span class="t">Chest</span><span class="tick">✓</span></div>
+            <div class="li pk"><span class="t">Bicep</span><span class="tick"></span></div>
+            <div class="li pk"><span class="t">Hip</span><span class="tick"></span></div>
+            <div class="li pk"><span class="t">Thigh</span><span class="tick"></span></div>
+          </div>
+        </div>
+        <div class="rules">
+          <div><b>Keep</b> the eight sites and the health-platform rule.</div>
+          <div><b>Change</b> bordered checkbox cards to rows with a trailing accent tick; platform-supplied items say so inline and can't be unticked. Sites map one-to-one onto the tailor's figure, so ticking Waist here puts the tape line on the figure.</div>
+        </div>
+      </div>
+
+      <div class="c">
+        <div class="c__h"><h3>Heading (was "Goal")</h3><span>from: Measurement · Goal</span></div>
+        <div class="stage">
+          <div class="hero" style="gap:4px">
+            <div class="l">Resting heart rate <span>Health Connect · today</span></div>
+            <div class="v" style="font-size:44px">51<small style="font-size:14px; color:var(--ink-3); letter-spacing:0; margin-left:4px">bpm</small></div>
+            <div class="rail" style="--c:var(--body)"><div class="tk"></div><div class="tr"></div><div class="bd" style="left:44%; width:26%; background:var(--body); border-color:var(--body)"></div><div class="pv" style="left:24%; border-color:var(--body)"></div><div class="mk" style="left:31%; background:var(--body); box-shadow:0 0 8px color-mix(in srgb,var(--body) 70%,transparent)"></div><div class="hn" style="left:19%"></div></div>
+            <div class="scale"><span>46</span><span>62</span></div>
+            <p class="read">Below your usual <em>53–57</em>. 1 bpm up since yesterday.</p>
+          </div>
+          <div class="card hd" style="gap:8px">
+            <div class="hd__top"><h6>Heading</h6><span>your words</span></div>
+            <p class="hd__q">Resting under 49 <i>by the new year.</i></p>
+            <div class="hd__meta"><span>Now <b>51</b></span><span>Heading <b>49</b></span><span>By <b>1 Jan</b></span></div>
+            <div class="hd__meta" style="margin-top:2px; color:var(--ink-2)">On the last 90 days you'd get there around <b>mid-December</b>.</div>
+          </div>
+        </div>
+        <div class="rules">
+          <div><b>Keep</b> the number and the optional date — that's the whole input.</div>
+          <div><b>Change</b> "Goal / Target (bpm) / Save goal" to a Heading: he types a sentence, the number and date are parsed from it (or set in a sheet), and it renders as a notch on the rail and a line on the Terrain. The app reports bearing as fact and never colours it. No form under the chart — the Heading is a card that opens a sheet.</div>
+          <div><b>Fix.</b> The rail on this screen is drawn in the Load amber. Resting heart rate is a Body measurement — moss. Domain colour is identity; it can't drift per screen.</div>
+        </div>
+      </div>
+
+    </div>
+  </section>
+
+  <!-- ============ COPY ============ -->
+  <section>
+    <div class="sec-head"><h2>Copy that carries over untouched</h2><p>Don't let the redesign lose these</p></div>
+    <div class="copybook">
+      <div class="h">Line</div><div class="h">Why it stays</div>
+      <div class="keep">Totals are stated without targets, allowances, or ratings.</div><div class="why">The product promise in one sentence.</div>
+      <div class="keep">A usual range appears once a total has 14 logged days.</div><div class="why">Sets expectation without apology.</div>
+      <div class="keep">Outside your usual 6h 47m – 8h 3m. 2h 3m down since yesterday.</div><div class="why">Fact, band, delta. The template for every read line.</div>
+      <div class="keep">Log what you take. Nothing is scheduled or reminded.</div><div class="why">A medication logger that promises not to nag. Rare, and right.</div>
+      <div class="keep">Food and drink are always on. Anything else appears only once you switch it on here.</div><div class="why">Streams are opt-in; the UI never grows on its own.</div>
+      <div class="keep">A measurement your health platform supplies stays here either way.</div><div class="why">Honest about what the user can and can't remove.</div>
+      <div class="keep">How you feel as the day ends.</div><div class="why">Mood, defined without a single clinical word.</div>
+      <div class="keep">Nothing is saved until you finish.</div><div class="why">Removes the fear of a half-done review.</div>
+      <div class="keep">1 is as low as it gets, 10 is as good as it gets.</div><div class="why">Defines the scale in eleven words.</div>
+      <div class="keep">Every reading is measured against itself.</div><div class="why">Body tab intro — keep as the empty-state line, not a paragraph above data.</div>
+      <div class="keep">Imported measurements are read-only in helm. Manage access in your health platform settings.</div><div class="why">Clear about ownership. Product name updates with the rename.</div>
+    </div>
+  </section>
+
+  <footer>Helm component guide — extracted from bro's Journal, Intake, Body, Life and Settings screens, 3 September 2026. Accent and theme switch in the top bar.</footer>
+</div>
+
+<script>
+  const root = document.documentElement, btn = document.getElementById('themeBtn');
+  btn.addEventListener('click', () => { const l = root.getAttribute('data-theme') === 'light'; root.setAttribute('data-theme', l ? 'dark' : 'light'); btn.textContent = l ? 'Light' : 'Dark'; });
+  [{n:'Ice',h:212},{n:'Lichen',h:140},{n:'Amber',h:80},{n:'Ember',h:35},{n:'Violet',h:300},{n:'Teal',h:190}].forEach(p => {
+    const row = document.querySelector('.accents'); const b = document.createElement('button');
+    b.style.setProperty('--sh', p.h); b.title = p.n; b.setAttribute('aria-label', p.n); b.setAttribute('aria-pressed', String(p.h === 212));
+    b.addEventListener('click', () => { root.style.setProperty('--accent-h', p.h); row.querySelectorAll('button').forEach(x => x.setAttribute('aria-pressed','false')); b.setAttribute('aria-pressed','true'); });
+    row.appendChild(b);
+  });
+
+  // ---- Radar (the wheel) ----
+  (function(){
+    const N=8, cx=150, cy=150, R=104, labels=['Work','Money','Health','Love','Home','Family','Growth','Fun'];
+    const now=[4,7,6,5,4,4,4,6], prev=[5,5,6,6,4,5,3,6];
+    const pt=(i,v)=>{ const a=-Math.PI/2 + i*2*Math.PI/N; const r=R*v/10; return [cx+r*Math.cos(a), cy+r*Math.sin(a)]; };
+    const poly=(vals)=>vals.map((v,i)=>pt(i,v).map(n=>n.toFixed(1)).join(',')).join(' ');
+    let s=`<svg viewBox="0 0 300 300" aria-label="Life wheel">`;
+    [2.5,5,7.5,10].forEach(v=>{ s+=`<polygon points="${poly(Array(N).fill(v))}" fill="none" stroke="var(--hair-2)" stroke-width="1"/>`; });
+    for(let i=0;i<N;i++){ const [x,y]=pt(i,10); s+=`<line x1="${cx}" y1="${cy}" x2="${x.toFixed(1)}" y2="${y.toFixed(1)}" stroke="var(--hair)" stroke-width="1"/>`; }
+    s+=`<polygon points="${poly(prev)}" fill="none" stroke="var(--mind)" stroke-width="1.5" stroke-dasharray="4 4" opacity=".55"/>`;
+    s+=`<polygon points="${poly(now)}" fill="var(--mind)" fill-opacity=".14" stroke="var(--mind)" stroke-width="2.5" stroke-linejoin="round" style="filter:drop-shadow(0 0 8px color-mix(in srgb,var(--mind) 55%,transparent))"/>`;
+    now.forEach((v,i)=>{ const [x,y]=pt(i,v); s+=`<circle cx="${x.toFixed(1)}" cy="${y.toFixed(1)}" r="3" fill="var(--mind)"/>`; });
+    labels.forEach((l,i)=>{ const [x,y]=pt(i,12.3); s+=`<text x="${x.toFixed(1)}" y="${(y+4).toFixed(1)}" text-anchor="middle" font-size="11" fill="var(--ink-3)" style="font-family:var(--sans)">${l}</text>`; });
+    s+=`</svg>`; document.getElementById('radar').innerHTML=s;
+  })();
+
+  // ---- Terrain (sleep, 30 days) ----
+  (function(){
+    const W=320,H=120, hrs=[9.6,7.2,8.1,7.4,5.9,7.0,7.1,6.6,6.4,6.2,6.5,7.3,7.8,8.4,7.5,6.1,7.6,7.9,8.7,9.5,7.7,7.4,6.0,8.2,8.3,8.0,7.6,9.2,8.1,6.2];
+    const min=5.3,max=10; const x=i=>i/(hrs.length-1)*W; const y=v=>H-6-(v-min)/(max-min)*(H-14);
+    let d=`M${x(0)},${y(hrs[0])}`; hrs.forEach((v,i)=>{ if(i) d+=` L${x(i).toFixed(1)},${y(v).toFixed(1)}`; });
+    const area=d+` L${W},${H} L0,${H} Z`, corr=`M0,${y(6.78)} L${W},${y(6.78)} L${W},${y(8.05)} L0,${y(8.05)} Z`;
+    document.getElementById('terrainSleep').innerHTML=`<svg viewBox="0 0 ${W} ${H}">
+      <defs><pattern id="ct2" width="6" height="6" patternUnits="userSpaceOnUse" patternTransform="rotate(-20)"><line x1="0" y1="0" x2="0" y2="6" stroke="var(--sleep)" stroke-width="1" opacity=".22"/></pattern>
+      <linearGradient id="fd2" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="var(--sleep)" stop-opacity=".35"/><stop offset="1" stop-color="var(--sleep)" stop-opacity="0"/></linearGradient></defs>
+      <path d="${corr}" fill="var(--s3)" opacity=".8"/>
+      <path d="${area}" fill="url(#fd2)"/><path d="${area}" fill="url(#ct2)"/>
+      <path d="${d}" fill="none" stroke="var(--sleep)" stroke-width="2" stroke-linejoin="round" style="filter:drop-shadow(0 0 5px color-mix(in srgb,var(--sleep) 50%,transparent))"/>
+      <text x="4" y="${(y(8.05)-4).toFixed(1)}" font-size="9" fill="var(--ink-3)" style="font-family:var(--mono)">8h 3m</text>
+      <text x="4" y="${(y(6.78)+11).toFixed(1)}" font-size="9" fill="var(--ink-3)" style="font-family:var(--mono)">6h 47m</text>
+      <circle cx="${x(hrs.length-1).toFixed(1)}" cy="${y(hrs[hrs.length-1]).toFixed(1)}" r="4" fill="var(--sleep)"/>
+    </svg>`;
+  })();
+</script>
+</body>
+</html>

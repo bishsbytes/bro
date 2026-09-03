@@ -1,67 +1,69 @@
-# bro — design package
+# bro — design package (Helm)
 
-Everything an agent or a person needs to build UI that belongs to bro.
-Read **DESIGN.md first** — it is the authority and overrides framework
-defaults and personal instinct. Add it to your agent context (e.g. reference
-it from the repo's CLAUDE.md / AGENTS.md) so it loads for every UI task.
+Drop this `design/` folder into the repo root. Reference `design/DESIGN.md`
+from your `CLAUDE.md` / `AGENTS.md` so it loads for every UI task. Product
+name is **bro** for now; the design language is **Helm**. If the product is
+renamed later, `brand/` regenerates from the same recipe (Instrument Sans Bold,
+−4% tracking, accent full stop) and two copy lines change.
 
 ```
 design/
-├── README.md                  this file
-├── DESIGN.md                  the rulebook — read before any UI work
-├── REACT_NATIVE.md            Expo/React Native delivery mapping
+├── README.md
+├── DESIGN.md                 the rulebook — read first, overrides everything
+├── COMPONENTS.md             every component, with RN library mappings and keep/change notes
 ├── tokens/
-│   ├── tokens.css             runtime tokens (light, dark, accent derivation)
-│   ├── tokens.json            canonical machine-readable tokens
-│   ├── tailwind.css           Tailwind v4 @theme bridge onto tokens.css
-│   └── accent.ts              accent presets + applyAccent()/normalizeHue()
-├── brand/
-│   ├── bro-icon-light.svg     app icon, light  (1024, OS applies corner mask)
-│   ├── bro-icon-dark.svg      app icon, dark
-│   ├── bro-icon-tinted.svg    app icon, iOS tinted / Android monochrome basis
-│   ├── bro-glyph.svg          circular b. glyph — notifications, favicon, watch
-│   ├── bro-wordmark.svg       drawn wordmark; dot takes var(--accent)
-│   └── bro-lockup.svg         marketing lockup (wordmark + gauge rail), ≥300px wide
+│   ├── tokens.json           canonical, machine-readable
+│   ├── helm.ts               theme objects, type scale, dial/terrain/figure geometry, OKLCH accent
+│   ├── unistyles.ts          StyleSheet.configure + setAccentHue() + setAppearance()
+│   ├── icons.ts              Lucide defaults and the canonical icon map
+│   └── tokens.css            web / marketing / reference sheets
+├── brand/                    logotype: Instrument Sans Bold, outlined, accent full stop
+│   ├── bro-icon-dark.svg     PRIMARY app icon (= dark-ice)
+│   ├── bro-icon-dark-{ice,lichen,amber,ember,violet,teal}.svg   alternate icons per accent preset
+│   ├── bro-icon-light.svg    light-mode icon, plus the same six presets
+│   ├── bro-icon-tinted.svg   iOS tinted / Android monochrome basis
+│   ├── bro-glyph.svg         circular b. — notifications, favicon, watch
+│   ├── bro-wordmark.svg      outlined wordmark; dot takes var(--accent), Ice fallback
+│   ├── bro-lockup-dark.svg / bro-lockup-light.svg   marketing lockup (≥300px wide)
+│   └── drawn-mark-archive/   the earlier geometric mark — reference only, not in use
 └── reference/
-    ├── baseline-design-system.html   living style guide — open in a browser
-    └── bro-icon-sheet.html           identity sheet: concepts, sizes, usage rules
+    ├── helm-design-language.html      the language: rationale, landscape, three screens
+    ├── helm-components-from-bro.html  25 components rebuilt in Helm with keep/change notes
+    ├── bro-intake-proposal.html       intake v2 (library-first, rough entries, substances)
+    ├── bro-measurements-proposal.html tailor's diagram, measurement rules
+    └── bro-icon-sheet.html            the earlier drawn-mark exploration — historical; see brand/ for the logotype in use
 ```
 
-## Wiring it up
+## Wiring (React Native + Unistyles 3)
 
-Plain CSS: link `tokens/tokens.css` before app styles; set `data-theme="dark"`
-on `<html>` for dark mode; call `applyAccent()` from `tokens/accent.ts` on boot.
+1. Copy `tokens/` into the app. `import './design/tokens/unistyles'` once, before
+   any `StyleSheet.create` (top of `App.tsx` / root `_layout.tsx`).
+2. Bundle Instrument Sans (400/500/600/700), Geist Mono (400/500/600) and
+   Instrument Serif (400/italic) — all OFL — and make the `fontFamily` strings in
+   `helm.ts` match your asset names (`expo-font` or `react-native-asset`).
+3. On boot, after loading the user record: `setAccentHue(user.accentHue)`. Persist
+   only the integer.
+4. Chrome from the OS: `react-native-bottom-tabs` for the tab bar, native-stack
+   `headerLargeTitle` for titles, `react-native-screens` form sheets for sheets.
+   See the library table at the top of `COMPONENTS.md`.
+5. Skia for Dial, Terrain and the tailor's figure; `react-native-svg` for the
+   wheel; Reanimated for springs; `expo-haptics` for confirmation.
+6. Icons: import from `tokens/icons.ts` only.
 
-Tailwind v4:
+**Web / reference.** `tokens.css` + the three Google Fonts families.
 
-```css
-@import "tailwindcss";
-@import "./design/tokens/tokens.css";
-@import "./design/tokens/tailwind.css";
-```
+## The rule most likely to be broken
 
-Then `bg-surface text-ink border-line rounded-md p-4 text-body font-sans`
-resolve to system values, and `bg-accent text-on-accent` gives a compliant
-primary button.
+Colour has three separate jobs: **domain** = what it measures (data only,
+constant per measurement), **accent** = you touched this (interaction only),
+**alert** = risk (once per screen, never personalised). A PR that mixes them is
+wrong regardless of how it looks. Second most likely: coloured deltas. There
+are none — change is a signed number in ink, in a sentence.
 
-## Fonts
+## Migrating from Baseline
 
-Archivo (400/500/600/700) and Source Serif 4 (400/500), e.g.:
-
-```html
-<link href="https://fonts.googleapis.com/css2?family=Archivo:wght@400;500;600;700&family=Source+Serif+4:opsz,wght@8..60,400;8..60,500&display=swap" rel="stylesheet">
-```
-
-Self-host for production.
-
-For the Expo app, fonts, semantic theme values, native-state handling, and
-asset delivery are documented in `REACT_NATIVE.md`. The canonical values still
-come from `tokens.json`; the native theme is their platform adapter.
-
-## The three color jobs (the rule most likely to be broken)
-
-- **Domain** (mind/body/sleep/load): what the data measures. Data surfaces only.
-- **Accent** (user's hue): what the user is touching. Interaction surfaces only.
-- **Alert**: genuine health risk. Max once per screen. Never decorative.
-
-If a PR mixes these, it is wrong regardless of how it looks.
+Baseline tokens (bone canvas, Archivo, `--line`-bordered cards, "lines before
+shadows") are retired. Search the codebase for `#E9E9E4`, `Archivo`, and
+1px-border card patterns; replace with `surface1` inset lists and Helm type.
+Everything about *behaviour* — bands, no verdicts, no streaks, rough entries,
+no intake↔exercise coupling — carries over unchanged.

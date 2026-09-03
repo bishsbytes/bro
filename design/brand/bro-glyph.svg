@@ -1,10 +1,1 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1024 1024" width="1024" height="1024" role="img" aria-label="bro">
-  <circle id="bg" cx="512" cy="512" r="512" fill="#23282B"/>
-  <g transform="translate(184.25,376.53) scale(4.37)">
-    <g fill="none" stroke="#E9E9E4" stroke-width="24" stroke-linecap="round">
-      <path d="M12,-26 L12,88"/>
-      <circle cx="50" cy="50" r="38"/>
-    </g>
-    <circle cx="138" cy="88" r="12" fill="#E9E9E4"/>
-  </g>
-</svg>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1024 1024" width="1024" height="1024" role="img" aria-label="bro"><circle cx="512" cy="512" r="512" fill="#E8ECF0"/><g transform="translate(214.7,760.1) scale(0.68910)"><path d="M371 10Q298 10 252.5 -24.0Q207 -58 199 -117L207 -118V0H60V-720H210V-397L201 -399Q212 -455 259.5 -487.5Q307 -520 379 -520Q448 -520 498.5 -487.5Q549 -455 576.5 -396.0Q604 -337 604 -257Q604 -176 575.0 -116.0Q546 -56 494.0 -23.0Q442 10 371 10ZM329 -110Q382 -110 415.0 -148.0Q448 -186 448 -256Q448 -326 414.5 -363.0Q381 -400 327 -400Q275 -400 241.5 -362.5Q208 -325 208 -255Q208 -185 241.5 -147.5Q275 -110 329 -110Z" fill="#0B0F14"/><path d="M638 0V-165H803V0Z" fill="#0B0F14"/></g></svg>
