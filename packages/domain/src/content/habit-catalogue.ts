@@ -89,7 +89,7 @@ export const HABIT_CATALOGUE = [
 		description:
 			"Counts automatically from your drink log: a day with no alcohol logged is alcohol-free.",
 		kind: "metric",
-		metricSlug: "alcohol_intake",
+		metricSlug: "ethanol_intake",
 		direction: "at_most",
 		defaultTargetValue: 0,
 		tagSlug: null,

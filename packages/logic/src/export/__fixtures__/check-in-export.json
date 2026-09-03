@@ -1,6 +1,6 @@
 {
   "metadata": {
-    "formatVersion": 1,
+    "formatVersion": 2,
     "exportedAt": "2026-08-14T12:00:00.000Z",
     "appVersion": "1.0.0"
   },
@@ -19,23 +19,25 @@
   "habitCompletions": [],
   "challengeEnrolments": [],
   "challengeProgress": [],
-  "consumptionEntries": [
+  "intakeEvents": [
     {
-      "id": "consumption-chicken-rice",
+      "id": "intake-chicken-rice",
       "kind": "food",
-      "catalogueRef": null,
-      "consumableRef": "custom:custom-chicken-rice",
-      "label": "Chicken and rice",
-      "servingLabel": "bowl",
+      "consumableId": "library-chicken-rice",
+      "sourceRef": "library:library-chicken-rice",
+      "name": "Chicken and rice",
+      "brand": null,
+      "portionLabel": "serving",
       "quantity": 1,
+      "massKg": 0.35,
       "volumeL": null,
-      "ethanolKg": null,
-      "caffeineKg": null,
-      "nicotineKg": null,
-      "energyKcal": 430,
-      "proteinG": 38,
-      "carbsG": 0,
-      "fatG": null,
+      "constituents": {
+        "energy": 430,
+        "protein": 0.038,
+        "carbohydrate": 0
+      },
+      "context": "dinner",
+      "notes": null,
       "occurredAt": 1786621800000,
       "localDay": "2026-08-13",
       "tzOffsetMinutes": -60,
@@ -43,65 +45,110 @@
       "updatedAt": 1786621800100
     }
   ],
-  "customConsumables": [
+  "consumables": [
     {
-      "id": "custom-yoghurt",
+      "id": "library-yoghurt",
       "kind": "food",
-      "label": "Greek yoghurt",
+      "name": "Greek yoghurt",
       "brand": "Corner shop",
-      "isRecipe": false,
-      "servings": [
+      "barcode": null,
+      "basis": {
+        "type": "mass",
+        "massKg": 0.1
+      },
+      "constituents": {
+        "energy": 97,
+        "protein": 0.009,
+        "carbohydrate": 0.004
+      },
+      "portions": [
         {
           "id": "pot",
           "label": "1 pot",
+          "massKg": 0.17,
           "volumeL": null,
-          "ethanolKg": null,
-          "caffeineKg": null,
-          "energyKcal": 120,
-          "proteinG": 15,
-          "carbsG": 0,
-          "fatG": null
+          "basisUnits": null
         }
       ],
+      "defaultPortionId": "pot",
+      "recipe": null,
+      "source": {
+        "type": "user"
+      },
+      "forkedFrom": null,
+      "archivedAt": null,
       "createdAt": 1786620000000,
       "updatedAt": 1786620000000
     },
     {
-      "id": "custom-chicken-rice",
+      "id": "library-chicken-rice",
       "kind": "food",
-      "label": "Chicken and rice",
+      "name": "Chicken and rice",
       "brand": null,
-      "isRecipe": true,
-      "servings": [
+      "barcode": null,
+      "basis": {
+        "type": "portion",
+        "portionId": "serving"
+      },
+      "constituents": {
+        "energy": 430,
+        "protein": 0.038,
+        "carbohydrate": 0
+      },
+      "portions": [
         {
-          "id": "bowl",
-          "label": "1 bowl",
+          "id": "serving",
+          "label": "serving",
+          "massKg": 0.35,
           "volumeL": null,
-          "ethanolKg": null,
-          "caffeineKg": null,
-          "energyKcal": 430,
-          "proteinG": 38,
-          "carbsG": 0,
-          "fatG": null
+          "basisUnits": 1
         }
       ],
+      "defaultPortionId": "serving",
+      "recipe": {
+        "yield": {
+          "quantity": 2,
+          "unit": "serving"
+        }
+      },
+      "source": {
+        "type": "user"
+      },
+      "forkedFrom": null,
+      "archivedAt": null,
       "createdAt": 1786620100000,
       "updatedAt": 1786620100000
     }
   ],
-  "customConsumableComponents": [
+  "recipeIngredients": [
     {
-      "id": "component-chicken",
-      "consumableId": "custom-chicken-rice",
+      "id": "ingredient-chicken",
+      "recipeId": "library-chicken-rice",
       "position": 0,
-      "label": "Chicken thigh",
+      "consumableId": null,
+      "sourceRef": "off:5000112637922",
+      "name": "Chicken thigh",
+      "portionLabel": "thigh",
       "quantity": 2,
-      "energyKcal": 260,
-      "proteinG": 38,
-      "carbsG": 0,
-      "fatG": null,
+      "massKg": 0.24,
+      "volumeL": null,
+      "constituents": {
+        "energy": 520,
+        "protein": 0.052,
+        "carbohydrate": 0
+      },
       "createdAt": 1786620100100,
       "updatedAt": 1786620100100
+    }
+  ],
+  "intakeStreams": [
+    {
+      "id": "stream-supplement",
+      "kind": "supplement",
+      "enabledAt": 1786620000000,
+      "disabledAt": null,
+      "createdAt": 1786620000000,
+      "updatedAt": 1786620000000
     }
   ]
 }

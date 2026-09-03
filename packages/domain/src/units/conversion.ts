@@ -25,6 +25,9 @@ export const KILOGRAMS_ETHANOL_PER_UK_UNIT =
 	(10 * ETHANOL_DENSITY_G_PER_ML) / 1_000;
 /** The US standard-drink definition is exactly 14 g of ethanol. */
 export const KILOGRAMS_ETHANOL_PER_US_STANDARD_DRINK = 0.014;
+/** The label convention: salt is sodium × 2.5, the rounded NaCl mass ratio. */
+export const SALT_GRAMS_PER_SODIUM_GRAM = 2.5;
+export const MICROGRAMS_PER_KILOGRAM = 1_000_000_000;
 
 function assertValue(value: number): void {
 	if (!Number.isFinite(value) || value < 0) {
@@ -59,6 +62,8 @@ export function toCanonical(
 		}
 		if (unit === "g") return value / 1_000;
 		if (unit === "mg") return value / 1_000_000;
+		if (unit === "µg") return value / MICROGRAMS_PER_KILOGRAM;
+		if (unit === "salt_g") return value / SALT_GRAMS_PER_SODIUM_GRAM / 1_000;
 		return (
 			value *
 			(unit === "uk_unit"
@@ -105,6 +110,10 @@ export function fromCanonical(
 		}
 		if (unit === "g") return canonicalValue * 1_000;
 		if (unit === "mg") return canonicalValue * 1_000_000;
+		if (unit === "µg") return canonicalValue * MICROGRAMS_PER_KILOGRAM;
+		if (unit === "salt_g") {
+			return canonicalValue * 1_000 * SALT_GRAMS_PER_SODIUM_GRAM;
+		}
 		return (
 			canonicalValue /
 			(unit === "uk_unit"

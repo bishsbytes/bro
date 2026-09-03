@@ -57,7 +57,10 @@ function toReading(row: Observation): MeasurementReading {
  * interpolation matters at these sample sizes: with five readings, a nearest-rank
  * quartile would jump a whole reading's width the moment a sixth arrives.
  */
-function quantile(sorted: readonly number[], fraction: number): number {
+export function interpolatedQuantile(
+	sorted: readonly number[],
+	fraction: number,
+): number {
 	const position = (sorted.length - 1) * fraction;
 	const lower = Math.floor(position);
 	const upper = Math.ceil(position);
@@ -66,7 +69,7 @@ function quantile(sorted: readonly number[], fraction: number): number {
 	return low + (high - low) * (position - lower);
 }
 
-function padded(values: readonly number[]): MeasurementRange {
+export function paddedRail(values: readonly number[]): MeasurementRange {
 	const min = Math.min(...values);
 	const max = Math.max(...values);
 	const span = max - min;
@@ -117,7 +120,10 @@ export function resolveMeasurementBaseline(
 		spannedDays >= MEASUREMENT_BASELINE_MIN_SPAN_DAYS;
 
 	const usualRange = banded
-		? { min: quantile(windowValues, 0.25), max: quantile(windowValues, 0.75) }
+		? {
+				min: interpolatedQuantile(windowValues, 0.25),
+				max: interpolatedQuantile(windowValues, 0.75),
+			}
 		: null;
 
 	return {
@@ -127,7 +133,7 @@ export function resolveMeasurementBaseline(
 		usualRange,
 		// Everything the gauge has to place has to fit on the rail, including a
 		// previous reading old enough to have fallen out of the window.
-		rail: padded([
+		rail: paddedRail([
 			...windowValues,
 			current.value,
 			...(previous ? [previous.value] : []),

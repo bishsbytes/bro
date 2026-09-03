@@ -343,37 +343,39 @@ All the user-side tables live in `bro.db` and replicate. Streaks are derived.
 
 **Resolved: challenges are solo, always.** They are private, local-first programmes with no sharing, competition, leaderboard, or participant identity. A future social product would be a separate opt-in server feature over authored templates; it would require accounts and its own identity/privacy design rather than adding authorship or visibility fields to these replicating rows.
 
-### 8. Consumption logging — drinks, then food
+### 8. Intake — one consumable model
 
-Sequencing splits this domain in two. **Drink logging shipped first as step 8** because alcohol, caffeine, fluid, and energy need no provider: migration 007 established the shared snapshot entry, canonical quantities, read-time daily totals, and offline correction path. **Food logging is step 9** and remains the largest part, carrying the external dependency while extending the proven table instead of introducing a parallel model.
+Shipped in three steps — drinks, then food, then nicotine — as one entry table with a fixed column per substance, and then rebuilt on 3 September 2026 as a single generic model, because adding the third substance cost a migration column, a registry metric, and a line in the totals mapping and the fourth would have cost the same. The delivery record is [Intake domain implementation plan](intake-domain.md); the three shipped plans remain the record of the copy, sensitivity, and offline decisions, all of which carry forward.
 
 ```ts
-consumptionEntries = {
-  id, kind, occurredAt, localDay,
-  catalogueRef,                 // authored drink, provider, custom-food, or null
-  label, servingLabel, quantity,// what was displayed, snapshotted
-  volumeL, ethanolKg,
-  caffeineKg, energyKcal,       // canonical quantities, snapshotted
-  proteinG, carbsG, fatG,       // step 9 extension
+intakeEvents = {
+  id, kind, occurredAt, localDay, tzOffsetMinutes,
+  consumableId, sourceRef,          // re-lookup only, never display
+  name, brand, portionLabel, quantity,
+  massKg, volumeL,                  // amount consumed, where known
+  constituents,                     // JSON code → canonical amount, already × quantity
+  context, notes,
   createdAt, updatedAt,
+}
+consumables = {                     // the library: user, provider, later community rows
+  id, kind, name, brand, barcode,
+  basis, constituents, portions, defaultPortionId,   // composition per basis
+  recipe,                           // { yield } when calculated from recipe_ingredients
+  source, forkedFrom, archivedAt, createdAt, updatedAt,
 }
 ```
 
-**Snapshot the nutrition onto the entry.** The food database will change entries, and providers disappear; a meal logged in 2026 has to still read correctly in 2029 without a network call. The `foodRef` is for re-lookup and editing, never for display.
+**A constituent is authored content, and a new one never migrates.** `constituent-catalogue.ts` lists what a consumable can contain — energy, the macros, sodium, fluid, caffeine, nicotine, ethanol, creatine, and the first vitamins and minerals — each with a permanent code, a dimension, a display choice, and a sensitivity flag. The registry's intake metrics are generated from it, one per constituent (`<code>_intake`), all default-off. An event stores one constituent map; a day's total for any metric is the sum of one code across the day's events, and nothing branches on the event's kind. Unknown codes round-trip untouched and reach no total, the same posture as unknown metric slugs.
 
-**Custom foods and recipes** the user creates are user-originated: `bro.db`, replicating. **Looked-up foods** are a cache of someone else's database: `bro-local.db`, never replicating, rebuildable.
+**System content stays in the binary; the library holds what the user has.** The drink and nicotine catalogues are consumables authored per 100 ml and per portion; editing one forks it into the library with `forkedFrom` recording where it came from. Logging a searched product writes a provider-sourced library row (one per product, however often it is logged) and logs against it, so "my foods" survive a phone change; the `bro-local.db` cache keeps holding results seen but not used.
 
-**The provider is a real problem for the free tier.** Food search means a network call, and the umbrella plan's [acceptance matrix](offline-first-identity-onboarding-premium.md#acceptance-test-matrix) currently asserts that *"a local-only user causes no auth, API, sync, or product-data request to our backend at any point"*, with store and analytics traffic carved out and documented separately. A food database becomes a **third carve-out**, and the options are not equivalent:
+**Snapshot everything displayed.** An event copies the scaled composition at log time; a recipe's ingredients snapshot their name and constituents and the recipe's own composition is recomputed and stored on every ingredient change. A catalogue edit, a provider change, or a deleted recipe never changes a logged day.
 
-| Option | Consequence |
-| --- | --- |
-| Bundle a dataset | No network call, no privacy question, but a large binary and data that ages. Viable if scoped to a few thousand common foods. |
-| Call the provider directly from the device | Keeps our servers out of it, but the user's food searches go to a third party, and the privacy screen has to say so. |
-| Proxy through our API | We see the queries, it needs infrastructure, and it puts a server dependency in the free tier's critical path — the thing this whole plan is built to avoid. |
+**Streams are an explicit overlay.** Food and drink are always on; `supplement`, `medication`, `nicotine`, and `other` are off on a fresh install and switched on from settings or by adopting a habit that needs one. Everything the nicotine plan gated — the quick-log action, the log screen's kind chips and catalogue, the day's events — gates on the stream.
 
-**Resolved and shipped, 19 August 2026: lookup proxies through our API, sourced from Open Food Facts first, behind a normalised response shape that lets UK and US datasets be added server-side without an app release.** This deliberately takes the option costed as worst above, for a reason not weighed when the table was written: multi-source coverage is a product requirement — USDA FoodData Central for the US and a UK composition dataset are both wanted — and normalising three datasets on the device would mean three parsers, three licence-attribution paths, and a client release to change any of them. The third carve-out to the no-backend-request promise is search/ref-lookup only. The endpoint is unauthenticated, receives no app-supplied account/session/device identifier, retains no query text, and rate-limits by an in-memory coarse IP bucket. Offline-first survives because logging, recents, correction, and every derived total stay local, while search degrades to recents plus the `bro-local.db` cache without blocking. ODbL source/licence fields travel with every result and attribution appears on both search and the permanent licences screen. See the [step 9 sign-off](step-9-food-logging.md#slice-4-implementation-sign-off--19-august-2026).
+**Sensitivity generalises by constituent and by kind.** Export drops any event or library row carrying a positive amount of a sensitive constituent (ethanol, nicotine) or of a sensitive kind (medication, other), with the metric's tracked row and goals, and the stream rows whose being on is itself a disclosure.
 
-Barcode scanning is another native dependency, and another prebuild.
+**The provider returns the consumable shape.** `/api/food/search`, `/api/food/:ref`, and `/api/food/barcode/:code` return an `ExternalConsumable` — per 100 g, with every constituent Open Food Facts knows and a serving portion where the product declares one — behind the same anonymous, retention-free, rate-limited boundary as before. Barcode scanning is still the native batch; the lookup route is where it will attach.
 
 ### 9. Insight — derived, and the actual product
 
@@ -459,7 +461,7 @@ A health record spanning years, some of it imported, is exactly the data a user 
 | Reminder schedule | `bro.db` | Yes | A preference about the person; a new phone should not mean setting it up again. |
 | Goals | `bro.db` | Yes | Intent, not measurement. |
 | Habits, completions, challenge enrolments and progress | `bro.db` | Yes | User-originated. |
-| Consumption entries, custom foods, recipes | `bro.db` | Yes | User-originated; displayed serving and canonical nutrition are snapshotted at log time. |
+| Intake events, the consumable library, recipe ingredients, intake streams | `bro.db` | Yes | User-originated; name, portion, and the scaled constituent map are snapshotted at log time. Provider results become library rows when logged. |
 | AI replies | `bro.db` | Yes | Kept against the day they concern. |
 | **Raw imported health samples** | **`bro-local.db`** | **No** | Orders of magnitude larger than anything typed, and never read at that granularity. Rebuildable by re-importing. |
 | **Daily rollups** (`dailyMetrics`) | `bro.db` | Yes | What the insight layer actually consumes; small, stably keyed, and the only imported figures worth carrying to a new phone. |
@@ -586,5 +588,7 @@ Each step adds exactly one hard thing.
 7. **Insight — complete.** Delivered on 18 August 2026: a fourteen-pair premium catalogue and one scale-aware daily-signal boundary; read-time 90-day alignment, arm, effect-floor, and split-window stability gates; arithmetic empty/not-yet/shown states on Mind; evidence detail with both means and counts; an eight-week four-state habit adherence record that stays outside correlation; and a platform-split v5 export share/save UI with sensitive data off by default. Insights add no schema, cache, or stored truth, and late-arriving rows change them on the next read. Real-SQLite signal and export coverage, pure gate/lag/stability/healing tests, interaction tests, typecheck, and lint are green. Entitlement enforcement remains Phase 4. Detailed delivery plan: [Step 7: Insight](step-7-insight.md).
 8. **Drink logging — complete.** Delivered on 19 August 2026: migration 007 and the replicating `consumption_entries` repository; snapshot-faithful catalogue and free entries; canonical ethanol/caffeine mass, volume, and energy; read-time totals shared by drinks, Trends, goals, history, and insight; default-off drinks and settings surfaces; entry-derived alcohol/caffeine presence plus two four-unit premium pairs; and export format v6 with whole-entry alcohol exclusion and continued v1–v5 parsing. Everything remains local and offline, no observation or stored daily-total row is written, and no native dependency or prebuild was required. Detailed delivery plan: [Step 8: Drink logging](step-8-drink-logging.md).
 9. **Food logging — complete.** Delivered on 19 August 2026: migration 008 and the replicating custom-consumable/recipe model; snapshotted food entries with nullable energy and macros; read-time totals through the existing consumption projection; offline recents, custom foods, recipes, free entry, correction, Trends, and goals; export v7 and two-store deletion; the honest privacy rewrite; and anonymous Open Food Facts search behind a shared normalised shape with short timeouts, coarse in-memory rate limiting, no query retention, local cache-through/offline degradation, and ODbL attribution. Automated app and API tests, typecheck, and lint are green. Detailed delivery plan and sign-off: [Step 9: Food logging](step-9-food-logging.md).
+
+10. **Intake domain, Phase 1 — complete.** Delivered on 3 September 2026: the constituent catalogue with registry metrics generated from it; the drink and nicotine catalogues re-authored as consumables; `intake_events`, `consumables`, `recipe_ingredients`, and `intake_streams` as a re-squashed `0000` baseline with the old tables deleted rather than migrated; repositories with a `listBetween` window, provider idempotency, fork-on-edit, and recipe recomputation with cycle rejection in one transaction; the pure intake calculation layer; export format v2 with constituent- and kind-based sensitivity; the provider returning the consumable shape plus a barcode lookup; and the three old app stacks replaced by one log screen, one tab, one settings screen, goals, and a first-cut library. Domain, model, logic, database, API, and app suites, typecheck, lint, and repo-wide `biome check` are green. Phases 2–9 follow the [intake domain plan](intake-domain.md).
 
 Sync (Phase 5) is orthogonal and can land whenever entitlement is ready — but note it should not land before step 5, or the [three-store split](#three-stores-not-two) will be retrofitted under a running replica rather than designed in.

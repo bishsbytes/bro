@@ -238,7 +238,7 @@ describe("habits store", () => {
 		});
 		expect(alcoholFree).toMatchObject({
 			kind: "metric",
-			metricSlug: "alcohol_intake",
+			metricSlug: "ethanol_intake",
 			direction: "at_most",
 			targetValue: 0,
 		});
@@ -257,16 +257,24 @@ describe("habits store", () => {
 		expect(today.habits[0]).toMatchObject({ completed: true, streak: 3 });
 
 		// A logged drink with ethanol breaks the day and shows what was logged.
-		await new databaseApp.ConsumptionEntryRepository(db).create({
+		await new databaseApp.IntakeEventRepository(db).create({
 			kind: "drink",
-			catalogueRef: "drink:lager",
-			label: "Lager",
-			servingLabel: "pint",
+			consumableId: null,
+			sourceRef: "system:drink:lager-4_5",
+			name: "Lager",
+			brand: null,
+			portionLabel: "pint",
 			quantity: 1,
+			massKg: null,
 			volumeL: 0.568_261_25,
-			ethanolKg: 0.020_181_999,
-			caffeineKg: 0,
-			energyKcal: 227,
+			constituents: {
+				fluid: 0.568_261_25,
+				ethanol: 0.020_181_999,
+				caffeine: 0,
+				energy: 227,
+			},
+			context: null,
+			notes: null,
 			occurredAt: now.getTime(),
 			localDay: "2026-08-19",
 			tzOffsetMinutes: 0,

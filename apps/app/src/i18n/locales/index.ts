@@ -4,8 +4,6 @@ import { body } from "./en/body";
 import { challenges } from "./en/challenges";
 import { checkIn } from "./en/checkIn";
 import { common } from "./en/common";
-import { drinks } from "./en/drinks";
-import { food } from "./en/food";
 import { habits } from "./en/habits";
 import { history } from "./en/history";
 import { home } from "./en/home";
@@ -13,7 +11,6 @@ import { insights } from "./en/insights";
 import { intake } from "./en/intake";
 import { life } from "./en/life";
 import { navigation } from "./en/navigation";
-import { nicotine } from "./en/nicotine";
 import { notes } from "./en/notes";
 import { notifications } from "./en/notifications";
 import { onboarding } from "./en/onboarding";
@@ -39,8 +36,6 @@ export const resources = {
 		checkIn,
 		common,
 		content,
-		drinks,
-		food,
 		habits,
 		history,
 		home,
@@ -48,7 +43,6 @@ export const resources = {
 		intake,
 		life,
 		navigation,
-		nicotine,
 		notes,
 		notifications,
 		onboarding,

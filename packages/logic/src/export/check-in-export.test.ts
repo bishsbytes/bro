@@ -8,19 +8,24 @@ import type {
 	Assessment,
 	ChallengeEnrolment,
 	ChallengeProgress,
-	ConsumptionEntry,
-	CustomConsumable,
-	CustomConsumableComponent,
+	Consumable,
 	DailyMetric,
 	DayNote,
 	Goal,
 	Habit,
 	HabitCompletion,
+	IntakeEvent,
+	IntakeStream,
 	Observation,
 	Reminder,
 	TrackedMetric,
 	UnitPreference,
 } from "@bro/mobile-model";
+import {
+	goldenInput,
+	goldenOptions,
+	goldenYoghurt,
+} from "./__fixtures__/golden-input";
 import {
 	buildCheckInExport,
 	CHECK_IN_EXPORT_FORMAT_VERSION,
@@ -192,22 +197,20 @@ const healthProgress: ChallengeProgress = {
 	updatedAt: 1_786_621_500_000,
 };
 
-const caffeineEntry: ConsumptionEntry = {
-	id: "consumption-coffee",
+const caffeineEvent: IntakeEvent = {
+	id: "intake-coffee",
 	kind: "drink",
-	catalogueRef: "drink:filter-coffee",
-	consumableRef: null,
-	label: "Filter coffee",
-	servingLabel: "mug",
+	consumableId: null,
+	sourceRef: "system:drink:filter-coffee",
+	name: "Filter coffee",
+	brand: null,
+	portionLabel: "250 ml mug",
 	quantity: 1,
+	massKg: null,
 	volumeL: 0.25,
-	ethanolKg: 0,
-	caffeineKg: 0.000_095,
-	nicotineKg: null,
-	energyKcal: 2,
-	proteinG: null,
-	carbsG: null,
-	fatG: null,
+	constituents: { fluid: 0.25, ethanol: 0, caffeine: 0.0001, energy: 2.5 },
+	context: null,
+	notes: null,
 	occurredAt: 1_786_621_600_000,
 	localDay: "2026-08-13",
 	tzOffsetMinutes: -60,
@@ -215,160 +218,117 @@ const caffeineEntry: ConsumptionEntry = {
 	updatedAt: 1_786_621_600_100,
 };
 
-const alcoholEntry: ConsumptionEntry = {
-	...caffeineEntry,
-	id: "consumption-lager",
-	catalogueRef: "drink:lager",
-	label: "Lager",
-	servingLabel: "pint",
+const alcoholEvent: IntakeEvent = {
+	...caffeineEvent,
+	id: "intake-lager",
+	sourceRef: "system:drink:lager-4_5",
+	name: "Lager, 4.5%",
+	portionLabel: "pint",
 	volumeL: 0.568_261_25,
-	ethanolKg: 0.020_181_999,
-	caffeineKg: 0,
-	energyKcal: 227,
+	constituents: {
+		fluid: 0.568_261_25,
+		ethanol: 0.020_181_999,
+		caffeine: 0,
+		energy: 244,
+	},
 	occurredAt: 1_786_621_500_000,
 	createdAt: 1_786_621_500_100,
 	updatedAt: 1_786_621_500_100,
 };
 
-const fluidEntry: ConsumptionEntry = {
-	...caffeineEntry,
-	id: "consumption-water",
-	catalogueRef: "drink:water",
-	label: "Water",
-	servingLabel: "glass",
+const fluidEvent: IntakeEvent = {
+	...caffeineEvent,
+	id: "intake-water",
+	sourceRef: "system:drink:water",
+	name: "Water",
+	portionLabel: "250 ml glass",
 	volumeL: 0.3,
-	ethanolKg: null,
-	caffeineKg: null,
-	energyKcal: 0,
+	constituents: { fluid: 0.3, ethanol: 0, caffeine: 0, energy: 0 },
 	occurredAt: 1_786_621_700_000,
 	createdAt: 1_786_621_700_100,
 	updatedAt: 1_786_621_700_100,
 };
 
-const nicotineEntry: ConsumptionEntry = {
-	...caffeineEntry,
-	id: "consumption-cigarette",
+const nicotineEvent: IntakeEvent = {
+	...caffeineEvent,
+	id: "intake-cigarette",
 	kind: "nicotine",
-	catalogueRef: "nicotine:cigarette",
-	label: "Cigarette",
-	servingLabel: "cigarette",
+	sourceRef: "system:nicotine:cigarette",
+	name: "Cigarette",
+	portionLabel: "cigarette",
 	volumeL: null,
-	ethanolKg: null,
-	caffeineKg: null,
-	nicotineKg: 1.2e-6,
-	energyKcal: null,
+	constituents: { nicotine: 1.2e-6 },
 	occurredAt: 1_786_621_900_000,
 	createdAt: 1_786_621_900_100,
 	updatedAt: 1_786_621_900_100,
 };
 
-const foodEntry: ConsumptionEntry = {
-	id: "consumption-chicken-rice",
-	kind: "food",
-	catalogueRef: null,
-	consumableRef: "custom:custom-chicken-rice",
-	label: "Chicken and rice",
-	servingLabel: "bowl",
-	quantity: 1,
+// Sensitive whole, by kind: the label is the disclosure, whatever it carries —
+// here an unknown code that no total ever reads.
+const medicationEvent: IntakeEvent = {
+	...caffeineEvent,
+	id: "intake-tablet",
+	kind: "medication",
+	sourceRef: null,
+	name: "Tablet",
+	portionLabel: "tablet",
 	volumeL: null,
-	ethanolKg: null,
-	caffeineKg: null,
-	nicotineKg: null,
-	energyKcal: 430,
-	proteinG: 38,
-	carbsG: 0,
-	fatG: null,
-	occurredAt: 1_786_621_800_000,
-	localDay: "2026-08-13",
-	tzOffsetMinutes: -60,
-	createdAt: 1_786_621_800_100,
-	updatedAt: 1_786_621_800_100,
+	constituents: { ibuprofen: 0.0002 },
+	context: "medication",
+	occurredAt: 1_786_621_950_000,
+	createdAt: 1_786_621_950_100,
+	updatedAt: 1_786_621_950_100,
 };
 
-const customYoghurt: CustomConsumable = {
-	id: "custom-yoghurt",
-	kind: "food",
-	label: "Greek yoghurt",
-	brand: "Corner shop",
-	isRecipe: false,
-	servings: [
+const vapeFork: Consumable = {
+	...goldenYoghurt,
+	id: "library-vape",
+	kind: "nicotine",
+	name: "My vape",
+	brand: null,
+	basis: { type: "portion", portionId: "puffs-10" },
+	constituents: { nicotine: 6e-7 },
+	portions: [
 		{
-			id: "pot",
-			label: "1 pot",
+			id: "puffs-10",
+			label: "10 puffs",
+			massKg: null,
 			volumeL: null,
-			ethanolKg: null,
-			caffeineKg: null,
-			energyKcal: 120,
-			proteinG: 15,
-			carbsG: 0,
-			fatG: null,
+			basisUnits: 1,
 		},
 	],
+	defaultPortionId: "puffs-10",
+	forkedFrom: { type: "system", key: "nicotine:vape-20" },
+	createdAt: 1_786_620_200_000,
+	updatedAt: 1_786_620_200_000,
+};
+
+const nicotineStream: IntakeStream = {
+	id: "stream-nicotine",
+	kind: "nicotine",
+	enabledAt: 1_786_620_000_000,
+	disabledAt: null,
 	createdAt: 1_786_620_000_000,
 	updatedAt: 1_786_620_000_000,
 };
 
-const chickenRiceRecipe: CustomConsumable = {
-	id: "custom-chicken-rice",
-	kind: "food",
-	label: "Chicken and rice",
-	brand: null,
-	isRecipe: true,
-	servings: [
-		{
-			id: "bowl",
-			label: "1 bowl",
-			volumeL: null,
-			ethanolKg: null,
-			caffeineKg: null,
-			energyKcal: 430,
-			proteinG: 38,
-			carbsG: 0,
-			fatG: null,
-		},
-	],
-	createdAt: 1_786_620_100_000,
-	updatedAt: 1_786_620_100_000,
+const supplementStream: IntakeStream = {
+	...nicotineStream,
+	id: "stream-supplement",
+	kind: "supplement",
 };
 
-const chickenComponent: CustomConsumableComponent = {
-	id: "component-chicken",
-	consumableId: chickenRiceRecipe.id,
-	position: 0,
-	label: "Chicken thigh",
-	quantity: 2,
-	energyKcal: 260,
-	proteinG: 38,
-	carbsG: 0,
-	fatG: null,
-	createdAt: 1_786_620_100_100,
-	updatedAt: 1_786_620_100_100,
-};
+const noIntake = {
+	intakeEvents: [],
+	consumables: [],
+	recipeIngredients: [],
+	intakeStreams: [],
+} as const;
 
 describe("check-in export", () => {
-	it("matches the golden file and round-trips food snapshots", () => {
-		const input = {
-			observations: [],
-			dayNotes: [],
-			trackedMetrics: [],
-			reminders: [],
-			assessments: [],
-			goals: [],
-			unitPreferences: [],
-			dailyMetrics: [],
-			habits: [],
-			habitCompletions: [],
-			challengeEnrolments: [],
-			challengeProgress: [],
-			consumptionEntries: [foodEntry],
-			customConsumables: [chickenRiceRecipe, customYoghurt],
-			customConsumableComponents: [chickenComponent],
-			registry: [],
-		};
-		const serialized = serializeCheckInExport(input, {
-			appVersion: "1.0.0",
-			exportedAt: 1_786_708_800_000,
-		});
+	it("matches the golden file and round-trips intake snapshots", () => {
+		const input = goldenInput;
+		const serialized = serializeCheckInExport(input, goldenOptions);
 		const golden = readFileSync(
 			join(__dirname, "__fixtures__", "check-in-export.json"),
 			"utf8",
@@ -414,12 +374,11 @@ describe("check-in export", () => {
 				"utf8",
 			),
 		);
-		const { customConsumableComponents: _omitted, ...withoutComponents } =
-			golden;
+		const { recipeIngredients: _omitted, ...withoutIngredients } = golden;
 
-		expect(() => parseCheckInExport(JSON.stringify(withoutComponents))).toThrow(
-			TypeError,
-		);
+		expect(() =>
+			parseCheckInExport(JSON.stringify(withoutIngredients)),
+		).toThrow(TypeError);
 	});
 
 	it("includes sensitive metrics by default and can deliberately exclude them", () => {
@@ -587,9 +546,7 @@ describe("check-in export", () => {
 				retiredAreaEnrolment,
 			],
 			challengeProgress: [healthProgress, faithProgress, retiredAreaProgress],
-			consumptionEntries: [],
-			customConsumables: [],
-			customConsumableComponents: [],
+			...noIntake,
 			registry: [
 				knownMetric("mood"),
 				sensitiveMetric,
@@ -656,31 +613,31 @@ describe("check-in export", () => {
 		expect(exported.challengeProgress).toEqual([healthProgress]);
 	});
 
-	it("excludes whole ethanol entries and every alcohol metric reference", () => {
-		const trackedAlcoholIntake: TrackedMetric = {
+	it("excludes sensitive intake by constituent and by kind, with every metric reference", () => {
+		const trackedEthanol: TrackedMetric = {
 			...trackedAlcohol,
-			id: "tracked-alcohol-intake",
-			metricSlug: "alcohol_intake",
+			id: "tracked-ethanol-intake",
+			metricSlug: "ethanol_intake",
 		};
 		const trackedCaffeine: TrackedMetric = {
 			...trackedAlcohol,
 			id: "tracked-caffeine-intake",
 			metricSlug: "caffeine_intake",
 		};
-		const alcoholGoal: Goal = {
+		const trackedNicotine: TrackedMetric = {
+			...trackedAlcohol,
+			id: "tracked-nicotine-intake",
+			metricSlug: "nicotine_intake",
+		};
+		const ethanolGoal: Goal = {
 			...goal,
-			id: "goal-alcohol",
-			metricSlug: "alcohol_intake",
+			id: "goal-ethanol",
+			metricSlug: "ethanol_intake",
 		};
 		const caffeineGoal: Goal = {
 			...goal,
 			id: "goal-caffeine",
 			metricSlug: "caffeine_intake",
-		};
-		const trackedNicotine: TrackedMetric = {
-			...trackedAlcohol,
-			id: "tracked-nicotine-intake",
-			metricSlug: "nicotine_intake",
 		};
 		const nicotineGoal: Goal = {
 			...goal,
@@ -690,26 +647,28 @@ describe("check-in export", () => {
 		const input = {
 			observations: [],
 			dayNotes: [],
-			trackedMetrics: [trackedAlcoholIntake, trackedCaffeine, trackedNicotine],
+			trackedMetrics: [trackedEthanol, trackedCaffeine, trackedNicotine],
 			reminders: [],
 			assessments: [],
-			goals: [alcoholGoal, caffeineGoal, nicotineGoal],
+			goals: [ethanolGoal, caffeineGoal, nicotineGoal],
 			unitPreferences: [],
 			dailyMetrics: [],
 			habits: [],
 			habitCompletions: [],
 			challengeEnrolments: [],
 			challengeProgress: [],
-			consumptionEntries: [
-				fluidEntry,
-				alcoholEntry,
-				caffeineEntry,
-				nicotineEntry,
+			intakeEvents: [
+				fluidEvent,
+				alcoholEvent,
+				medicationEvent,
+				caffeineEvent,
+				nicotineEvent,
 			],
-			customConsumables: [],
-			customConsumableComponents: [],
+			consumables: [vapeFork, goldenYoghurt],
+			recipeIngredients: [],
+			intakeStreams: [nicotineStream, supplementStream],
 			registry: [
-				knownMetric("alcohol_intake"),
+				knownMetric("ethanol_intake"),
 				knownMetric("caffeine_intake"),
 				knownMetric("nicotine_intake"),
 				knownMetric("fluid_intake"),
@@ -720,24 +679,31 @@ describe("check-in export", () => {
 			appVersion: "1.0.0",
 			exportedAt: 1_786_708_800_000,
 		});
-		expect(included.consumptionEntries).toEqual([
-			alcoholEntry,
-			caffeineEntry,
-			fluidEntry,
-			nicotineEntry,
+		expect(included.intakeEvents).toEqual([
+			alcoholEvent,
+			caffeineEvent,
+			fluidEvent,
+			nicotineEvent,
+			medicationEvent,
 		]);
+		expect(included.consumables).toEqual([goldenYoghurt, vapeFork]);
+		expect(included.intakeStreams).toEqual([nicotineStream, supplementStream]);
 
 		const excluded = buildCheckInExport(input, {
 			appVersion: "1.0.0",
 			exportedAt: 1_786_708_800_000,
 			excludeSensitiveMetrics: true,
 		});
-		// Exclusion is keyed on the substance an entry carries, not on its kind:
-		// the ethanol drink and the nicotine entry both go, whole.
-		expect(excluded.consumptionEntries).toEqual([caffeineEntry, fluidEntry]);
+		// Exclusion reads the catalogue and the kind list: the ethanol drink and
+		// the nicotine event go for what they carry, the tablet for what it is,
+		// and everything else survives untouched.
+		expect(excluded.intakeEvents).toEqual([caffeineEvent, fluidEvent]);
+		expect(excluded.consumables).toEqual([goldenYoghurt]);
+		expect(excluded.intakeStreams).toEqual([supplementStream]);
+		// Registry order is by default position: fluid sits before caffeine.
 		expect(excluded.registry.metrics.map(({ slug }) => slug)).toEqual([
-			"caffeine_intake",
 			"fluid_intake",
+			"caffeine_intake",
 		]);
 		expect(excluded.trackedMetrics.map(({ metricSlug }) => metricSlug)).toEqual(
 			["caffeine_intake"],
@@ -762,9 +728,7 @@ describe("check-in export", () => {
 				habitCompletions: [],
 				challengeEnrolments: [],
 				challengeProgress: [],
-				consumptionEntries: [],
-				customConsumables: [],
-				customConsumableComponents: [],
+				...noIntake,
 				registry: [knownMetric("mood")],
 			},
 			{ appVersion: "1.0.0", exportedAt: 0 },
@@ -788,9 +752,10 @@ describe("check-in export", () => {
 			habitCompletions: [],
 			challengeEnrolments: [],
 			challengeProgress: [],
-			consumptionEntries: [],
-			customConsumables: [],
-			customConsumableComponents: [],
+			intakeEvents: [],
+			consumables: [],
+			recipeIngredients: [],
+			intakeStreams: [],
 		});
 		expect(exported.registry.metrics).toHaveLength(1);
 	});
@@ -829,9 +794,7 @@ describe("check-in export", () => {
 			habitCompletions: [],
 			challengeEnrolments: [],
 			challengeProgress: [],
-			consumptionEntries: [],
-			customConsumables: [],
-			customConsumableComponents: [],
+			...noIntake,
 			registry: [knownMetric("mood"), knownMetric("weight")],
 		};
 

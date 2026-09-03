@@ -4,10 +4,10 @@ import {
 	resolveChallenge as resolveChallengeSource,
 } from "@bro/domain/challenge-catalogue";
 import {
-	DRINK_CATALOGUE as DRINK_CATALOGUE_SOURCE,
-	type DrinkCatalogueEntry,
-	resolveDrink as resolveDrinkSource,
-} from "@bro/domain/drink-catalogue";
+	type ConstituentDefinition,
+	resolveConstituent as resolveConstituentSource,
+} from "@bro/domain/constituent-catalogue";
+import type { ConsumableKind, SystemConsumable } from "@bro/domain/consumable";
 import {
 	HABIT_CATALOGUE as HABIT_CATALOGUE_SOURCE,
 	type HabitTemplate,
@@ -33,15 +33,15 @@ import {
 	resolveMetric as resolveMetricSource,
 } from "@bro/domain/metric-registry";
 import {
-	NICOTINE_CATALOGUE as NICOTINE_CATALOGUE_SOURCE,
-	resolveNicotineEntry as resolveNicotineEntrySource,
-} from "@bro/domain/nicotine-catalogue";
-import type { SubstanceCatalogueEntry } from "@bro/domain/substance-catalogue";
+	listSystemConsumables as listSystemConsumablesSource,
+	resolveSystemConsumable as resolveSystemConsumableSource,
+} from "@bro/domain/system-consumables";
 import { i18n } from "../i18n";
 
 /**
  * Authored product content — metric names, life areas, habits, challenges,
- * drinks, insight copy — is translated here, on the way out of `@bro/domain`.
+ * consumables, constituents, insight copy — is translated here, on the way out
+ * of `@bro/domain`.
  *
  * The domain package holds the English wording and has no runtime dependencies,
  * so it cannot call i18next itself. These wrappers keep the same shapes and
@@ -157,57 +157,40 @@ export function challengeForArea(areaSlug: string): ChallengeTemplate | null {
 	return challenge && localiseChallenge(challenge);
 }
 
-function localiseDrink(drink: DrinkCatalogueEntry): DrinkCatalogueEntry {
-	const key = `drinks.${bareSlug(drink.id)}`;
+function localiseSystemConsumable<T extends SystemConsumable>(
+	consumable: T,
+): T {
+	const key = `consumables.${consumable.key.replace(":", ".")}`;
 	return {
-		...drink,
-		label: translate(`${key}.label`, drink.label),
-		servings: drink.servings.map((serving) => ({
-			...serving,
-			label: translate(`${key}.servings.${serving.id}`, serving.label),
+		...consumable,
+		name: translate(`${key}.name`, consumable.name),
+		portions: consumable.portions.map((portion) => ({
+			...portion,
+			label: translate(`${key}.portions.${portion.id}`, portion.label),
 		})),
 	};
 }
 
-export function resolveDrink(id: string): DrinkCatalogueEntry | null {
-	const drink = resolveDrinkSource(id);
-	return drink && localiseDrink(drink);
+export function resolveSystemConsumable(key: string): SystemConsumable | null {
+	const consumable = resolveSystemConsumableSource(key);
+	return consumable && localiseSystemConsumable(consumable);
 }
 
-export function drinkCatalogue(): DrinkCatalogueEntry[] {
-	return DRINK_CATALOGUE_SOURCE.map(localiseDrink);
+export function listSystemConsumables(
+	kind?: ConsumableKind,
+): SystemConsumable[] {
+	return listSystemConsumablesSource(kind).map(localiseSystemConsumable);
 }
 
-/**
- * Substance content localises by the same rule as drinks, keyed by the
- * catalogue's own namespace so each substance's copy stays its own.
- */
-function localiseSubstance(
-	entry: SubstanceCatalogueEntry,
-	namespace: string,
-): SubstanceCatalogueEntry {
-	const key = `${namespace}.${bareSlug(entry.id)}`;
-	return {
-		...entry,
-		label: translate(`${key}.label`, entry.label),
-		servings: entry.servings.map((serving) => ({
-			...serving,
-			label: translate(`${key}.servings.${serving.id}`, serving.label),
-		})),
-	};
-}
-
-export function nicotineCatalogue(): SubstanceCatalogueEntry[] {
-	return NICOTINE_CATALOGUE_SOURCE.map((entry) =>
-		localiseSubstance(entry, "nicotine"),
+/** A constituent's own name, as an editor or a total row shows it. */
+export function resolveConstituent(code: string): ConstituentDefinition | null {
+	const constituent = resolveConstituentSource(code);
+	return (
+		constituent && {
+			...constituent,
+			label: translate(`constituents.${constituent.code}`, constituent.label),
+		}
 	);
-}
-
-export function resolveNicotineEntry(
-	id: string,
-): SubstanceCatalogueEntry | null {
-	const entry = resolveNicotineEntrySource(id);
-	return entry && localiseSubstance(entry, "nicotine");
 }
 
 function localiseInsight(

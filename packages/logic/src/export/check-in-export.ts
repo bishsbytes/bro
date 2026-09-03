@@ -1,3 +1,12 @@
+import {
+	type ConstituentAmounts,
+	carriesSensitiveConstituent,
+} from "@bro/domain/constituent-catalogue";
+import {
+	type ConsumableKind,
+	isSensitiveConsumableKind,
+	isSensitiveStreamKind,
+} from "@bro/domain/consumable";
 import { resolveHabit } from "@bro/domain/habit-catalogue";
 import { LIFE_AREA_CATALOGUE } from "@bro/domain/life-area-catalogue";
 import type { MetricDefinition } from "@bro/domain/metric-registry";
@@ -5,21 +14,27 @@ import type {
 	Assessment,
 	ChallengeEnrolment,
 	ChallengeProgress,
-	ConsumptionEntry,
-	CustomConsumable,
-	CustomConsumableComponent,
+	Consumable,
 	DailyMetric,
 	DayNote,
 	Goal,
 	Habit,
 	HabitCompletion,
+	IntakeEvent,
+	IntakeStream,
 	Observation,
+	RecipeIngredient,
 	Reminder,
 	TrackedMetric,
 	UnitPreference,
 } from "@bro/mobile-model";
 
-export const CHECK_IN_EXPORT_FORMAT_VERSION = 1 as const;
+/**
+ * Version 2 carries the intake model — events with constituent maps, the
+ * library, recipe ingredients, streams — in place of the consumption tables.
+ * Only the current version parses: a format change regenerates fixtures.
+ */
+export const CHECK_IN_EXPORT_FORMAT_VERSION = 2 as const;
 
 export type CheckInExportInput = {
 	observations: readonly Observation[];
@@ -34,9 +49,10 @@ export type CheckInExportInput = {
 	habitCompletions: readonly HabitCompletion[];
 	challengeEnrolments: readonly ChallengeEnrolment[];
 	challengeProgress: readonly ChallengeProgress[];
-	consumptionEntries: readonly ConsumptionEntry[];
-	customConsumables: readonly CustomConsumable[];
-	customConsumableComponents: readonly CustomConsumableComponent[];
+	intakeEvents: readonly IntakeEvent[];
+	consumables: readonly Consumable[];
+	recipeIngredients: readonly RecipeIngredient[];
+	intakeStreams: readonly IntakeStream[];
 	registry: readonly MetricDefinition[];
 };
 
@@ -67,9 +83,10 @@ export type CheckInExport = {
 	habitCompletions: HabitCompletion[];
 	challengeEnrolments: ChallengeEnrolment[];
 	challengeProgress: ChallengeProgress[];
-	consumptionEntries: ConsumptionEntry[];
-	customConsumables: CustomConsumable[];
-	customConsumableComponents: CustomConsumableComponent[];
+	intakeEvents: IntakeEvent[];
+	consumables: Consumable[];
+	recipeIngredients: RecipeIngredient[];
+	intakeStreams: IntakeStream[];
 };
 
 function compareText(left: string, right: string): number {
@@ -250,67 +267,98 @@ function copyChallengeProgress(progress: ChallengeProgress): ChallengeProgress {
 }
 
 /**
- * Whether an entry carries any substance whose metric is sensitive. Keyed on
- * content rather than on `kind`, so an entry that carries one through another
- * logging journey is still excluded, and a later substance adds one term.
+ * Whether an intake row is sensitive: by content — a positive amount of a
+ * sensitive constituent — or whole, by kind. The predicate reads the catalogue
+ * and the kind list, so the next sensitive substance adds a definition there
+ * rather than a clause here.
  */
-function carriesSensitive(entry: ConsumptionEntry): boolean {
-	return (entry.ethanolKg ?? 0) > 0 || (entry.nicotineKg ?? 0) > 0;
+function isSensitiveIntake(row: {
+	kind: ConsumableKind;
+	constituents: ConstituentAmounts;
+}): boolean {
+	return (
+		isSensitiveConsumableKind(row.kind) ||
+		carriesSensitiveConstituent(row.constituents)
+	);
 }
 
-function copyConsumptionEntry(entry: ConsumptionEntry): ConsumptionEntry {
+function copyConstituents(amounts: ConstituentAmounts): ConstituentAmounts {
+	return { ...amounts };
+}
+
+function copyIntakeEvent(event: IntakeEvent): IntakeEvent {
 	return {
-		id: entry.id,
-		kind: entry.kind,
-		catalogueRef: entry.catalogueRef,
-		consumableRef: entry.consumableRef,
-		label: entry.label,
-		servingLabel: entry.servingLabel,
-		quantity: entry.quantity,
-		volumeL: entry.volumeL,
-		ethanolKg: entry.ethanolKg,
-		caffeineKg: entry.caffeineKg,
-		nicotineKg: entry.nicotineKg,
-		energyKcal: entry.energyKcal,
-		proteinG: entry.proteinG,
-		carbsG: entry.carbsG,
-		fatG: entry.fatG,
-		occurredAt: entry.occurredAt,
-		localDay: entry.localDay,
-		tzOffsetMinutes: entry.tzOffsetMinutes,
-		createdAt: entry.createdAt,
-		updatedAt: entry.updatedAt,
+		id: event.id,
+		kind: event.kind,
+		consumableId: event.consumableId,
+		sourceRef: event.sourceRef,
+		name: event.name,
+		brand: event.brand,
+		portionLabel: event.portionLabel,
+		quantity: event.quantity,
+		massKg: event.massKg,
+		volumeL: event.volumeL,
+		constituents: copyConstituents(event.constituents),
+		context: event.context,
+		notes: event.notes,
+		occurredAt: event.occurredAt,
+		localDay: event.localDay,
+		tzOffsetMinutes: event.tzOffsetMinutes,
+		createdAt: event.createdAt,
+		updatedAt: event.updatedAt,
 	};
 }
 
-function copyCustomConsumable(consumable: CustomConsumable): CustomConsumable {
+function copyConsumable(consumable: Consumable): Consumable {
 	return {
 		id: consumable.id,
 		kind: consumable.kind,
-		label: consumable.label,
+		name: consumable.name,
 		brand: consumable.brand,
-		isRecipe: consumable.isRecipe,
-		servings: consumable.servings.map((serving) => ({ ...serving })),
+		barcode: consumable.barcode,
+		basis: { ...consumable.basis },
+		constituents: copyConstituents(consumable.constituents),
+		portions: consumable.portions.map((portion) => ({ ...portion })),
+		defaultPortionId: consumable.defaultPortionId,
+		recipe:
+			consumable.recipe === null
+				? null
+				: { yield: { ...consumable.recipe.yield } },
+		source: { ...consumable.source },
+		forkedFrom:
+			consumable.forkedFrom === null ? null : { ...consumable.forkedFrom },
+		archivedAt: consumable.archivedAt,
 		createdAt: consumable.createdAt,
 		updatedAt: consumable.updatedAt,
 	};
 }
 
-function copyCustomConsumableComponent(
-	component: CustomConsumableComponent,
-): CustomConsumableComponent {
+function copyRecipeIngredient(ingredient: RecipeIngredient): RecipeIngredient {
 	return {
-		id: component.id,
-		consumableId: component.consumableId,
-		position: component.position,
-		label: component.label,
-		quantity: component.quantity,
-		energyKcal: component.energyKcal,
-		proteinG: component.proteinG,
-		carbsG: component.carbsG,
-		fatG: component.fatG,
-		createdAt: component.createdAt,
-		updatedAt: component.updatedAt,
+		id: ingredient.id,
+		recipeId: ingredient.recipeId,
+		position: ingredient.position,
+		consumableId: ingredient.consumableId,
+		sourceRef: ingredient.sourceRef,
+		name: ingredient.name,
+		portionLabel: ingredient.portionLabel,
+		quantity: ingredient.quantity,
+		massKg: ingredient.massKg,
+		volumeL: ingredient.volumeL,
+		constituents: copyConstituents(ingredient.constituents),
+		createdAt: ingredient.createdAt,
+		updatedAt: ingredient.updatedAt,
+	};
+}
+
+function copyIntakeStream(stream: IntakeStream): IntakeStream {
+	return {
+		id: stream.id,
+		kind: stream.kind,
+		enabledAt: stream.enabledAt,
+		disabledAt: stream.disabledAt,
+		createdAt: stream.createdAt,
+		updatedAt: stream.updatedAt,
 	};
 }
 
@@ -364,6 +412,16 @@ export function buildCheckInExport(
 		input.challengeEnrolments
 			.filter(includeChallenge)
 			.map((enrolment) => enrolment.id),
+	);
+	// A library row is sensitive by the same rule as an event; its ingredient
+	// rows follow the recipe they belong to.
+	const includedConsumableIds = new Set(
+		input.consumables
+			.filter(
+				(consumable) =>
+					!options.excludeSensitiveMetrics || !isSensitiveIntake(consumable),
+			)
+			.map((consumable) => consumable.id),
 	);
 
 	return {
@@ -501,11 +559,12 @@ export function buildCheckInExport(
 					left.dayIndex - right.dayIndex ||
 					compareText(left.id, right.id),
 			),
-		consumptionEntries: input.consumptionEntries
+		intakeEvents: input.intakeEvents
 			.filter(
-				(entry) => !options.excludeSensitiveMetrics || !carriesSensitive(entry),
+				(event) =>
+					!options.excludeSensitiveMetrics || !isSensitiveIntake(event),
 			)
-			.map(copyConsumptionEntry)
+			.map(copyIntakeEvent)
 			.sort(
 				(left, right) =>
 					compareText(left.localDay, right.localDay) ||
@@ -513,18 +572,33 @@ export function buildCheckInExport(
 					left.createdAt - right.createdAt ||
 					compareText(left.id, right.id),
 			),
-		customConsumables: input.customConsumables
-			.map(copyCustomConsumable)
+		consumables: input.consumables
+			.filter((consumable) => includedConsumableIds.has(consumable.id))
+			.map(copyConsumable)
 			.sort(
 				(left, right) =>
 					left.createdAt - right.createdAt || compareText(left.id, right.id),
 			),
-		customConsumableComponents: input.customConsumableComponents
-			.map(copyCustomConsumableComponent)
+		recipeIngredients: input.recipeIngredients
+			.filter((ingredient) => includedConsumableIds.has(ingredient.recipeId))
+			.map(copyRecipeIngredient)
 			.sort(
 				(left, right) =>
-					compareText(left.consumableId, right.consumableId) ||
+					compareText(left.recipeId, right.recipeId) ||
 					left.position - right.position ||
+					left.createdAt - right.createdAt ||
+					compareText(left.id, right.id),
+			),
+		intakeStreams: input.intakeStreams
+			.filter(
+				(stream) =>
+					!options.excludeSensitiveMetrics ||
+					!isSensitiveStreamKind(stream.kind),
+			)
+			.map(copyIntakeStream)
+			.sort(
+				(left, right) =>
+					compareText(left.kind, right.kind) ||
 					left.createdAt - right.createdAt ||
 					compareText(left.id, right.id),
 			),
@@ -562,9 +636,10 @@ const EXPORT_COLLECTIONS = [
 	"habitCompletions",
 	"challengeEnrolments",
 	"challengeProgress",
-	"consumptionEntries",
-	"customConsumables",
-	"customConsumableComponents",
+	"intakeEvents",
+	"consumables",
+	"recipeIngredients",
+	"intakeStreams",
 ] as const;
 
 export function parseCheckInExport(serialized: string): CheckInExport {

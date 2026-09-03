@@ -1,7 +1,7 @@
 import {
-	ConsumptionEntryRepository,
 	DailyMetricRepository,
 	getDb,
+	IntakeEventRepository,
 	ObservationRepository,
 	TrackedMetricsRepository,
 	UnitPreferenceRepository,
@@ -43,7 +43,7 @@ export type TrendsSnapshot = {
 export class TrendsStore {
 	private readonly observations: ObservationRepository;
 	private readonly dailyMetrics: DailyMetricRepository;
-	private readonly consumptionEntries: ConsumptionEntryRepository;
+	private readonly intakeEvents: IntakeEventRepository;
 	private readonly trackedMetrics: TrackedMetricsRepository;
 	private readonly unitPreferences: UnitPreferenceRepository;
 
@@ -60,7 +60,7 @@ export class TrendsStore {
 	) {
 		this.observations = new ObservationRepository(db);
 		this.dailyMetrics = new DailyMetricRepository(db);
-		this.consumptionEntries = new ConsumptionEntryRepository(db);
+		this.intakeEvents = new IntakeEventRepository(db);
 		this.trackedMetrics = new TrackedMetricsRepository(db);
 		this.unitPreferences = new UnitPreferenceRepository(db);
 	}
@@ -77,12 +77,15 @@ export class TrendsStore {
 				measurementSlugs.has(metric.metricSlug) ||
 				listScoredMetrics().some((scored) => scored.slug === metric.metricSlug),
 		);
-		const [overlays, preferences, dailyMetrics, consumptionEntries] =
+		const [overlays, preferences, dailyMetrics, intakeEvents] =
 			await Promise.all([
 				this.trackedMetrics.listResolved(trackedDefaults),
 				this.unitPreferences.resolveLatestPerDimension(),
 				this.dailyMetrics.listAll(),
-				this.consumptionEntries.listAll(),
+				this.intakeEvents.listBetween(
+					range.fromLocalDay,
+					range.throughLocalDay,
+				),
 			]);
 		const overlayBySlug = new Map(
 			overlays.map((overlay) => [overlay.metricSlug, overlay]),
@@ -139,7 +142,7 @@ export class TrendsStore {
 								metric.slug,
 								metricRows,
 								dailyMetrics,
-								consumptionEntries,
+								intakeEvents,
 							)
 						: metricRows;
 				const series = buildTrendSeries(

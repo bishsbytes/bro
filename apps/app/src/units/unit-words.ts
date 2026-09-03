@@ -13,5 +13,6 @@ export function unitWords(): UnitWordOverrides {
 			i18n.t("settings:unitWords.us_standard_drink", { count }),
 		fl_oz_uk: (count) => i18n.t("settings:unitWords.fl_oz", { count }),
 		fl_oz_us: (count) => i18n.t("settings:unitWords.fl_oz", { count }),
+		salt_g: (count) => i18n.t("settings:unitWords.salt_g", { count }),
 	};
 }

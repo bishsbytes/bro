@@ -1,14 +1,9 @@
 import {
-	type ConsumptionDerivedMeasurementSlug,
 	type MeasurementSlug,
 	resolveMetric,
 } from "@bro/domain/metric-registry";
-import type {
-	ConsumptionEntry,
-	DailyMetric,
-	Observation,
-} from "@bro/mobile-model";
-import { consumptionMetricDayTotal } from "../consumption/daily-totals";
+import type { DailyMetric, IntakeEvent, Observation } from "@bro/mobile-model";
+import { intakeDayTotal } from "../intake/totals";
 
 export type ResolvedMetricDay = {
 	metricSlug: MeasurementSlug;
@@ -17,11 +12,11 @@ export type ResolvedMetricDay = {
 	selected:
 		| { kind: "imported"; row: DailyMetric }
 		| { kind: "user"; rows: Observation[] }
-		| { kind: "consumption"; entries: ConsumptionEntry[] }
+		| { kind: "intake"; events: IntakeEvent[] }
 		| null;
 	userRows: Observation[];
 	importedRows: DailyMetric[];
-	consumptionEntries: ConsumptionEntry[];
+	intakeEvents: IntakeEvent[];
 };
 
 function compareObservations(left: Observation, right: Observation): number {
@@ -47,7 +42,7 @@ export function resolveMetricDay(
 	localDay: string,
 	observations: readonly Observation[],
 	dailyMetrics: readonly DailyMetric[],
-	consumptionEntries: readonly ConsumptionEntry[] = [],
+	intakeEvents: readonly IntakeEvent[] = [],
 ): ResolvedMetricDay {
 	const resolved = resolveMetric(metricSlug);
 	if (resolved.kind !== "known" || resolved.metric.kind !== "measurement") {
@@ -57,22 +52,23 @@ export function resolveMetricDay(
 		"measurementSource" in resolved.metric &&
 		resolved.metric.measurementSource === "consumption"
 	) {
-		const total = consumptionMetricDayTotal(
-			metricSlug as ConsumptionDerivedMeasurementSlug,
+		// An intake metric is arithmetic over the day's events: the sum of its
+		// constituent code, with no per-stream storage and nothing branching on
+		// the event's kind.
+		const total = intakeDayTotal(
+			resolved.metric.constituentCode,
 			localDay,
-			consumptionEntries,
+			intakeEvents,
 		);
 		return {
 			metricSlug,
 			localDay,
 			value: total.value,
 			selected:
-				total.value === null
-					? null
-					: { kind: "consumption", entries: total.entries },
+				total.value === null ? null : { kind: "intake", events: total.events },
 			userRows: [],
 			importedRows: [],
-			consumptionEntries: total.entries,
+			intakeEvents: total.events,
 		};
 	}
 	const userRows = observations
@@ -106,7 +102,7 @@ export function resolveMetricDay(
 			selected: { kind: "user", rows: userRows },
 			userRows,
 			importedRows,
-			consumptionEntries: [],
+			intakeEvents: [],
 		};
 	}
 	if (imported) {
@@ -117,7 +113,7 @@ export function resolveMetricDay(
 			selected: { kind: "imported", row: imported },
 			userRows,
 			importedRows,
-			consumptionEntries: [],
+			intakeEvents: [],
 		};
 	}
 	return {
@@ -127,6 +123,6 @@ export function resolveMetricDay(
 		selected: null,
 		userRows,
 		importedRows,
-		consumptionEntries: [],
+		intakeEvents: [],
 	};
 }

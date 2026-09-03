@@ -1,10 +1,6 @@
 import type { MeasurementSlug } from "@bro/domain/metric-registry";
 import { resolveMetric } from "@bro/domain/metric-registry";
-import type {
-	ConsumptionEntry,
-	DailyMetric,
-	Observation,
-} from "@bro/mobile-model";
+import type { DailyMetric, IntakeEvent, Observation } from "@bro/mobile-model";
 import { type ResolvedMetricDay, resolveMetricDay } from "./resolved-day";
 
 export type ResolvedMetricObservation = Observation & {
@@ -65,14 +61,12 @@ function userObservation(day: ResolvedMetricDay): ResolvedMetricObservation {
 	};
 }
 
-function consumptionObservation(
-	day: ResolvedMetricDay,
-): ResolvedMetricObservation {
+function intakeObservation(day: ResolvedMetricDay): ResolvedMetricObservation {
 	const selected = day.selected;
-	if (selected?.kind !== "consumption") {
-		throw new TypeError("A resolved consumption day must contain entries.");
+	if (selected?.kind !== "intake") {
+		throw new TypeError("A resolved intake day must contain events.");
 	}
-	const latest = [...selected.entries]
+	const latest = [...selected.events]
 		.sort(
 			(left, right) =>
 				left.occurredAt - right.occurredAt ||
@@ -81,10 +75,10 @@ function consumptionObservation(
 		)
 		.at(-1);
 	if (!latest || day.value === null) {
-		throw new TypeError("A resolved consumption day is missing its total.");
+		throw new TypeError("A resolved intake day is missing its total.");
 	}
 	return {
-		id: `resolved-consumption:${day.metricSlug}:${day.localDay}`,
+		id: `resolved-intake:${day.metricSlug}:${day.localDay}`,
 		metricSlug: day.metricSlug,
 		value: day.value,
 		scaleMin: null,
@@ -92,12 +86,12 @@ function consumptionObservation(
 		observedAt: latest.occurredAt,
 		localDay: day.localDay,
 		tzOffsetMinutes: latest.tzOffsetMinutes,
-		source: "consumption",
+		source: "intake",
 		sourceRecordId: null,
 		assessmentId: null,
 		slot: null,
 		createdAt: latest.createdAt,
-		updatedAt: Math.max(...selected.entries.map((entry) => entry.updatedAt)),
+		updatedAt: Math.max(...selected.events.map((event) => event.updatedAt)),
 		resolvedDay: day,
 	};
 }
@@ -110,10 +104,10 @@ export function resolveMetricObservations(
 	metricSlug: MeasurementSlug,
 	observations: readonly Observation[],
 	dailyMetrics: readonly DailyMetric[],
-	consumptionEntries: readonly ConsumptionEntry[] = [],
+	intakeEvents: readonly IntakeEvent[] = [],
 ): ResolvedMetricObservation[] {
 	const resolved = resolveMetric(metricSlug);
-	const isConsumptionDerived =
+	const isIntakeDerived =
 		resolved.kind === "known" &&
 		resolved.metric.kind === "measurement" &&
 		"measurementSource" in resolved.metric &&
@@ -125,9 +119,7 @@ export function resolveMetricObservations(
 		...dailyMetrics
 			.filter((row) => row.metricSlug === metricSlug)
 			.map((row) => row.localDay),
-		...(isConsumptionDerived
-			? consumptionEntries.map((entry) => entry.localDay)
-			: []),
+		...(isIntakeDerived ? intakeEvents.map((event) => event.localDay) : []),
 	]);
 
 	return [...localDays]
@@ -138,14 +130,14 @@ export function resolveMetricObservations(
 				localDay,
 				observations,
 				dailyMetrics,
-				consumptionEntries,
+				intakeEvents,
 			);
 			if (!day.selected) return [];
 			return [
 				day.selected.kind === "imported"
 					? importedObservation(day, day.selected.row)
-					: day.selected.kind === "consumption"
-						? consumptionObservation(day)
+					: day.selected.kind === "intake"
+						? intakeObservation(day)
 						: userObservation(day),
 			];
 		});

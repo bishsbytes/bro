@@ -70,6 +70,7 @@ export const DEFAULT_UNIT_WORDS = {
 		count === 1 ? "standard drink" : "standard drinks",
 	fl_oz_uk: () => "fl oz",
 	fl_oz_us: () => "fl oz",
+	salt_g: () => "g salt",
 } as const satisfies Partial<Record<SimpleDisplayUnit, UnitWordFormatter>>;
 
 export type UnitWordOverrides = Partial<

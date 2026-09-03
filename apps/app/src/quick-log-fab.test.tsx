@@ -41,7 +41,7 @@ describe("quick log fab", () => {
 
 	it("offers note and universal log actions without assuming smoking", async () => {
 		const view = await render(
-			<QuickLogFab bottom={24} isNicotineEnabled={async () => false} />,
+			<QuickLogFab bottom={24} enabledKinds={async () => ["food", "drink"]} />,
 		);
 
 		await fireEvent.press(view.getByLabelText("Log"));
@@ -58,13 +58,40 @@ describe("quick log fab", () => {
 		expect(router.push).toHaveBeenCalledWith("/notes/new");
 	});
 
+	it("presets the one log screen to the kind chosen", async () => {
+		const view = await render(
+			<QuickLogFab bottom={24} enabledKinds={async () => ["food", "drink"]} />,
+		);
+
+		await fireEvent.press(view.getByLabelText("Log"));
+		await fireEvent.press(view.getByLabelText("Drink"));
+		expect(router.push).toHaveBeenCalledWith("/intake/log?kind=drink");
+	});
+
+	it("offers each optional stream only once it is switched on", async () => {
+		const view = await render(
+			<QuickLogFab
+				bottom={24}
+				enabledKinds={async () => ["food", "drink", "nicotine", "supplement"]}
+			/>,
+		);
+
+		await fireEvent.press(view.getByLabelText("Log"));
+		expect(await view.findByText("Smoke or vape")).toBeTruthy();
+		expect(view.getByText("Supplement")).toBeTruthy();
+		expect(view.queryByText("Medication")).toBeNull();
+
+		await fireEvent.press(view.getByLabelText("Smoke or vape"));
+		expect(router.push).toHaveBeenCalledWith("/intake/log?kind=nicotine");
+	});
+
 	it("uses the open quick-log sheet for Body sub-navigation", async () => {
 		const view = await render(
 			<BodyLogSurfaceProvider>
 				<QuickLogFab
 					bottom={24}
 					bodyActive
-					isNicotineEnabled={async () => false}
+					enabledKinds={async () => ["food", "drink"]}
 				/>
 				<RegisteredBodyLog />
 			</BodyLogSurfaceProvider>,
@@ -87,7 +114,7 @@ describe("quick log fab", () => {
 	it("moves to Body before opening its log from another tab", async () => {
 		const view = await render(
 			<BodyLogSurfaceProvider>
-				<QuickLogFab bottom={24} isNicotineEnabled={async () => false} />
+				<QuickLogFab bottom={24} enabledKinds={async () => ["food", "drink"]} />
 				<RegisteredBodyLog />
 			</BodyLogSurfaceProvider>,
 		);
@@ -99,24 +126,11 @@ describe("quick log fab", () => {
 		expect(view.getByText("Body log options")).toBeTruthy();
 	});
 
-	it("offers the smoking action once the stream is tracked", async () => {
-		const view = await render(
-			<QuickLogFab bottom={24} isNicotineEnabled={async () => true} />,
-		);
-
-		await fireEvent.press(view.getByLabelText("Log"));
-
-		const action = await view.findByText("Smoke or vape");
-		expect(action).toBeTruthy();
-		await fireEvent.press(view.getByLabelText("Smoke or vape"));
-		expect(router.push).toHaveBeenCalledWith("/nicotine/log");
-	});
-
 	it("hides the smoking action when the tracked check fails", async () => {
 		const view = await render(
 			<QuickLogFab
 				bottom={24}
-				isNicotineEnabled={async () => {
+				enabledKinds={async () => {
 					throw new Error("database unavailable");
 				}}
 			/>,

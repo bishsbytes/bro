@@ -163,7 +163,7 @@ function mountedWith(
 			<QuickLogFab
 				bottom={24}
 				bodyActive
-				isNicotineEnabled={async () => false}
+				enabledKinds={async () => ["food", "drink"]}
 			/>
 			<BodyScreen
 				store={{

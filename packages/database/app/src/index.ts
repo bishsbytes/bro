@@ -64,23 +64,15 @@ export {
 	ChallengeProgressRepository,
 } from "./repositories/challenge-progress-repository";
 export {
-	type ConsumptionEntry,
-	type ConsumptionEntryKind,
-	ConsumptionEntryRepository,
-	type CreateConsumptionEntry,
-	type UpdateConsumptionEntry,
-} from "./repositories/consumption-entry-repository";
-export {
-	type CreateCustomConsumable,
-	type CreateCustomConsumableComponent,
-	type CustomConsumable,
-	type CustomConsumableComponent,
-	type CustomConsumableKind,
-	CustomConsumableRepository,
-	type CustomConsumableServing,
-	type UpdateCustomConsumable,
-	type UpdateCustomConsumableComponent,
-} from "./repositories/custom-consumable-repository";
+	type Consumable,
+	ConsumableRepository,
+	type CreateConsumable,
+	type CreateRecipeIngredient,
+	type ListConsumablesOptions,
+	type RecipeIngredient,
+	type UpdateConsumable,
+	type UpdateRecipeIngredient,
+} from "./repositories/consumable-repository";
 export {
 	type DailyMetric,
 	DailyMetricRepository,
@@ -119,6 +111,16 @@ export {
 	HealthConnectionRepository,
 	type HealthPlatform,
 } from "./repositories/health-connection-repository";
+export {
+	type CreateIntakeEvent,
+	type IntakeEvent,
+	IntakeEventRepository,
+	type UpdateIntakeEvent,
+} from "./repositories/intake-event-repository";
+export {
+	type IntakeStream,
+	IntakeStreamRepository,
+} from "./repositories/intake-stream-repository";
 export {
 	type CreateObservation,
 	type Observation,

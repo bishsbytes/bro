@@ -69,25 +69,24 @@ jest.mock("./body/body-store", () => ({
 	}),
 }));
 
-jest.mock("./drinks/drinks-store", () => ({
-	createDrinksStore: () => ({
-		loadToday: async () => ({ entries: [], metrics: [] }),
+jest.mock("./intake/intake-store", () => ({
+	createIntakeStore: () => ({
+		loadToday: async () => ({
+			localDay: "2026-08-14",
+			defaultTime: "12:00",
+			enabledKinds: ["food", "drink"],
+			events: [],
+			metrics: [],
+			totals: [],
+			recents: [],
+			recentLocalDays: [],
+		}),
 	}),
 }));
 
-jest.mock("./food/food-store", () => ({
-	createFoodStore: () => ({
-		loadToday: async () => ({ entries: [], metrics: [] }),
-	}),
-}));
-
-jest.mock("./substances/nicotine", () => ({
-	...jest.requireActual("./substances/nicotine"),
-	createNicotineStore: () => ({
-		isTracked: async () => false,
-		loadToday: async () => ({ entries: [], metrics: [] }),
-	}),
-	isNicotineTracked: async () => false,
+jest.mock("./intake/intake-settings-store", () => ({
+	...jest.requireActual("./intake/intake-settings-store"),
+	enabledIntakeKinds: async () => ["food", "drink"],
 }));
 
 jest.mock("./habits/habits-store", () => ({
@@ -228,8 +227,8 @@ describe("app entry", () => {
 		).toBeTruthy();
 	});
 
-	it("protects the nicotine stack until onboarding is complete", async () => {
-		const { router } = await launch({}, "/nicotine");
+	it("protects the intake log until onboarding is complete", async () => {
+		const { router } = await launch({}, "/intake/log");
 
 		expect(router.getPathname()).toBe("/onboarding");
 	});

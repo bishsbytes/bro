@@ -323,7 +323,7 @@ describe("review store", () => {
 		});
 	});
 
-	it("presents body and consumption goals on the overview in their own units", async () => {
+	it("presents body and intake goals on the overview in their own units", async () => {
 		const now = new Date("2026-08-14T12:00:00.000Z");
 		const store = new ReviewStore(
 			db,
@@ -369,22 +369,30 @@ describe("review store", () => {
 		});
 
 		const alcoholGoal = await goals.create({
-			metricSlug: "alcohol_intake",
+			metricSlug: "ethanol_intake",
 			direction: "decrease",
 			targetValue: 2 * KILOGRAMS_ETHANOL_PER_UK_UNIT,
 			targetDate: null,
 			startedAt: Date.parse("2026-08-02T09:00:00.000Z"),
 		});
-		await new databaseApp.ConsumptionEntryRepository(db).create({
+		await new databaseApp.IntakeEventRepository(db).create({
 			kind: "drink",
-			catalogueRef: "drink:lager",
-			label: "Lager",
-			servingLabel: "pint",
+			consumableId: null,
+			sourceRef: "system:drink:lager-4_5",
+			name: "Lager",
+			brand: null,
+			portionLabel: "pint",
 			quantity: 1,
+			massKg: null,
 			volumeL: 0.568_261_25,
-			ethanolKg: 0.020_181_999,
-			caffeineKg: 0,
-			energyKcal: 227,
+			constituents: {
+				fluid: 0.568_261_25,
+				ethanol: 0.020_181_999,
+				caffeine: 0,
+				energy: 227,
+			},
+			context: null,
+			notes: null,
 			occurredAt: Date.parse("2026-08-12T18:00:00.000Z"),
 			localDay: "2026-08-12",
 			tzOffsetMinutes: 0,
@@ -408,7 +416,7 @@ describe("review store", () => {
 		const alcohol = overview.goals.find(
 			(progress) => progress.goal.id === alcoholGoal.id,
 		);
-		// Consumption goals live in consumption_entries, not observations; the
+		// Intake goals live in intake_events, not observations; the
 		// overview used to show them with no current value at all.
 		expect(alcohol?.label).toBe("Alcohol");
 		expect(alcohol?.currentValue).toBeCloseTo(0.020_181_999 / 7, 12);

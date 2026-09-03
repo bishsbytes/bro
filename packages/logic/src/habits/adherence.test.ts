@@ -89,7 +89,7 @@ describe("habit adherence", () => {
 			...manual,
 			slug: "habit:alcohol-free",
 			kind: "metric",
-			metricSlug: "alcohol_intake",
+			metricSlug: "ethanol_intake",
 			direction: "at_most",
 			targetValue: 0,
 			daysOfWeek: 0b111_1111,

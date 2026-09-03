@@ -94,22 +94,10 @@ export function SettingsScreen({
 				onPress={() => router.push("/settings/check-ins" as Href)}
 			/>
 			<ListRow
-				title={t("index.drinks")}
-				detail={t("index.drinksDetail")}
-				accessibilityLabel={t("index.drinksA11y")}
-				onPress={() => router.push("/settings/drinks" as Href)}
-			/>
-			<ListRow
-				title={t("index.food")}
-				detail={t("index.foodDetail")}
-				accessibilityLabel={t("index.foodA11y")}
-				onPress={() => router.push("/settings/food" as Href)}
-			/>
-			<ListRow
-				title={t("index.nicotine")}
-				detail={t("index.nicotineDetail")}
-				accessibilityLabel={t("index.nicotineA11y")}
-				onPress={() => router.push("/settings/nicotine" as Href)}
+				title={t("index.intake")}
+				detail={t("index.intakeDetail")}
+				accessibilityLabel={t("index.intakeA11y")}
+				onPress={() => router.push("/settings/intake" as Href)}
 			/>
 			<ListRow
 				title={t("index.units")}

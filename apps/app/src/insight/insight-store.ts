@@ -1,7 +1,7 @@
 import {
-	ConsumptionEntryRepository,
 	DailyMetricRepository,
 	getDb,
+	IntakeEventRepository,
 	ObservationRepository,
 	TrackedMetricsRepository,
 } from "@bro/database-app";
@@ -41,7 +41,7 @@ function systemTimeZone(): string {
 export class InsightStore {
 	private readonly observations: ObservationRepository;
 	private readonly dailyMetrics: DailyMetricRepository;
-	private readonly consumptionEntries: ConsumptionEntryRepository;
+	private readonly intakeEvents: IntakeEventRepository;
 	private readonly trackedMetrics: TrackedMetricsRepository;
 
 	constructor(
@@ -51,7 +51,7 @@ export class InsightStore {
 	) {
 		this.observations = new ObservationRepository(db);
 		this.dailyMetrics = new DailyMetricRepository(db);
-		this.consumptionEntries = new ConsumptionEntryRepository(db);
+		this.intakeEvents = new IntakeEventRepository(db);
 		this.trackedMetrics = new TrackedMetricsRepository(db);
 	}
 
@@ -64,11 +64,11 @@ export class InsightStore {
 		);
 		const inWindow = (row: { localDay: string }) =>
 			row.localDay >= earliestLocalDay && row.localDay <= throughLocalDay;
-		const [observations, dailyMetrics, consumptionEntries, trackedMetrics] =
+		const [observations, dailyMetrics, intakeEvents, trackedMetrics] =
 			await Promise.all([
 				this.observations.listAll(),
 				this.dailyMetrics.listAll(),
-				this.consumptionEntries.listAll(),
+				this.intakeEvents.listBetween(earliestLocalDay, throughLocalDay),
 				this.trackedMetrics.listAll(),
 			]);
 		const tagWindows = new Map<
@@ -109,7 +109,7 @@ export class InsightStore {
 		return createDailySignalReader({
 			observations: observations.filter(inWindow),
 			dailyMetrics: dailyMetrics.filter(inWindow),
-			consumptionEntries: consumptionEntries.filter(inWindow),
+			intakeEvents,
 			tagActive,
 		});
 	}

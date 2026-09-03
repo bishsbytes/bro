@@ -2,14 +2,15 @@ import {
 	AssessmentRepository,
 	ChallengeEnrolmentRepository,
 	ChallengeProgressRepository,
-	ConsumptionEntryRepository,
-	CustomConsumableRepository,
+	ConsumableRepository,
 	DailyMetricRepository,
 	DayNoteRepository,
 	GoalRepository,
 	getDb,
 	HabitCompletionRepository,
 	HabitRepository,
+	IntakeEventRepository,
+	IntakeStreamRepository,
 	ObservationRepository,
 	ReminderRepository,
 	TrackedMetricsRepository,
@@ -28,7 +29,7 @@ export class ExportStore {
 	) {}
 
 	async serialize(includeSensitive: boolean): Promise<string> {
-		const customConsumableRepository = new CustomConsumableRepository(this.db);
+		const consumableRepository = new ConsumableRepository(this.db);
 		const [
 			observations,
 			dayNotes,
@@ -42,8 +43,9 @@ export class ExportStore {
 			habitCompletions,
 			challengeEnrolments,
 			challengeProgress,
-			consumptionEntries,
-			customConsumables,
+			intakeEvents,
+			consumables,
+			intakeStreams,
 		] = await Promise.all([
 			new ObservationRepository(this.db).listAll(),
 			new DayNoteRepository(this.db).listAll(),
@@ -57,14 +59,15 @@ export class ExportStore {
 			new HabitCompletionRepository(this.db).listAll(),
 			new ChallengeEnrolmentRepository(this.db).listAll(),
 			new ChallengeProgressRepository(this.db).listAll(),
-			new ConsumptionEntryRepository(this.db).listAll(),
-			customConsumableRepository.listAll(),
+			new IntakeEventRepository(this.db).listAll(),
+			consumableRepository.listAll({ includeArchived: true }),
+			new IntakeStreamRepository(this.db).listAll(),
 		]);
-		const customConsumableComponents = (
+		const recipeIngredients = (
 			await Promise.all(
-				customConsumables.map(({ id }) =>
-					customConsumableRepository.listComponents(id),
-				),
+				consumables
+					.filter((consumable) => consumable.recipe !== null)
+					.map(({ id }) => consumableRepository.listIngredients(id)),
 			)
 		).flat();
 
@@ -82,9 +85,10 @@ export class ExportStore {
 				habitCompletions,
 				challengeEnrolments,
 				challengeProgress,
-				consumptionEntries,
-				customConsumables,
-				customConsumableComponents,
+				intakeEvents,
+				consumables,
+				recipeIngredients,
+				intakeStreams,
 				registry: METRIC_REGISTRY,
 			},
 			{

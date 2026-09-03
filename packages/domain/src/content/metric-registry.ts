@@ -5,6 +5,11 @@ import type {
 	MetricDimension,
 	UnitPreferenceDimension,
 } from "../units";
+import {
+	CONSTITUENT_CATALOGUE,
+	type ConstituentCode,
+	type ConstituentDefinition,
+} from "./constituent-catalogue";
 import { LIFE_AREA_CATALOGUE, type LifeAreaSlug } from "./life-area-catalogue";
 
 export type MetricKind = "scored" | "tag" | "assessment" | "measurement";
@@ -89,15 +94,18 @@ export type ManualMeasurementCapture =
 	| "measurement_session"
 	| "both";
 export type ImportedOnlyMeasurementSlug = "sleep_duration" | "steps";
-export type ConsumptionDerivedMeasurementSlug =
-	| "alcohol_intake"
-	| "caffeine_intake"
-	| "nicotine_intake"
-	| "fluid_intake"
-	| "energy_intake"
-	| "protein_intake"
-	| "carbs_intake"
-	| "fat_intake";
+/**
+ * One intake metric per constituent, generated from the catalogue: a new
+ * constituent is a catalogue entry and nothing else. The slug is permanent
+ * once a release has written it under this name.
+ */
+export type ConsumptionDerivedMeasurementSlug = `${ConstituentCode}_intake`;
+
+export function intakeMetricSlug<Code extends ConstituentCode>(
+	code: Code,
+): `${Code}_intake` {
+	return `${code}_intake`;
+}
 export type MeasurementSlug =
 	| UserEnterableMeasurementSlug
 	| ImportedOnlyMeasurementSlug
@@ -193,6 +201,8 @@ export type ConsumptionDerivedMeasurementMetricDefinition =
 		dimension: Dimension;
 		userEnterable: false;
 		measurementSource: "consumption";
+		/** The constituent code this metric sums across a day's intake events. */
+		constituentCode: ConstituentCode;
 	};
 
 export type MeasurementMetricDefinition =
@@ -214,7 +224,7 @@ export type MetricResolution =
  * The only value a tag observation ever carries. A tag that later needs
  * quantity gets a separate quantified-counterpart metric — as when the alcohol
  * and caffeine tags were replaced outright by the consumption-derived
- * `alcohol_intake`/`caffeine_intake`; reusing a tag's value would make
+ * `ethanol_intake`/`caffeine_intake`; reusing a tag's value would make
  * existing rows ambiguous. Convention: product plan, check-in domain.
  */
 export const TAG_PRESENCE_VALUE = 1;
@@ -285,31 +295,31 @@ const assessment = (
 	dimension: null,
 });
 
-const consumptionMeasurement = (
-	slug: ConsumptionDerivedMeasurementSlug,
-	label: string,
-	dimension: Dimension,
-	defaultPosition: number,
-	sensitive: boolean,
-	display:
-		| { unitPreferenceDimension: UnitPreferenceDimension }
-		| { fixedDisplayUnit: DisplayUnit },
+/**
+ * Intake metrics sit after every hand-positioned measurement so adding a
+ * constituent never reorders an existing install's defaults.
+ */
+const INTAKE_METRIC_POSITION_BASE = 100;
+
+const intakeMeasurement = (
+	constituent: ConstituentDefinition & { code: ConstituentCode },
 ): ConsumptionDerivedMeasurementMetricDefinition => ({
-	slug,
-	label,
+	slug: intakeMetricSlug(constituent.code),
+	label: constituent.metricLabel ?? constituent.label,
 	kind: "measurement",
 	scaleMin: null,
 	scaleMax: null,
 	category: null,
 	aggregation: "sum",
-	dimension,
-	sensitive,
+	dimension: constituent.dimension,
+	sensitive: constituent.sensitive,
 	userEnterable: false,
 	measurementSource: "consumption",
+	constituentCode: constituent.code,
 	healthImport: false,
 	deprecated: false,
-	defaultPosition,
-	...display,
+	defaultPosition: INTAKE_METRIC_POSITION_BASE + constituent.defaultPosition,
+	...constituent.display,
 });
 
 const measurement = (
@@ -459,30 +469,9 @@ export const METRIC_REGISTRY = [
 		healthImport: true,
 		aggregation: "mean",
 	}),
-	consumptionMeasurement("alcohol_intake", "Alcohol", "mass", 6, true, {
-		unitPreferenceDimension: "alcohol",
-	}),
-	consumptionMeasurement("caffeine_intake", "Caffeine", "mass", 7, false, {
-		fixedDisplayUnit: "mg",
-	}),
-	consumptionMeasurement("nicotine_intake", "Nicotine", "mass", 13, true, {
-		fixedDisplayUnit: "mg",
-	}),
-	consumptionMeasurement("fluid_intake", "Fluid intake", "volume", 8, false, {
-		unitPreferenceDimension: "volume",
-	}),
-	consumptionMeasurement("energy_intake", "Energy intake", "energy", 9, false, {
-		fixedDisplayUnit: "kcal",
-	}),
-	consumptionMeasurement("protein_intake", "Protein", "mass", 10, false, {
-		fixedDisplayUnit: "g",
-	}),
-	consumptionMeasurement("carbs_intake", "Carbohydrate", "mass", 11, false, {
-		fixedDisplayUnit: "g",
-	}),
-	consumptionMeasurement("fat_intake", "Fat", "mass", 12, false, {
-		fixedDisplayUnit: "g",
-	}),
+	// One metric per constituent, all default-off: twenty-odd metrics change
+	// nothing on Trends or in settings until one is tracked.
+	...CONSTITUENT_CATALOGUE.map(intakeMeasurement),
 	...LIFE_AREA_CATALOGUE.map((area) =>
 		assessment(area.slug, area.label, area.defaultPosition, area.sensitive),
 	),

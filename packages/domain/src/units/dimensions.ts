@@ -25,6 +25,8 @@ export type MassDisplayUnit =
 	| "st"
 	| "g"
 	| "mg"
+	| "µg"
+	| "salt_g"
 	| "uk_unit"
 	| "us_standard_drink";
 export type LengthDisplayUnit = "cm" | "in" | "ft";
@@ -61,7 +63,17 @@ export const CANONICAL_STORAGE_UNITS = {
 } as const satisfies Record<MetricDimension, string>;
 
 export const DISPLAY_UNITS_BY_DIMENSION = {
-	mass: ["kg", "lb", "st", "g", "mg", "uk_unit", "us_standard_drink"],
+	mass: [
+		"kg",
+		"lb",
+		"st",
+		"g",
+		"mg",
+		"µg",
+		"salt_g",
+		"uk_unit",
+		"us_standard_drink",
+	],
 	length: ["cm", "in", "ft"],
 	fraction: ["%"],
 	volume: ["ml", "l", "fl_oz_uk", "fl_oz_us"],
@@ -82,6 +94,7 @@ export const UNIT_PREFERENCE_DIMENSIONS = [
 	"fraction",
 	"alcohol",
 	"volume",
+	"sodium",
 ] as const;
 export type UnitPreferenceDimension =
 	(typeof UNIT_PREFERENCE_DIMENSIONS)[number];
@@ -93,6 +106,8 @@ type DisplayUnitByPreferenceDimension = {
 	fraction: FractionDisplayUnit;
 	alcohol: "uk_unit" | "us_standard_drink" | "g";
 	volume: VolumeDisplayUnit;
+	/** Sodium mass shown as milligrams of sodium or grams of salt (×2.5). */
+	sodium: "mg" | "salt_g";
 };
 
 export type DisplayUnitForPreferenceDimension<
@@ -106,6 +121,7 @@ export const DISPLAY_UNITS_BY_PREFERENCE_DIMENSION = {
 	fraction: ["%"],
 	alcohol: ["uk_unit", "us_standard_drink", "g"],
 	volume: ["ml", "l", "fl_oz_uk", "fl_oz_us"],
+	sodium: ["mg", "salt_g"],
 } as const satisfies {
 	[D in UnitPreferenceDimension]: readonly DisplayUnitForPreferenceDimension<D>[];
 };
@@ -117,6 +133,7 @@ export const DIMENSION_BY_UNIT_PREFERENCE = {
 	fraction: "fraction",
 	alcohol: "mass",
 	volume: "volume",
+	sodium: "mass",
 } as const satisfies Record<UnitPreferenceDimension, Dimension>;
 
 export const FALLBACK_DISPLAY_UNITS_BY_PREFERENCE_DIMENSION = {
@@ -126,6 +143,7 @@ export const FALLBACK_DISPLAY_UNITS_BY_PREFERENCE_DIMENSION = {
 	fraction: "%",
 	alcohol: "uk_unit",
 	volume: "ml",
+	sodium: "mg",
 } as const satisfies {
 	[D in UnitPreferenceDimension]: DisplayUnitForPreferenceDimension<D>;
 };
@@ -150,6 +168,8 @@ export const DISPLAY_RESOLUTIONS = {
 	"%": 0.1,
 	g: 0.1,
 	mg: 1,
+	µg: 0.1,
+	salt_g: 0.1,
 	uk_unit: 0.1,
 	us_standard_drink: 0.1,
 	ml: 1,

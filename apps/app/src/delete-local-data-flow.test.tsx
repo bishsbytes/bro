@@ -96,8 +96,9 @@ describe("delete local data", () => {
 			db,
 		);
 		const challengeProgress = new databaseApp.ChallengeProgressRepository(db);
-		const consumptionEntries = new databaseApp.ConsumptionEntryRepository(db);
-		const customConsumables = new databaseApp.CustomConsumableRepository(db);
+		const intakeEvents = new databaseApp.IntakeEventRepository(db);
+		const consumables = new databaseApp.ConsumableRepository(db);
+		const intakeStreams = new databaseApp.IntakeStreamRepository(db);
 		await observations.create({
 			metricSlug: "mood",
 			value: 4,
@@ -173,52 +174,56 @@ describe("delete local data", () => {
 			startedOn: "2026-08-14",
 		});
 		await challengeProgress.completeDay(enrolment.id, 1, "2026-08-14");
-		await consumptionEntries.create({
+		await intakeEvents.create({
 			kind: "drink",
-			catalogueRef: "drink:lager",
-			label: "Lager",
-			servingLabel: "pint",
+			consumableId: null,
+			sourceRef: "system:drink:lager-4_5",
+			name: "Lager",
+			brand: null,
+			portionLabel: "pint",
 			quantity: 1,
+			massKg: null,
 			volumeL: 0.568_261_25,
-			ethanolKg: 0.020_181_999,
-			caffeineKg: null,
-			energyKcal: 227,
+			constituents: {
+				fluid: 0.568_261_25,
+				ethanol: 0.020_181_999,
+				energy: 227,
+			},
+			context: null,
+			notes: null,
 			occurredAt: Date.parse("2026-08-14T21:00:00.000Z"),
 			localDay: "2026-08-14",
 			tzOffsetMinutes: -60,
 		});
-		const recipe = await customConsumables.create(
-			{
-				kind: "food",
-				label: "Traybake",
-				brand: null,
-				isRecipe: true,
-				servings: [
-					{
-						id: "plate",
-						label: "1 plate",
-						volumeL: null,
-						ethanolKg: null,
-						caffeineKg: null,
-						energyKcal: 500,
-						proteinG: 40,
-						carbsG: 50,
-						fatG: 20,
-					},
-				],
+		const recipe = await consumables.create({
+			kind: "food",
+			name: "Traybake",
+			brand: null,
+			barcode: null,
+			basis: { type: "portion", portionId: "plate" },
+			constituents: {},
+			portions: [],
+			defaultPortionId: null,
+			recipe: { yield: { quantity: 1, unit: "portion" } },
+			source: { type: "user" },
+		});
+		await consumables.addIngredient(recipe.id, {
+			position: 0,
+			consumableId: null,
+			sourceRef: null,
+			name: "Chicken",
+			portionLabel: null,
+			quantity: 2,
+			massKg: null,
+			volumeL: null,
+			constituents: {
+				energy: 500,
+				protein: 0.04,
+				carbohydrate: 0.05,
+				fat: 0.02,
 			},
-			[
-				{
-					position: 0,
-					label: "Chicken",
-					quantity: 2,
-					energyKcal: 500,
-					proteinG: 40,
-					carbsG: 50,
-					fatG: 20,
-				},
-			],
-		);
+		});
+		await intakeStreams.setEnabled("nicotine", true);
 		const healthConnections = new databaseApp.HealthConnectionRepository(
 			localDb,
 		);
@@ -237,7 +242,7 @@ describe("delete local data", () => {
 		await foodCache.upsert({
 			ref: "off:delete-me",
 			query: "traybake",
-			payload: { ref: "off:delete-me", label: "Traybake" },
+			payload: { ref: "off:delete-me", name: "Traybake" },
 		});
 		(
 			Notifications.getAllScheduledNotificationsAsync as jest.Mock
@@ -267,9 +272,10 @@ describe("delete local data", () => {
 		expect(await observations.listAll()).toHaveLength(2);
 		expect(await notes.listAll()).toHaveLength(1);
 		expect(await trackedMetrics.listAll()).toHaveLength(1);
-		expect(await consumptionEntries.listAll()).toHaveLength(1);
-		expect(await customConsumables.listAll()).toHaveLength(1);
-		expect(await customConsumables.listComponents(recipe.id)).toHaveLength(1);
+		expect(await intakeEvents.listAll()).toHaveLength(1);
+		expect(await consumables.listAll()).toHaveLength(1);
+		expect(await consumables.listIngredients(recipe.id)).toHaveLength(1);
+		expect(await intakeStreams.listAll()).toHaveLength(1);
 		expect(await foodCache.listRecent()).toHaveLength(1);
 
 		await fireEvent.press(view.getByText("Cancel"));
@@ -292,9 +298,10 @@ describe("delete local data", () => {
 		expect(await habitCompletions.listByDay("2026-08-14")).toEqual([]);
 		expect(await challengeEnrolments.listAll()).toEqual([]);
 		expect(await challengeProgress.listByDay("2026-08-14")).toEqual([]);
-		expect(await consumptionEntries.listAll()).toEqual([]);
-		expect(await customConsumables.listAll()).toEqual([]);
-		expect(await customConsumables.listComponents(recipe.id)).toEqual([]);
+		expect(await intakeEvents.listAll()).toEqual([]);
+		expect(await consumables.listAll()).toEqual([]);
+		expect(await consumables.listIngredients(recipe.id)).toEqual([]);
+		expect(await intakeStreams.listAll()).toEqual([]);
 		expect(await healthConnections.list()).toEqual([]);
 		expect(await rawSamples.listByMetricDay("weight", "2026-08-14")).toEqual(
 			[],

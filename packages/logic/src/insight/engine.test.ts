@@ -198,7 +198,7 @@ describe("insight engine", () => {
 		const alcoholPairs = INSIGHT_CATALOGUE.filter(
 			(candidate) =>
 				candidate.input.kind === "threshold" &&
-				candidate.input.metricSlug === "alcohol_intake",
+				candidate.input.metricSlug === "ethanol_intake",
 		);
 		expect(alcoholPairs).toHaveLength(2);
 
@@ -214,7 +214,7 @@ describe("insight engine", () => {
 				const inputDay = shiftLocalDay(outputDay, -alcoholPair.lagDays);
 				const active = offset % 3 === 0;
 				values.set(
-					`alcohol_intake:${inputDay}`,
+					`ethanol_intake:${inputDay}`,
 					active ? alcoholPair.input.value : alcoholPair.input.value / 2,
 				);
 				values.set(
@@ -242,7 +242,7 @@ describe("insight engine", () => {
 			);
 
 			for (const key of values.keys()) {
-				if (key.startsWith("alcohol_intake:")) {
+				if (key.startsWith("ethanol_intake:")) {
 					values.set(key, alcoholPair.input.value / 2);
 				}
 			}

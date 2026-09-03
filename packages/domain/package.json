@@ -16,6 +16,21 @@
 			"import": "./src/content/challenge-catalogue.ts",
 			"default": "./src/content/challenge-catalogue.ts"
 		},
+		"./constituent-catalogue": {
+			"types": "./src/content/constituent-catalogue.ts",
+			"import": "./src/content/constituent-catalogue.ts",
+			"default": "./src/content/constituent-catalogue.ts"
+		},
+		"./composition": {
+			"types": "./src/content/composition.ts",
+			"import": "./src/content/composition.ts",
+			"default": "./src/content/composition.ts"
+		},
+		"./consumable": {
+			"types": "./src/content/consumable.ts",
+			"import": "./src/content/consumable.ts",
+			"default": "./src/content/consumable.ts"
+		},
 		"./drink-catalogue": {
 			"types": "./src/content/drink-catalogue.ts",
 			"import": "./src/content/drink-catalogue.ts",
@@ -51,10 +66,10 @@
 			"import": "./src/content/nicotine-catalogue.ts",
 			"default": "./src/content/nicotine-catalogue.ts"
 		},
-		"./substance-catalogue": {
-			"types": "./src/content/substance-catalogue.ts",
-			"import": "./src/content/substance-catalogue.ts",
-			"default": "./src/content/substance-catalogue.ts"
+		"./system-consumables": {
+			"types": "./src/content/system-consumables.ts",
+			"import": "./src/content/system-consumables.ts",
+			"default": "./src/content/system-consumables.ts"
 		},
 		"./wheel-template": {
 			"types": "./src/content/wheel-template.ts",

@@ -19,9 +19,10 @@ export const PRODUCT_TABLE_NAMES = {
 	habitCompletions: "habit_completions",
 	challengeEnrolments: "challenge_enrolments",
 	challengeProgress: "challenge_progress",
-	consumptionEntries: "consumption_entries",
-	customConsumables: "custom_consumables",
-	customConsumableComponents: "custom_consumable_components",
+	intakeEvents: "intake_events",
+	consumables: "consumables",
+	recipeIngredients: "recipe_ingredients",
+	intakeStreams: "intake_streams",
 } as const;
 
 export type ProductTableName =

@@ -85,6 +85,8 @@ const UNIT_LABEL_KEYS = {
 	"%": "unitNames.percent",
 	g: "unitNames.g",
 	mg: "unitNames.mg",
+	µg: "unitNames.µg",
+	salt_g: "unitNames.salt_g",
 	uk_unit: "unitNames.uk_unit",
 	us_standard_drink: "unitNames.us_standard_drink",
 	ml: "unitNames.ml",

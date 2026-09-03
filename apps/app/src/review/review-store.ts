@@ -2,11 +2,11 @@ import {
 	type Assessment,
 	type AssessmentItemSnapshot,
 	AssessmentRepository,
-	ConsumptionEntryRepository,
 	DailyMetricRepository,
 	type Goal,
 	GoalRepository,
 	getDb,
+	IntakeEventRepository,
 	type Observation,
 	ObservationRepository,
 	TrackedMetricsRepository,
@@ -14,11 +14,10 @@ import {
 } from "@bro/database-app";
 import { localDayOf, systemLocale } from "@bro/domain";
 import { DEFAULT_LIFE_AREA_METRICS } from "@bro/domain/life-area-catalogue";
-import { isConsumptionDerivedMeasurementSlug } from "@bro/domain/metric-registry";
 import { WHEEL_OF_LIFE_TEMPLATE } from "@bro/domain/wheel-template";
 import {
-	consumptionMetricTrailingDailyMean,
 	formatMetricValue,
+	intakeTrailingDailyMean,
 	metricDisplayUnit,
 	type ResolvedGoalProgress,
 	resolveGoalProgress,
@@ -199,7 +198,7 @@ export class ReviewStore {
 	private readonly observations: ObservationRepository;
 	private readonly trackedMetrics: TrackedMetricsRepository;
 	private readonly dailyMetrics: DailyMetricRepository;
-	private readonly consumptionEntries: ConsumptionEntryRepository;
+	private readonly intakeEvents: IntakeEventRepository;
 	private readonly unitPreferences: UnitPreferenceRepository;
 
 	constructor(
@@ -212,7 +211,7 @@ export class ReviewStore {
 		this.observations = new ObservationRepository(db);
 		this.trackedMetrics = new TrackedMetricsRepository(db);
 		this.dailyMetrics = new DailyMetricRepository(db);
-		this.consumptionEntries = new ConsumptionEntryRepository(db);
+		this.intakeEvents = new IntakeEventRepository(db);
 		this.unitPreferences = new UnitPreferenceRepository(db);
 	}
 
@@ -229,7 +228,7 @@ export class ReviewStore {
 			observations,
 			overlays,
 			dailyMetrics,
-			consumptionEntries,
+			intakeEvents,
 			preferences,
 		] = await Promise.all([
 			this.listSittings(),
@@ -237,7 +236,7 @@ export class ReviewStore {
 			this.observations.listAll(),
 			this.trackedMetrics.listResolved(DEFAULT_LIFE_AREA_METRICS),
 			this.dailyMetrics.listAll(),
-			this.consumptionEntries.listAll(),
+			this.intakeEvents.listAll(),
 			this.unitPreferences.resolveLatestPerDimension(),
 		]);
 		const labels = new Map<string, string>(
@@ -300,21 +299,20 @@ export class ReviewStore {
 						inputLocale,
 						unitWords(),
 					);
-				const slug = metric.slug;
-				if (isConsumptionDerivedMeasurementSlug(slug)) {
+				if ("measurementSource" in metric) {
 					const series = resolveMetricObservations(
-						slug,
+						metric.slug,
 						[],
 						[],
-						consumptionEntries,
+						intakeEvents,
 					);
 					const hasEntries = series.length > 0;
 					const mean = (throughLocalDay: string) =>
-						consumptionMetricTrailingDailyMean(
-							slug,
+						intakeTrailingDailyMean(
+							metric.constituentCode,
 							throughLocalDay,
 							GOAL_MEAN_WINDOW_DAYS,
-							consumptionEntries,
+							intakeEvents,
 						);
 					return resolveGoalProgress({
 						goal,

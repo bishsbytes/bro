@@ -1,12 +1,5 @@
-import type {
-	SubstanceCatalogueEntry,
-	SubstanceCatalogueServing,
-	SubstanceServingSnapshot,
-} from "./substance-catalogue";
-import {
-	resolveSubstanceEntry,
-	snapshotSubstanceServing,
-} from "./substance-catalogue";
+import { milligramsToKg } from "./constituent-catalogue";
+import type { Portion, SystemConsumable } from "./consumable";
 
 export const NICOTINE_MG_PER_KG = 1_000_000;
 
@@ -14,7 +7,42 @@ export function nicotineKgFromMg(milligrams: number): number {
 	if (!Number.isFinite(milligrams) || milligrams < 0) {
 		throw new RangeError("Nicotine must be finite and non-negative.");
 	}
-	return milligrams / NICOTINE_MG_PER_KG;
+	return milligramsToKg(milligrams);
+}
+
+export type NicotineCatalogueEntry = SystemConsumable & {
+	key: `nicotine:${string}`;
+	kind: "nicotine";
+};
+
+function unit(id: string, label: string, basisUnits: number): Portion {
+	return { id, label, massKg: null, volumeL: null, basisUnits };
+}
+
+/**
+ * A nicotine item is authored per one portion — the cigarette, the ten puffs —
+ * and its other portions are multiples of it: half a cigarette is 0.5, a
+ * session on a vape is what ten puffs deliver times the session's share.
+ */
+function nicotineItem(
+	key: `nicotine:${string}`,
+	name: string,
+	deliveredMgPerBasisPortion: number,
+	portions: readonly Portion[],
+): NicotineCatalogueEntry {
+	const basisPortion = portions[0];
+	if (!basisPortion) {
+		throw new RangeError(`${key} must offer at least one portion.`);
+	}
+	return {
+		key,
+		kind: "nicotine",
+		name,
+		basis: { type: "portion", portionId: basisPortion.id },
+		constituents: { nicotine: nicotineKgFromMg(deliveredMgPerBasisPortion) },
+		portions,
+		defaultPortionId: basisPortion.id,
+	};
 }
 
 /**
@@ -37,93 +65,34 @@ export function nicotineKgFromMg(milligrams: number): number {
  * into the numbers this catalogue exists to pin.
  */
 export const NICOTINE_CATALOGUE = [
-	{
-		id: "nicotine:cigarette",
-		label: "Cigarette",
-		servings: [
-			{
-				id: "one",
-				label: "cigarette",
-				amounts: { nicotineKg: nicotineKgFromMg(1.2) },
-			},
-			{
-				id: "half",
-				label: "half",
-				amounts: { nicotineKg: nicotineKgFromMg(0.6) },
-			},
-		],
-	},
-	{
-		id: "nicotine:roll-up",
-		label: "Roll-up",
-		servings: [
-			{
-				id: "one",
-				label: "roll-up",
-				amounts: { nicotineKg: nicotineKgFromMg(1.2) },
-			},
-			{
-				id: "half",
-				label: "half",
-				amounts: { nicotineKg: nicotineKgFromMg(0.6) },
-			},
-		],
-	},
-	{
-		id: "nicotine:cigar",
-		label: "Cigar",
-		servings: [
-			{
-				id: "one",
-				label: "cigar",
-				amounts: { nicotineKg: nicotineKgFromMg(3) },
-			},
-		],
-	},
-	{
-		id: "nicotine:vape-20",
-		label: "Vape, ~20 mg/ml",
-		servings: [
-			{
-				id: "puffs-10",
-				label: "10 puffs",
-				amounts: { nicotineKg: nicotineKgFromMg(0.8) },
-			},
-			{
-				id: "session",
-				label: "session",
-				amounts: { nicotineKg: nicotineKgFromMg(1.5) },
-			},
-		],
-	},
-	{
-		id: "nicotine:vape-10",
-		label: "Vape, ~10 mg/ml",
-		servings: [
-			{
-				id: "puffs-10",
-				label: "10 puffs",
-				amounts: { nicotineKg: nicotineKgFromMg(0.4) },
-			},
-			{
-				id: "session",
-				label: "session",
-				amounts: { nicotineKg: nicotineKgFromMg(0.75) },
-			},
-		],
-	},
-] as const satisfies readonly SubstanceCatalogueEntry[];
+	nicotineItem("nicotine:cigarette", "Cigarette", 1.2, [
+		unit("one", "cigarette", 1),
+		unit("half", "half", 0.5),
+	]),
+	nicotineItem("nicotine:roll-up", "Roll-up", 1.2, [
+		unit("one", "roll-up", 1),
+		unit("half", "half", 0.5),
+	]),
+	nicotineItem("nicotine:cigar", "Cigar", 3, [unit("one", "cigar", 1)]),
+	// A session is authored as 1.5 mg against 0.8 mg for ten puffs: 1.875 of
+	// the basis portion, exactly.
+	nicotineItem("nicotine:vape-20", "Vape, ~20 mg/ml", 0.8, [
+		unit("puffs-10", "10 puffs", 1),
+		unit("session", "session", 1.875),
+	]),
+	nicotineItem("nicotine:vape-10", "Vape, ~10 mg/ml", 0.4, [
+		unit("puffs-10", "10 puffs", 1),
+		unit("session", "session", 1.875),
+	]),
+] as const satisfies readonly NicotineCatalogueEntry[];
 
+const entriesByKey = new Map<string, NicotineCatalogueEntry>(
+	NICOTINE_CATALOGUE.map((entry) => [entry.key, entry]),
+);
+
+/** Unknown keys resolve to null forever, so removed content never throws. */
 export function resolveNicotineEntry(
-	id: string,
-): SubstanceCatalogueEntry | null {
-	return resolveSubstanceEntry(NICOTINE_CATALOGUE, id);
-}
-
-export function snapshotNicotineServing(
-	entry: SubstanceCatalogueEntry,
-	serving: SubstanceCatalogueServing,
-	quantity: number,
-): SubstanceServingSnapshot {
-	return snapshotSubstanceServing(entry, serving, quantity);
+	key: string,
+): NicotineCatalogueEntry | null {
+	return entriesByKey.get(key) ?? null;
 }

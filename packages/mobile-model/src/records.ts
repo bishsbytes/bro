@@ -1,4 +1,13 @@
 import type { HabitDirection } from "@bro/domain";
+import type { ConstituentAmounts } from "@bro/domain/constituent-catalogue";
+import type {
+	ConsumableComposition,
+	ConsumableKind,
+	ContentSource,
+	IntakeContext,
+	Portion,
+	RecipeYield,
+} from "@bro/domain/consumable";
 import type {
 	CheckInSlot,
 	CheckInSlotAssignment,
@@ -56,28 +65,98 @@ export type ChallengeProgress = {
 };
 
 /**
- * The logging journey an entry came from, not the substance it carries: a
- * drink already carries ethanol, caffeine, and energy on one row, and a
- * substance entry carries its own canonical quantities the same way.
+ * A thing you can take in, as the library holds it: a name with a composition
+ * — constituent amounts per basis, portions that scale the basis — and where
+ * it came from. System consumables never reach this table; editing one forks
+ * it here with `forkedFrom` naming the catalogue entry.
  */
-export type ConsumptionEntryKind = "drink" | "food" | "nicotine";
-
-export type ConsumptionEntry = {
+export type Consumable = ConsumableComposition & {
 	id: string;
-	kind: ConsumptionEntryKind;
-	catalogueRef: string | null;
-	consumableRef: string | null;
-	label: string;
-	servingLabel: string | null;
+	kind: ConsumableKind;
+	name: string;
+	brand: string | null;
+	barcode: string | null;
+	portions: Portion[];
+	/** A recipe's composition is calculated from `recipe_ingredients`. */
+	recipe: { yield: RecipeYield } | null;
+	source: ContentSource;
+	forkedFrom: ContentSource | null;
+	/** Archived rather than deleted while an event still references the row. */
+	archivedAt: number | null;
+	createdAt: number;
+	updatedAt: number;
+};
+
+export type CreateConsumable = Omit<
+	Consumable,
+	"id" | "createdAt" | "updatedAt" | "archivedAt" | "forkedFrom"
+> & { forkedFrom?: ContentSource | null };
+
+/** Kind and provenance are fixed at creation; a fork is its own operation. */
+export type UpdateConsumable = Pick<
+	Consumable,
+	| "name"
+	| "brand"
+	| "barcode"
+	| "basis"
+	| "constituents"
+	| "portions"
+	| "defaultPortionId"
+	| "recipe"
+>;
+
+/**
+ * One line of a recipe: a reference to what went in, plus a snapshot of its
+ * name and scaled constituents so the recipe still calculates after the
+ * ingredient's consumable is edited, archived, or gone.
+ */
+export type RecipeIngredient = {
+	id: string;
+	recipeId: string;
+	position: number;
+	/** Library row, or null when the ingredient is a system item or has gone. */
+	consumableId: string | null;
+	sourceRef: string | null;
+	name: string;
+	portionLabel: string | null;
 	quantity: number;
+	massKg: number | null;
 	volumeL: number | null;
-	ethanolKg: number | null;
-	caffeineKg: number | null;
-	nicotineKg: number | null;
-	energyKcal: number | null;
-	proteinG: number | null;
-	carbsG: number | null;
-	fatG: number | null;
+	/** Scaled to this ingredient's quantity. */
+	constituents: ConstituentAmounts;
+	createdAt: number;
+	updatedAt: number;
+};
+
+export type CreateRecipeIngredient = Omit<
+	RecipeIngredient,
+	"id" | "recipeId" | "createdAt" | "updatedAt"
+>;
+
+export type UpdateRecipeIngredient = CreateRecipeIngredient;
+
+/**
+ * What was taken, when. Everything displayed is snapshotted from the
+ * consumable at log time and already scaled by quantity; `consumableId` and
+ * `sourceRef` exist for re-lookup only, never for display.
+ */
+export type IntakeEvent = {
+	id: string;
+	/** The consumable's kind at log time; partitions the stream views. */
+	kind: ConsumableKind;
+	consumableId: string | null;
+	sourceRef: string | null;
+	name: string;
+	brand: string | null;
+	portionLabel: string | null;
+	quantity: number;
+	/** Amount consumed, where known: provenance, not a total. */
+	massKg: number | null;
+	volumeL: number | null;
+	/** code → canonical amount, already × quantity. Unknown codes survive. */
+	constituents: ConstituentAmounts;
+	context: IntakeContext | null;
+	notes: string | null;
 	occurredAt: number;
 	localDay: string;
 	tzOffsetMinutes: number;
@@ -85,79 +164,25 @@ export type ConsumptionEntry = {
 	updatedAt: number;
 };
 
-type FoodSnapshotFields = Pick<
-	ConsumptionEntry,
-	"consumableRef" | "proteinG" | "carbsG" | "fatG"
+export type CreateIntakeEvent = Omit<
+	IntakeEvent,
+	"id" | "createdAt" | "updatedAt"
 >;
 
-/** Optional for the same reason food's are: a drink carries no nicotine. */
-type SubstanceSnapshotFields = Pick<ConsumptionEntry, "nicotineKg">;
+export type UpdateIntakeEvent = Omit<CreateIntakeEvent, "kind">;
 
-export type CreateConsumptionEntry = Omit<
-	ConsumptionEntry,
-	| "id"
-	| "createdAt"
-	| "updatedAt"
-	| keyof FoodSnapshotFields
-	| keyof SubstanceSnapshotFields
-> &
-	Partial<FoodSnapshotFields> &
-	Partial<SubstanceSnapshotFields>;
-
-export type UpdateConsumptionEntry = Omit<CreateConsumptionEntry, "kind">;
-
-export type CustomConsumableKind = "food" | "drink";
-
-export type CustomConsumableServing = {
+/**
+ * Which optional streams are on. Food and drink are always on and never have
+ * a row; the others are off on a fresh install and switched on here.
+ */
+export type IntakeStream = {
 	id: string;
-	label: string;
-	volumeL: number | null;
-	ethanolKg: number | null;
-	caffeineKg: number | null;
-	energyKcal: number | null;
-	proteinG: number | null;
-	carbsG: number | null;
-	fatG: number | null;
-};
-
-export type CustomConsumable = {
-	id: string;
-	kind: CustomConsumableKind;
-	label: string;
-	brand: string | null;
-	isRecipe: boolean;
-	servings: CustomConsumableServing[];
+	kind: ConsumableKind;
+	enabledAt: number;
+	disabledAt: number | null;
 	createdAt: number;
 	updatedAt: number;
 };
-
-export type CreateCustomConsumable = Pick<
-	CustomConsumable,
-	"kind" | "label" | "brand" | "isRecipe" | "servings"
->;
-
-export type UpdateCustomConsumable = Omit<CreateCustomConsumable, "kind">;
-
-export type CustomConsumableComponent = {
-	id: string;
-	consumableId: string;
-	position: number;
-	label: string;
-	quantity: number;
-	energyKcal: number | null;
-	proteinG: number | null;
-	carbsG: number | null;
-	fatG: number | null;
-	createdAt: number;
-	updatedAt: number;
-};
-
-export type CreateCustomConsumableComponent = Omit<
-	CustomConsumableComponent,
-	"id" | "consumableId" | "createdAt" | "updatedAt"
->;
-
-export type UpdateCustomConsumableComponent = CreateCustomConsumableComponent;
 
 export type DailyMetric = {
 	id: string;

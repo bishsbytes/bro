@@ -1,10 +1,6 @@
 import { fireEvent, render } from "@testing-library/react-native";
-import type { DrinkDaySnapshot } from "./drinks/drinks-store";
-import type { FoodDaySnapshot } from "./food/food-store";
+import type { IntakeDaySnapshot } from "./intake/intake-store";
 import { IntakeScreen } from "./screens/intake/intake-screen";
-import type { NicotineStore } from "./substances/nicotine";
-
-type NicotineDaySnapshot = Awaited<ReturnType<NicotineStore["loadToday"]>>;
 
 const mockPush = jest.fn();
 
@@ -32,125 +28,134 @@ jest.mock("react-native-safe-area-context", () => {
 				...props,
 				testID: `safe-area-${edges.join("-")}`,
 			}),
+		useSafeAreaInsets: () => ({ top: 0, right: 0, bottom: 0, left: 0 }),
 	};
 });
 
-const emptyDay = { entries: [], metrics: [] };
-
-function drinksStore(snapshot: unknown = emptyDay) {
-	return { loadToday: jest.fn(async () => snapshot as DrinkDaySnapshot) };
+function total(slug: string, label: string, dayFormatted: string | null) {
+	return { metric: { slug, label }, tracked: true, dayFormatted };
 }
 
-function foodStore(snapshot: unknown = emptyDay) {
-	return { loadToday: jest.fn(async () => snapshot as FoodDaySnapshot) };
-}
-
-function nicotineStore(tracked: boolean, snapshot: unknown = emptyDay) {
+function snapshot(
+	overrides: Partial<IntakeDaySnapshot> = {},
+): IntakeDaySnapshot {
 	return {
-		isTracked: jest.fn(async () => tracked),
-		loadToday: jest.fn(async () => snapshot as NicotineDaySnapshot),
-	};
+		localDay: "2026-09-02",
+		defaultTime: "12:00",
+		enabledKinds: ["food", "drink"],
+		events: [],
+		metrics: [],
+		totals: [],
+		recents: [],
+		recentLocalDays: [],
+		...overrides,
+	} as IntakeDaySnapshot;
+}
+
+function store(day: IntakeDaySnapshot) {
+	return {
+		loadToday: jest.fn(async () => day),
+		repeatEvent: jest.fn(async () => ({
+			id: "event-2",
+			localDay: day.localDay,
+		})),
+	} as unknown as Pick<
+		import("./intake/intake-store").IntakeStore,
+		"loadToday" | "repeatEvent"
+	>;
 }
 
 describe("Intake screen", () => {
 	beforeEach(() => jest.clearAllMocks());
 
-	it("leads with today's food and drink totals and opens each logger", async () => {
+	it("states the day's tracked totals once, energy first, and lists the events", async () => {
 		const screen = await render(
 			<IntakeScreen
-				drinksStore={drinksStore({
-					entries: [{ entry: { id: "drink-1" } }],
-					metrics: [
-						{
-							metric: { slug: "fluid_intake", label: "Fluid" },
-							dayFormatted: "1.5 L",
-						},
-						{
-							metric: { slug: "energy_intake", label: "Energy intake" },
-							dayFormatted: "2,100 kcal",
-						},
-					],
-				})}
-				foodStore={foodStore({
-					entries: [],
-					metrics: [
-						{
-							metric: { slug: "protein_intake", label: "Protein" },
-							dayFormatted: "82.0 g",
-						},
-						{
-							metric: { slug: "energy_intake", label: "Energy intake" },
-							dayFormatted: "2,100 kcal",
-						},
-					],
-				})}
-				nicotineStore={nicotineStore(false)}
+				store={store(
+					snapshot({
+						totals: [
+							total("energy_intake", "Energy intake", "2,100 kcal"),
+							total("protein_intake", "Protein", "82.0 g"),
+							total("caffeine_intake", "Caffeine", null),
+						] as IntakeDaySnapshot["totals"],
+						events: [
+							{
+								event: {
+									id: "event-1",
+									kind: "drink",
+									name: "Filter coffee",
+								},
+								detail: "1 × 250 ml mug · 07:40",
+								contributions: "95 mg",
+							},
+							{
+								event: { id: "event-2", kind: "food", name: "Lunch" },
+								detail: "1 × portion · 13:00",
+								contributions: "650 kcal · 40.0 g",
+							},
+						] as IntakeDaySnapshot["events"],
+					}),
+				)}
 			/>,
 		);
 
-		expect(await screen.findByText("1.5 L")).toBeTruthy();
+		expect(await screen.findByText("2,100 kcal")).toBeTruthy();
 		expect(screen.getByText("82.0 g")).toBeTruthy();
-		expect(screen.getByText("1 entry")).toBeTruthy();
-		expect(screen.getAllByText("Drinks")).toHaveLength(1);
-		expect(screen.getAllByText("Food")).toHaveLength(1);
-		// Every stream feeds the same energy total, so the card states it once.
-		expect(screen.getAllByText("ENERGY INTAKE")).toHaveLength(1);
-		expect(screen.getAllByText("2,100 kcal")).toHaveLength(1);
+		// A tracked total with nothing logged reads as a dash, never a zero or a grade.
+		expect(screen.getAllByText("—").length).toBeGreaterThan(0);
+		expect(screen.getByText("Filter coffee")).toBeTruthy();
+		expect(screen.getByText("Lunch")).toBeTruthy();
+		expect(screen.getByText("650 kcal · 40.0 g")).toBeTruthy();
+		// Totals are stated, never graded: nothing counts down or judges.
+		expect(
+			screen.queryByText(/remaining|left today|\bover\b|\bunder\b/i),
+		).toBeNull();
 
-		await fireEvent.press(screen.getByLabelText("Open Drinks"));
-		expect(mockPush).toHaveBeenLastCalledWith("/drinks");
-		await fireEvent.press(screen.getByLabelText("Open Food"));
-		expect(mockPush).toHaveBeenLastCalledWith("/food");
+		await fireEvent.press(screen.getByLabelText("Edit Lunch"));
+		expect(mockPush).toHaveBeenLastCalledWith("/intake/2026-09-02");
+		await fireEvent.press(screen.getByText("Log something"));
+		expect(mockPush).toHaveBeenLastCalledWith("/intake/log");
 	});
 
-	it("offers smoking only once that stream is switched on", async () => {
-		const untracked = nicotineStore(false);
-		const screen = await render(
-			<IntakeScreen
-				drinksStore={drinksStore()}
-				foodStore={foodStore()}
-				nicotineStore={untracked}
-			/>,
-		);
+	it("says how to get totals when nothing is tracked and stays empty when nothing is logged", async () => {
+		const screen = await render(<IntakeScreen store={store(snapshot())} />);
 
-		expect(await screen.findByLabelText("Open Food")).toBeTruthy();
+		expect(
+			await screen.findByText(
+				"Choose what to track in settings and today's totals will appear here.",
+			),
+		).toBeTruthy();
+		expect(screen.getByText("Nothing logged")).toBeTruthy();
 		expect(screen.queryByText("Smoking & vaping")).toBeNull();
-		// An unasked-for smoking row is the product having a view about its user,
-		// so the day is not even read when the stream is off.
-		expect(untracked.loadToday).not.toHaveBeenCalled();
 	});
 
-	it("shows a smoking row alongside food and drink once tracked", async () => {
-		const screen = await render(
-			<IntakeScreen
-				drinksStore={drinksStore()}
-				foodStore={foodStore()}
-				nicotineStore={nicotineStore(true, {
-					entries: [{ entry: { id: "nicotine-1" } }],
-					metrics: [
-						{
-							metric: { slug: "nicotine_intake", label: "Nicotine" },
-							dayFormatted: "12 mg",
-						},
-					],
-				})}
-			/>,
-		);
+	it("repeats a recent in one tap and confirms it", async () => {
+		const day = snapshot({
+			recents: [
+				{
+					event: {
+						id: "event-1",
+						kind: "drink",
+						name: "Filter coffee",
+						portionLabel: "250 ml mug",
+					},
+					detail: "",
+					contributions: "",
+				},
+			] as IntakeDaySnapshot["recents"],
+		});
+		const intake = store(day);
+		const screen = await render(<IntakeScreen store={intake} />);
 
-		expect(await screen.findByText("Smoking & vaping")).toBeTruthy();
-		expect(screen.getByText("12 mg")).toBeTruthy();
-		await fireEvent.press(screen.getByLabelText("Open Smoking & vaping"));
-		expect(mockPush).toHaveBeenLastCalledWith("/nicotine");
+		await fireEvent.press(
+			await screen.findByLabelText("Log Filter coffee again"),
+		);
+		expect(intake.repeatEvent).toHaveBeenCalledWith("event-1");
+		expect(await screen.findByText("Filter coffee added")).toBeTruthy();
 	});
 
 	it("leaves the bottom safe area to the tab navigator", async () => {
-		const screen = await render(
-			<IntakeScreen
-				drinksStore={drinksStore()}
-				foodStore={foodStore()}
-				nicotineStore={nicotineStore(false)}
-			/>,
-		);
+		const screen = await render(<IntakeScreen store={store(snapshot())} />);
 
 		expect(await screen.findByTestId("safe-area-")).toBeTruthy();
 		expect(screen.queryByTestId("safe-area-bottom")).toBeNull();

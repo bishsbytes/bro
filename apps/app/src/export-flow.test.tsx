@@ -44,11 +44,12 @@ describe("export flow", () => {
 
 	afterAll(() => mockSqlite.cleanup());
 
-	it("round-trips food data and applies the sensitive toggle", async () => {
+	it("round-trips intake data and applies the sensitive toggle", async () => {
 		const observations = new databaseApp.ObservationRepository(db);
 		const reminders = new databaseApp.ReminderRepository(db);
-		const consumptionEntries = new databaseApp.ConsumptionEntryRepository(db);
-		const customConsumables = new databaseApp.CustomConsumableRepository(db);
+		const intakeEvents = new databaseApp.IntakeEventRepository(db);
+		const consumables = new databaseApp.ConsumableRepository(db);
+		const intakeStreams = new databaseApp.IntakeStreamRepository(db);
 		const base = {
 			observedAt: Date.parse("2026-08-18T09:00:00.000Z"),
 			localDay: "2026-08-18",
@@ -77,84 +78,79 @@ describe("export flow", () => {
 			daysOfWeek: 0b111_1111,
 			slot: "evening",
 		});
-		await consumptionEntries.create({
-			kind: "drink",
-			catalogueRef: "drink:lager",
-			label: "Lager",
-			servingLabel: "pint",
+		const event = {
+			consumableId: null,
+			brand: null,
 			quantity: 1,
+			massKg: null,
+			context: null,
+			notes: null,
+			localDay: base.localDay,
+			tzOffsetMinutes: -60,
+		};
+		await intakeEvents.create({
+			...event,
+			kind: "drink",
+			sourceRef: "system:drink:lager-4_5",
+			name: "Lager",
+			portionLabel: "pint",
 			volumeL: 0.568_261_25,
-			ethanolKg: 0.020_181_999,
-			caffeineKg: 0,
-			energyKcal: 227,
-			occurredAt: base.observedAt,
-			localDay: base.localDay,
-			tzOffsetMinutes: -60,
-		});
-		await consumptionEntries.create({
-			kind: "drink",
-			catalogueRef: "drink:coffee",
-			label: "Coffee",
-			servingLabel: "mug",
-			quantity: 1,
-			volumeL: 0.25,
-			ethanolKg: 0,
-			caffeineKg: 0.000_095,
-			energyKcal: 2,
-			occurredAt: base.observedAt + 1,
-			localDay: base.localDay,
-			tzOffsetMinutes: -60,
-		});
-		const recipe = await customConsumables.create(
-			{
-				kind: "food",
-				label: "Chicken and rice",
-				brand: null,
-				isRecipe: true,
-				servings: [
-					{
-						id: "bowl",
-						label: "1 bowl",
-						volumeL: null,
-						ethanolKg: null,
-						caffeineKg: null,
-						energyKcal: 430,
-						proteinG: 38,
-						carbsG: 0,
-						fatG: null,
-					},
-				],
+			constituents: {
+				fluid: 0.568_261_25,
+				ethanol: 0.020_181_999,
+				caffeine: 0,
+				energy: 227,
 			},
-			[
-				{
-					position: 0,
-					label: "Chicken thigh",
-					quantity: 2,
-					energyKcal: 260,
-					proteinG: 38,
-					carbsG: 0,
-					fatG: null,
-				},
-			],
-		);
-		await consumptionEntries.create({
-			kind: "food",
-			catalogueRef: null,
-			consumableRef: `custom:${recipe.id}`,
-			label: recipe.label,
-			servingLabel: "bowl",
-			quantity: 1,
-			volumeL: null,
-			ethanolKg: null,
-			caffeineKg: null,
-			energyKcal: 430,
-			proteinG: 38,
-			carbsG: 0,
-			fatG: null,
-			occurredAt: base.observedAt + 2,
-			localDay: base.localDay,
-			tzOffsetMinutes: -60,
+			occurredAt: base.observedAt,
 		});
+		await intakeEvents.create({
+			...event,
+			kind: "drink",
+			sourceRef: "system:drink:filter-coffee",
+			name: "Coffee",
+			portionLabel: "mug",
+			volumeL: 0.25,
+			constituents: { fluid: 0.25, ethanol: 0, caffeine: 0.000_095, energy: 2 },
+			occurredAt: base.observedAt + 1,
+		});
+		const recipe = await consumables.create({
+			kind: "food",
+			name: "Chicken and rice",
+			brand: null,
+			barcode: null,
+			basis: { type: "portion", portionId: "serving" },
+			constituents: {},
+			portions: [],
+			defaultPortionId: null,
+			recipe: { yield: { quantity: 1, unit: "serving" } },
+			source: { type: "user" },
+		});
+		await consumables.addIngredient(recipe.id, {
+			position: 0,
+			consumableId: null,
+			sourceRef: "off:5000112637922",
+			name: "Chicken thigh",
+			portionLabel: "thigh",
+			quantity: 2,
+			massKg: 0.24,
+			volumeL: null,
+			constituents: { energy: 260, protein: 0.038, carbohydrate: 0 },
+		});
+		await intakeEvents.create({
+			...event,
+			kind: "food",
+			consumableId: recipe.id,
+			sourceRef: `library:${recipe.id}`,
+			name: recipe.name,
+			portionLabel: "serving",
+			massKg: 0.24,
+			volumeL: null,
+			constituents: { energy: 260, protein: 0.038, carbohydrate: 0 },
+			context: "dinner",
+			occurredAt: base.observedAt + 2,
+		});
+		await intakeStreams.setEnabled("nicotine", true);
+		await intakeStreams.setEnabled("supplement", true);
 		const store = new ExportStore(db, "1.0.0", () => 1_787_040_000_000);
 
 		const withoutSensitive = parseCheckInExport(await store.serialize(false));
@@ -173,23 +169,48 @@ describe("export flow", () => {
 			{ minuteOfDay: 20 * 60, slot: "evening" },
 		]);
 		expect(withSensitive.reminders).toEqual(withoutSensitive.reminders);
+		expect(withoutSensitive.intakeEvents.map((event) => event.name)).toEqual([
+			"Coffee",
+			"Chicken and rice",
+		]);
+		expect(withSensitive.intakeEvents.map((event) => event.name)).toEqual([
+			"Lager",
+			"Coffee",
+			"Chicken and rice",
+		]);
+		// The library and its ingredient rows travel with their recipe; the
+		// stored composition is the calculated one, per serving.
+		expect(withoutSensitive.consumables.map(({ name }) => name)).toEqual([
+			"Chicken and rice",
+		]);
+		expect(withoutSensitive.consumables[0]).toMatchObject({
+			recipe: { yield: { quantity: 1, unit: "serving" } },
+			constituents: { energy: 260, protein: 0.038, carbohydrate: 0 },
+			source: { type: "user" },
+		});
 		expect(
-			withoutSensitive.consumptionEntries.map((entry) => entry.label),
-		).toEqual(["Coffee", "Chicken and rice"]);
+			withoutSensitive.recipeIngredients.map(({ name, sourceRef }) => [
+				name,
+				sourceRef,
+			]),
+		).toEqual([["Chicken thigh", "off:5000112637922"]]);
 		expect(
-			withSensitive.consumptionEntries.map((entry) => entry.label),
-		).toEqual(["Lager", "Coffee", "Chicken and rice"]);
-		expect(
-			withoutSensitive.customConsumables.map(({ label }) => label),
-		).toEqual(["Chicken and rice"]);
-		expect(
-			withoutSensitive.customConsumableComponents.map(({ fatG }) => fatG),
-		).toEqual([null]);
-		expect(
-			withoutSensitive.consumptionEntries.find(
-				({ label }) => label === "Chicken and rice",
+			withoutSensitive.intakeEvents.find(
+				({ name }) => name === "Chicken and rice",
 			),
-		).toMatchObject({ proteinG: 38, carbsG: 0, fatG: null });
+		).toMatchObject({
+			constituents: { energy: 260, protein: 0.038, carbohydrate: 0 },
+			context: "dinner",
+			sourceRef: `library:${recipe.id}`,
+		});
+		// A stream being on is itself a disclosure for the sensitive kinds.
+		expect(withoutSensitive.intakeStreams.map(({ kind }) => kind)).toEqual([
+			"supplement",
+		]);
+		expect(withSensitive.intakeStreams.map(({ kind }) => kind)).toEqual([
+			"nicotine",
+			"supplement",
+		]);
 	});
 
 	it("defaults sensitive data off and hands each generated file to the share action", async () => {

@@ -42,7 +42,7 @@ describe("insight catalogue", () => {
 		const alcoholThresholds = INSIGHT_CATALOGUE.filter(
 			(entry) =>
 				entry.input.kind === "threshold" &&
-				entry.input.metricSlug === "alcohol_intake",
+				entry.input.metricSlug === "ethanol_intake",
 		);
 		expect(alcoholThresholds).toHaveLength(2);
 		for (const pair of alcoholThresholds) {

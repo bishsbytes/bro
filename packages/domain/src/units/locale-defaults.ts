@@ -67,6 +67,12 @@ export function defaultUnitPreference<D extends UnitPreferenceDimension>(
 			region === "US" ? "fl_oz_us" : "ml"
 		) as DisplayUnitForPreferenceDimension<D>;
 	}
+	if (dimension === "sodium") {
+		// UK labels declare salt; most others declare sodium.
+		return (
+			region === "GB" ? "salt_g" : "mg"
+		) as DisplayUnitForPreferenceDimension<D>;
+	}
 	return "%" as DisplayUnitForPreferenceDimension<D>;
 }
 

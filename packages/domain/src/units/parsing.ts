@@ -28,6 +28,8 @@ const SUFFIXES: Record<SimpleDisplayUnit, string> = {
 	"%": "%",
 	g: "g",
 	mg: "mg",
+	µg: "(?:µg|ug|mcg)",
+	salt_g: "(?:g\\s*salt|g)",
 	uk_unit: "(?:unit|units)",
 	us_standard_drink: "(?:standard\\s*drink|standard\\s*drinks)",
 	ml: "ml",

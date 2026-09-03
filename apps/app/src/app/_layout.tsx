@@ -114,9 +114,19 @@ function RootNavigator() {
 				<Stack.Screen name="notes" options={{ headerShown: false }} />
 				<Stack.Screen name="insights" options={{ headerShown: false }} />
 				<Stack.Screen name="settings" options={{ headerShown: false }} />
-				<Stack.Screen name="drinks" options={{ headerShown: false }} />
-				<Stack.Screen name="food" options={{ headerShown: false }} />
-				<Stack.Screen name="nicotine" options={{ headerShown: false }} />
+				<Stack.Screen name="intake/log" options={{ title: t("intake.log") }} />
+				<Stack.Screen
+					name="intake/[localDay]"
+					options={{ title: t("intake.day") }}
+				/>
+				<Stack.Screen
+					name="intake/goals"
+					options={{ title: t("intake.goals") }}
+				/>
+				<Stack.Screen
+					name="intake/library"
+					options={{ title: t("intake.library") }}
+				/>
 				<Stack.Screen name="habits" options={{ headerShown: false }} />
 				<Stack.Screen
 					name="life-areas"

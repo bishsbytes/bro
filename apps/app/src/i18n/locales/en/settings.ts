@@ -14,15 +14,10 @@ export const settings = {
 		checkIns: "Check-ins",
 		checkInsDetail: "Choose which scores appear after Mood.",
 		checkInsA11y: "Manage check-ins",
-		drinks: "Drinks",
-		drinksDetail: "Choose drink totals and the units they use.",
-		drinksA11y: "Manage drink logging",
-		food: "Food",
-		foodDetail: "Choose nutrition totals for Trends and goals.",
-		foodA11y: "Manage food logging",
-		nicotine: "Smoking & vaping",
-		nicotineDetail: "Track cigarettes and vapes if you want to cut down.",
-		nicotineA11y: "Manage smoking and vaping logging",
+		intake: "Intake",
+		intakeDetail:
+			"Food, drink, and other streams: totals, units, and what you track.",
+		intakeA11y: "Manage intake",
 		units: "Units & format",
 		unitsDetail: "Choose how weeks and body measurements appear.",
 		unitsA11y: "Manage units and format",
@@ -124,34 +119,6 @@ export const settings = {
 		removeTag: "Remove {{name}} tag",
 		tagsNote: "Turning a tag off does not delete anything you already logged.",
 	},
-	drinks: {
-		loadFailed: "Drink settings could not be loaded",
-		intro:
-			"Choose which daily drink totals appear in Trends. Logging remains available whichever metrics you track.",
-		openLog: "Open drink log",
-		trendsTitle: "Trends and goals",
-		metricDetail: "Daily total from your logged drinks",
-		track: "Track {{name}}",
-		stopTracking: "Stop tracking {{name}}",
-		unitsTitle: "Display units",
-		example: "Example: {{value}}",
-		useUnit: "Use {{unit}} for {{setting}}",
-		unitA11y: "Choose the unit for {{setting}}",
-		unitDismissA11y: "Close {{setting}} options",
-	},
-	food: {
-		loadFailed: "Food settings could not be loaded",
-		intro:
-			"Choose which daily nutrition totals appear in Trends. Logging remains available whichever metrics you track.",
-		openLog: "Open food log",
-		trendsTitle: "Trends and goals",
-		metricDetail: "Daily total from food and other applicable entries",
-		track: "Track {{name}}",
-		stopTracking: "Stop tracking {{name}}",
-		unitsTitle: "Display units",
-		unitsBody:
-			"Energy is shown in kcal. Protein, carbohydrate, and fat are shown in grams.",
-	},
 	/** Display names for the units a person can choose between. */
 	unitNames: {
 		kg: "Kilograms",
@@ -163,6 +130,8 @@ export const settings = {
 		percent: "Percent",
 		g: "Grams",
 		mg: "Milligrams",
+		µg: "Micrograms",
+		salt_g: "Grams of salt",
 		uk_unit: "UK units",
 		us_standard_drink: "US standard drinks",
 		ml: "Millilitres",
@@ -183,6 +152,8 @@ export const settings = {
 		us_standard_drink_other: "standard drinks",
 		fl_oz_one: "fl oz",
 		fl_oz_other: "fl oz",
+		salt_g_one: "g salt",
+		salt_g_other: "g salt",
 	},
 	/** Titles and explanations for each measurement a unit applies to. */
 	dimensions: {
@@ -196,6 +167,7 @@ export const settings = {
 		fractionDescription: "Body fat is always displayed as a percentage.",
 		alcoholTitle: "Alcohol",
 		volumeTitle: "Fluid",
+		sodiumTitle: "Sodium",
 	},
 	units: {
 		intro:

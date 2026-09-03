@@ -46,22 +46,56 @@ function observation(
 	};
 }
 
-function consumptionEntry(
-	overrides: Partial<DatabaseApp.CreateConsumptionEntry> = {},
-): DatabaseApp.CreateConsumptionEntry {
+function intakeEvent(
+	overrides: Partial<DatabaseApp.CreateIntakeEvent> = {},
+): DatabaseApp.CreateIntakeEvent {
 	return {
 		kind: "drink",
-		catalogueRef: "drink:lager",
-		label: "Lager",
-		servingLabel: "pint",
+		consumableId: null,
+		sourceRef: "system:drink:lager-4_5",
+		name: "Lager, 4.5%",
+		brand: null,
+		portionLabel: "pint",
 		quantity: 1,
+		massKg: null,
 		volumeL: 0.568_261_25,
-		ethanolKg: 0.020_181_999,
-		caffeineKg: null,
-		energyKcal: 227,
+		constituents: {
+			fluid: 0.568_261_25,
+			ethanol: 0.020_181_999,
+			caffeine: 0,
+			energy: 244,
+		},
+		context: null,
+		notes: null,
 		occurredAt: Date.parse("2026-08-14T21:00:00.000Z"),
 		localDay: "2026-08-14",
 		tzOffsetMinutes: -60,
+		...overrides,
+	};
+}
+
+function userFood(
+	overrides: Partial<DatabaseApp.CreateConsumable> = {},
+): DatabaseApp.CreateConsumable {
+	return {
+		kind: "food",
+		name: "Greek yoghurt",
+		brand: "Corner shop",
+		barcode: null,
+		basis: { type: "mass", massKg: 0.1 },
+		constituents: { energy: 97, protein: 0.009, carbohydrate: 0.004 },
+		portions: [
+			{
+				id: "pot",
+				label: "1 pot",
+				massKg: 0.17,
+				volumeL: null,
+				basisUnits: null,
+			},
+		],
+		defaultPortionId: "pot",
+		recipe: null,
+		source: { type: "user" },
 		...overrides,
 	};
 }
@@ -222,192 +256,549 @@ describe("product repositories", () => {
 		expect(await repository.listByDay("2026-08-14")).toEqual([mood]);
 	});
 
-	it("creates, lists, edits, and hard-deletes snapshotted consumption entries", async () => {
+	it("creates, windows, edits, and hard-deletes snapshotted intake events", async () => {
 		let now = 1_000;
 		let nextId = 0;
-		const repository = new databaseApp.ConsumptionEntryRepository(db, {
+		const repository = new databaseApp.IntakeEventRepository(db, {
 			now: () => now,
-			createId: () => `consumption-${++nextId}`,
+			createId: () => `event-${++nextId}`,
 		});
 		const lager = await repository.create(
-			consumptionEntry({ label: "  Lager  ", servingLabel: " pint " }),
+			intakeEvent({ name: "  Lager, 4.5%  ", portionLabel: " pint " }),
 		);
 
 		now = 2_000;
 		const coffee = await repository.create(
-			consumptionEntry({
-				catalogueRef: "drink:filter-coffee",
-				label: "Filter coffee",
-				servingLabel: "mug",
-				volumeL: 0.35,
-				ethanolKg: null,
-				caffeineKg: 0.000_14,
-				energyKcal: 2,
+			intakeEvent({
+				sourceRef: "system:drink:filter-coffee",
+				name: "Filter coffee",
+				portionLabel: "mug",
+				volumeL: 0.25,
+				constituents: { fluid: 0.25, ethanol: 0, caffeine: 0.0001, energy: 2 },
 				occurredAt: Date.parse("2026-08-15T08:00:00.000Z"),
 				localDay: "2026-08-15",
 			}),
 		);
 		now = 2_500;
 		const chicken = await repository.create(
-			consumptionEntry({
+			intakeEvent({
 				kind: "food",
-				catalogueRef: null,
-				consumableRef: "off:123456",
-				label: "Chicken thighs",
-				servingLabel: "2 thighs",
+				consumableId: "library-1",
+				sourceRef: "off:123456",
+				name: "Chicken thighs",
+				brand: "Example",
+				portionLabel: "2 thighs",
 				quantity: 2,
+				massKg: 0.24,
 				volumeL: null,
-				ethanolKg: null,
-				caffeineKg: null,
-				energyKcal: 436,
-				proteinG: 52,
-				carbsG: 0,
-				fatG: null,
+				// An unknown code round-trips untouched beside the known ones.
+				constituents: { energy: 436, protein: 0.052, carbohydrate: 0, thc: 0 },
+				context: "lunch",
+				notes: "  leftovers ",
 				occurredAt: Date.parse("2026-08-15T12:00:00.000Z"),
 				localDay: "2026-08-15",
 			}),
 		);
 
 		expect(lager).toMatchObject({
-			id: "consumption-1",
-			label: "Lager",
-			servingLabel: "pint",
+			id: "event-1",
+			name: "Lager, 4.5%",
+			portionLabel: "pint",
 			createdAt: 1_000,
 			updatedAt: 1_000,
 		});
+		expect(chicken).toMatchObject({
+			consumableId: "library-1",
+			sourceRef: "off:123456",
+			context: "lunch",
+			notes: "leftovers",
+			constituents: { energy: 436, protein: 0.052, carbohydrate: 0, thc: 0 },
+		});
+		await expect(repository.findById(chicken.id)).resolves.toEqual(chicken);
 		await expect(repository.listByDay("2026-08-14")).resolves.toEqual([lager]);
-		await expect(repository.listRecentByKind("drink", 1)).resolves.toEqual([
+		await expect(
+			repository.listBetween("2026-08-14", "2026-08-15"),
+		).resolves.toEqual([lager, coffee, chicken]);
+		await expect(
+			repository.listBetween("2026-08-15", "2026-08-15"),
+		).resolves.toEqual([coffee, chicken]);
+		await expect(repository.listRecent(["drink"], 1)).resolves.toEqual([
 			coffee,
 		]);
-		await expect(repository.listRecentByKind("food", 1)).resolves.toEqual([
+		await expect(repository.listRecent(["food", "drink"], 2)).resolves.toEqual([
 			chicken,
+			coffee,
 		]);
-		expect(chicken).toMatchObject({
-			consumableRef: "off:123456",
-			proteinG: 52,
-			carbsG: 0,
-			fatG: null,
-		});
+		await expect(repository.listRecent(["nicotine"])).resolves.toEqual([]);
 
 		now = 3_000;
 		const corrected = await repository.update(lager.id, {
-			catalogueRef: lager.catalogueRef,
-			label: lager.label,
-			servingLabel: "half pint",
-			quantity: 1,
+			consumableId: lager.consumableId,
+			sourceRef: lager.sourceRef,
+			name: lager.name,
+			brand: lager.brand,
+			portionLabel: "half pint",
+			quantity: 0.5,
+			massKg: null,
 			volumeL: lager.volumeL === null ? null : lager.volumeL / 2,
-			ethanolKg: lager.ethanolKg === null ? null : lager.ethanolKg / 2,
-			caffeineKg: null,
-			energyKcal: 113.5,
+			constituents: {
+				fluid: 0.284_130_625,
+				ethanol: 0.010_090_999_5,
+				caffeine: 0,
+				energy: 122,
+			},
+			context: "drink",
+			notes: null,
 			occurredAt: lager.occurredAt,
 			localDay: lager.localDay,
 			tzOffsetMinutes: lager.tzOffsetMinutes,
 		});
 		expect(corrected).toMatchObject({
 			id: lager.id,
-			servingLabel: "half pint",
+			kind: "drink",
+			portionLabel: "half pint",
+			context: "drink",
+			constituents: { energy: 122 },
 			createdAt: 1_000,
 			updatedAt: 3_000,
 		});
 		await expect(repository.delete(lager.id)).resolves.toBe(true);
 		await expect(repository.delete(lager.id)).resolves.toBe(false);
 		await expect(repository.listAll()).resolves.toEqual([chicken, coffee]);
+
 		await expect(
-			repository.create(consumptionEntry({ quantity: 0 })),
+			repository.create(intakeEvent({ quantity: 0 })),
 		).rejects.toThrow("quantity must be a positive finite value");
+		await expect(
+			repository.create(
+				intakeEvent({ massKg: null, volumeL: null, constituents: {} }),
+			),
+		).rejects.toThrow(
+			"must carry a mass, a volume, or at least one constituent",
+		);
+		await expect(
+			repository.create(intakeEvent({ constituents: { energy: -1 } })),
+		).rejects.toThrow("energy must be finite and non-negative");
+		await expect(
+			repository.create(
+				intakeEvent({
+					context: "brunch" as DatabaseApp.IntakeEvent["context"],
+				}),
+			),
+		).rejects.toThrow("Unsupported intake context");
 		await expect(repository.listByDay("2026-02-30")).rejects.toThrow(
 			"real YYYY-MM-DD date",
 		);
+		await expect(
+			repository.listBetween("2026-08-15", "2026-08-14"),
+		).rejects.toThrow("must run forwards");
 	});
 
-	it("stores custom foods and edits recipe components without rewriting snapshots", async () => {
+	it("stores library consumables with provenance, forks, and archives", async () => {
 		let now = 1_000;
 		let nextId = 0;
-		const repository = new databaseApp.CustomConsumableRepository(db, {
+		const repository = new databaseApp.ConsumableRepository(db, {
 			now: () => now,
-			createId: () => `custom-${++nextId}`,
+			createId: () => `consumable-${++nextId}`,
 		});
-		const recipe = await repository.create(
-			{
-				kind: "food",
-				label: "  Chicken traybake  ",
-				brand: null,
-				isRecipe: true,
-				servings: [
+		const yoghurt = await repository.create(
+			userFood({ name: "  Greek yoghurt  " }),
+		);
+		expect(yoghurt).toMatchObject({
+			id: "consumable-1",
+			name: "Greek yoghurt",
+			source: { type: "user" },
+			forkedFrom: null,
+			archivedAt: null,
+		});
+		await expect(repository.findById(yoghurt.id)).resolves.toEqual(yoghurt);
+
+		// A searched product is one library row, however often it is logged.
+		now = 2_000;
+		const provider = {
+			type: "provider",
+			provider: "off",
+			externalId: "5000112637922",
+		} as const;
+		await expect(repository.findBySource(provider)).resolves.toBeNull();
+		const cola = await repository.create(
+			userFood({
+				kind: "drink",
+				name: "Cola",
+				brand: "Example",
+				barcode: "5000112637922",
+				basis: { type: "volume", volumeL: 0.1 },
+				constituents: { energy: 42, sugar: 0.0106, caffeine: 0.000_01 },
+				portions: [
 					{
-						id: "plate",
-						label: "1 plate",
-						volumeL: null,
-						ethanolKg: null,
-						caffeineKg: null,
-						energyKcal: 610,
-						proteinG: 48,
-						carbsG: 54,
-						fatG: 22,
+						id: "can",
+						label: "330 ml can",
+						massKg: null,
+						volumeL: 0.33,
+						basisUnits: null,
 					},
 				],
-			},
-			[
-				{
-					position: 0,
-					label: "Chicken thighs",
-					quantity: 2,
-					energyKcal: 436,
-					proteinG: 52,
-					carbsG: 0,
-					fatG: 24,
+				defaultPortionId: "can",
+				source: provider,
+			}),
+		);
+		await expect(repository.findBySource(provider)).resolves.toEqual(cola);
+		await expect(
+			repository.findBySource({
+				type: "community",
+				contentId: "c",
+				version: 1,
+			}),
+		).resolves.toBeNull();
+		await expect(repository.findBySource({ type: "user" })).resolves.toBeNull();
+
+		// Editing a catalogue drink makes a user row that says where it came from.
+		now = 3_000;
+		const fork = await repository.createFork(
+			{ type: "system", key: "drink:lager-4_5" },
+			userFood({
+				kind: "drink",
+				name: "Lager, 4.5% (my pub)",
+				brand: null,
+				basis: { type: "volume", volumeL: 0.1 },
+				constituents: {
+					fluid: 0.1,
+					ethanol: 0.003_551_58,
+					caffeine: 0,
+					energy: 43,
 				},
+				portions: [
+					{
+						id: "schooner",
+						label: "schooner",
+						massKg: null,
+						volumeL: 0.425,
+						basisUnits: null,
+					},
+				],
+				defaultPortionId: "schooner",
+			}),
+		);
+		expect(fork).toMatchObject({
+			source: { type: "user" },
+			forkedFrom: { type: "system", key: "drink:lager-4_5" },
+		});
+		await expect(repository.listByKind("drink")).resolves.toEqual([cola, fork]);
+		await expect(repository.listByKind("food")).resolves.toEqual([yoghurt]);
+		await expect(repository.listAll()).resolves.toEqual([cola, yoghurt, fork]);
+
+		now = 4_000;
+		const edited = await repository.update(yoghurt.id, {
+			name: "Greek yoghurt, 0%",
+			brand: yoghurt.brand,
+			barcode: "5011234",
+			basis: yoghurt.basis,
+			constituents: { energy: 57, protein: 0.01, carbohydrate: 0.004 },
+			portions: yoghurt.portions,
+			defaultPortionId: "pot",
+			recipe: null,
+		});
+		expect(edited).toMatchObject({
+			name: "Greek yoghurt, 0%",
+			barcode: "5011234",
+			constituents: { energy: 57 },
+			createdAt: 1_000,
+			updatedAt: 4_000,
+		});
+
+		now = 5_000;
+		await expect(repository.archive(cola.id)).resolves.toMatchObject({
+			archivedAt: 5_000,
+		});
+		await expect(repository.listByKind("drink")).resolves.toEqual([fork]);
+		expect(
+			(await repository.listByKind("drink", { includeArchived: true })).map(
+				({ id }) => id,
+			),
+		).toEqual([cola.id, fork.id]);
+		await expect(repository.unarchive(cola.id)).resolves.toMatchObject({
+			archivedAt: null,
+		});
+		await expect(repository.delete(fork.id)).resolves.toBe(true);
+		await expect(repository.delete(fork.id)).resolves.toBe(false);
+
+		await expect(
+			repository.create(
+				userFood({ source: { type: "system", key: "drink:water" } }),
+			),
+		).rejects.toThrow("live in the catalogue");
+		await expect(
+			repository.create(userFood({ constituents: {} })),
+		).rejects.toThrow("at least one constituent");
+		await expect(
+			repository.create(userFood({ defaultPortionId: "bowl" })),
+		).rejects.toThrow("Default portion bowl is not one of the portions");
+		await expect(
+			repository.create(userFood({ constituents: { energy: Number.NaN } })),
+		).rejects.toThrow("energy must be finite and non-negative");
+	});
+
+	it("recomputes a recipe from its ingredients and refuses a cycle", async () => {
+		let now = 1_000;
+		let nextId = 0;
+		const repository = new databaseApp.ConsumableRepository(db, {
+			now: () => now,
+			createId: () => `recipe-${++nextId}`,
+		});
+		const smoothie = await repository.create(
+			userFood({
+				kind: "drink",
+				name: "Protein smoothie",
+				brand: null,
+				basis: { type: "portion", portionId: "serving" },
+				constituents: {},
+				portions: [],
+				defaultPortionId: null,
+				recipe: { yield: { quantity: 2, unit: "serving" } },
+			}),
+		);
+		// An empty recipe stores the calculated (empty) composition per serving.
+		expect(smoothie).toMatchObject({
+			recipe: { yield: { quantity: 2, unit: "serving" } },
+			constituents: {},
+		});
+
+		now = 2_000;
+		const milk = await repository.addIngredient(smoothie.id, {
+			position: 0,
+			consumableId: null,
+			sourceRef: "off:milk",
+			name: "Milk",
+			portionLabel: "250 ml",
+			quantity: 1,
+			massKg: 0.258,
+			volumeL: 0.25,
+			constituents: { energy: 115, protein: 0.0085, calcium: 0.0003 },
+		});
+		const whey = await repository.addIngredient(smoothie.id, {
+			position: 1,
+			consumableId: null,
+			sourceRef: null,
+			name: "Whey",
+			portionLabel: "scoop",
+			quantity: 1,
+			massKg: 0.03,
+			volumeL: null,
+			constituents: { energy: 120, protein: 0.024, creatine: 0.005 },
+		});
+		expect(await repository.findById(smoothie.id)).toMatchObject({
+			basis: { type: "portion", portionId: "serving" },
+			constituents: {
+				energy: 117.5,
+				protein: 0.016_25,
+				calcium: 0.000_15,
+				creatine: 0.0025,
+			},
+			portions: [
 				{
-					position: 1,
-					label: "Potatoes",
-					quantity: 250,
-					energyKcal: 174,
-					proteinG: 4,
-					carbsG: 54,
-					fatG: 0,
+					id: "serving",
+					label: "serving",
+					massKg: expect.closeTo(0.144, 12),
+					volumeL: null,
+					basisUnits: 1,
 				},
 			],
-		);
-
-		expect(recipe).toMatchObject({
-			id: "custom-1",
-			label: "Chicken traybake",
-			isRecipe: true,
+			defaultPortionId: "serving",
+			updatedAt: 2_000,
 		});
-		const originalComponents = await repository.listComponents(recipe.id);
-		expect(originalComponents.map(({ id }) => id)).toEqual([
-			"custom-2",
-			"custom-3",
+
+		now = 3_000;
+		await repository.updateIngredient(whey.id, {
+			position: 1,
+			consumableId: null,
+			sourceRef: null,
+			name: "Whey",
+			portionLabel: "scoop",
+			quantity: 2,
+			massKg: 0.06,
+			volumeL: null,
+			constituents: { energy: 240, protein: 0.048, creatine: 0.01 },
+		});
+		expect(await repository.findById(smoothie.id)).toMatchObject({
+			constituents: { energy: 177.5, creatine: 0.005 },
+			updatedAt: 3_000,
+		});
+		// Re-yielding the recipe recalculates from the same ingredients.
+		now = 3_500;
+		await repository.update(smoothie.id, {
+			name: "Protein smoothie",
+			brand: null,
+			barcode: null,
+			basis: smoothie.basis,
+			constituents: {},
+			portions: [],
+			defaultPortionId: null,
+			recipe: { yield: { quantity: 500, unit: "ml" } },
+		});
+		expect(await repository.findById(smoothie.id)).toMatchObject({
+			basis: { type: "volume", volumeL: 0.1 },
+			constituents: { energy: 71, creatine: 0.002 },
+			portions: [],
+			defaultPortionId: null,
+		});
+
+		await expect(repository.deleteIngredient(milk.id)).resolves.toBe(true);
+		expect(await repository.findById(smoothie.id)).toMatchObject({
+			constituents: {
+				energy: 48,
+				protein: expect.closeTo(0.0096, 12),
+				creatine: 0.002,
+			},
+		});
+		expect(
+			(await repository.listIngredients(smoothie.id)).map(({ id }) => id),
+		).toEqual([whey.id]);
+
+		// A recipe inside a recipe is fine; a recipe inside itself is not.
+		const martini = await repository.create(
+			userFood({
+				kind: "drink",
+				name: "Espresso martini",
+				brand: null,
+				basis: { type: "portion", portionId: "glass" },
+				constituents: {},
+				portions: [],
+				defaultPortionId: null,
+				recipe: { yield: { quantity: 1, unit: "glass" } },
+			}),
+		);
+		await repository.addIngredient(martini.id, {
+			position: 0,
+			consumableId: smoothie.id,
+			sourceRef: `library:${smoothie.id}`,
+			name: "Protein smoothie",
+			portionLabel: "100 ml",
+			quantity: 1,
+			massKg: null,
+			volumeL: 0.1,
+			constituents: { energy: 48 },
+		});
+		await expect(
+			repository.addIngredient(smoothie.id, {
+				position: 5,
+				consumableId: martini.id,
+				sourceRef: `library:${martini.id}`,
+				name: "Espresso martini",
+				portionLabel: "glass",
+				quantity: 1,
+				massKg: null,
+				volumeL: null,
+				constituents: { energy: 48 },
+			}),
+		).rejects.toThrow("A recipe cannot contain itself.");
+		await expect(
+			repository.replaceIngredients(martini.id, [
+				{
+					position: 0,
+					consumableId: martini.id,
+					sourceRef: null,
+					name: "Espresso martini",
+					portionLabel: null,
+					quantity: 1,
+					massKg: null,
+					volumeL: null,
+					constituents: { energy: 1 },
+				},
+			]),
+		).rejects.toThrow("A recipe cannot contain itself.");
+		await expect(
+			repository.update(smoothie.id, {
+				name: "Protein smoothie",
+				brand: null,
+				barcode: null,
+				basis: { type: "volume", volumeL: 0.1 },
+				constituents: { energy: 48 },
+				portions: [],
+				defaultPortionId: null,
+				recipe: null,
+			}),
+		).rejects.toThrow("Remove a recipe's ingredients");
+		const yoghurt = await repository.create(userFood());
+		await expect(
+			repository.addIngredient(yoghurt.id, {
+				position: 0,
+				consumableId: null,
+				sourceRef: null,
+				name: "Honey",
+				portionLabel: null,
+				quantity: 1,
+				massKg: 0.02,
+				volumeL: null,
+				constituents: { energy: 60 },
+			}),
+		).rejects.toThrow("Only recipes can have ingredients.");
+
+		// Deleting the recipe takes its ingredient rows with it; the martini's
+		// reference dangles and its snapshot stays.
+		await expect(repository.delete(smoothie.id)).resolves.toBe(true);
+		await expect(repository.listIngredients(smoothie.id)).resolves.toEqual([]);
+		expect(await repository.listIngredients(martini.id)).toMatchObject([
+			{ consumableId: smoothie.id, constituents: { energy: 48 } },
 		]);
+	});
+
+	it("switches optional intake streams on and off without touching food or drink", async () => {
+		let now = 1_000;
+		let nextId = 0;
+		const repository = new databaseApp.IntakeStreamRepository(db, {
+			now: () => now,
+			createId: () => `stream-${++nextId}`,
+		});
+		await expect(repository.listEnabledKinds()).resolves.toEqual([
+			"food",
+			"drink",
+		]);
+		await expect(repository.isEnabled("nicotine")).resolves.toBe(false);
+		await expect(repository.isEnabled("food")).resolves.toBe(true);
+
+		const enabled = await repository.setEnabled("nicotine", true);
+		expect(enabled).toMatchObject({
+			id: "stream-1",
+			kind: "nicotine",
+			enabledAt: 1_000,
+			disabledAt: null,
+		});
+		await expect(repository.listEnabledKinds()).resolves.toEqual([
+			"food",
+			"drink",
+			"nicotine",
+		]);
+		await expect(repository.isEnabled("nicotine")).resolves.toBe(true);
 
 		now = 2_000;
 		await expect(
-			repository.updateComponent(originalComponents[1].id, {
-				position: 1,
-				label: "Roast potatoes",
-				quantity: 300,
-				energyKcal: 209,
-				proteinG: 5,
-				carbsG: 65,
-				fatG: 0,
-			}),
+			repository.setEnabled("nicotine", false),
 		).resolves.toMatchObject({
-			id: "custom-3",
-			label: "Roast potatoes",
-			updatedAt: 2_000,
+			id: "stream-1",
+			disabledAt: 2_000,
 		});
-		expect(await repository.findById(recipe.id)).toMatchObject({
-			createdAt: 1_000,
-			updatedAt: 2_000,
-		});
-		expect(originalComponents[1]).toMatchObject({
-			label: "Potatoes",
-			energyKcal: 174,
-		});
+		await expect(repository.listEnabledKinds()).resolves.toEqual([
+			"food",
+			"drink",
+		]);
 
-		await expect(repository.delete(recipe.id)).resolves.toBe(true);
-		await expect(repository.listComponents(recipe.id)).resolves.toEqual([]);
-		await expect(repository.findById(recipe.id)).resolves.toBeNull();
+		now = 3_000;
+		// Switching back on reuses the row rather than minting a second one.
+		await expect(
+			repository.setEnabled("nicotine", true),
+		).resolves.toMatchObject({
+			id: "stream-1",
+			enabledAt: 3_000,
+			disabledAt: null,
+		});
+		await repository.setEnabled("supplement", true);
+		expect((await repository.listAll()).map(({ kind }) => kind)).toEqual([
+			"nicotine",
+			"supplement",
+		]);
+		await expect(repository.setEnabled("food", false)).rejects.toThrow(
+			"Only optional intake streams can be switched",
+		);
 	});
 
 	it("keeps a day's notes in the order they were written", async () => {

@@ -1,10 +1,10 @@
 import { CHALLENGE_CATALOGUE } from "@bro/domain/challenge-catalogue";
-import { DRINK_CATALOGUE } from "@bro/domain/drink-catalogue";
+import { CONSTITUENT_CATALOGUE } from "@bro/domain/constituent-catalogue";
 import { HABIT_CATALOGUE } from "@bro/domain/habit-catalogue";
 import { INSIGHT_CATALOGUE } from "@bro/domain/insight-catalogue";
 import { LIFE_AREA_CATALOGUE } from "@bro/domain/life-area-catalogue";
 import { METRIC_REGISTRY } from "@bro/domain/metric-registry";
-import { NICOTINE_CATALOGUE } from "@bro/domain/nicotine-catalogue";
+import { SYSTEM_CONSUMABLES } from "@bro/domain/system-consumables";
 
 /**
  * The English half of the `content` namespace is derived from the domain
@@ -63,25 +63,26 @@ export const content = {
 			),
 		}),
 	),
-	drinks: byBareSlug(
-		DRINK_CATALOGUE,
-		(drink) => drink.id,
-		(drink) => ({
-			label: drink.label,
-			servings: Object.fromEntries(
-				drink.servings.map((serving) => [serving.id, serving.label]),
-			),
-		}),
+	constituents: Object.fromEntries(
+		CONSTITUENT_CATALOGUE.map((constituent) => [
+			constituent.code,
+			constituent.label,
+		]),
 	),
-	nicotine: byBareSlug(
-		NICOTINE_CATALOGUE,
-		(entry) => entry.id,
-		(entry) => ({
-			label: entry.label,
-			servings: Object.fromEntries(
-				entry.servings.map((serving) => [serving.id, serving.label]),
-			),
-		}),
+	/**
+	 * Authored consumables, keyed by catalogue then bare key, so each
+	 * catalogue's copy stays its own: `consumables.drink.lager-4_5`.
+	 */
+	consumables: Object.fromEntries(
+		SYSTEM_CONSUMABLES.map((consumable) => [
+			consumable.key.replace(":", "."),
+			{
+				name: consumable.name,
+				portions: Object.fromEntries(
+					consumable.portions.map((portion) => [portion.id, portion.label]),
+				),
+			},
+		]),
 	),
 	insights: byBareSlug(
 		INSIGHT_CATALOGUE,

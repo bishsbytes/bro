@@ -46,7 +46,7 @@ describe("derived metric habit completion", () => {
 	it("reads an unlogged day as zero only for consumption ceilings", () => {
 		const alcoholFree = metricHabit({
 			slug: "habit:alcohol-free",
-			metricSlug: "alcohol_intake",
+			metricSlug: "ethanol_intake",
 			direction: "at_most",
 			targetValue: 0,
 		});
@@ -54,7 +54,7 @@ describe("derived metric habit completion", () => {
 		expect(habitMetricDayValue(alcoholFree, 0.02)).toBe(0.02);
 		expect(
 			isMetricHabitComplete(alcoholFree, {
-				metricSlug: "alcohol_intake",
+				metricSlug: "ethanol_intake",
 				value: habitMetricDayValue(alcoholFree, null),
 			}),
 		).toBe(true);

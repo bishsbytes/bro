@@ -17,11 +17,6 @@ export {
 } from "./calendar/local-day-label";
 
 export {
-	type ConsumptionMetricDayTotal,
-	consumptionMetricDayTotal,
-	consumptionMetricTrailingDailyMean,
-} from "./consumption/daily-totals";
-export {
 	buildCheckInExport,
 	CHECK_IN_EXPORT_FORMAT_VERSION,
 	type CheckInExport,
@@ -135,6 +130,30 @@ export {
 	renderInsightSummary,
 	renderInsightTeaserProgress,
 } from "./insight/presentation";
+export {
+	addConstituents,
+	calculateRecipeComposition,
+	INTAKE_BASELINE_MIN_LOGGED_DAYS,
+	INTAKE_BASELINE_WINDOW_DAYS,
+	type IntakeDayTotal,
+	type IntakePeriodTotals,
+	type IntakeProjectionGroup,
+	type IntakeProjectionRow,
+	intakeBaseline,
+	intakeDayTotal,
+	intakePeriodTotals,
+	intakeProjections,
+	intakeTrailingDailyMean,
+	type PortionSelection,
+	PortionSelectionError,
+	type PortionSelectionField,
+	portionFactor,
+	type RecipeComposition,
+	type RecipeIngredientSnapshot,
+	type ScaledComposition,
+	scaleComposition,
+	scaleConstituents,
+} from "./intake";
 export {
 	MEASUREMENT_BASELINE_MIN_READINGS,
 	MEASUREMENT_BASELINE_MIN_SPAN_DAYS,

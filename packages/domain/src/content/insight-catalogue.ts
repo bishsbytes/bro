@@ -37,7 +37,7 @@ export type InsightCatalogueEntry = {
 export const INSIGHT_CATALOGUE = [
 	{
 		id: "insight:alcohol-energy-lag1",
-		input: { kind: "presence", metricSlug: "alcohol_intake" },
+		input: { kind: "presence", metricSlug: "ethanol_intake" },
 		outputMetricSlug: "energy",
 		lagDays: 1,
 		tier: "premium",
@@ -50,7 +50,7 @@ export const INSIGHT_CATALOGUE = [
 	},
 	{
 		id: "insight:alcohol-mood-lag1",
-		input: { kind: "presence", metricSlug: "alcohol_intake" },
+		input: { kind: "presence", metricSlug: "ethanol_intake" },
 		outputMetricSlug: "mood",
 		lagDays: 1,
 		tier: "premium",
@@ -236,10 +236,10 @@ export const INSIGHT_CATALOGUE = [
 		},
 	},
 	{
-		id: "insight:alcohol_intake-at_least-four-units-energy-lag1",
+		id: "insight:ethanol_intake-at_least-four-units-energy-lag1",
 		input: {
 			kind: "threshold",
-			metricSlug: "alcohol_intake",
+			metricSlug: "ethanol_intake",
 			operator: "at_least",
 			value: 4 * KILOGRAMS_ETHANOL_PER_UK_UNIT,
 			unit: "kilograms",
@@ -255,10 +255,10 @@ export const INSIGHT_CATALOGUE = [
 		},
 	},
 	{
-		id: "insight:alcohol_intake-at_least-four-units-sleep_duration-lag1",
+		id: "insight:ethanol_intake-at_least-four-units-sleep_duration-lag1",
 		input: {
 			kind: "threshold",
-			metricSlug: "alcohol_intake",
+			metricSlug: "ethanol_intake",
 			operator: "at_least",
 			value: 4 * KILOGRAMS_ETHANOL_PER_UK_UNIT,
 			unit: "kilograms",

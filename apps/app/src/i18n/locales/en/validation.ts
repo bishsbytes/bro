@@ -2,59 +2,34 @@
  * Messages thrown by the stores. Screens render `caught.message` directly, so
  * these reach people and belong in a catalogue like any other copy.
  *
- * The `_drink` / `_food` pairs are i18next contexts rather than one message
- * with a `{{noun}}` placeholder: a sentence built by dropping a subject into a
- * slot only works while the subject needs no article, gender, or case.
+ * Intake messages name no stream: one log serves food, drink, and every
+ * optional stream, so the sentences are written to read the same for each.
  */
 export const validation = {
-	/** {{field}} names the input, e.g. "Drink volume". */
+	/** {{field}} names the input, e.g. "Energy". */
 	nonNegativeNumber: "{{field}} must be empty or a non-negative number.",
-	fields: {
-		drinkVolume: "Drink volume",
-		drinkCaffeine: "Drink caffeine",
-		drinkEnergy: "Drink energy",
-		drinkAbv: "Drink ABV",
-		foodEnergy: "Food energy",
-		foodProtein: "Food protein",
-		foodCarbs: "Food carbohydrate",
-		foodFat: "Food fat",
-	},
 	measurement: {
 		invalid: "Enter a valid measurement.",
 	},
-	consumption: {
-		quantityPositive_drink: "Drink quantity must be a positive number.",
-		quantityPositive_food: "Food quantity must be a positive number.",
-		quantityPositive_nicotine: "Quantity must be a positive number.",
-		entryNotFound_drink: "Drink entry not found.",
-		entryNotFound_food: "Food entry not found.",
-		entryNotFound_nicotine: "Entry not found.",
-		customNotFound_drink: "Custom drink not found.",
-		customNotFound_food: "Custom food not found.",
-		customNotFound_nicotine: "Entry not found.",
-		chooseCustom_drink: "Choose a custom drink and serving.",
-		chooseCustom_food: "Choose a custom food and serving.",
-		chooseCustom_nicotine: "Choose an entry and serving.",
-		recentNotFound_drink: "Recent drink not found.",
-		recentNotFound_food: "Recent food not found.",
-		recentNotFound_nicotine: "Recent entry not found.",
-		logBeforeGoal_drink: "Log drink before setting a goal.",
-		logBeforeGoal_food: "Log food before setting a goal.",
-		logBeforeGoal_nicotine: "Log something before setting a goal.",
-		unknownMetric_drink: "Unknown drink metric: {{slug}}",
-		unknownMetric_food: "Unknown food metric: {{slug}}",
-		unknownMetric_nicotine: "Unknown metric: {{slug}}",
+	intake: {
+		quantityPositive: "Quantity must be a positive number.",
+		nameRequired: "Give it a name.",
+		eventNotFound: "Entry not found.",
+		consumableNotFound: "Item not found.",
+		choosePortion: "Choose a portion.",
+		chooseItem: "Choose an item.",
+		recentNotFound: "Recent entry not found.",
+		/** {{stream}} is a stream name, e.g. "Smoking & vaping". */
+		streamOff: "Turn on {{stream}} in intake settings before logging it.",
+		logBeforeGoal: "Log something before setting a goal.",
+		unknownMetric: "Unknown total: {{slug}}",
 		targetSameAsLatest: "Choose a target different from your latest total.",
 		activeGoalExists: "Finish the active goal before creating another.",
-	},
-	drinks: {
-		chooseCatalogue: "Choose a drink and serving from the catalogue.",
-		abvMaximum: "Drink ABV must not exceed 100%.",
+		abvMaximum: "ABV must not exceed 100%.",
 		volumeWithAbv: "Enter a volume when entering an ABV.",
-	},
-	food: {
-		chooseSearched: "Choose a searched food and serving.",
-		onlyRecipes: "Only recipes can have components.",
+		needsOneValue: "Enter at least one value.",
+		ingredientsRequired: "A recipe needs at least one ingredient.",
+		recipeCycle: "A recipe cannot contain itself.",
 	},
 	checkIn: {
 		/** {{score}} is the metric's own label, e.g. "Mood". */

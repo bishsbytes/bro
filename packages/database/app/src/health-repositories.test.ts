@@ -222,27 +222,32 @@ describe("health import repositories", () => {
 		await expect(repository.listRecent()).resolves.toEqual([]);
 	});
 
-	it("deletes food entries, custom consumables, components, and cache rows", async () => {
+	it("deletes intake events, the library, ingredients, streams, and cache rows", async () => {
 		const productDb = databaseApp.getDb();
 		const localDb = databaseApp.getLocalDb();
 		await productDb.execAsync(`
-			INSERT INTO custom_consumables (
-				id, kind, label, is_recipe, servings, created_at, updated_at
-			) VALUES (
-				'custom-delete', 'food', 'Recipe', 1, '[]', 1, 1
-			);
-			INSERT INTO custom_consumable_components (
-				id, consumable_id, position, label, quantity, energy_kcal,
+			INSERT INTO consumables (
+				id, kind, name, basis, constituents, portions, recipe, source_type,
 				created_at, updated_at
 			) VALUES (
-				'component-delete', 'custom-delete', 0, 'Part', 1, 1, 1, 1
+				'recipe-delete', 'food', 'Recipe', '{"type":"portion","portionId":"serving"}',
+				'{}', '[]', '{"yield":{"quantity":1,"unit":"serving"}}', 'user', 1, 1
 			);
-			INSERT INTO consumption_entries (
-				id, kind, label, quantity, energy_kcal, occurred_at, local_day,
+			INSERT INTO recipe_ingredients (
+				id, recipe_id, position, name, quantity, constituents, created_at,
+				updated_at
+			) VALUES (
+				'ingredient-delete', 'recipe-delete', 0, 'Part', 1, '{"energy":1}', 1, 1
+			);
+			INSERT INTO intake_events (
+				id, kind, name, quantity, constituents, occurred_at, local_day,
 				tz_offset_minutes, created_at, updated_at
 			) VALUES (
-				'entry-delete', 'food', 'Meal', 1, 1, 1, '2026-08-19', 0, 1, 1
+				'event-delete', 'food', 'Meal', 1, '{"energy":1}', 1, '2026-08-19', 0, 1, 1
 			);
+			INSERT INTO intake_streams (
+				id, kind, enabled_at, created_at, updated_at
+			) VALUES ('stream-delete', 'nicotine', 1, 1, 1);
 		`);
 		await localDb.runAsync(
 			`INSERT INTO food_cache (ref, payload, query, fetched_at)
@@ -253,9 +258,10 @@ describe("health import repositories", () => {
 		await databaseApp.deleteLocalProductData(productDb, localDb);
 
 		for (const table of [
-			"consumption_entries",
-			"custom_consumables",
-			"custom_consumable_components",
+			"intake_events",
+			"consumables",
+			"recipe_ingredients",
+			"intake_streams",
 		]) {
 			expect(
 				await productDb.getFirstAsync<{ count: number }>(

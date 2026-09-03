@@ -1,3 +1,4 @@
+import { CONSTITUENT_CATALOGUE } from "./constituent-catalogue";
 import {
 	assignmentIncludesSlot,
 	CHECK_IN_METRIC_SLUGS,
@@ -158,47 +159,15 @@ describe("metric registry", () => {
 				dimension: "rate_bpm",
 				aggregation: "mean",
 			}),
-			expect.objectContaining({
-				slug: "alcohol_intake",
-				dimension: "mass",
-				aggregation: "sum",
-			}),
-			expect.objectContaining({
-				slug: "caffeine_intake",
-				dimension: "mass",
-				fixedDisplayUnit: "mg",
-			}),
-			expect.objectContaining({
-				slug: "nicotine_intake",
-				dimension: "mass",
-				aggregation: "sum",
-				fixedDisplayUnit: "mg",
-				sensitive: true,
-			}),
-			expect.objectContaining({
-				slug: "fluid_intake",
-				dimension: "volume",
-			}),
-			expect.objectContaining({
-				slug: "energy_intake",
-				dimension: "energy",
-				fixedDisplayUnit: "kcal",
-			}),
-			expect.objectContaining({
-				slug: "protein_intake",
-				dimension: "mass",
-				fixedDisplayUnit: "g",
-			}),
-			expect.objectContaining({
-				slug: "carbs_intake",
-				dimension: "mass",
-				fixedDisplayUnit: "g",
-			}),
-			expect.objectContaining({
-				slug: "fat_intake",
-				dimension: "mass",
-				fixedDisplayUnit: "g",
-			}),
+			// One generated intake metric per constituent, in catalogue order.
+			...CONSTITUENT_CATALOGUE.map((constituent) =>
+				expect.objectContaining({
+					slug: `${constituent.code}_intake`,
+					dimension: constituent.dimension,
+					aggregation: "sum",
+					constituentCode: constituent.code,
+				}),
+			),
 		]);
 		for (const metric of listUserEnterableMeasurements()) {
 			expect(metric).toMatchObject({
@@ -251,50 +220,60 @@ describe("metric registry", () => {
 				healthImport: false,
 			},
 		});
-		expect(listConsumptionDerivedMeasurements()).toEqual([
-			expect.objectContaining({
-				slug: "alcohol_intake",
+		// The intake block is generated: every constituent has exactly one
+		// metric, slug `<code>_intake`, carrying the constituent's dimension,
+		// display, and sensitivity, and no hand-written or legacy slug survives.
+		const intake = listConsumptionDerivedMeasurements();
+		expect(intake.map((metric) => metric.slug)).toEqual(
+			CONSTITUENT_CATALOGUE.map((constituent) => `${constituent.code}_intake`),
+		);
+		for (const constituent of CONSTITUENT_CATALOGUE) {
+			const metric = intake.find(
+				(candidate) => candidate.constituentCode === constituent.code,
+			);
+			expect(metric).toMatchObject({
+				slug: `${constituent.code}_intake`,
+				label: constituent.metricLabel ?? constituent.label,
+				dimension: constituent.dimension,
+				sensitive: constituent.sensitive,
 				userEnterable: false,
 				measurementSource: "consumption",
-				sensitive: true,
+				healthImport: false,
+				...constituent.display,
+			});
+		}
+		expect(
+			intake.filter((metric) => metric.sensitive).map((m) => m.slug),
+		).toEqual(["nicotine_intake", "ethanol_intake"]);
+		expect(resolveMetric("ethanol_intake")).toMatchObject({
+			kind: "known",
+			metric: {
+				label: "Alcohol",
+				dimension: "mass",
 				unitPreferenceDimension: "alcohol",
-			}),
-			expect.objectContaining({
-				slug: "caffeine_intake",
-				sensitive: false,
-			}),
-			expect.objectContaining({
-				slug: "nicotine_intake",
-				userEnterable: false,
-				measurementSource: "consumption",
 				sensitive: true,
-				fixedDisplayUnit: "mg",
-			}),
-			expect.objectContaining({
-				slug: "fluid_intake",
-				sensitive: false,
-				unitPreferenceDimension: "volume",
-			}),
-			expect.objectContaining({
-				slug: "energy_intake",
-				sensitive: false,
-			}),
-			expect.objectContaining({
-				slug: "protein_intake",
-				sensitive: false,
-				fixedDisplayUnit: "g",
-			}),
-			expect.objectContaining({
-				slug: "carbs_intake",
-				sensitive: false,
-				fixedDisplayUnit: "g",
-			}),
-			expect.objectContaining({
-				slug: "fat_intake",
-				sensitive: false,
-				fixedDisplayUnit: "g",
-			}),
-		]);
+			},
+		});
+		expect(resolveMetric("energy_intake")).toMatchObject({
+			kind: "known",
+			metric: { label: "Energy intake", fixedDisplayUnit: "kcal" },
+		});
+		expect(resolveMetric("fluid_intake")).toMatchObject({
+			kind: "known",
+			metric: { label: "Fluid intake", unitPreferenceDimension: "volume" },
+		});
+		expect(resolveMetric("sodium_intake")).toMatchObject({
+			kind: "known",
+			metric: { unitPreferenceDimension: "sodium" },
+		});
+		expect(resolveMetric("vitamin_d_intake")).toMatchObject({
+			kind: "known",
+			metric: { fixedDisplayUnit: "µg" },
+		});
+		// The eight shipped names gave way to uniform generated slugs.
+		for (const legacy of ["alcohol_intake", "carbs_intake"]) {
+			expect(resolveMetric(legacy)).toEqual({ kind: "unknown", slug: legacy });
+		}
 		expect(listAssessmentMetrics().map((metric) => metric.slug)).toEqual([
 			"wheel:career",
 			"wheel:money",

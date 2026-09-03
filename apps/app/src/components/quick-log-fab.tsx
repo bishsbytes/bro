@@ -1,10 +1,12 @@
+import type { ConsumableKind } from "@bro/domain/consumable";
+import { OPTIONAL_STREAM_KINDS } from "@bro/domain/consumable";
 import { type Href, router } from "expo-router";
 import { useState } from "react";
 import { useTranslation } from "react-i18next";
 import { TouchableOpacity, View } from "react-native";
 import { useBodyLogSurface } from "../body/body-log-surface-context";
 import { playSelectionHaptic } from "../feedback/selection-haptic";
-import { isNicotineTracked } from "../substances/nicotine";
+import { enabledIntakeKinds } from "../intake/intake-settings-store";
 import { StyleSheet, useUnistyles } from "../theme/unistyles";
 import { AppText } from "./app-text";
 import { Icon, type IconName } from "./icon";
@@ -47,20 +49,25 @@ function QuickLogAction({ icon, title, detail, onPress }: QuickLogActionProps) {
 	);
 }
 
+/** The log screen, preset to one kind so muscle memory survives the merge. */
+export function intakeLogHref(kind: ConsumableKind): Href {
+	return `/intake/log?kind=${kind}` as Href;
+}
+
 export function QuickLogFab({
 	bottom,
 	bodyActive = false,
-	isNicotineEnabled = isNicotineTracked,
+	enabledKinds = enabledIntakeKinds,
 }: {
 	bottom: number;
 	bodyActive?: boolean;
-	isNicotineEnabled?: () => Promise<boolean>;
+	enabledKinds?: () => Promise<ConsumableKind[]>;
 }) {
 	const { t } = useTranslation("navigation");
 	const { theme } = useUnistyles();
 	const [open, setOpen] = useState(false);
 	const [page, setPage] = useState<QuickLogPage>("options");
-	const [nicotineEnabled, setNicotineEnabled] = useState(false);
+	const [optionalKinds, setOptionalKinds] = useState<ConsumableKind[]>([]);
 	const { surface: bodyLogSurface } = useBodyLogSurface();
 
 	// Leaving the body page unmounts the surface's content, which is what
@@ -85,16 +92,22 @@ export function QuickLogFab({
 	}
 
 	/**
-	 * Smoking is the one action this sheet asks about before offering. Eating
-	 * and drinking are universal; a standing smoking button for everyone would
-	 * be the product assuming something about the person holding the phone.
+	 * Eating and drinking are universal; every other stream is asked about
+	 * before it is offered. A standing smoking or medication button in every
+	 * man's sheet would be the product assuming something about him.
 	 */
 	function openSheet() {
 		playSelectionHaptic();
 		setOpen(true);
-		isNicotineEnabled()
-			.then(setNicotineEnabled)
-			.catch(() => setNicotineEnabled(false));
+		enabledKinds()
+			.then((kinds) =>
+				setOptionalKinds(
+					kinds.filter((kind) =>
+						(OPTIONAL_STREAM_KINDS as readonly string[]).includes(kind),
+					),
+				),
+			)
+			.catch(() => setOptionalKinds([]));
 	}
 
 	return (
@@ -132,13 +145,13 @@ export function QuickLogFab({
 								icon="food"
 								title={t("quickLog.food")}
 								detail={t("quickLog.foodDetail")}
-								onPress={() => choose("/food/log")}
+								onPress={() => choose(intakeLogHref("food"))}
 							/>
 							<QuickLogAction
 								icon="drink"
 								title={t("quickLog.drink")}
 								detail={t("quickLog.drinkDetail")}
-								onPress={() => choose("/drinks/log")}
+								onPress={() => choose(intakeLogHref("drink"))}
 							/>
 							<QuickLogAction
 								icon="body"
@@ -146,14 +159,15 @@ export function QuickLogFab({
 								detail={t("quickLog.bodyDetail")}
 								onPress={chooseBody}
 							/>
-							{nicotineEnabled ? (
+							{optionalKinds.map((kind) => (
 								<QuickLogAction
+									key={kind}
 									icon="drink"
-									title={t("quickLog.nicotine")}
-									detail={t("quickLog.nicotineDetail")}
-									onPress={() => choose("/nicotine/log")}
+									title={t(`quickLog.${kind}`)}
+									detail={t(`quickLog.${kind}Detail`)}
+									onPress={() => choose(intakeLogHref(kind))}
 								/>
-							) : null}
+							))}
 							<QuickLogAction
 								icon="check-in"
 								title={t("quickLog.checkIn")}

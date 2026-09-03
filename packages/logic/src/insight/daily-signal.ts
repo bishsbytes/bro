@@ -1,9 +1,5 @@
 import { resolveMetric, TAG_PRESENCE_VALUE } from "@bro/domain/metric-registry";
-import type {
-	ConsumptionEntry,
-	DailyMetric,
-	Observation,
-} from "@bro/mobile-model";
+import type { DailyMetric, IntakeEvent, Observation } from "@bro/mobile-model";
 import { resolveMetricDay } from "../health/resolved-day";
 
 export type DailySignal = {
@@ -15,7 +11,7 @@ export type DailySignal = {
 export type DailySignalSource = {
 	observations: readonly Observation[];
 	dailyMetrics: readonly DailyMetric[];
-	consumptionEntries?: readonly ConsumptionEntry[];
+	intakeEvents?: readonly IntakeEvent[];
 	tagActive?: (metricSlug: string, localDay: string) => boolean;
 };
 
@@ -47,11 +43,11 @@ export function createDailySignalReader(
 ): DailySignalReader {
 	const observationsByKey = groupByKey(source.observations);
 	const metricsByKey = groupByKey(source.dailyMetrics);
-	const consumptionEntriesByDay = new Map<string, ConsumptionEntry[]>();
-	for (const entry of source.consumptionEntries ?? []) {
-		const entries = consumptionEntriesByDay.get(entry.localDay);
-		if (entries) entries.push(entry);
-		else consumptionEntriesByDay.set(entry.localDay, [entry]);
+	const intakeEventsByDay = new Map<string, IntakeEvent[]>();
+	for (const event of source.intakeEvents ?? []) {
+		const events = intakeEventsByDay.get(event.localDay);
+		if (events) events.push(event);
+		else intakeEventsByDay.set(event.localDay, [event]);
 	}
 	const checkInDays = new Set<string>();
 	for (const row of source.observations) {
@@ -85,13 +81,13 @@ export function createDailySignalReader(
 				localDay,
 				dayRows,
 				metricsByKey.get(signalKey(metricSlug, localDay)) ?? [],
-				consumptionEntriesByDay.get(localDay) ?? [],
+				intakeEventsByDay.get(localDay) ?? [],
 			).value;
 			if (value !== null) {
 				return { metricSlug, localDay, value };
 			}
-			// A consumption-derived metric has no "not logged" state a user can
-			// express, so a check-in day with no entries reads as zero intake —
+			// An intake metric has no "not logged" state a user can express, so
+			// a check-in day with no events reads as zero intake —
 			// the denominator both intake presence and threshold insights need.
 			// Imported measurements (sleep, steps) keep dropping absent days.
 			const consumptionDerived =

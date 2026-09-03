@@ -1,8 +1,6 @@
 import {
 	ChallengeEnrolmentRepository,
 	ChallengeProgressRepository,
-	type ConsumptionEntry,
-	ConsumptionEntryRepository,
 	createUuidV7,
 	type DailyMetric,
 	DailyMetricRepository,
@@ -10,6 +8,9 @@ import {
 	type Habit,
 	HabitCompletionRepository,
 	HabitRepository,
+	type IntakeEvent,
+	IntakeEventRepository,
+	IntakeStreamRepository,
 	type Observation,
 	ObservationRepository,
 	TrackedMetricsRepository,
@@ -18,6 +19,7 @@ import {
 } from "@bro/database-app";
 import { isCalendarDay, shiftLocalDay, systemLocale } from "@bro/domain";
 import type { ChallengeDay } from "@bro/domain/challenge-catalogue";
+import type { OptionalStreamKind } from "@bro/domain/consumable";
 import type { HabitTemplate } from "@bro/domain/habit-catalogue";
 import { DEFAULT_LIFE_AREA_METRICS } from "@bro/domain/life-area-catalogue";
 import {
@@ -257,6 +259,11 @@ function localDaysInRange(
 	return localDays;
 }
 
+/** Optional intake streams a metric habit implies. */
+const STREAM_FOR_HABIT_METRIC: Partial<Record<string, OptionalStreamKind>> = {
+	nicotine_intake: "nicotine",
+};
+
 export class HabitsStore {
 	private readonly habits: HabitRepository;
 	private readonly completions: HabitCompletionRepository;
@@ -265,7 +272,8 @@ export class HabitsStore {
 	private readonly observations: ObservationRepository;
 	private readonly dailyMetrics: DailyMetricRepository;
 	private readonly trackedMetrics: TrackedMetricsRepository;
-	private readonly consumptionEntries: ConsumptionEntryRepository;
+	private readonly intakeEvents: IntakeEventRepository;
+	private readonly intakeStreams: IntakeStreamRepository;
 	private readonly unitPreferences: UnitPreferenceRepository;
 
 	constructor(
@@ -282,7 +290,8 @@ export class HabitsStore {
 		this.observations = new ObservationRepository(db);
 		this.dailyMetrics = new DailyMetricRepository(db);
 		this.trackedMetrics = new TrackedMetricsRepository(db);
-		this.consumptionEntries = new ConsumptionEntryRepository(db);
+		this.intakeEvents = new IntakeEventRepository(db);
+		this.intakeStreams = new IntakeStreamRepository(db, { now: nowMs });
 		this.unitPreferences = new UnitPreferenceRepository(db);
 	}
 
@@ -296,15 +305,15 @@ export class HabitsStore {
 		throughLocalDay: string,
 	): Promise<(localDay: string) => number | null> {
 		if (isConsumptionDerivedMeasurementSlug(metricSlug)) {
-			const entries = (await this.consumptionEntries.listAll()).filter(
-				(entry) =>
-					entry.localDay >= fromLocalDay && entry.localDay <= throughLocalDay,
+			const events = await this.intakeEvents.listBetween(
+				fromLocalDay,
+				throughLocalDay,
 			);
-			const entriesByDay = new Map<string, ConsumptionEntry[]>();
-			for (const entry of entries) {
-				const rows = entriesByDay.get(entry.localDay);
-				if (rows) rows.push(entry);
-				else entriesByDay.set(entry.localDay, [entry]);
+			const eventsByDay = new Map<string, IntakeEvent[]>();
+			for (const event of events) {
+				const rows = eventsByDay.get(event.localDay);
+				if (rows) rows.push(event);
+				else eventsByDay.set(event.localDay, [event]);
 			}
 			return (localDay) =>
 				resolveMetricDay(
@@ -312,7 +321,7 @@ export class HabitsStore {
 					localDay,
 					[],
 					[],
-					entriesByDay.get(localDay) ?? [],
+					eventsByDay.get(localDay) ?? [],
 				).value;
 		}
 		const [observations, metrics] = await Promise.all([
@@ -759,6 +768,16 @@ export class HabitsStore {
 	): Promise<Habit> {
 		const defaultLabel = template.label;
 		const active = await this.habits.listActive();
+		// Adopting a habit on an optional stream's metric switches that stream
+		// on: the nicotine-free day needs a smoke log to count against, and
+		// this is the found-not-promoted way in.
+		const stream =
+			template.metricSlug === null
+				? undefined
+				: STREAM_FOR_HABIT_METRIC[template.metricSlug];
+		if (stream) {
+			await this.intakeStreams.setEnabled(stream, true);
+		}
 		return await this.habits.create({
 			slug: template.slug,
 			customLabel:

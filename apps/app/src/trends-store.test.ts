@@ -186,33 +186,36 @@ describe("trends store", () => {
 		).toMatchObject({ latestFormatted: "61.5 bpm" });
 	});
 
-	it("adds opted-in consumption totals without writing observations", async () => {
+	it("adds opted-in intake totals without writing observations", async () => {
 		const now = new Date("2026-08-19T22:00:00.000Z");
 		await new databaseApp.TrackedMetricsRepository(db).configure(
-			"alcohol_intake",
-			6,
+			"ethanol_intake",
+			111,
 			true,
 		);
 		await new databaseApp.UnitPreferenceRepository(db).set(
 			"alcohol",
 			"uk_unit",
 		);
-		const entries = new databaseApp.ConsumptionEntryRepository(db);
-		for (const [id, localDay, ethanolKg] of [
+		const events = new databaseApp.IntakeEventRepository(db);
+		for (const [id, localDay, ethanol] of [
 			["first", "2026-08-18", 0.01],
 			["second", "2026-08-19", 0.02],
 			["third", "2026-08-19", 0.005],
 		] as const) {
-			await entries.create({
+			await events.create({
 				kind: "drink",
-				catalogueRef: `drink:${id}`,
-				label: id,
-				servingLabel: "serving",
+				consumableId: null,
+				sourceRef: `system:drink:${id}`,
+				name: id,
+				brand: null,
+				portionLabel: "serving",
 				quantity: 1,
+				massKg: null,
 				volumeL: 0.25,
-				ethanolKg,
-				caffeineKg: 0,
-				energyKcal: 100,
+				constituents: { fluid: 0.25, ethanol, caffeine: 0, energy: 100 },
+				context: null,
+				notes: null,
 				occurredAt: Date.parse(`${localDay}T20:00:00.000Z`),
 				localDay,
 				tzOffsetMinutes: 0,
@@ -225,7 +228,7 @@ describe("trends store", () => {
 				() => now,
 				() => "en-GB",
 			).load(7)
-		).metrics.find(({ metric }) => metric.slug === "alcohol_intake");
+		).metrics.find(({ metric }) => metric.slug === "ethanol_intake");
 		expect(alcohol).toMatchObject({ latestFormatted: "3.2 units" });
 		expect(
 			alcohol?.series.points

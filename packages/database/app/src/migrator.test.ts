@@ -62,14 +62,16 @@ describe("product database migrations", () => {
 			objects.filter(({ type }) => type === "index").map(({ name }) => name),
 		).toEqual([
 			"idx_challenge_progress_natural",
-			"idx_consumption_entries_day",
-			"idx_consumption_entries_kind_day",
-			"idx_custom_consumable_components_parent",
+			"idx_consumables_kind",
+			"idx_consumables_source",
 			"idx_daily_metrics_natural",
 			"idx_day_notes_day",
 			"idx_habit_completions_natural",
+			"idx_intake_events_day",
+			"idx_intake_events_kind_day",
 			"idx_observations_day",
 			"idx_observations_metric_day",
+			"idx_recipe_ingredients_recipe",
 		]);
 	});
 
@@ -83,20 +85,39 @@ describe("product database migrations", () => {
 				 WHERE name = 'custom_label'`,
 			),
 		).toEqual({ name: "custom_label" });
+		// The intake model: a constituent map on every event, and a library with
+		// provenance columns. No old table name survives the squash.
 		expect(
-			await db.getAllAsync<{ name: string }>(
-				`SELECT name FROM pragma_table_info('consumption_entries')
-				 WHERE name IN
-					('protein_g', 'carbs_g', 'fat_g', 'consumable_ref', 'nicotine_kg')
+			await db.getAllAsync<{ name: string; notnull: number }>(
+				`SELECT name, "notnull" FROM pragma_table_info('intake_events')
+				 WHERE name IN ('constituents', 'context', 'source_ref', 'mass_kg')
 				 ORDER BY name`,
 			),
 		).toEqual([
-			{ name: "carbs_g" },
-			{ name: "consumable_ref" },
-			{ name: "fat_g" },
-			{ name: "nicotine_kg" },
-			{ name: "protein_g" },
+			{ name: "constituents", notnull: 1 },
+			{ name: "context", notnull: 0 },
+			{ name: "mass_kg", notnull: 0 },
+			{ name: "source_ref", notnull: 0 },
 		]);
+		expect(
+			await db.getAllAsync<{ name: string }>(
+				`SELECT name FROM pragma_table_info('consumables')
+				 WHERE name IN ('source_type', 'source_ref', 'source_version', 'forked_from', 'recipe')
+				 ORDER BY name`,
+			),
+		).toEqual([
+			{ name: "forked_from" },
+			{ name: "recipe" },
+			{ name: "source_ref" },
+			{ name: "source_type" },
+			{ name: "source_version" },
+		]);
+		expect(
+			await db.getAllAsync<{ name: string }>(
+				`SELECT name FROM sqlite_master WHERE type = 'table' AND name IN
+					('consumption_entries', 'custom_consumables', 'custom_consumable_components')`,
+			),
+		).toEqual([]);
 		expect(
 			await db.getFirstAsync<{ name: string }>(
 				`SELECT name FROM pragma_table_info('habits')
@@ -133,53 +154,6 @@ describe("product database migrations", () => {
 			"SELECT COUNT(*) AS count FROM __drizzle_migrations",
 		);
 		expect(marker?.count).toBe(migrations.journal.entries.length);
-	});
-
-	it("adds nicotine_kg to a database that predates it, keeping its rows", async () => {
-		const { databaseApp, db } = await migratedDatabase("baseline.db");
-
-		// A device on the pre-nicotine baseline: the first migration's statements
-		// applied and recorded in Drizzle's ledger — which is what stops the
-		// baseline's plain CREATE TABLEs from re-running — plus a logged drink.
-		const [baselineEntry] = migrations.journal.entries;
-		if (!baselineEntry) throw new Error("Expected a baseline migration.");
-		for (const statement of migrations.migrations.m0000.split(
-			"--> statement-breakpoint",
-		)) {
-			await db.execAsync(statement);
-		}
-		await db.execAsync(
-			`CREATE TABLE IF NOT EXISTS __drizzle_migrations (
-				id SERIAL PRIMARY KEY,
-				hash text NOT NULL,
-				created_at numeric
-			)`,
-		);
-		await db.runAsync(
-			"INSERT INTO __drizzle_migrations (hash, created_at) VALUES (?, ?)",
-			["", baselineEntry.when],
-		);
-		await db.runAsync(
-			`INSERT INTO consumption_entries (
-				id, kind, label, quantity, ethanol_kg, occurred_at, local_day,
-				tz_offset_minutes, created_at, updated_at
-			) VALUES ('e1', 'drink', 'Lager, 4.5%', 1, 0.0202, 1, '2026-09-01', 0, 1, 1)`,
-		);
-
-		await expect(databaseApp.runMigrations(db)).resolves.toBeUndefined();
-
-		expect(
-			await db.getFirstAsync<{ name: string }>(
-				`SELECT name FROM pragma_table_info('consumption_entries')
-				 WHERE name = 'nicotine_kg'`,
-			),
-		).toEqual({ name: "nicotine_kg" });
-		// The pre-existing drink survives untouched, with no nicotine of its own.
-		expect(
-			await db.getFirstAsync<{ label: string; nicotine_kg: number | null }>(
-				"SELECT label, nicotine_kg FROM consumption_entries WHERE id = 'e1'",
-			),
-		).toEqual({ label: "Lager, 4.5%", nicotine_kg: null });
 	});
 
 	it("creates and safely re-runs the independent local-store manifest", async () => {

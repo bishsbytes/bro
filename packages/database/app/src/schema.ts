@@ -211,24 +211,27 @@ export const challengeProgress = sqliteTable(
 	],
 );
 
-export const consumptionEntries = sqliteTable(
-	PRODUCT_TABLE_NAMES.consumptionEntries,
+export const intakeEvents = sqliteTable(
+	PRODUCT_TABLE_NAMES.intakeEvents,
 	{
 		id: text("id").primaryKey(),
+		// The consumable's kind, snapshotted.
 		kind: text("kind").notNull(),
-		catalogueRef: text("catalogue_ref"),
-		label: text("label").notNull(),
-		servingLabel: text("serving_label"),
+		// Library row; may dangle after a delete.
+		consumableId: text("consumable_id"),
+		// 'system:drink:lager-4_5' | 'off:5000…' | 'community:<id>@<v>' | 'library:<id>'
+		sourceRef: text("source_ref"),
+		name: text("name").notNull(),
+		brand: text("brand"),
+		portionLabel: text("portion_label"),
 		quantity: real("quantity").notNull(),
+		// Amount consumed, where known.
+		massKg: real("mass_kg"),
 		volumeL: real("volume_l"),
-		ethanolKg: real("ethanol_kg"),
-		caffeineKg: real("caffeine_kg"),
-		nicotineKg: real("nicotine_kg"),
-		energyKcal: real("energy_kcal"),
-		proteinG: real("protein_g"),
-		carbsG: real("carbs_g"),
-		fatG: real("fat_g"),
-		consumableRef: text("consumable_ref"),
+		// JSON map code → canonical amount, already × quantity.
+		constituents: text("constituents").notNull(),
+		context: text("context"),
+		notes: text("notes"),
 		occurredAt: integer("occurred_at").notNull(),
 		localDay: text("local_day").notNull(),
 		tzOffsetMinutes: integer("tz_offset_minutes").notNull(),
@@ -236,44 +239,76 @@ export const consumptionEntries = sqliteTable(
 		updatedAt: integer("updated_at").notNull(),
 	},
 	(table) => [
-		index("idx_consumption_entries_day").on(table.localDay),
-		index("idx_consumption_entries_kind_day").on(table.kind, table.localDay),
+		index("idx_intake_events_day").on(table.localDay),
+		index("idx_intake_events_kind_day").on(table.kind, table.localDay),
 	],
 );
 
-export const customConsumables = sqliteTable(
-	PRODUCT_TABLE_NAMES.customConsumables,
+export const consumables = sqliteTable(
+	PRODUCT_TABLE_NAMES.consumables,
 	{
 		id: text("id").primaryKey(),
 		kind: text("kind").notNull(),
-		label: text("label").notNull(),
+		name: text("name").notNull(),
 		brand: text("brand"),
-		isRecipe: integer("is_recipe").notNull(),
-		servings: text("servings").notNull(),
-		createdAt: integer("created_at").notNull(),
-		updatedAt: integer("updated_at").notNull(),
-	},
-);
-
-export const customConsumableComponents = sqliteTable(
-	PRODUCT_TABLE_NAMES.customConsumableComponents,
-	{
-		id: text("id").primaryKey(),
-		consumableId: text("consumable_id").notNull(),
-		position: integer("position").notNull(),
-		label: text("label").notNull(),
-		quantity: real("quantity").notNull(),
-		energyKcal: real("energy_kcal"),
-		proteinG: real("protein_g"),
-		carbsG: real("carbs_g"),
-		fatG: real("fat_g"),
+		barcode: text("barcode"),
+		// JSON CompositionBasis.
+		basis: text("basis").notNull(),
+		// JSON map, per basis.
+		constituents: text("constituents").notNull(),
+		// JSON Portion[].
+		portions: text("portions").notNull(),
+		defaultPortionId: text("default_portion_id"),
+		// JSON { yield } for a recipe, else NULL.
+		recipe: text("recipe"),
+		// 'user' | 'provider' | 'community'; system content never reaches here.
+		sourceType: text("source_type").notNull(),
+		// Provider external id or community content id.
+		sourceRef: text("source_ref"),
+		// Community version.
+		sourceVersion: integer("source_version"),
+		// JSON ContentSource.
+		forkedFrom: text("forked_from"),
+		archivedAt: integer("archived_at"),
 		createdAt: integer("created_at").notNull(),
 		updatedAt: integer("updated_at").notNull(),
 	},
 	(table) => [
-		index("idx_custom_consumable_components_parent").on(
-			table.consumableId,
-			table.position,
-		),
+		index("idx_consumables_kind").on(table.kind, table.archivedAt),
+		// Provider idempotency: one library row per searched product.
+		index("idx_consumables_source").on(table.sourceType, table.sourceRef),
 	],
 );
+
+export const recipeIngredients = sqliteTable(
+	PRODUCT_TABLE_NAMES.recipeIngredients,
+	{
+		id: text("id").primaryKey(),
+		recipeId: text("recipe_id").notNull(),
+		position: integer("position").notNull(),
+		consumableId: text("consumable_id"),
+		sourceRef: text("source_ref"),
+		// Snapshot.
+		name: text("name").notNull(),
+		portionLabel: text("portion_label"),
+		quantity: real("quantity").notNull(),
+		massKg: real("mass_kg"),
+		volumeL: real("volume_l"),
+		// JSON map, scaled to this ingredient.
+		constituents: text("constituents").notNull(),
+		createdAt: integer("created_at").notNull(),
+		updatedAt: integer("updated_at").notNull(),
+	},
+	(table) => [
+		index("idx_recipe_ingredients_recipe").on(table.recipeId, table.position),
+	],
+);
+
+export const intakeStreams = sqliteTable(PRODUCT_TABLE_NAMES.intakeStreams, {
+	id: text("id").primaryKey(),
+	kind: text("kind").notNull(),
+	enabledAt: integer("enabled_at").notNull(),
+	disabledAt: integer("disabled_at"),
+	createdAt: integer("created_at").notNull(),
+	updatedAt: integer("updated_at").notNull(),
+});

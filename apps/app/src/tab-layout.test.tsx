@@ -120,7 +120,7 @@ describe("TabLayout", () => {
 		expect(Haptics.selectionAsync).toHaveBeenCalledTimes(1);
 		await fireEvent.press(screen.getByLabelText("Food"));
 
-		expect(router.push).toHaveBeenCalledWith("/food/log");
+		expect(router.push).toHaveBeenCalledWith("/intake/log?kind=food");
 	});
 
 	it("keeps the shared quick-log FAB on the Body overview", async () => {

@@ -1,13 +1,17 @@
 import {
+	type ConstituentAmounts,
+	type ConsumableKind,
+	type ExternalConsumable,
 	FOOD_DATA_LICENCE,
 	FOOD_DATA_SOURCE,
-	type FoodSearchResult,
-	type FoodSearchServing,
+	PER_100_G,
+	type Portion,
 } from "@bro/domain/food-search";
 
 export type FoodProvider = {
-	search(query: string): Promise<FoodSearchResult[]>;
-	findByRef(ref: string): Promise<FoodSearchResult | null>;
+	search(query: string): Promise<ExternalConsumable[]>;
+	findByRef(ref: string): Promise<ExternalConsumable | null>;
+	findByBarcode(barcode: string): Promise<ExternalConsumable | null>;
 };
 
 type ProviderFetch = typeof fetch;
@@ -26,6 +30,7 @@ type OpenFoodFactsProduct = {
 	product_name?: unknown;
 	generic_name?: unknown;
 	brands?: unknown;
+	categories_tags?: unknown;
 	serving_size?: unknown;
 	serving_quantity?: unknown;
 	serving_quantity_unit?: unknown;
@@ -40,11 +45,47 @@ const PRODUCT_FIELDS = [
 	"product_name",
 	"generic_name",
 	"brands",
+	"categories_tags",
 	"serving_size",
 	"serving_quantity",
 	"serving_quantity_unit",
 	"nutriments",
 ].join(",");
+
+/** The label convention: salt is sodium × 2.5. */
+const SALT_GRAMS_PER_SODIUM_GRAM = 2.5;
+const KILOJOULES_PER_KILOCALORIE = 4.184;
+const GRAMS_PER_KILOGRAM = 1_000;
+
+/**
+ * Open Food Facts nutriment keys, mapped to constituent codes. Every `_100g`
+ * mass value is in grams, whatever unit the label printed; energy is kcal or
+ * kJ. Nothing else the provider knows reaches the client — the constituent
+ * map is the whole contract.
+ *
+ * Alcohol is deliberately absent: the provider declares it as % by volume
+ * against a per-100-g basis, which cannot be converted honestly without a
+ * density. A beer from a barcode carries its energy and sugar, not its ethanol.
+ */
+const MASS_NUTRIMENTS = [
+	["proteins", "protein"],
+	["carbohydrates", "carbohydrate"],
+	["fat", "fat"],
+	["saturated-fat", "saturated_fat"],
+	["sugars", "sugar"],
+	["fiber", "fibre"],
+	["caffeine", "caffeine"],
+	["vitamin-a", "vitamin_a"],
+	["vitamin-d", "vitamin_d"],
+	["vitamin-b12", "vitamin_b12"],
+	["folates", "folate"],
+	["vitamin-c", "vitamin_c"],
+	["calcium", "calcium"],
+	["iron", "iron"],
+	["magnesium", "magnesium"],
+	["potassium", "potassium"],
+	["zinc", "zinc"],
+] as const;
 
 export class FoodProviderUnavailableError extends Error {
 	constructor(readonly reason: "timeout" | "upstream") {
@@ -67,96 +108,121 @@ function finiteNonNegative(value: unknown): number | null {
 	return Number.isFinite(parsed) && parsed >= 0 ? parsed : null;
 }
 
-function nutrient(
+function nutrientPer100g(
 	nutriments: OpenFoodFactsNutriments,
 	name: string,
-	suffix: "serving" | "100g",
 ): number | null {
-	return finiteNonNegative(nutriments[`${name}_${suffix}`]);
+	return finiteNonNegative(nutriments[`${name}_100g`]);
 }
 
-function energyKcal(
-	nutriments: OpenFoodFactsNutriments,
-	suffix: "serving" | "100g",
-): number | null {
-	const kcal = nutrient(nutriments, "energy-kcal", suffix);
+function energyKcalPer100g(nutriments: OpenFoodFactsNutriments): number | null {
+	const kcal = nutrientPer100g(nutriments, "energy-kcal");
 	if (kcal !== null) return kcal;
-	const kilojoules = nutrient(nutriments, "energy-kj", suffix);
-	return kilojoules === null ? null : kilojoules / 4.184;
+	const kilojoules = nutrientPer100g(nutriments, "energy-kj");
+	return kilojoules === null ? null : kilojoules / KILOJOULES_PER_KILOCALORIE;
 }
 
-function nutrition(
+/**
+ * The constituent map per 100 g in canonical units: kilocalories for energy,
+ * kilograms for every mass. Absent nutriments stay absent — "not applicable or
+ * unknown" — and a declared zero stays a zero.
+ */
+function constituentsPer100g(
 	nutriments: OpenFoodFactsNutriments,
-	suffix: "serving" | "100g",
-): Omit<FoodSearchServing, "id" | "label"> {
-	return {
-		energyKcal: energyKcal(nutriments, suffix),
-		proteinG: nutrient(nutriments, "proteins", suffix),
-		carbsG: nutrient(nutriments, "carbohydrates", suffix),
-		fatG: nutrient(nutriments, "fat", suffix),
-	};
+): ConstituentAmounts {
+	const amounts: Record<string, number> = {};
+	const energy = energyKcalPer100g(nutriments);
+	if (energy !== null) amounts.energy = energy;
+	for (const [nutriment, code] of MASS_NUTRIMENTS) {
+		const grams = nutrientPer100g(nutriments, nutriment);
+		if (grams !== null) amounts[code] = grams / GRAMS_PER_KILOGRAM;
+	}
+	const sodiumG = nutrientPer100g(nutriments, "sodium");
+	const saltG = nutrientPer100g(nutriments, "salt");
+	if (sodiumG !== null) {
+		amounts.sodium = sodiumG / GRAMS_PER_KILOGRAM;
+	} else if (saltG !== null) {
+		amounts.sodium = saltG / SALT_GRAMS_PER_SODIUM_GRAM / GRAMS_PER_KILOGRAM;
+	}
+	return amounts;
 }
 
-function hasKnownNutrition(
-	values: Omit<FoodSearchServing, "id" | "label">,
-): boolean {
-	return Object.values(values).some((value) => value !== null);
+function kindOf(product: OpenFoodFactsProduct): ConsumableKind {
+	return Array.isArray(product.categories_tags) &&
+		product.categories_tags.includes("en:beverages")
+		? "drink"
+		: "food";
 }
 
-function scaledNutrition(
-	values: Omit<FoodSearchServing, "id" | "label">,
-	factor: number,
-): Omit<FoodSearchServing, "id" | "label"> {
-	return {
-		energyKcal: values.energyKcal === null ? null : values.energyKcal * factor,
-		proteinG: values.proteinG === null ? null : values.proteinG * factor,
-		carbsG: values.carbsG === null ? null : values.carbsG * factor,
-		fatG: values.fatG === null ? null : values.fatG * factor,
-	};
-}
-
-export function normaliseOpenFoodFactsProduct(
-	product: OpenFoodFactsProduct,
-): FoodSearchResult | null {
-	const code = nonEmptyString(product.code);
-	const label =
-		nonEmptyString(product.product_name) ??
-		nonEmptyString(product.generic_name);
-	if (!code || !/^\d+$/.test(code) || !label) return null;
-
-	const nutriments =
-		product.nutriments && typeof product.nutriments === "object"
-			? product.nutriments
-			: {};
-	const per100g = nutrition(nutriments, "100g");
-	const directServing = nutrition(nutriments, "serving");
+/**
+ * A declared serving becomes a portion only when its mass is known: a portion
+ * that cannot be related to the per-100-g basis is not offered rather than
+ * guessed. "100 g" is always offered, and is the default when nothing else is.
+ */
+function portionsOf(product: OpenFoodFactsProduct): {
+	portions: Portion[];
+	defaultPortionId: string;
+} {
+	const portions: Portion[] = [];
 	const servingLabel = nonEmptyString(product.serving_size);
 	const servingQuantity = finiteNonNegative(product.serving_quantity);
 	const servingUnit = nonEmptyString(
 		product.serving_quantity_unit,
 	)?.toLowerCase();
-	const canScaleGrams =
+	const servingInGrams =
 		servingQuantity !== null &&
+		servingQuantity > 0 &&
 		(servingUnit === "g" ||
+			servingUnit === "ml" ||
 			(!servingUnit && servingLabel?.toLowerCase().includes("g")));
-	const servingNutrition = hasKnownNutrition(directServing)
-		? directServing
-		: canScaleGrams
-			? scaledNutrition(per100g, servingQuantity / 100)
-			: directServing;
-	const servings: FoodSearchServing[] = [];
-	if (servingLabel && (hasKnownNutrition(servingNutrition) || canScaleGrams)) {
-		servings.push({ id: "serving", label: servingLabel, ...servingNutrition });
+	if (servingLabel && servingInGrams) {
+		portions.push({
+			id: "serving",
+			label: servingLabel,
+			massKg: servingQuantity / GRAMS_PER_KILOGRAM,
+			volumeL: null,
+			basisUnits: null,
+		});
 	}
-	servings.push({ id: "100g", label: "100 g", ...per100g });
+	portions.push({
+		id: "100g",
+		label: "100 g",
+		massKg: PER_100_G.massKg,
+		volumeL: null,
+		basisUnits: null,
+	});
+	return { portions, defaultPortionId: portions[0]?.id ?? "100g" };
+}
+
+export function normaliseOpenFoodFactsProduct(
+	product: OpenFoodFactsProduct,
+): ExternalConsumable | null {
+	const code = nonEmptyString(product.code);
+	const name =
+		nonEmptyString(product.product_name) ??
+		nonEmptyString(product.generic_name);
+	if (!code || !/^\d+$/.test(code) || !name) return null;
+
+	const nutriments =
+		product.nutriments && typeof product.nutriments === "object"
+			? product.nutriments
+			: {};
+	const constituents = constituentsPer100g(nutriments);
+	// A product the provider knows nothing about nutritionally cannot be logged
+	// as intake; it is not a result.
+	if (Object.keys(constituents).length === 0) return null;
 
 	return {
 		ref: `off:${code}`,
-		label,
+		name,
 		brand: nonEmptyString(product.brands),
+		barcode: code,
+		kind: kindOf(product),
+		basis: PER_100_G,
+		constituents,
+		...portionsOf(product),
 		source: FOOD_DATA_SOURCE,
 		licence: FOOD_DATA_LICENCE,
-		servings,
 	};
 }
 
@@ -179,7 +245,7 @@ export class OpenFoodFactsProvider implements FoodProvider {
 		this.userAgent = options.userAgent;
 	}
 
-	async search(query: string): Promise<FoodSearchResult[]> {
+	async search(query: string): Promise<ExternalConsumable[]> {
 		const params = new URLSearchParams({
 			search_terms: query,
 			search_simple: "1",
@@ -202,12 +268,16 @@ export class OpenFoodFactsProvider implements FoodProvider {
 		});
 	}
 
-	async findByRef(ref: string): Promise<FoodSearchResult | null> {
+	async findByRef(ref: string): Promise<ExternalConsumable | null> {
 		const match = /^off:(\d+)$/.exec(ref);
-		if (!match) return null;
+		return match ? await this.findByBarcode(match[1] as string) : null;
+	}
+
+	async findByBarcode(barcode: string): Promise<ExternalConsumable | null> {
+		if (!/^\d+$/.test(barcode)) return null;
 		const params = new URLSearchParams({ fields: PRODUCT_FIELDS });
 		const payload = await this.request<ProductPayload>(
-			`${this.baseUrl}/api/v2/product/${match[1]}?${params}`,
+			`${this.baseUrl}/api/v2/product/${barcode}?${params}`,
 		);
 		return payload.status === 1 && isProduct(payload.product)
 			? normaliseOpenFoodFactsProduct(payload.product)

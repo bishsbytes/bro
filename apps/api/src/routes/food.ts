@@ -1,4 +1,4 @@
-import type { FoodSearchResponse } from "@bro/domain/food-search";
+import type { ExternalConsumableResponse } from "@bro/domain/food-search";
 import { type Context, Hono } from "hono";
 import {
 	type FoodProvider,
@@ -186,7 +186,7 @@ export function createFoodRoutes({
 				durationMs: now() - startedAt,
 				resultCount: results.length,
 			});
-			return c.json({ results } satisfies FoodSearchResponse);
+			return c.json({ results } satisfies ExternalConsumableResponse);
 		} catch (error) {
 			observe("food_lookup_upstream_error", { durationMs: now() - startedAt });
 			return c.json(
@@ -199,13 +199,17 @@ export function createFoodRoutes({
 		}
 	});
 
-	app.get("/api/food/:ref", async (c) => {
-		const ref = c.req.param("ref");
-		if (!/^off:\d+$/.test(ref))
-			return c.json({ error: "Food not found." }, 404);
+	/**
+	 * One product by ref or by barcode. A lookup, not a scan: the camera is a
+	 * later native batch, and when it lands it calls this route.
+	 */
+	async function lookup(
+		c: Context,
+		find: () => Promise<Awaited<ReturnType<FoodProvider["findByRef"]>>>,
+	) {
 		const startedAt = now();
 		try {
-			const result = await provider.findByRef(ref);
+			const result = await find();
 			observe(result ? "food_lookup_hit" : "food_lookup_miss", {
 				durationMs: now() - startedAt,
 				resultCount: result ? 1 : 0,
@@ -223,6 +227,21 @@ export function createFoodRoutes({
 					: 502,
 			);
 		}
+	}
+
+	app.get("/api/food/barcode/:code", async (c) => {
+		const code = c.req.param("code");
+		if (!/^\d{8,14}$/.test(code)) {
+			return c.json({ error: "Enter a barcode of 8 to 14 digits." }, 400);
+		}
+		return await lookup(c, () => provider.findByBarcode(code));
+	});
+
+	app.get("/api/food/:ref", async (c) => {
+		const ref = c.req.param("ref");
+		if (!/^off:\d+$/.test(ref))
+			return c.json({ error: "Food not found." }, 404);
+		return await lookup(c, () => provider.findByRef(ref));
 	});
 
 	return app;

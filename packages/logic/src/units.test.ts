@@ -48,7 +48,17 @@ describe("measurement units", () => {
 			rate_bpm: "bpm",
 		});
 		expect(DISPLAY_UNITS_BY_DIMENSION).toEqual({
-			mass: ["kg", "lb", "st", "g", "mg", "uk_unit", "us_standard_drink"],
+			mass: [
+				"kg",
+				"lb",
+				"st",
+				"g",
+				"mg",
+				"µg",
+				"salt_g",
+				"uk_unit",
+				"us_standard_drink",
+			],
 			length: ["cm", "in", "ft"],
 			fraction: ["%"],
 			volume: ["ml", "l", "fl_oz_uk", "fl_oz_us"],
@@ -61,6 +71,7 @@ describe("measurement units", () => {
 			fraction: ["%"],
 			alcohol: ["uk_unit", "us_standard_drink", "g"],
 			volume: ["ml", "l", "fl_oz_uk", "fl_oz_us"],
+			sodium: ["mg", "salt_g"],
 		});
 		expect(DIMENSION_BY_UNIT_PREFERENCE).toEqual({
 			mass: "mass",
@@ -69,6 +80,7 @@ describe("measurement units", () => {
 			fraction: "fraction",
 			alcohol: "mass",
 			volume: "volume",
+			sodium: "mass",
 		});
 		expect(DISPLAY_RESOLUTIONS).toEqual({
 			kg: 0.1,
@@ -80,6 +92,8 @@ describe("measurement units", () => {
 			"%": 0.1,
 			g: 0.1,
 			mg: 1,
+			µg: 0.1,
+			salt_g: 0.1,
 			uk_unit: 0.1,
 			us_standard_drink: 0.1,
 			ml: 1,
@@ -351,7 +365,7 @@ describe("measurement units", () => {
 		for (const [slug, expectedUnit] of [
 			["caffeine_intake", "mg"],
 			["energy_intake", "kcal"],
-			["alcohol_intake", "us_standard_drink"],
+			["ethanol_intake", "us_standard_drink"],
 		] as const) {
 			const resolved = resolveMetric(slug);
 			if (resolved.kind !== "known" || resolved.metric.kind !== "measurement") {
