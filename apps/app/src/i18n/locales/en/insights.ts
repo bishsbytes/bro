@@ -4,7 +4,7 @@ export const insights = {
 	patterns: {
 		title: "Insights",
 		/** Renders in capitals; see the note on eyebrows in the review catalogue. */
-		eyebrow: "LAST 90 DAYS",
+		eyebrow: "Last 90 days",
 		loadFailed: "Insights could not be loaded",
 		emptyTitle: "Your patterns start with check-ins",
 		emptyBody:
@@ -29,7 +29,7 @@ export const insights = {
 	trends: {
 		title: "Trends",
 		/** Renders in capitals; see the note on eyebrows in the review catalogue. */
-		eyebrow: "YOUR TRACKED DATA",
+		eyebrow: "Your tracked data",
 		intro:
 			"Scored metrics use daily averages, body metrics use the last reading, and consumption totals are summed. Missing days stay as gaps.",
 		loadFailed: "Trends could not be loaded",

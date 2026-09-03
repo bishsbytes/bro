@@ -44,7 +44,7 @@ describe("catalogues", () => {
 
 	it("interpolates and pluralises", () => {
 		expect(i18n.t("review:goals.achieve", { goal: "Sleep" })).toBe(
-			"Mark Sleep achieved",
+			"Archive Sleep heading",
 		);
 		expect(i18n.t("review:history.lifeAreas", { count: 1 })).toBe(
 			"1 life area",

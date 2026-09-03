@@ -1,12 +1,12 @@
-import { router, Tabs, usePathname, useSegments } from "expo-router";
+import { router, usePathname, useSegments } from "expo-router";
+import { NativeTabs } from "expo-router/unstable-native-tabs";
 import { useLayoutEffect, useRef } from "react";
 import { useTranslation } from "react-i18next";
 import { View } from "react-native";
-import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { BodyLogSurfaceProvider } from "../../body/body-log-surface-context";
 import { AppHeader } from "../../components/app-header";
 import { HeaderIconButton } from "../../components/header-icon-button";
-import { Icon } from "../../components/icon";
+import { Icon, type IconName } from "../../components/icon";
 import { QuickLogFab } from "../../components/quick-log-fab";
 import {
 	TodayHeaderMonthProvider,
@@ -15,7 +15,6 @@ import {
 import { playSelectionHaptic } from "../../feedback/selection-haptic";
 import { StyleSheet, useUnistyles } from "../../theme/unistyles";
 
-/** Values are keys in the `navigation` catalogue, not copy. */
 const TAB_TITLE_KEYS = {
 	"/": "tabs.journal",
 	"/intake": "tabs.intake",
@@ -23,12 +22,22 @@ const TAB_TITLE_KEYS = {
 	"/life": "tabs.life",
 } as const;
 
-const TAB_BAR_CONTENT_HEIGHT = 56;
+function TabIcon({ name }: { name: IconName }) {
+	const { theme } = useUnistyles();
+	return (
+		<NativeTabs.Trigger.Icon
+			renderingMode="template"
+			src={{
+				default: <Icon name={name} color={theme.colors.ink2} size={22} />,
+				selected: <Icon name={name} color={theme.colors.accent} size={22} />,
+			}}
+		/>
+	);
+}
 
 function TabShell() {
 	const { t } = useTranslation("navigation");
 	const { theme } = useUnistyles();
-	const insets = useSafeAreaInsets();
 	const pathname = usePathname();
 	const segments = useSegments() as string[];
 	const todayHeaderMonth = useTodayHeaderMonth();
@@ -37,11 +46,14 @@ function TabShell() {
 	const activeHeaderTitle =
 		pathname === "/" ? todayHeaderMonth : activeTabTitle;
 	const isJournalTab = pathname === "/";
+	const canQuickLog =
+		pathname === "/" || pathname === "/intake" || pathname === "/body";
 	const lastTabHeader = useRef(
 		activeHeaderTitle
 			? { title: activeHeaderTitle, isJournal: isJournalTab }
 			: { title: todayHeaderMonth, isJournal: true },
 	);
+
 	useLayoutEffect(() => {
 		if (activeHeaderTitle) {
 			lastTabHeader.current = {
@@ -50,6 +62,7 @@ function TabShell() {
 			};
 		}
 	}, [activeHeaderTitle, isJournalTab]);
+
 	const isNestedTabRoute = segments[0] === "(tabs)" && segments.length > 2;
 	const header = activeHeaderTitle
 		? { title: activeHeaderTitle, isJournal: isJournalTab }
@@ -62,7 +75,6 @@ function TabShell() {
 			{title ? (
 				<AppHeader
 					title={title}
-					centerTitle={header.isJournal}
 					leading={
 						header.isJournal ? (
 							<HeaderIconButton
@@ -74,88 +86,76 @@ function TabShell() {
 						) : null
 					}
 					actions={
-						header.isJournal ? (
-							<HeaderIconButton
-								icon="calendar"
-								testID="history-header-icon"
-								label={t("tabs.openHistory")}
-								onPress={() => router.push("/history")}
-							/>
-						) : null
+						<>
+							{canQuickLog ? (
+								<QuickLogFab bodyActive={pathname === "/body"} />
+							) : null}
+							{header.isJournal ? (
+								<HeaderIconButton
+									icon="calendar"
+									testID="history-header-icon"
+									label={t("tabs.openHistory")}
+									onPress={() => router.push("/history")}
+								/>
+							) : null}
+						</>
 					}
 				/>
 			) : null}
-			<Tabs
-				detachInactiveScreens={false}
+
+			<NativeTabs
+				backgroundColor={theme.colors.glass}
+				blurEffect={
+					theme.isDark
+						? "systemUltraThinMaterialDark"
+						: "systemUltraThinMaterialLight"
+				}
+				iconColor={{
+					default: theme.colors.ink2,
+					selected: theme.colors.accent,
+				}}
+				indicatorColor={theme.colors.accentDeep}
+				labelStyle={{
+					default: {
+						fontFamily: theme.fonts.sans,
+						fontSize: 12,
+						color: theme.colors.ink2,
+					},
+					selected: {
+						fontFamily: theme.fonts.sans,
+						fontSize: 12,
+						color: theme.colors.accent,
+					},
+				}}
+				minimizeBehavior="onScrollDown"
+				shadowColor={theme.colors.hairlineStrong}
 				screenListeners={({ route }) => ({
 					tabPress: () => {
 						if (route.name !== activeTabName) playSelectionHaptic();
 					},
 				})}
-				screenOptions={{
-					headerShown: false,
-					// Domain dashboards initialise repositories and charts. Mount them on
-					// first use, then keep them attached for quick returns.
-					lazy: true,
-					sceneStyle: { backgroundColor: theme.colors.background },
-					tabBarActiveTintColor: theme.colors.text,
-					tabBarInactiveTintColor: theme.colors.tabInactive,
-					tabBarStyle: {
-						backgroundColor: theme.colors.tabBackground,
-						borderTopWidth: 0,
-						boxShadow: "none",
-						elevation: 0,
-						height: TAB_BAR_CONTENT_HEIGHT + insets.bottom,
-					},
-					tabBarLabelStyle: {
-						...theme.typography.micro,
-						fontWeight: "500",
-					},
-				}}
 			>
-				<Tabs.Screen
-					name="index"
-					options={{
-						title: t("tabs.journal"),
-						tabBarIcon: ({ color, size }) => (
-							<Icon name="journal" color={color} size={size} />
-						),
-					}}
-				/>
-				<Tabs.Screen
-					name="intake"
-					options={{
-						title: t("tabs.intake"),
-						tabBarIcon: ({ color, size }) => (
-							<Icon name="food" color={color} size={size} />
-						),
-					}}
-				/>
-				<Tabs.Screen
-					name="body"
-					options={{
-						title: t("tabs.body"),
-						tabBarIcon: ({ color, size }) => (
-							<Icon name="body" color={color} size={size} />
-						),
-					}}
-				/>
-				<Tabs.Screen
-					name="life"
-					options={{
-						title: t("tabs.life"),
-						tabBarIcon: ({ color, size }) => (
-							<Icon name="explore" color={color} size={size} />
-						),
-					}}
-				/>
-			</Tabs>
-			{pathname === "/" || pathname === "/intake" || pathname === "/body" ? (
-				<QuickLogFab
-					bottom={TAB_BAR_CONTENT_HEIGHT + insets.bottom + theme.spacing.lg}
-					bodyActive={pathname === "/body"}
-				/>
-			) : null}
+				<NativeTabs.Trigger name="index">
+					<TabIcon name="journal" />
+					<NativeTabs.Trigger.Label>
+						{t("tabs.journal")}
+					</NativeTabs.Trigger.Label>
+				</NativeTabs.Trigger>
+				<NativeTabs.Trigger name="intake">
+					<TabIcon name="food" />
+					<NativeTabs.Trigger.Label>
+						{t("tabs.intake")}
+					</NativeTabs.Trigger.Label>
+				</NativeTabs.Trigger>
+				<NativeTabs.Trigger name="body">
+					<TabIcon name="body" />
+					<NativeTabs.Trigger.Label>{t("tabs.body")}</NativeTabs.Trigger.Label>
+				</NativeTabs.Trigger>
+				<NativeTabs.Trigger name="life">
+					<TabIcon name="explore" />
+					<NativeTabs.Trigger.Label>{t("tabs.life")}</NativeTabs.Trigger.Label>
+				</NativeTabs.Trigger>
+			</NativeTabs>
 		</View>
 	);
 }
@@ -171,5 +171,5 @@ export default function TabLayout() {
 }
 
 const styles = StyleSheet.create((theme) => ({
-	shell: { flex: 1, backgroundColor: theme.colors.background },
+	shell: { flex: 1, backgroundColor: theme.colors.base },
 }));

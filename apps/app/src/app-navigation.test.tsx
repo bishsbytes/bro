@@ -261,7 +261,7 @@ describe("app entry", () => {
 
 		await press(view, "Life");
 		await waitFor(() => expect(router.getPathname()).toBe("/life"));
-		expect(await view.findByText("WHEEL OF LIFE")).toBeTruthy();
+		expect(await view.findByText("Wheel of life")).toBeTruthy();
 		expect(view.getByLabelText("Settings")).toBeTruthy();
 
 		// The journal pane carries the title "Journal" too, so address the tab itself.

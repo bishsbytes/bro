@@ -39,7 +39,7 @@ export function ListRow({
 						{title}
 					</AppText>
 					{value ? (
-						<AppText variant="caption" color="muted">
+						<AppText variant="monoInline" color="muted">
 							{value}
 						</AppText>
 					) : null}
@@ -52,7 +52,7 @@ export function ListRow({
 				{children}
 			</View>
 			{showChevron ? (
-				<Icon name="chevron-right" size={24} color={theme.colors.textSubtle} />
+				<Icon name="chevron-right" size={16} color={theme.colors.textSubtle} />
 			) : null}
 		</TouchableOpacity>
 	);
@@ -64,10 +64,8 @@ const styles = StyleSheet.create((theme) => ({
 		alignItems: "center",
 		gap: theme.spacing.md,
 		padding: theme.spacing.lg,
-		borderWidth: 1,
-		borderColor: theme.colors.line,
-		borderRadius: theme.radius.lg,
-		backgroundColor: theme.colors.surface,
+		borderRadius: theme.radius.control,
+		backgroundColor: theme.colors.surface1,
 	},
 	/**
 	 * The chevron's ink spans 8–16 of its 24px box, so it carries 8px of its own

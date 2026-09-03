@@ -258,7 +258,12 @@ export function WeekStrip({
 								accessibilityState={{ selected, disabled: future }}
 								disabled={future}
 								onPress={() => onSelectDay(localDay)}
-								style={[styles.day, future && styles.futureDay]}
+								style={[
+									styles.day,
+									localDay === todayLocalDay && styles.today,
+									selected && styles.selectedDay,
+									future && styles.futureDay,
+								]}
 							>
 								<AppText
 									variant="micro"
@@ -268,7 +273,7 @@ export function WeekStrip({
 									{presentation?.weekday ?? weekdayLabel(localDay)}
 								</AppText>
 								<AppText
-									variant="label"
+									variant="monoInline"
 									color={selected ? "brand" : "subtle"}
 									style={[
 										localDay === todayLocalDay && styles.todayNumber,
@@ -316,8 +321,6 @@ export function WeekStrip({
 const styles = StyleSheet.create((theme) => ({
 	list: {
 		flexGrow: 0,
-		borderBottomWidth: 1,
-		borderBottomColor: theme.colors.headerBorder,
 		backgroundColor: theme.colors.headerBackground,
 	},
 	week: {
@@ -331,7 +334,10 @@ const styles = StyleSheet.create((theme) => ({
 		alignItems: "center",
 		justifyContent: "center",
 		gap: 2,
+		borderRadius: theme.radius.control,
 	},
+	today: { borderWidth: 1, borderColor: theme.colors.hairlineStrong },
+	selectedDay: { backgroundColor: theme.colors.surface2 },
 	selectedText: { fontWeight: "700" },
 	futureDay: { opacity: theme.opacity.disabled },
 	todayNumber: { fontWeight: "700" },

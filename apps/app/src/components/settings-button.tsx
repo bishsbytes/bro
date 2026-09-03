@@ -25,7 +25,7 @@ export function SettingsButton({
 			<Icon
 				testID="settings-header-icon"
 				name="settings"
-				color={theme.colors.text}
+				color={theme.colors.ink2}
 				size={theme.control.avatarIconSize}
 			/>
 		</TouchableOpacity>

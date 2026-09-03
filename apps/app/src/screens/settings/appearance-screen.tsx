@@ -89,9 +89,7 @@ export function AppearanceScreen() {
 				<AppText color="muted">{t("appearance.accentIntro")}</AppText>
 				<View accessibilityRole="radiogroup" style={styles.accents}>
 					{ACCENT_OPTIONS.map((option) => {
-						const selected =
-							option.hue === settings.accentHue &&
-							option.chroma === settings.accentChroma;
+						const selected = option.hue === settings.accentHue;
 						const preview = createTheme(
 							activeScheme,
 							option.hue,

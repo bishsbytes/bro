@@ -42,8 +42,11 @@ export function MarkdownText({
 		},
 		// The real cuts are loaded, so tell the renderer to set them as they are
 		// instead of slanting and thickening the regular face on top of them.
-		strong: { fontFamily: "SourceSerif4_600SemiBold", fontWeight: "normal" },
-		em: { fontFamily: "SourceSerif4_400Regular_Italic", fontStyle: "normal" },
+		strong: { fontFamily: "InstrumentSerif_400Regular", fontWeight: "normal" },
+		em: {
+			fontFamily: "InstrumentSerif_400Regular_Italic",
+			fontStyle: "normal",
+		},
 		list: {
 			fontFamily: theme.typography.lead.fontFamily,
 			fontSize: theme.typography.lead.fontSize,

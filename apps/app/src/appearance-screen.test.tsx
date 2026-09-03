@@ -16,9 +16,9 @@ const settings: DeviceSettingsSnapshot = {
 	onboardingComplete: true,
 	appLockEnabled: false,
 	appLockTimeoutSeconds: null,
-	themeMode: "system",
-	accentHue: 235,
-	accentChroma: 0.055,
+	themeMode: "dark",
+	accentHue: 212,
+	accentChroma: 0.12,
 	hasStoredRemoteSession: false,
 	lastRemoteUserId: null,
 };
@@ -35,28 +35,28 @@ describe("appearance screen", () => {
 			</DeviceSettingsProvider>,
 		);
 
-		expect(
-			view.getByLabelText("System theme").props.accessibilityState,
-		).toEqual(expect.objectContaining({ selected: true }));
-		expect(
-			view.getByLabelText("Harbour accent").props.accessibilityState,
-		).toEqual(expect.objectContaining({ selected: true }));
-
-		await fireEvent.press(view.getByLabelText("Dark theme"));
-		await waitFor(() =>
-			expect(mockSetAppearance).toHaveBeenLastCalledWith("dark", 235, 0.055),
-		);
 		expect(view.getByLabelText("Dark theme").props.accessibilityState).toEqual(
 			expect.objectContaining({ selected: true }),
 		);
-
-		await fireEvent.press(view.getByLabelText("Moss accent"));
-		await waitFor(() =>
-			expect(mockSetAppearance).toHaveBeenLastCalledWith("dark", 145, 0.055),
-		);
-		expect(view.getByLabelText("Moss accent").props.accessibilityState).toEqual(
+		expect(view.getByLabelText("Ice accent").props.accessibilityState).toEqual(
 			expect.objectContaining({ selected: true }),
 		);
+
+		await fireEvent.press(view.getByLabelText("Light theme"));
+		await waitFor(() =>
+			expect(mockSetAppearance).toHaveBeenLastCalledWith("light", 212, 0.12),
+		);
+		expect(view.getByLabelText("Light theme").props.accessibilityState).toEqual(
+			expect.objectContaining({ selected: true }),
+		);
+
+		await fireEvent.press(view.getByLabelText("Lichen accent"));
+		await waitFor(() =>
+			expect(mockSetAppearance).toHaveBeenLastCalledWith("light", 140, 0.12),
+		);
+		expect(
+			view.getByLabelText("Lichen accent").props.accessibilityState,
+		).toEqual(expect.objectContaining({ selected: true }));
 		expect(globalThis.fetch).not.toHaveBeenCalled();
 	});
 });

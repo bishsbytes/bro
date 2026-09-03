@@ -5,45 +5,41 @@ export const life = {
 		"See where life stands, what you are focusing on, and the practices that move it forward.",
 	wheel: {
 		title: "Your wheel",
-		/**
-		 * Renders in capitals, and {{date}} is upper-cased by the screen. See the
-		 * note on eyebrows in the review catalogue.
-		 */
-		reviewedEyebrow: "REVIEWED {{date}}",
+		reviewedEyebrow: "Reviewed {{date}}",
 		openLatest: "Open latest review",
 		manageAreas: "Manage life areas",
 		emptyTitle: "Take stock of the bigger picture",
-		emptyEyebrow: "WHEEL OF LIFE",
+		emptyEyebrow: "Wheel of life",
 		emptyBody:
 			"Rate the areas of your life, choose where to focus, and create a first snapshot to come back to.",
 		takeStock: "Take stock",
 		dueTitle: "Time to take stock",
-		dueEyebrow: "WHEEL REVIEW",
+		dueEyebrow: "Wheel review",
 		dueBody:
 			"It has been more than five weeks since your last snapshot. See what has moved and choose your next focus.",
 	},
 	focus: {
 		title: "Focus areas",
-		eyebrow: "WHAT MATTERS NOW",
+		eyebrow: "What matters now",
 		/** A wheel score against its scale, e.g. "6/10". */
 		scoreOutOf: "{{value}}/10",
 	},
 	goals: {
-		title: "Goals",
-		eyebrow: "YOUR DIRECTION",
+		title: "Headings",
+		eyebrow: "Your direction",
 		statusActive: "Active",
-		statusAchieved: "Achieved",
-		statusAbandoned: "Stopped",
+		statusAchieved: "Archived",
+		statusAbandoned: "Removed",
 		/** Joins the two fragments below; reorder freely per language. */
 		summary: "{{current}} · {{target}}",
 		currentValue: "Latest {{value}}",
 		currentValueUnknown: "No current value",
-		targetValue: "Target {{value}}",
-		percentComplete: "{{percent}}% of the way",
+		targetValue: "Heading {{value}}",
+		percentComplete: "",
 	},
 	habits: {
 		title: "Habits",
-		eyebrow: "WHAT YOU PRACTISE",
+		eyebrow: "What you practise",
 		rowTitle: "Your habits",
 		manage: "Manage habits",
 		none: "No habits scheduled today",

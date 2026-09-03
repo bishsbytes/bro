@@ -93,7 +93,7 @@ describe("BaselineGauge", () => {
 		const unitStyle = StyleSheet.flatten(
 			view.getByTestId("gauge-unit").props.style as StyleProp<TextStyle>,
 		);
-		expect(unitStyle?.fontSize).toBe(lightTheme.typography.caption.fontSize);
+		expect(unitStyle?.fontSize).toBe(lightTheme.typography.monoInline.fontSize);
 		expect(unitStyle?.fontSize).not.toBe(lightTheme.typography.metric.fontSize);
 	});
 

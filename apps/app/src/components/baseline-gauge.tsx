@@ -78,10 +78,10 @@ export function BaselineGauge({
 					</AppText>
 				) : null}
 			</View>
-			<AppText variant={valueVariant}>
+			<AppText variant={valueVariant === "metric" ? "metric" : "monoReadout"}>
 				{value}
 				{unit ? (
-					<AppText testID="gauge-unit" variant="caption" color="subtle">
+					<AppText testID="gauge-unit" variant="monoInline" color="subtle">
 						{` ${unit}`}
 					</AppText>
 				) : null}
@@ -187,14 +187,14 @@ const styles = StyleSheet.create((theme) => ({
 	rail: {
 		height: RAIL_HEIGHT,
 		marginTop: theme.spacing.xs,
-		borderBottomWidth: 1,
-		borderBottomColor: theme.colors.lineStrong,
+		borderRadius: theme.radius.chip,
+		backgroundColor: theme.colors.hairlineStrong,
 	},
 	tick: {
 		position: "absolute",
-		bottom: 0,
+		bottom: 5,
 		width: 1,
-		height: 6,
+		height: 8,
 		backgroundColor: theme.colors.lineStrong,
 	},
 	band: {
@@ -204,6 +204,7 @@ const styles = StyleSheet.create((theme) => ({
 		opacity: theme.opacity.domainTint,
 		borderLeftWidth: 1,
 		borderRightWidth: 1,
+		borderRadius: theme.radius.chip,
 	},
 	/**
 	 * Three stacked segments rather than a dashed border: a one-pixel dashed edge
@@ -233,6 +234,8 @@ const styles = StyleSheet.create((theme) => ({
 		width: 8,
 		height: 8,
 		transform: [{ rotate: "45deg" }],
+		shadowOpacity: 0.7,
+		shadowRadius: 6,
 	},
 	markerStem: { width: 2, height: RAIL_HEIGHT },
 	scale: {

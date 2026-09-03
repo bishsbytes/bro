@@ -3,7 +3,13 @@ import { Text } from "react-native";
 import { useUnistyles } from "../theme/unistyles";
 
 type TextVariant =
+	| "largeTitle"
 	| "metric"
+	| "monoDial"
+	| "monoReadout"
+	| "monoList"
+	| "monoInline"
+	| "serifQuote"
 	| "display"
 	| "title"
 	| "section"

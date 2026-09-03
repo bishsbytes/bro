@@ -1,5 +1,6 @@
 import { act, fireEvent, render } from "@testing-library/react-native";
 import type { RefObject } from "react";
+import { StyleSheet } from "react-native";
 import type {
 	EnrichedMarkdownTextInputInstance,
 	StyleState,
@@ -69,6 +70,21 @@ describe("MarkdownField", () => {
 		fireEvent.changeText(screen.getByLabelText("Note"), "A thought");
 
 		expect(onChangeMarkdown).toHaveBeenCalledWith("A thought");
+	});
+
+	it("keeps the native editor text visible without a density-unsafe line height", async () => {
+		const screen = await render(
+			<MarkdownField label="Note" onChangeMarkdown={jest.fn()} />,
+		);
+		const style = StyleSheet.flatten(screen.getByLabelText("Note").props.style);
+
+		expect(style).toMatchObject({
+			fontFamily: "InstrumentSerif_400Regular",
+			fontSize: 21,
+			fontWeight: "400",
+			color: expect.stringMatching(/^#/),
+		});
+		expect(style.lineHeight).toBeUndefined();
 	});
 
 	it("opens on the markdown it was given", async () => {

@@ -97,7 +97,11 @@ export function MarkdownField({
 	const inputStyle: TextStyle = {
 		fontFamily: theme.typography.lead.fontFamily,
 		fontSize: theme.typography.lead.fontSize,
-		lineHeight: theme.typography.lead.lineHeight,
+		// The enriched native editor interprets lineHeight as physical pixels on
+		// Android while fontSize is density-scaled. Supplying Helm's 26pt line
+		// height therefore clips the 21pt serif face on high-density screens.
+		// Let the native typeface provide its own readable leading here.
+		fontWeight: "400",
 		color: theme.colors.ink,
 		...(flush
 			? { flex: 1 }
@@ -128,7 +132,18 @@ export function MarkdownField({
 				placeholder={placeholder}
 				placeholderTextColor={theme.colors.ink3}
 				autoFocus={autoFocus}
-				markdownStyle={{ list: { itemSpacing: theme.spacing.xs } }}
+				markdownStyle={{
+					strong: { color: theme.colors.ink },
+					em: { color: theme.colors.ink },
+					link: { color: theme.colors.accent },
+					h1: { color: theme.colors.ink },
+					h2: { color: theme.colors.ink },
+					h3: { color: theme.colors.ink },
+					h4: { color: theme.colors.ink },
+					h5: { color: theme.colors.ink },
+					h6: { color: theme.colors.ink },
+					list: { itemSpacing: theme.spacing.xs },
+				}}
 				cursorColor={theme.colors.accent}
 				selectionColor={theme.colors.accentTint}
 				onFocus={() => setFocused(true)}

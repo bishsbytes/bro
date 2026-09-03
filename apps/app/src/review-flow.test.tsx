@@ -97,7 +97,7 @@ describe("wheel-of-life review flow", () => {
 		expect(firstRun.getByText("Focus")).toBeTruthy();
 
 		await fireEvent.press(firstRun.getByText("Read “A clearer working week”"));
-		expect(await firstRun.findByText("DAY 1")).toBeTruthy();
+		expect(await firstRun.findByText("Day 1")).toBeTruthy();
 		expect(firstRun.getByText("Name what matters")).toBeTruthy();
 		await fireEvent.press(firstRun.getByText("Back to my wheel"));
 
@@ -125,13 +125,13 @@ describe("wheel-of-life review flow", () => {
 		await act(async () => expoRouter.back());
 
 		await fireEvent.press(
-			await firstRun.findByText("Set a goal for Work & career"),
+			await firstRun.findByText("Set a heading for Work & career"),
 		);
 		expect(
 			await firstRun.findByText("Your current wheel score is 6/10."),
 		).toBeTruthy();
-		await fireEvent.changeText(firstRun.getByLabelText("Target score"), "8");
-		await fireEvent.press(firstRun.getByLabelText("Target date (optional)"));
+		await fireEvent.changeText(firstRun.getByLabelText("Heading"), "8");
+		await fireEvent.press(firstRun.getByLabelText("By (optional)"));
 		await fireEvent(
 			firstRun.getByTestId("date-picker"),
 			"valueChange",
@@ -139,11 +139,11 @@ describe("wheel-of-life review flow", () => {
 			new Date(2026, 11, 1, 12),
 		);
 		await fireEvent.press(firstRun.getByText("Done"));
-		await fireEvent.press(firstRun.getByText("Save goal"));
+		await fireEvent.press(firstRun.getByText("Save heading"));
 		expect(
-			await firstRun.findByText("Started at 6/10 · Latest 6/10 · Target 8/10"),
+			await firstRun.findByText("Started at 6/10 · Latest 6/10 · Heading 8/10"),
 		).toBeTruthy();
-		expect(firstRun.getByText("Target date 2026-12-01")).toBeTruthy();
+		expect(firstRun.getByText("By 2026-12-01")).toBeTruthy();
 		expect(globalThis.fetch).not.toHaveBeenCalled();
 
 		firstRun.unmount();
@@ -154,10 +154,10 @@ describe("wheel-of-life review flow", () => {
 		expect(await secondRun.findByText("8 life areas")).toBeTruthy();
 		expect(secondRun.getAllByLabelText(/^Open review /)).toHaveLength(1);
 		expect(
-			secondRun.getByText("Started at 6/10 · Latest 6/10 · Target 8/10"),
+			secondRun.getByText("Started at 6/10 · Latest 6/10 · Heading 8/10"),
 		).toBeTruthy();
-		await fireEvent.press(secondRun.getByText("Mark Work & career achieved"));
-		expect(await secondRun.findByText("Achieved")).toBeTruthy();
+		await fireEvent.press(secondRun.getByText("Archive Work & career heading"));
+		expect(await secondRun.findByText("Archived")).toBeTruthy();
 
 		await fireEvent.press(
 			secondRun.getByRole("button", { name: "Take stock" }),

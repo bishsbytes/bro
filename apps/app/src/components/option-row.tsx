@@ -54,7 +54,7 @@ export function OptionRow({
 				<View style={[styles.icon, selected && styles.selectedIcon]}>
 					<Icon
 						name={icon}
-						size={22}
+						size={20}
 						color={selected ? theme.colors.brand : theme.colors.textMuted}
 					/>
 				</View>
@@ -71,7 +71,7 @@ export function OptionRow({
 			</View>
 			<Icon
 				name={selected ? mark.on : mark.off}
-				size={22}
+				size={20}
 				color={selected ? theme.colors.brand : theme.colors.border}
 			/>
 		</TouchableOpacity>
@@ -85,13 +85,11 @@ const styles = StyleSheet.create((theme) => ({
 		alignItems: "center",
 		gap: theme.spacing.md,
 		padding: theme.spacing.md,
-		borderRadius: theme.radius.sm,
-		borderWidth: 1,
-		borderColor: theme.colors.lineStrong,
+		borderRadius: theme.radius.control,
+		backgroundColor: theme.colors.surface2,
 	},
 	selectedOption: {
-		borderColor: theme.colors.accent,
-		backgroundColor: theme.colors.accentTint,
+		backgroundColor: theme.colors.accentDeep,
 	},
 	disabled: { opacity: theme.opacity.disabled },
 	icon: {
@@ -99,10 +97,10 @@ const styles = StyleSheet.create((theme) => ({
 		height: 40,
 		alignItems: "center",
 		justifyContent: "center",
-		borderRadius: theme.radius.md,
-		backgroundColor: theme.colors.background,
+		borderRadius: theme.radius.control,
+		backgroundColor: theme.colors.surface3,
 	},
-	selectedIcon: { backgroundColor: theme.colors.surface },
+	selectedIcon: { backgroundColor: theme.colors.surface1 },
 	copy: { flex: 1 },
 	label: { fontWeight: "600" },
 }));

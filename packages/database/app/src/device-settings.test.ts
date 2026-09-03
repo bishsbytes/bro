@@ -41,9 +41,9 @@ describe("device-local settings", () => {
 			onboardingComplete: false,
 			appLockEnabled: false,
 			appLockTimeoutSeconds: null,
-			themeMode: "system",
-			accentHue: 235,
-			accentChroma: 0.055,
+			themeMode: "dark",
+			accentHue: 212,
+			accentChroma: 0.12,
 			hasStoredRemoteSession: false,
 			lastRemoteUserId: null,
 		});
@@ -95,7 +95,7 @@ describe("device-local settings", () => {
 			appLockTimeoutSeconds: 120,
 			themeMode: "dark",
 			accentHue: 145,
-			accentChroma: 0.055,
+			accentChroma: 0.12,
 			hasStoredRemoteSession: true,
 			lastRemoteUserId: "user-a",
 		});
@@ -116,7 +116,7 @@ describe("device-local settings", () => {
 
 	it("refuses settings written by a newer app version", () => {
 		const seed = new mockSqlite.SQLiteStorage("bro-device.db");
-		seed.setItemSync("schemaVersion", "3");
+		seed.setItemSync("schemaVersion", "4");
 		seed.setItemSync("installationId", "from-the-future");
 		seed.closeSync();
 
@@ -127,7 +127,7 @@ describe("device-local settings", () => {
 		);
 	});
 
-	it("migrates a version-one named accent to its Baseline hue", () => {
+	it("migrates a version-one named accent to its Helm hue", () => {
 		const seed = new mockSqlite.SQLiteStorage("bro-device.db");
 		seed.setItemSync("schemaVersion", "1");
 		seed.setItemSync("installationId", "install-1");
@@ -140,7 +140,7 @@ describe("device-local settings", () => {
 		expect(deviceSettings.readDeviceSettings()).toMatchObject({
 			themeMode: "dark",
 			accentHue: 145,
-			accentChroma: 0.055,
+			accentChroma: 0.12,
 		});
 	});
 
@@ -156,9 +156,9 @@ describe("device-local settings", () => {
 		const deviceSettings = relaunch();
 
 		expect(deviceSettings.readDeviceSettings()).toMatchObject({
-			themeMode: "system",
-			accentHue: 235,
-			accentChroma: 0.055,
+			themeMode: "dark",
+			accentHue: 212,
+			accentChroma: 0.12,
 		});
 	});
 });

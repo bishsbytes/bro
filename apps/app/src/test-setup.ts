@@ -5,6 +5,108 @@ globalThis.fetch = jest.fn(async () => {
 
 require("react-native-gesture-handler/jestSetup");
 
+// Skia owns the dial and tailor's-figure drawing surface. Unit tests exercise
+// the surrounding labels and interactions, so use host views while keeping the
+// path-building API available to render those components without CanvasKit.
+jest.mock("@shopify/react-native-skia", () => {
+	const React = jest.requireActual<typeof import("react")>("react");
+	const { View } =
+		jest.requireActual<typeof import("react-native")>("react-native");
+	const Primitive = ({ children, ...props }: Record<string, unknown>) =>
+		React.createElement(
+			View,
+			props as unknown as React.ComponentProps<typeof View>,
+			children as React.ReactNode,
+		);
+	const path = {
+		addArc: jest.fn(),
+		moveTo: jest.fn(),
+		lineTo: jest.fn(),
+		cubicTo: jest.fn(),
+		close: jest.fn(),
+	};
+
+	return {
+		BlurMask: Primitive,
+		Canvas: Primitive,
+		Circle: Primitive,
+		DashPathEffect: Primitive,
+		Group: Primitive,
+		Line: Primitive,
+		Path: Primitive,
+		Skia: {
+			Path: { Make: jest.fn(() => ({ ...path })) },
+			XYWHRect: jest.fn((x, y, width, height) => ({ x, y, width, height })),
+		},
+		vec: jest.fn((x, y) => ({ x, y })),
+	};
+});
+
+// Expo Router's native tabs require a mounted iOS/Android tab controller. Its
+// test router is intentionally platform-neutral, so adapt the declarative
+// NativeTabs API to the stable JS Tabs navigator for integration tests.
+jest.mock("expo-router/unstable-native-tabs", () => {
+	const React = jest.requireActual<typeof import("react")>("react");
+	const expoRouter =
+		jest.requireActual<typeof import("expo-router")>("expo-router");
+	const labels: Record<string, string> = {
+		index: "Journal",
+		intake: "Intake",
+		body: "Body",
+		life: "Life",
+	};
+	const Trigger = Object.assign(() => null, {
+		Badge: () => null,
+		Icon: () => null,
+		Label: () => null,
+		VectorIcon: () => null,
+	});
+	const NativeTabs = Object.assign(
+		({
+			children,
+			iconColor,
+			screenListeners,
+		}: {
+			children?: React.ReactNode;
+			iconColor?: { default?: string; selected?: string };
+			screenListeners?: React.ComponentProps<
+				typeof expoRouter.Tabs
+			>["screenListeners"];
+		}) => {
+			const screens = React.Children.toArray(children).flatMap((child) => {
+				if (
+					!React.isValidElement<{ name?: string }>(child) ||
+					!child.props.name
+				) {
+					return [];
+				}
+				const name = child.props.name;
+				return [
+					React.createElement(expoRouter.Tabs.Screen, {
+						key: name,
+						name,
+						options: { title: labels[name] ?? name },
+					}),
+				];
+			});
+			return React.createElement(
+				expoRouter.Tabs,
+				{
+					screenListeners,
+					screenOptions: {
+						tabBarActiveTintColor: iconColor?.selected,
+						tabBarInactiveTintColor: iconColor?.default,
+					},
+				},
+				screens,
+			);
+		},
+		{ Trigger },
+	);
+
+	return { NativeTabs };
+});
+
 // Keep Reanimated/native gestures outside Jest while preserving the public
 // close behavior and backdrop configuration exercised by ModalSheet tests.
 jest.mock("@gorhom/bottom-sheet", () => {

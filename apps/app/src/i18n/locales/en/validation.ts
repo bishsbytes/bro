@@ -21,10 +21,10 @@ export const validation = {
 		recentNotFound: "Recent entry not found.",
 		/** {{stream}} is a stream name, e.g. "Smoking & vaping". */
 		streamOff: "Turn on {{stream}} in intake settings before logging it.",
-		logBeforeGoal: "Log something before setting a goal.",
+		logBeforeGoal: "Log something before setting a heading.",
 		unknownMetric: "Unknown total: {{slug}}",
-		targetSameAsLatest: "Choose a target different from your latest total.",
-		activeGoalExists: "Finish the active goal before creating another.",
+		targetSameAsLatest: "Choose a heading different from your latest total.",
+		activeGoalExists: "Remove the active heading before creating another.",
 		abvMaximum: "ABV must not exceed 100%.",
 		volumeWithAbv: "Enter a volume when entering an ABV.",
 		needsOneValue: "Enter at least one value.",
@@ -39,10 +39,10 @@ export const validation = {
 		valueRange: "Measurement values must be finite and non-negative.",
 		fractionRange: "Fraction measurements must be between zero and one.",
 		observationNotFound: "Measurement observation not found.",
-		logBeforeGoal: "Log a measurement before setting a goal.",
+		logBeforeGoal: "Log a measurement before setting a heading.",
 		targetSameAsLatest:
-			"Choose a target different from your latest measurement.",
-		activeGoalExists: "Finish the active goal before creating another.",
+			"Choose a heading different from your latest measurement.",
+		activeGoalExists: "Remove the active heading before creating another.",
 	},
 	review: {
 		rateEveryArea: "Rate every displayed life area before saving.",
@@ -50,9 +50,9 @@ export const validation = {
 		scoreRange: "{{area}} must be a whole number from 1 to 10.",
 		focusLimit: "Choose no more than three unique focus areas from this wheel.",
 		enableAnArea: "Enable at least one life area before taking stock.",
-		goalFromFocusArea: "Goals can only be created from a saved focus area.",
-		targetRange: "Choose a whole-number target from 1 to 10.",
-		targetSameAsCurrent: "Choose a target different from your current score.",
+		goalFromFocusArea: "Headings can only be created from a saved focus area.",
+		targetRange: "Choose a whole-number heading from 1 to 10.",
+		targetSameAsCurrent: "Choose a heading different from your current score.",
 	},
 	habits: {
 		/** A programming fault rather than something a person can cause. */

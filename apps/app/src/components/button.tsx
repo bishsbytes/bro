@@ -72,15 +72,15 @@ const styles = StyleSheet.create((theme) => ({
 		minHeight: theme.control.buttonMinHeight,
 		alignItems: "center",
 		justifyContent: "center",
-		borderRadius: theme.radius.md,
+		borderRadius: 14,
 		paddingHorizontal: theme.spacing.lg,
 		paddingVertical: theme.spacing.md,
 	},
 	primary: { backgroundColor: theme.colors.accent },
 	secondary: {
 		borderWidth: 1,
-		borderColor: theme.colors.lineStrong,
-		backgroundColor: "transparent",
+		borderColor: theme.colors.hairlineStrong,
+		backgroundColor: theme.colors.surface2,
 	},
 	danger: {
 		borderWidth: 1,

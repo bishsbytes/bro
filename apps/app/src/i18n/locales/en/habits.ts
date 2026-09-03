@@ -57,7 +57,7 @@ export const habits = {
 		notFound: "Habit not found",
 		notFoundBody: "This habit is no longer available.",
 		/** Renders in capitals; see the note on eyebrows in the review catalogue. */
-		eyebrow: "LAST 8 WEEKS",
+		eyebrow: "Last 8 weeks",
 		intro:
 			"A descriptive record of scheduled days. Missing metric data is kept separate from a missed habit.",
 		/** Screen-reader label for one day in the grid. */

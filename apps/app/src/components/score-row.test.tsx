@@ -35,7 +35,7 @@ describe("ScoreRow", () => {
 		expect(onSelect).toHaveBeenCalledWith(4);
 	});
 
-	it("renders the word and height encoded Baseline mood scale", async () => {
+	it("renders the word and height encoded Helm mood scale", async () => {
 		const view = await render(
 			<ScoreRow
 				accessibilityPrefix="Mood"

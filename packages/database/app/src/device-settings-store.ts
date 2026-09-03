@@ -3,12 +3,13 @@ export const DEVICE_SETTINGS_DATABASE_NAME = "bro-device.db";
 const THEME_MODES = ["system", "light", "dark"] as const;
 export type ThemeMode = (typeof THEME_MODES)[number];
 
-export const DEFAULT_ACCENT_HUE = 235;
-export const DEFAULT_ACCENT_CHROMA = 0.055;
-export const GRAPHITE_ACCENT_CHROMA = 0.006;
+export const DEFAULT_ACCENT_HUE = 212;
+export const DEFAULT_ACCENT_CHROMA = 0.12;
+/** @deprecated Helm has one fixed chroma; retained for API compatibility. */
+export const GRAPHITE_ACCENT_CHROMA = DEFAULT_ACCENT_CHROMA;
 
 const LEGACY_ACCENTS = {
-	neutral: { hue: 250, chroma: GRAPHITE_ACCENT_CHROMA },
+	neutral: { hue: 212, chroma: DEFAULT_ACCENT_CHROMA },
 	emerald: { hue: 145, chroma: DEFAULT_ACCENT_CHROMA },
 	sky: { hue: 235, chroma: DEFAULT_ACCENT_CHROMA },
 	rose: { hue: 318, chroma: DEFAULT_ACCENT_CHROMA },
@@ -22,10 +23,8 @@ export function normalizeAccentHue(value: unknown): number {
 	return ((Math.round(hue) % 360) + 360) % 360;
 }
 
-function normalizeAccentChroma(value: unknown): number {
-	return Number(value) === GRAPHITE_ACCENT_CHROMA
-		? GRAPHITE_ACCENT_CHROMA
-		: DEFAULT_ACCENT_CHROMA;
+function normalizeAccentChroma(_value: unknown): number {
+	return DEFAULT_ACCENT_CHROMA;
 }
 
 /**
@@ -46,7 +45,7 @@ export type DeviceSettingsSnapshot = {
 	themeMode: ThemeMode;
 	/** User-owned hue. Derived accent colours are never persisted. */
 	accentHue: number;
-	/** Only Graphite differs from the system chroma. */
+	/** Compatibility field; Helm fixes chroma system-wide and persists only hue. */
 	accentChroma: number;
 	/** Lets startup skip all session work for a user who has never registered. */
 	hasStoredRemoteSession: boolean;
@@ -69,7 +68,7 @@ export const DEVICE_SETTINGS_KEYS = {
 	lastRemoteUserId: "lastRemoteUserId",
 } as const;
 
-const SCHEMA_VERSION = 2;
+const SCHEMA_VERSION = 3;
 
 /**
  * The only things a platform has to supply. Everything above this line — the
@@ -168,7 +167,7 @@ export function createDeviceSettings(
 
 		if ((storedVersion ?? 1) < SCHEMA_VERSION) {
 			backend.setItem(DEVICE_SETTINGS_KEYS.accentHue, String(accentHue));
-			backend.setItem(DEVICE_SETTINGS_KEYS.accentChroma, String(accentChroma));
+			backend.removeItem(DEVICE_SETTINGS_KEYS.accentChroma);
 			backend.removeItem(DEVICE_SETTINGS_KEYS.accentColor);
 			backend.setItem(
 				DEVICE_SETTINGS_KEYS.schemaVersion,
@@ -186,7 +185,7 @@ export function createDeviceSettings(
 			themeMode: readChoice(
 				DEVICE_SETTINGS_KEYS.themeMode,
 				THEME_MODES,
-				"system",
+				"dark",
 			),
 			accentHue,
 			accentChroma,
@@ -224,16 +223,13 @@ export function createDeviceSettings(
 			);
 		},
 
-		setAppearance(themeMode, accentHue, accentChroma = DEFAULT_ACCENT_CHROMA) {
+		setAppearance(themeMode, accentHue, _accentChroma = DEFAULT_ACCENT_CHROMA) {
 			backend.setItem(DEVICE_SETTINGS_KEYS.themeMode, themeMode);
 			backend.setItem(
 				DEVICE_SETTINGS_KEYS.accentHue,
 				String(normalizeAccentHue(accentHue)),
 			);
-			backend.setItem(
-				DEVICE_SETTINGS_KEYS.accentChroma,
-				String(normalizeAccentChroma(accentChroma)),
-			);
+			backend.removeItem(DEVICE_SETTINGS_KEYS.accentChroma);
 		},
 
 		setRemoteSessionMarker(hasStoredRemoteSession, lastRemoteUserId) {

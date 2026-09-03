@@ -235,15 +235,6 @@ export function CheckInScreen({
 		if (done) void commit();
 	}, [done, commit]);
 
-	// Leaving early still keeps what was answered. The explicit paths above
-	// report their own failures; this one is the net under a swipe back.
-	useEffect(
-		() => () => {
-			void commit();
-		},
-		[commit],
-	);
-
 	function answer(slug: string, value: number) {
 		playSelectionHaptic();
 		setValues((current) => ({ ...current, [slug]: value }));

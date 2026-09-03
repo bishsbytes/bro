@@ -5,17 +5,17 @@ export const review = {
 	scoreUnset: "—",
 	backToReviews: "Back to reviews",
 	goals: {
-		title: "Goals",
+		title: "Headings",
 		/**
 		 * Eyebrows render in capitals as a typographic convention, and the
 		 * heading's letter spacing is tuned for it. Languages that do not case
 		 * this way should use their natural form.
 		 */
-		eyebrow: "WHAT YOU'RE WORKING ON",
+		eyebrow: "Your direction",
 		status: {
 			active: "Active",
-			achieved: "Achieved",
-			abandoned: "Stopped",
+			achieved: "Archived",
+			abandoned: "Removed",
 		},
 		/** Joins the three fragments below. Reorder them freely per language. */
 		summary: "{{start}} · {{current}} · {{target}}",
@@ -23,17 +23,17 @@ export const review = {
 		startValueUnknown: "No starting value",
 		currentValue: "Latest {{value}}",
 		currentValueUnknown: "No current value",
-		targetValue: "Target {{value}}",
-		targetDate: "Target date {{date}}",
-		targetReached: "Target reached — mark it achieved?",
-		percentComplete: "{{percent}}% of the way",
+		targetValue: "Heading {{value}}",
+		targetDate: "By {{date}}",
+		targetReached: "",
+		percentComplete: "",
 		/** {{goal}} is the goal's own label, e.g. "Work & career". */
-		achieve: "Mark {{goal}} achieved",
-		abandon: "Stop {{goal}} goal",
+		achieve: "Archive {{goal}} heading",
+		abandon: "Remove {{goal}} heading",
 	},
 	history: {
 		title: "Review history",
-		eyebrow: "WHEEL OF LIFE",
+		eyebrow: "Wheel of life",
 		takeStock: "Take stock",
 		loadFailed: "Reviews could not be loaded",
 		emptyTitle: "No reviews yet",
@@ -82,12 +82,12 @@ export const review = {
 		notFound: "Focus area not found",
 		notFoundBody: "This area is not part of the saved review focus.",
 		currentScore: "Your current wheel score is {{score}}.",
-		targetScore: "Target score",
+		targetScore: "Heading",
 		targetScorePlaceholder: "1–10",
-		targetDate: "Target date (optional)",
+		targetDate: "By (optional)",
 		/** Shown in the empty field; mirrors the format the input accepts. */
 		targetDatePlaceholder: "YYYY-MM-DD",
-		save: "Save goal",
+		save: "Save heading",
 		progressNote:
 			"Progress comes from future wheel scores; there is nothing extra to log.",
 	},
@@ -104,7 +104,7 @@ export const review = {
 		delta: "{{delta}} from {{previous}}",
 		previousLabel: "Previously “{{label}}”",
 		notPreviouslyRated: "Not rated in your previous review",
-		setGoal: "Set a goal for {{area}}",
+		setGoal: "Set a heading for {{area}}",
 		readChallenge: "Read “{{title}}”",
 		addHabit: "Add habit “{{label}}”",
 		firstSnapshot:

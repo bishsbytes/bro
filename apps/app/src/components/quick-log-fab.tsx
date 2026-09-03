@@ -17,13 +17,21 @@ type QuickLogPage = "options" | "body";
 
 type QuickLogActionProps = {
 	icon: IconName;
+	domain: "mind" | "body" | "load";
 	title: string;
 	detail: string;
 	onPress: () => void;
 };
 
-function QuickLogAction({ icon, title, detail, onPress }: QuickLogActionProps) {
+function QuickLogAction({
+	icon,
+	domain,
+	title,
+	detail,
+	onPress,
+}: QuickLogActionProps) {
 	const { theme } = useUnistyles();
+	const domainColor = theme.colors[domain];
 
 	return (
 		<TouchableOpacity
@@ -33,8 +41,13 @@ function QuickLogAction({ icon, title, detail, onPress }: QuickLogActionProps) {
 			style={styles.actionRow}
 			onPress={onPress}
 		>
-			<View style={styles.actionIcon}>
-				<Icon name={icon} color={theme.colors.brand} size={24} />
+			<View
+				style={[
+					styles.actionIcon,
+					{ backgroundColor: theme.tint(domainColor) },
+				]}
+			>
+				<Icon name={icon} color={domainColor} size={20} />
 			</View>
 			<View style={styles.actionCopy}>
 				<AppText variant="label" style={styles.actionTitle}>
@@ -44,7 +57,7 @@ function QuickLogAction({ icon, title, detail, onPress }: QuickLogActionProps) {
 					{detail}
 				</AppText>
 			</View>
-			<Icon name="chevron-right" color={theme.colors.textSubtle} size={24} />
+			<Icon name="chevron-right" color={theme.colors.textSubtle} size={16} />
 		</TouchableOpacity>
 	);
 }
@@ -55,11 +68,10 @@ export function intakeLogHref(kind: ConsumableKind): Href {
 }
 
 export function QuickLogFab({
-	bottom,
 	bodyActive = false,
 	enabledKinds = enabledIntakeKinds,
 }: {
-	bottom: number;
+	bottom?: number;
 	bodyActive?: boolean;
 	enabledKinds?: () => Promise<ConsumableKind[]>;
 }) {
@@ -115,11 +127,11 @@ export function QuickLogFab({
 			<TouchableOpacity
 				accessibilityRole="button"
 				accessibilityLabel={t("quickLog.open")}
-				activeOpacity={0.82}
-				style={[styles.fab, { bottom }]}
+				activeOpacity={0.72}
+				style={styles.trigger}
 				onPress={openSheet}
 			>
-				<Icon name="add" color={theme.colors.onBrand} size={28} />
+				<Icon name="add" color={theme.colors.ink2} size={20} />
 			</TouchableOpacity>
 
 			<ModalSheet
@@ -137,24 +149,28 @@ export function QuickLogFab({
 						<View style={styles.actions}>
 							<QuickLogAction
 								icon="note"
+								domain="mind"
 								title={t("quickLog.note")}
 								detail={t("quickLog.noteDetail")}
 								onPress={() => choose("/notes/new")}
 							/>
 							<QuickLogAction
 								icon="food"
+								domain="body"
 								title={t("quickLog.food")}
 								detail={t("quickLog.foodDetail")}
 								onPress={() => choose(intakeLogHref("food"))}
 							/>
 							<QuickLogAction
 								icon="drink"
+								domain="load"
 								title={t("quickLog.drink")}
 								detail={t("quickLog.drinkDetail")}
 								onPress={() => choose(intakeLogHref("drink"))}
 							/>
 							<QuickLogAction
 								icon="body"
+								domain="body"
 								title={t("quickLog.body")}
 								detail={t("quickLog.bodyDetail")}
 								onPress={chooseBody}
@@ -163,6 +179,7 @@ export function QuickLogFab({
 								<QuickLogAction
 									key={kind}
 									icon="drink"
+									domain="load"
 									title={t(`quickLog.${kind}`)}
 									detail={t(`quickLog.${kind}Detail`)}
 									onPress={() => choose(intakeLogHref(kind))}
@@ -170,6 +187,7 @@ export function QuickLogFab({
 							))}
 							<QuickLogAction
 								icon="check-in"
+								domain="mind"
 								title={t("quickLog.checkIn")}
 								detail={t("quickLog.checkInDetail")}
 								onPress={() => choose("/check-in")}
@@ -190,16 +208,13 @@ export function QuickLogFab({
 }
 
 const styles = StyleSheet.create((theme) => ({
-	fab: {
-		position: "absolute",
-		right: theme.spacing.lg,
-		zIndex: 10,
-		width: 56,
-		height: 56,
+	trigger: {
+		width: theme.control.buttonMinHeight,
+		height: theme.control.buttonMinHeight,
 		alignItems: "center",
 		justifyContent: "center",
 		borderRadius: theme.radius.pill,
-		backgroundColor: theme.colors.brand,
+		backgroundColor: "transparent",
 	},
 	actions: { gap: theme.spacing.sm },
 	loading: { alignItems: "center", gap: theme.spacing.md },
@@ -210,15 +225,14 @@ const styles = StyleSheet.create((theme) => ({
 		gap: theme.spacing.md,
 		padding: theme.spacing.md,
 		borderRadius: theme.radius.md,
-		backgroundColor: theme.colors.surface,
+		backgroundColor: theme.colors.surface1,
 	},
 	actionIcon: {
 		width: 44,
 		height: 44,
 		alignItems: "center",
 		justifyContent: "center",
-		borderRadius: theme.radius.pill,
-		backgroundColor: theme.colors.selected,
+		borderRadius: theme.radius.control,
 	},
 	actionCopy: { flex: 1, gap: theme.spacing.xs },
 	actionTitle: { fontWeight: "700" },

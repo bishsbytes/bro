@@ -79,7 +79,7 @@ describe("design tokens", () => {
 		expect(darkTheme.colors.background).not.toBe(darkTheme.colors.surface);
 	});
 
-	it("meets Baseline text contrast in both schemes and every accent", () => {
+	it("meets Helm text contrast in both schemes and every accent", () => {
 		for (const scheme of ["light", "dark"] as const) {
 			for (const option of ACCENT_OPTIONS) {
 				const theme = createTheme(scheme, option.hue, option.chroma);

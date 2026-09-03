@@ -113,7 +113,7 @@ export function LifeScreen({ reviewStore, habitsStore, now }: LifeScreenProps) {
 					<SectionHeader
 						title={t("wheel.title")}
 						eyebrow={t("wheel.reviewedEyebrow", {
-							date: formatReviewDate(completedAt).toLocaleUpperCase(),
+							date: formatReviewDate(completedAt),
 						})}
 					/>
 					{latest.scores.length >= 3 ? (
@@ -217,14 +217,6 @@ export function LifeScreen({ reviewStore, habitsStore, now }: LifeScreenProps) {
 									}),
 								})}
 							</AppText>
-							{progress.status === "active" &&
-							progress.progressPercent !== null ? (
-								<AppText variant="caption" color="brand">
-									{t("goals.percentComplete", {
-										percent: progress.progressPercent,
-									})}
-								</AppText>
-							) : null}
 						</Card>
 					))}
 				</View>

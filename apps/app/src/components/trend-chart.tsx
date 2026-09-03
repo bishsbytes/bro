@@ -1,7 +1,17 @@
 import type { MeasurementSlug } from "@bro/domain/metric-registry";
 import type { TrendSeries } from "@bro/logic";
+import { Fragment } from "react";
 import { useTranslation } from "react-i18next";
-import Svg, { Circle, Line, Polyline } from "react-native-svg";
+import Svg, {
+	Circle,
+	Defs,
+	Line,
+	LinearGradient,
+	Pattern,
+	Polygon,
+	Polyline,
+	Stop,
+} from "react-native-svg";
 import { useUnistyles } from "../theme/unistyles";
 
 export type DataDomain = "mind" | "body" | "sleep" | "load";
@@ -14,8 +24,8 @@ export type DataDomain = "mind" | "body" | "sleep" | "load";
  */
 const STATED_DOMAINS: Partial<Record<MeasurementSlug, DataDomain>> = {
 	sleep_duration: "sleep",
-	steps: "load",
-	resting_heart_rate: "load",
+	steps: "body",
+	resting_heart_rate: "body",
 };
 
 export function dataDomainForMetric(metricSlug: string): DataDomain {
@@ -48,6 +58,7 @@ export function TrendChart({
 	const { t } = useTranslation("common");
 	const dataColor =
 		theme.colors[domain ?? dataDomainForMetric(series.metricSlug)];
+	const finalMarker = series.markers.at(-1);
 	return (
 		<Svg
 			accessibilityLabel={t("a11y.trendChart", { metric: series.metricSlug })}
@@ -55,29 +66,76 @@ export function TrendChart({
 			height={height}
 			width="100%"
 		>
-			<Line x1="0" y1="10" x2="300" y2="10" stroke={theme.colors.border} />
-			<Line x1="0" y1="60" x2="300" y2="60" stroke={theme.colors.border} />
-			<Line x1="0" y1="110" x2="300" y2="110" stroke={theme.colors.border} />
+			<Defs>
+				<LinearGradient id="terrain-fade" x1="0" y1="0" x2="0" y2="1">
+					<Stop offset="0" stopColor={dataColor} stopOpacity="0.35" />
+					<Stop offset="1" stopColor={dataColor} stopOpacity="0" />
+				</LinearGradient>
+				<Pattern
+					id="terrain-hatch"
+					width="6"
+					height="6"
+					patternUnits="userSpaceOnUse"
+					patternTransform="rotate(-20)"
+				>
+					<Line
+						x1="0"
+						y1="0"
+						x2="0"
+						y2="6"
+						stroke={dataColor}
+						strokeOpacity="0.22"
+						strokeWidth="1"
+					/>
+				</Pattern>
+			</Defs>
+			<Line
+				x1="0"
+				y1="60"
+				x2="300"
+				y2="60"
+				stroke={theme.colors.surface3}
+				strokeWidth="18"
+				strokeOpacity="0.8"
+			/>
 			{series.segments.map((points) => (
-				<Polyline
-					key={points}
-					points={points}
-					fill="none"
-					stroke={dataColor}
-					strokeWidth="4"
-					strokeLinecap="round"
-					strokeLinejoin="round"
-				/>
+				<Fragment key={points}>
+					<Polygon
+						points={`${points} 300,110 0,110`}
+						fill="url(#terrain-fade)"
+					/>
+					<Polygon
+						points={`${points} 300,110 0,110`}
+						fill="url(#terrain-hatch)"
+					/>
+					<Polyline
+						points={points}
+						fill="none"
+						stroke={dataColor}
+						strokeOpacity="0.22"
+						strokeWidth="8"
+						strokeLinecap="round"
+						strokeLinejoin="round"
+					/>
+					<Polyline
+						points={points}
+						fill="none"
+						stroke={dataColor}
+						strokeWidth="2"
+						strokeLinecap="round"
+						strokeLinejoin="round"
+					/>
+				</Fragment>
 			))}
-			{series.markers.map((marker) => (
+			{finalMarker ? (
 				<Circle
-					key={marker.localDay}
-					cx={marker.x}
-					cy={marker.y}
+					key={finalMarker.localDay}
+					cx={finalMarker.x}
+					cy={finalMarker.y}
 					r="4"
 					fill={dataColor}
 				/>
-			))}
+			) : null}
 		</Svg>
 	);
 }

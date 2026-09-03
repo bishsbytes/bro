@@ -501,7 +501,7 @@ describe("home screen", () => {
 		expect(await screen.findByText("Mood 2 · Energy 3")).toBeTruthy();
 		expect(screen.getByText("Resting heart rate")).toBeTruthy();
 		expect(screen.getByText("55 bpm")).toBeTruthy();
-		expect(screen.getByText("↑ 10%")).toBeTruthy();
+		expect(screen.queryByText("↑ 10%")).toBeNull();
 		expect(screen.getByText("5 bpm higher than previous day")).toBeTruthy();
 		expect(screen.queryByText("Morning")).toBeNull();
 		expect(screen.getByText("Edit this day")).toBeTruthy();

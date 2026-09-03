@@ -1,6 +1,15 @@
 import type { TapeSiteSlug } from "@bro/domain/metric-registry";
+import {
+	BlurMask,
+	Canvas,
+	Circle,
+	DashPathEffect,
+	Group,
+	Line,
+	Path,
+	vec,
+} from "@shopify/react-native-skia";
 import { Pressable, View } from "react-native";
-import Svg, { Circle, G, Line, Path } from "react-native-svg";
 import { AppText } from "../../components/app-text";
 import { StyleSheet, useUnistyles } from "../../theme/unistyles";
 
@@ -69,63 +78,65 @@ export function TapeFigure({ sites, selectedSlug, onSelect }: TapeFigureProps) {
 
 	return (
 		<View style={styles.figure}>
-			<Svg
-				accessible={false}
-				width={VIEW_WIDTH * SCALE}
-				height={FIGURE_HEIGHT}
-				viewBox={`0 0 ${VIEW_WIDTH} ${VIEW_HEIGHT}`}
-			>
-				<G
-					fill="none"
-					stroke={theme.colors.lineStrong}
+			<Canvas style={{ width: VIEW_WIDTH * SCALE, height: FIGURE_HEIGHT }}>
+				<Group
+					transform={[{ scale: SCALE }]}
+					style="stroke"
+					color={theme.colors.lineStrong}
 					strokeWidth={11}
-					strokeLinecap="round"
-					strokeLinejoin="round"
+					strokeCap="round"
+					strokeJoin="round"
 				>
 					<Circle cx={190} cy={46} r={24} />
-					<Path d={TORSO} />
-					<Path d={LEFT_ARM} />
-					<Path d={RIGHT_ARM} />
-				</G>
+					<Path path={TORSO} />
+					<Path path={LEFT_ARM} />
+					<Path path={RIGHT_ARM} />
+				</Group>
 				{sites.map((site) => {
 					const geometry = SITE_GEOMETRY[site.slug];
 					const selected = site.slug === selectedSlug;
 					return (
-						<G key={site.slug}>
+						<Group key={site.slug} transform={[{ scale: SCALE }]}>
 							<Line
-								x1={geometry.leader[0]}
-								y1={geometry.y}
-								x2={geometry.leader[1]}
-								y2={geometry.y}
-								stroke={theme.colors.line}
+								p1={vec(geometry.leader[0], geometry.y)}
+								p2={vec(geometry.leader[1], geometry.y)}
+								color={theme.colors.line}
 								strokeWidth={1}
 							/>
+							{selected ? (
+								<Line
+									p1={vec(geometry.tape[0], geometry.y)}
+									p2={vec(geometry.tape[1], geometry.y)}
+									color={theme.colors.body}
+									strokeWidth={6}
+									opacity={0.65}
+								>
+									<BlurMask blur={6} style="solid" />
+								</Line>
+							) : null}
 							<Line
-								x1={geometry.tape[0]}
-								y1={geometry.y}
-								x2={geometry.tape[1]}
-								y2={geometry.y}
-								stroke={selected ? theme.colors.body : theme.colors.ink3}
+								p1={vec(geometry.tape[0], geometry.y)}
+								p2={vec(geometry.tape[1], geometry.y)}
+								color={selected ? theme.colors.body : theme.colors.ink3}
 								strokeWidth={selected ? 2 : 1.2}
-								strokeDasharray={selected ? undefined : "4 4"}
-							/>
+							>
+								{selected ? null : <DashPathEffect intervals={[4, 4]} />}
+							</Line>
 							{selected
 								? geometry.tape.map((x) => (
 										<Line
 											key={x}
-											x1={x}
-											y1={geometry.y - 6}
-											x2={x}
-											y2={geometry.y + 6}
-											stroke={theme.colors.body}
+											p1={vec(x, geometry.y - 6)}
+											p2={vec(x, geometry.y + 6)}
+											color={theme.colors.body}
 											strokeWidth={2}
 										/>
 									))
 								: null}
-						</G>
+						</Group>
 					);
 				})}
-			</Svg>
+			</Canvas>
 			{sites.map((site) => {
 				const geometry = SITE_GEOMETRY[site.slug];
 				const selected = site.slug === selectedSlug;

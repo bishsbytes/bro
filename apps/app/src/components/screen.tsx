@@ -81,7 +81,13 @@ export function Screen({
  * navigation at the bottom of the device.
  */
 export function StackScreen(props: StackScreenProps) {
-	return <Screen {...props} edges={["bottom"]} />;
+	return (
+		<Screen
+			contentInsetAdjustmentBehavior="automatic"
+			{...props}
+			edges={["bottom"]}
+		/>
+	);
 }
 
 /** Screen used without either a native header or a bottom tab bar. */
@@ -118,9 +124,9 @@ const styles = StyleSheet.create((theme) => ({
 	scroll: { flex: 1, backgroundColor: theme.colors.background },
 	content: { flexGrow: 1 },
 	padded: {
-		paddingHorizontal: theme.spacing.lg,
-		paddingTop: theme.spacing.md,
-		paddingBottom: theme.spacing.xl,
+		paddingHorizontal: theme.spacing.gutter,
+		paddingTop: theme.spacing.lg,
+		paddingBottom: theme.spacing.xxl,
 	},
 	centered: { alignItems: "stretch", justifyContent: "center" },
 }));

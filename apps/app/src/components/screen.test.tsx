@@ -42,6 +42,23 @@ describe("Screen safe areas", () => {
 		expect(view.getByTestId("safe-area-bottom")).toBeTruthy();
 	});
 
+	it("lets native stack headers inset and collapse over scrolling pages", async () => {
+		const view = await render(
+			<StackScreen scroll>
+				<Text>Stack content</Text>
+			</StackScreen>,
+		);
+
+		let ancestor = view.getByText("Stack content").parent;
+		while (
+			ancestor &&
+			ancestor.props.contentInsetAdjustmentBehavior !== "automatic"
+		) {
+			ancestor = ancestor.parent;
+		}
+		expect(ancestor?.props.contentInsetAdjustmentBehavior).toBe("automatic");
+	});
+
 	it("protects both edges when no navigator chrome is present", async () => {
 		const view = await render(
 			<FullScreen>
@@ -76,8 +93,8 @@ describe("Screen safe areas", () => {
 
 		expect(StyleSheet.flatten(content?.props.style)).toMatchObject({
 			paddingHorizontal: 16,
-			paddingTop: 12,
-			paddingBottom: 24,
+			paddingTop: 16,
+			paddingBottom: 32,
 		});
 	});
 

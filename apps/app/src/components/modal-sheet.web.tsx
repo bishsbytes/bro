@@ -155,11 +155,11 @@ const styles = StyleSheet.create((theme) => ({
 		right: 0,
 		bottom: 0,
 		overflow: "hidden",
-		borderTopLeftRadius: theme.radius.lg,
-		borderTopRightRadius: theme.radius.lg,
+		borderTopLeftRadius: theme.radius.sheet,
+		borderTopRightRadius: theme.radius.sheet,
 		borderWidth: 1,
 		borderColor: theme.colors.line,
-		backgroundColor: theme.colors.surface,
+		backgroundColor: theme.colors.glass,
 	},
 	handleArea: {
 		height: 24,
@@ -167,7 +167,7 @@ const styles = StyleSheet.create((theme) => ({
 		justifyContent: "center",
 	},
 	handle: {
-		width: 40,
+		width: 36,
 		height: 4,
 		borderRadius: theme.radius.pill,
 		backgroundColor: theme.colors.lineStrong,

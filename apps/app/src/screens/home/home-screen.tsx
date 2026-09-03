@@ -88,23 +88,6 @@ function localDaysBetween(fromLocalDay: string, throughLocalDay: string) {
 	return days;
 }
 
-function measurementChangeBadgeLabel(
-	t: TFunction<"home">,
-	change: HistoryMeasurementChange,
-): string {
-	if (change.direction === "unchanged") {
-		return t("measurements.unchangedBadge");
-	}
-	const arrow = change.direction === "increase" ? "↑" : "↓";
-	const amount =
-		change.absolutePercentage === null
-			? change.formattedDelta
-			: `${new Intl.NumberFormat(undefined, {
-					maximumFractionDigits: 1,
-				}).format(change.absolutePercentage)}%`;
-	return t("measurements.changeBadge", { arrow, amount });
-}
-
 function measurementChangeDetailLabel(
 	t: TFunction<"home">,
 	change: HistoryMeasurementChange,
@@ -292,22 +275,8 @@ function PastDaySection({
 										>
 											{measurement.label}
 										</AppText>
-										{measurement.changeFromPreviousDay ? (
-											<View style={styles.measurementDeltaBadge}>
-												<AppText
-													variant="micro"
-													color="brand"
-													style={styles.measurementDeltaText}
-												>
-													{measurementChangeBadgeLabel(
-														t,
-														measurement.changeFromPreviousDay,
-													)}
-												</AppText>
-											</View>
-										) : null}
 									</View>
-									<AppText variant="title">
+									<AppText variant="monoList">
 										{measurement.formattedValue}
 									</AppText>
 									{measurement.changeFromPreviousDay ? (

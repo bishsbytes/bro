@@ -12,7 +12,7 @@ export const challenges = {
 			"This run's history has been kept. You can start a fresh run whenever you are ready.",
 		startAgain: "Start again",
 		/** Renders in capitals; see the note on eyebrows in the review catalogue. */
-		dayOf: "DAY {{day}} OF {{total}}",
+		dayOf: "Day {{day}} of {{total}}",
 		dayTitle: "Day {{day}}",
 		stepUnavailable:
 			"The authored step is unavailable in this version, but your run and progress are preserved.",
@@ -27,7 +27,7 @@ export const challenges = {
 		backToReviews: "Back to reviews",
 		summary: "{{total}}-day challenge · Advance one completed step at a time",
 		start: "Start this challenge",
-		day: "DAY {{day}}",
+		day: "Day {{day}}",
 		backToWheel: "Back to my wheel",
 	},
 } as const;

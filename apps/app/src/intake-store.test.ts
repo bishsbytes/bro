@@ -325,7 +325,7 @@ describe("intake store", () => {
 		});
 		await expect(
 			store.createGoal("energy_intake", "1800", null),
-		).rejects.toThrow("Finish the active goal");
+		).rejects.toThrow("Remove the active heading before creating another.");
 		await expect(store.createGoal("thc_intake", "1", null)).rejects.toThrow(
 			"Unknown total: thc_intake",
 		);

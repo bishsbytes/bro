@@ -117,9 +117,9 @@ describe("body metrics flow", () => {
 		expect(await view.findByLabelText(/^Weight, 12 st 4 lb\./)).toBeTruthy();
 		expect(view.getByTestId("gauge-marker")).toBeTruthy();
 
-		await fireEvent.changeText(view.getByLabelText("Target (stones)"), "12");
-		await fireEvent.changeText(view.getByLabelText("Target (pounds)"), "0");
-		await fireEvent.press(view.getByLabelText("Target date (optional)"));
+		await fireEvent.changeText(view.getByLabelText("Heading (stones)"), "12");
+		await fireEvent.changeText(view.getByLabelText("Heading (pounds)"), "0");
+		await fireEvent.press(view.getByLabelText("By (optional)"));
 		await fireEvent(
 			view.getByTestId("date-picker"),
 			"valueChange",
@@ -127,8 +127,8 @@ describe("body metrics flow", () => {
 			new Date(2026, 11, 25, 12),
 		);
 		await fireEvent.press(view.getByText("Done"));
-		await fireEvent.press(view.getByText("Save goal"));
-		expect(await view.findByText("Target 12 st 0 lb")).toBeTruthy();
+		await fireEvent.press(view.getByText("Save heading"));
+		expect(await view.findByText("Heading 12 st 0 lb")).toBeTruthy();
 		expect(
 			view.getByText("Started at 12 st 4 lb · Latest 12 st 4 lb"),
 		).toBeTruthy();
@@ -171,8 +171,8 @@ describe("body metrics flow", () => {
 				?.value,
 		).toBe(170 * KILOGRAMS_PER_POUND);
 
-		await fireEvent.press(view.getByText("Mark goal achieved"));
-		expect(await view.findByText(/Achieved: target 12 st 0 lb/)).toBeTruthy();
+		await fireEvent.press(view.getByText("Archive heading"));
+		expect(await view.findByText(/Archived: heading 12 st 0 lb/)).toBeTruthy();
 
 		const canonicalObservation = (
 			await new databaseApp.ObservationRepository(db).findById(observation.id)
@@ -201,7 +201,7 @@ describe("body metrics flow", () => {
 		await act(async () => expoRouter.replace("/body"));
 		expect(await view.findByLabelText("Weight. First reading.")).toBeTruthy();
 		await act(async () => expoRouter.replace("/body/weight"));
-		expect(await view.findByText(/Achieved: target 76.2 kg/)).toBeTruthy();
+		expect(await view.findByText(/Archived: heading 76.2 kg/)).toBeTruthy();
 		await act(async () => expoRouter.replace("/insights"));
 		expect(await view.findByText("Latest 77.1 kg")).toBeTruthy();
 

@@ -23,7 +23,7 @@ function themeSuffix(themeMode: ThemeMode): "System" | "Light" | "Dark" {
 
 function accentLabelKey(hue: number, chroma: number) {
 	const option = matchingAccentOption(hue, chroma);
-	return option?.labelKey ?? "appearance.accentHarbour";
+	return option?.labelKey ?? "appearance.accentIce";
 }
 
 type SettingsScreenProps = {

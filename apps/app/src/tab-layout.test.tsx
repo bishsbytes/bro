@@ -2,7 +2,6 @@ import { localDayOf } from "@bro/domain";
 import { fireEvent, render } from "@testing-library/react-native";
 import * as Haptics from "expo-haptics";
 import type { ReactNode } from "react";
-import { StyleSheet as NativeStyleSheet } from "react-native";
 import TabLayout from "./app/(tabs)/_layout";
 import { monthHeaderLabel } from "./components/today-header-month-context";
 import * as themeModule from "./theme/unistyles";
@@ -31,9 +30,8 @@ jest.mock("./theme/unistyles", () => {
 	};
 });
 
-const mockTabsOptions = jest.fn();
-const mockTabsProps = jest.fn();
-const mockTabsListeners = jest.fn();
+const mockNativeTabsProps = jest.fn();
+const mockNativeTabsListeners = jest.fn();
 let mockPathname = "/";
 let mockSegments = ["(tabs)"];
 
@@ -42,33 +40,43 @@ jest.mock("@bro/auth-app", () => ({
 }));
 
 jest.mock("expo-router", () => {
-	const React = jest.requireActual<typeof import("react")>("react");
-	const Tabs = Object.assign(
-		({
-			children,
-			detachInactiveScreens,
-			screenListeners,
-			screenOptions,
-		}: {
-			children: ReactNode;
-			detachInactiveScreens: boolean;
-			screenListeners: unknown;
-			screenOptions: Record<string, unknown>;
-		}) => {
-			mockTabsProps({ detachInactiveScreens });
-			mockTabsListeners(screenListeners);
-			mockTabsOptions(screenOptions);
-			return React.createElement(React.Fragment, null, children);
-		},
-		{ Screen: () => null },
-	);
-
 	return {
 		router: { push: jest.fn() },
-		Tabs,
 		usePathname: () => mockPathname,
 		useSegments: () => mockSegments,
 	};
+});
+
+jest.mock("expo-router/unstable-native-tabs", () => {
+	const React = jest.requireActual<typeof import("react")>("react");
+	const { Text } =
+		jest.requireActual<typeof import("react-native")>("react-native");
+	const Trigger = Object.assign(
+		({ children }: { children: ReactNode }) =>
+			React.createElement(React.Fragment, null, children),
+		{
+			Icon: () => null,
+			Label: ({ children }: { children: ReactNode }) =>
+				React.createElement(Text, null, children),
+		},
+	);
+	const NativeTabs = Object.assign(
+		({
+			children,
+			screenListeners,
+			...props
+		}: {
+			children: ReactNode;
+			screenListeners: unknown;
+		}) => {
+			mockNativeTabsProps(props);
+			mockNativeTabsListeners(screenListeners);
+			return React.createElement(React.Fragment, null, children);
+		},
+		{ Trigger },
+	);
+
+	return { NativeTabs };
 });
 
 describe("TabLayout", () => {
@@ -79,33 +87,23 @@ describe("TabLayout", () => {
 		jest.clearAllMocks();
 	});
 
-	it("owns one stable header above lazy, retained tab scenes", async () => {
+	it("owns one stable header above native glass tabs", async () => {
 		const screen = await render(<TabLayout />);
 		const currentMonth = monthHeaderLabel(localDayOf(new Date()));
 
 		expect(screen.getByText(currentMonth)).toBeTruthy();
-		expect(mockTabsOptions).toHaveBeenCalledWith(
-			expect.objectContaining({ lazy: true }),
+		expect(mockNativeTabsProps).toHaveBeenCalledWith(
+			expect.objectContaining({
+				backgroundColor: themeModule.lightTheme.colors.glass,
+				blurEffect: "systemUltraThinMaterialLight",
+				minimizeBehavior: "onScrollDown",
+			}),
 		);
-		expect(mockTabsProps).toHaveBeenCalledWith({
-			detachInactiveScreens: false,
-		});
-		const screenOptions = mockTabsOptions.mock.calls[0]?.[0] as {
-			tabBarStyle: Record<string, unknown>;
-			tabBarItemStyle?: Record<string, unknown>;
-		};
-		// The custom label is taller than React Navigation's 49-point default.
-		// Keep a 56-point content area above the full device inset.
-		expect(screenOptions.tabBarStyle.height).toBe(80);
-		expect(screenOptions.tabBarStyle.boxShadow).toBe("none");
-		expect(screenOptions.tabBarStyle).not.toHaveProperty("shadowOpacity");
-		expect(screenOptions.tabBarStyle).not.toHaveProperty("paddingTop");
-		expect(screenOptions.tabBarItemStyle).toBeUndefined();
 
 		mockPathname = "/intake";
 		await screen.rerender(<TabLayout />);
 
-		expect(screen.getByText("Intake")).toBeTruthy();
+		expect(screen.getAllByText("Intake")).toHaveLength(2);
 		expect(screen.queryByText(currentMonth)).toBeNull();
 	});
 
@@ -123,7 +121,7 @@ describe("TabLayout", () => {
 		expect(router.push).toHaveBeenCalledWith("/intake/log?kind=food");
 	});
 
-	it("keeps the shared quick-log FAB on the Body and Intake tabs", async () => {
+	it("keeps quick log in the Body and Intake title bars", async () => {
 		mockPathname = "/body";
 		const screen = await render(<TabLayout />);
 
@@ -140,7 +138,7 @@ describe("TabLayout", () => {
 
 	it("ticks only when the selected bottom tab changes", async () => {
 		await render(<TabLayout />);
-		const listeners = mockTabsListeners.mock.calls[0]?.[0] as (input: {
+		const listeners = mockNativeTabsListeners.mock.calls[0]?.[0] as (input: {
 			route: { name: string };
 		}) => { tabPress: () => void };
 
@@ -161,9 +159,6 @@ describe("TabLayout", () => {
 
 		const retainedMonth = screen.getByText(currentMonth);
 		expect(retainedMonth).toBeTruthy();
-		expect(
-			NativeStyleSheet.flatten(retainedMonth.parent?.props.style).pointerEvents,
-		).toBe("none");
 		expect(screen.getByTestId("history-header-icon")).toBeTruthy();
 
 		mockPathname = "/body/weight";
@@ -173,29 +168,32 @@ describe("TabLayout", () => {
 		expect(screen.queryByText(currentMonth)).toBeNull();
 	});
 
-	it("keeps header icons and active tabs neutral", async () => {
+	it("keeps chrome quiet and reserves accent for the selected tab", async () => {
 		const themed = {
 			...themeModule.lightTheme,
 			colors: {
 				...themeModule.lightTheme.colors,
-				text: "neutral-chrome",
-				brand: "accent-colour",
+				ink2: "#345678",
+				accent: "#12ABCD",
 			},
 		} as unknown as typeof themeModule.lightTheme;
 		mockThemeOverride = themed;
 
 		const screen = await render(<TabLayout />);
-		const screenOptions = mockTabsOptions.mock.calls[0]?.[0] as {
-			tabBarActiveTintColor: string;
+		const nativeOptions = mockNativeTabsProps.mock.calls[0]?.[0] as {
+			iconColor: { default: string; selected: string };
 		};
 		const insightsIcon = screen.getByTestId("insights-header-icon");
 		const historyIcon = screen.getByTestId("history-header-icon");
 		const settingsIcon = screen.getByTestId("settings-header-icon");
 
-		expect(screenOptions.tabBarActiveTintColor).toBe("neutral-chrome");
-		expect(insightsIcon.props.children.props.color).toBe("neutral-chrome");
-		expect(historyIcon.props.children.props.color).toBe("neutral-chrome");
-		expect(settingsIcon.props.children.props.color).toBe("neutral-chrome");
+		expect(nativeOptions.iconColor).toEqual({
+			default: "#345678",
+			selected: "#12ABCD",
+		});
+		expect(insightsIcon.props.children.props.color).toBe("#345678");
+		expect(historyIcon.props.children.props.color).toBe("#345678");
+		expect(settingsIcon.props.children.props.color).toBe("#345678");
 	});
 
 	it("reaches insights and history from the journal header alone", async () => {

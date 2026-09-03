@@ -23,7 +23,7 @@ export const navigation = {
 		index: "Review",
 		new: "Take stock",
 		result: "Your wheel",
-		goal: "Set a goal",
+		goal: "Set a heading",
 		challenge: "Starter challenge",
 	},
 	challenges: {
@@ -45,7 +45,7 @@ export const navigation = {
 	},
 	intake: {
 		log: "Log",
-		goals: "Intake goals",
+		goals: "Intake headings",
 		library: "Your library",
 	},
 	quickLog: {
@@ -60,7 +60,7 @@ export const navigation = {
 		body: "Body",
 		bodyDetail: "Weight, measurements, or resting heart rate",
 		bodyLoading: "Loading body data",
-		/** Only offered once each stream is switched on; see the FAB. */
+		/** Only offered once each stream is switched on. */
 		supplement: "Supplement",
 		supplementDetail: "A tablet, a scoop, or a stack",
 		medication: "Medication",

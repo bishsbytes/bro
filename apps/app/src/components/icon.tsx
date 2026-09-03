@@ -105,12 +105,19 @@ type IconProps = {
 export function Icon({
 	name,
 	color,
-	size = 24,
-	strokeWidth = 2,
+	size = 20,
+	strokeWidth = 1.75,
 	testID,
 }: IconProps) {
 	const Glyph = ICONS[name];
-	const glyph = <Glyph color={color} size={size} strokeWidth={strokeWidth} />;
+	const glyph = (
+		<Glyph
+			absoluteStrokeWidth
+			color={color}
+			size={size}
+			strokeWidth={strokeWidth}
+		/>
+	);
 	// Lucide rewrites `testID` to `data-testid`, which RN Testing Library
 	// cannot query, so a queryable View carries it instead.
 	return testID ? <View testID={testID}>{glyph}</View> : glyph;

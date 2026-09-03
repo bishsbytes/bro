@@ -89,7 +89,7 @@ describe("take stock screen", () => {
 		jest.clearAllMocks();
 		beforeRemove = null;
 		// General flow tests cover the reduced-motion path without waiting. The
-		// confirmation test below opts into the Baseline motion duration.
+		// confirmation test below opts into the Helm motion duration.
 		jest
 			.spyOn(AccessibilityInfo, "isReduceMotionEnabled")
 			.mockResolvedValue(true);

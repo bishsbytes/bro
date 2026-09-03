@@ -1,6 +1,6 @@
 import { useTranslation } from "react-i18next";
 import { View } from "react-native";
-import Svg, { G, Line, Polygon } from "react-native-svg";
+import Svg, { Circle, G, Line, Polygon } from "react-native-svg";
 import { lifeAreaIconName } from "../review/life-area-icons";
 import type { WheelScore } from "../review/review-store";
 import { StyleSheet, useUnistyles } from "../theme/unistyles";
@@ -87,7 +87,7 @@ export function WheelChart({ scores, previousScores = [] }: WheelChartProps) {
 						points={polygonPoints(comparablePrevious)}
 						fill="none"
 						stroke={theme.colors.textMuted}
-						strokeWidth="3"
+						strokeWidth="1.5"
 						strokeDasharray="7 5"
 					/>
 				) : null}
@@ -96,9 +96,25 @@ export function WheelChart({ scores, previousScores = [] }: WheelChartProps) {
 					fill={theme.colors.mindTint}
 					fillOpacity={0.65}
 					stroke={theme.colors.mind}
-					strokeWidth="4"
+					strokeWidth="2.5"
 					strokeLinejoin="round"
 				/>
+				{scores.map((score, index) => {
+					const vertex = point(
+						index,
+						scores.length,
+						RADIUS * (score.value / 10),
+					);
+					return (
+						<Circle
+							key={`vertex-${score.slug}`}
+							cx={vertex.x}
+							cy={vertex.y}
+							r="3"
+							fill={theme.colors.mind}
+						/>
+					);
+				})}
 				{scores.map((score, index) => {
 					const centre = point(index, scores.length, AXIS_ICON_RADIUS);
 					const iconSize = theme.control.focusIconSize;

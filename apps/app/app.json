@@ -19,7 +19,7 @@
 			"adaptiveIcon": {
 				"foregroundImage": "./assets/images/adaptive-icon.png",
 				"monochromeImage": "./assets/images/monochrome-icon.png",
-				"backgroundColor": "#F5F5F1"
+				"backgroundColor": "#0B0F14"
 			},
 			"edgeToEdgeEnabled": true,
 			"package": "com.anonymous.app",
@@ -43,10 +43,10 @@
 					"image": "./assets/images/splash-icon.png",
 					"imageWidth": 200,
 					"resizeMode": "contain",
-					"backgroundColor": "#F5F5F1",
+					"backgroundColor": "#EEF1F4",
 					"dark": {
 						"image": "./assets/images/splash-icon-dark.png",
-						"backgroundColor": "#191C1E"
+						"backgroundColor": "#0B0F14"
 					}
 				}
 			],

@@ -29,7 +29,7 @@ export function HeaderIconButton({
 			<Icon
 				testID={testID}
 				name={icon}
-				color={theme.colors.text}
+				color={theme.colors.ink2}
 				size={theme.control.avatarIconSize}
 			/>
 		</TouchableOpacity>

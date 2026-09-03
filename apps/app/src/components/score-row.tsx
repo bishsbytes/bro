@@ -13,7 +13,7 @@ type ScoreRowProps = {
 	accessibilityPrefix: string;
 	selected: number | null;
 	onSelect: (score: number) => void;
-	/** Visible meanings for each point, used by the Baseline mood scale. */
+	/** Visible meanings for each point on Helm's rising mood scale. */
 	labels?: readonly string[];
 	/** Encodes the scale by shape as well as copy, from 52 through 108px. */
 	varyHeight?: boolean;
@@ -50,7 +50,7 @@ export function ScoreRow({
 							style={[
 								styles.button,
 								varyHeight && {
-									height: [52, 64, 80, 96, 108][index] ?? 52,
+									height: [56, 70, 84, 98, 112][index] ?? 56,
 								},
 								isSelected && styles.selected,
 								disabled && styles.disabled,
@@ -80,16 +80,16 @@ const styles = StyleSheet.create((theme) => ({
 		minHeight: theme.control.scoreMinHeight,
 		alignItems: "center",
 		justifyContent: "center",
-		borderWidth: 1,
-		borderColor: theme.colors.lineStrong,
-		borderRadius: theme.radius.md,
-		backgroundColor: theme.colors.surface,
+		borderRadius: theme.radius.control,
+		backgroundColor: theme.colors.surface2,
 	},
 	buttonLabel: { textAlign: "center" },
 	selected: {
-		borderColor: theme.colors.accent,
-		backgroundColor: theme.colors.accentTint,
+		backgroundColor: theme.colors.accent,
+		shadowColor: theme.colors.accent,
+		shadowOpacity: 0.45,
+		shadowRadius: 18,
 	},
-	selectedText: { color: theme.colors.ink },
+	selectedText: { color: theme.colors.onAccent },
 	disabled: { opacity: theme.opacity.disabled },
 }));

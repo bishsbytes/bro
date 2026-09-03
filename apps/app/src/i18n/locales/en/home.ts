@@ -35,7 +35,7 @@ export const home = {
 	challenges: {
 		title: "Challenges",
 		/** Renders in capitals; see the note on eyebrows in the review catalogue. */
-		dayOf: "DAY {{day}} OF {{total}}",
+		dayOf: "Day {{day}} of {{total}}",
 		markStepDone: "Mark step done",
 		view: "View challenge",
 		completeTitle: "Challenge complete",

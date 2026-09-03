@@ -125,6 +125,9 @@ export function DiscreteScale({
 
 	return (
 		<View style={styles.container}>
+			<AppText variant="metric" color="brand" style={styles.heroValue}>
+				{shownSelection ?? "—"}
+			</AppText>
 			<KeyboardPressable
 				accessibilityRole="adjustable"
 				accessibilityLabel={t("a11y.scale", {
@@ -244,10 +247,8 @@ const styles = StyleSheet.create((theme) => ({
 	scale: {
 		minHeight: theme.spacing.huge,
 		justifyContent: "center",
-		borderWidth: 1,
-		borderColor: theme.colors.lineStrong,
-		borderRadius: theme.radius.md,
-		backgroundColor: theme.colors.surface,
+		borderRadius: theme.radius.control,
+		backgroundColor: theme.colors.surface1,
 		paddingHorizontal: theme.spacing.xs,
 		paddingVertical: theme.spacing.sm,
 	},
@@ -269,7 +270,7 @@ const styles = StyleSheet.create((theme) => ({
 	tickSlot: {
 		height: theme.spacing.lg,
 		justifyContent: "center",
-		backgroundColor: theme.colors.surface,
+		backgroundColor: theme.colors.surface1,
 	},
 	tick: {
 		width: 1,
@@ -277,9 +278,12 @@ const styles = StyleSheet.create((theme) => ({
 		backgroundColor: theme.colors.lineStrong,
 	},
 	selectedTick: {
-		width: 2,
+		width: 3,
 		height: theme.spacing.lg,
 		backgroundColor: theme.colors.accent,
+		shadowColor: theme.colors.accent,
+		shadowOpacity: 0.7,
+		shadowRadius: 6,
 	},
 	value: {
 		minWidth: theme.spacing.xl,
@@ -291,7 +295,7 @@ const styles = StyleSheet.create((theme) => ({
 		borderRadius: theme.radius.xs,
 	},
 	selectedValue: {
-		borderColor: theme.colors.accent,
-		backgroundColor: theme.colors.accentTint,
+		borderColor: theme.colors.surface1,
 	},
+	heroValue: { textAlign: "center", fontSize: 64, lineHeight: 68 },
 }));

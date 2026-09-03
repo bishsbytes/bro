@@ -101,14 +101,14 @@ export function ModalSheet({
 const styles = StyleSheet.create((theme) => ({
 	overlay: { flex: 1 },
 	sheetBackground: {
-		borderTopLeftRadius: theme.radius.lg,
-		borderTopRightRadius: theme.radius.lg,
+		borderTopLeftRadius: theme.radius.sheet,
+		borderTopRightRadius: theme.radius.sheet,
 		borderWidth: 1,
 		borderColor: theme.colors.line,
-		backgroundColor: theme.colors.surface,
+		backgroundColor: theme.colors.glass,
 	},
 	handle: {
-		width: 40,
+		width: 36,
 		height: 4,
 		borderRadius: theme.radius.pill,
 		backgroundColor: theme.colors.lineStrong,

@@ -321,17 +321,6 @@ export function BodyMetricScreen({ metricSlug, store }: BodyMetricScreenProps) {
 									{t("goal.targetDate", { date: activeGoal.goal.targetDate })}
 								</AppText>
 							) : null}
-							{activeGoal.targetReached ? (
-								<AppText variant="caption" color="brand">
-									{t("goal.targetReached")}
-								</AppText>
-							) : activeGoal.progressPercent !== null ? (
-								<AppText variant="caption" color="brand">
-									{t("goal.percentComplete", {
-										percent: activeGoal.progressPercent,
-									})}
-								</AppText>
-							) : null}
 							<View style={styles.actions}>
 								<Button
 									label={t("goal.achieve")}

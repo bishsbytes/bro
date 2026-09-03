@@ -69,13 +69,12 @@ export const settings = {
 		accentIntro:
 			"Used only for actions, selections, links, and active navigation. Data keeps its own domain colour.",
 		accentA11y: "{{name}} accent",
-		accentHarbour: "Harbour",
-		accentMoss: "Moss",
-		accentBrass: "Brass",
-		accentClay: "Clay",
-		accentPlum: "Plum",
+		accentIce: "Ice",
+		accentLichen: "Lichen",
+		accentAmber: "Amber",
+		accentEmber: "Ember",
+		accentViolet: "Violet",
 		accentTeal: "Teal",
-		accentGraphite: "Graphite",
 	},
 	checkIns: {
 		loadFailed: "Check-in settings could not be loaded",
@@ -158,7 +157,7 @@ export const settings = {
 	/** Titles and explanations for each measurement a unit applies to. */
 	dimensions: {
 		massTitle: "Weight",
-		massDescription: "Used for weight entries, history, trends, and goals.",
+		massDescription: "Used for weight entries, history, trends, and headings.",
 		heightTitle: "Height",
 		heightDescription: "Used for height measurements.",
 		lengthTitle: "Other body measurements",
@@ -171,7 +170,7 @@ export const settings = {
 	},
 	units: {
 		intro:
-			"Choose how dates and measurements appear. Stored values stay unchanged, so format choices never change your history or goals.",
+			"Choose how dates and measurements appear. Stored values stay unchanged, so format choices never change your history or headings.",
 		updateFailed: "Units could not be updated",
 		weekStartTitle: "Week starts on",
 		weekStartIntro:
@@ -260,7 +259,7 @@ export const settings = {
 	licences: {
 		/** Open Food Facts and ODbL are proper names and stay untranslated. */
 		title: "Open Food Facts",
-		eyebrow: "FOOD DATA",
+		eyebrow: "Food data",
 		provider:
 			"Food search results are provided by Open Food Facts and its contributors.",
 		licence:

@@ -109,7 +109,7 @@ describe("Life screen", () => {
 		expect(
 			await screen.findByText("Take stock of the bigger picture"),
 		).toBeTruthy();
-		expect(screen.getByText("WHEEL OF LIFE")).toBeTruthy();
+		expect(screen.getByText("Wheel of life")).toBeTruthy();
 		expect(screen.getByText("Take stock")).toBeTruthy();
 	});
 

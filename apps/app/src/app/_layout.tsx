@@ -27,7 +27,7 @@ import {
 	useDeviceSettings,
 } from "../providers/device-settings-provider";
 import { ReminderNotificationEffects } from "../reminders/reminder-notification-effects";
-import { useBaselineFonts } from "../theme/fonts";
+import { useHelmFonts } from "../theme/fonts";
 import {
 	applyAppearance,
 	StyleSheet,
@@ -146,7 +146,7 @@ function RootNavigator() {
 
 export default function RootLayout() {
 	const [startup, setStartup] = useState<StartupState>({ kind: "loading" });
-	const [fontsLoaded, fontError] = useBaselineFonts();
+	const [fontsLoaded, fontError] = useHelmFonts();
 	const { rt } = useUnistyles();
 
 	const start = useCallback(async () => {

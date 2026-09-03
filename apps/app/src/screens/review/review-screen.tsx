@@ -110,18 +110,6 @@ export function ReviewScreen({ store }: ReviewScreenProps) {
 									{t("goals.targetDate", { date: progress.goal.targetDate })}
 								</AppText>
 							) : null}
-							{progress.targetReached ? (
-								<AppText variant="caption" color="brand">
-									{t("goals.targetReached")}
-								</AppText>
-							) : progress.status === "active" &&
-								progress.progressPercent !== null ? (
-								<AppText variant="caption" color="brand">
-									{t("goals.percentComplete", {
-										percent: progress.progressPercent,
-									})}
-								</AppText>
-							) : null}
 							{progress.status === "active" ? (
 								<View style={styles.goalActions}>
 									<Button

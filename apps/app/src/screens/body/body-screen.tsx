@@ -23,6 +23,7 @@ import {
 import { AppText } from "../../components/app-text";
 import { Button } from "../../components/button";
 import { Card } from "../../components/card";
+import { Dial } from "../../components/dial";
 import { EmptyState } from "../../components/empty-state";
 import { ListRow } from "../../components/list-row";
 import { MeasurementField } from "../../components/measurement-field";
@@ -500,6 +501,13 @@ export function BodyScreen({ store }: BodyScreenProps) {
 		};
 	}
 	const measurementChanges = measurementRows.map(changeOf);
+	const heroMetric =
+		overview.metrics.find(
+			(metric) => metric.metricSlug === WEIGHT_SLUG && metric.baseline.current,
+		) ??
+		overview.metrics.find(
+			(metric) => metric.visible && metric.baseline.current,
+		);
 	const healthFitnessChanges = overview.metrics
 		.filter((metric) => metric.bodyGroup === "health_fitness" && metric.visible)
 		.map(changeOf);
@@ -518,6 +526,17 @@ export function BodyScreen({ store }: BodyScreenProps) {
 				onManageMeasurements={openManageMeasurements}
 			/>
 			<AppText color="muted">{t("body:overview.intro")}</AppText>
+			{heroMetric?.baseline.current && heroMetric.baseline.rail ? (
+				<Dial
+					label={heroMetric.label}
+					value={heroMetric.baseline.current.formatted}
+					current={heroMetric.baseline.current.value}
+					range={heroMetric.baseline.rail}
+					usualRange={heroMetric.baseline.usualRange}
+					domain={dataDomainForMetric(heroMetric.metricSlug)}
+					accessibilityLabel={`${heroMetric.label}, ${heroMetric.baseline.current.formatted}`}
+				/>
+			) : null}
 
 			{error ? <AppText color="danger">{error}</AppText> : null}
 
