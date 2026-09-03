@@ -1,5 +1,5 @@
 import { previousLocalDay } from "@bro/domain";
-import { fireEvent, render } from "@testing-library/react-native";
+import { act, fireEvent, render } from "@testing-library/react-native";
 import type {
 	IntakeDaySnapshot,
 	IntakeMetricSummary,
@@ -12,6 +12,7 @@ import { IntakeScreen } from "./screens/intake/intake-screen";
 const mockPush = jest.fn();
 let mockParams: Record<string, string> = {};
 const mockParamListeners = new Set<() => void>();
+const mockFocusEffects = new Set<() => undefined | (() => void)>();
 
 /**
  * The screen reads the day on show and the card's open tab from the route, so
@@ -39,7 +40,14 @@ jest.mock("expo-router", () => ({
 	},
 	useFocusEffect: (effect: () => undefined | (() => void)) => {
 		const React = jest.requireActual("react");
-		React.useEffect(effect, [effect]);
+		React.useEffect(() => {
+			mockFocusEffects.add(effect);
+			const cleanup = effect();
+			return () => {
+				mockFocusEffects.delete(effect);
+				cleanup?.();
+			};
+		}, [effect]);
 	},
 }));
 
@@ -173,6 +181,46 @@ describe("Intake screen", () => {
 	beforeEach(() => {
 		jest.clearAllMocks();
 		mockParams = {};
+		mockFocusEffects.clear();
+	});
+
+	it("loads the new local day when a retained tab regains focus after midnight", async () => {
+		jest.useFakeTimers();
+		jest.setSystemTime(new Date(2026, 8, 2, 23, 59));
+		const loadDay = jest.fn(async (localDay: string) =>
+			snapshot({
+				localDay,
+				dayLabel: localDay === "2026-09-02" ? "Today" : "New day",
+				dayDate:
+					localDay === "2026-09-02"
+						? "Wednesday 2 September"
+						: "Thursday 3 September",
+			}),
+		);
+
+		try {
+			const screen = await render(
+				<IntakeScreen
+					store={{
+						loadDay,
+						updateEvent: jest.fn(),
+						deleteEvent: jest.fn(),
+					}}
+				/>,
+			);
+			expect(await screen.findByText("Wednesday 2 September")).toBeTruthy();
+
+			jest.setSystemTime(new Date(2026, 8, 3, 0, 1));
+			await act(async () => {
+				for (const effect of mockFocusEffects) effect();
+				await Promise.resolve();
+			});
+
+			expect(loadDay).toHaveBeenLastCalledWith("2026-09-03");
+			expect(await screen.findByText("Thursday 3 September")).toBeTruthy();
+		} finally {
+			jest.useRealTimers();
+		}
 	});
 
 	it("draws one compact gauge per tracked total against the usual band and states it as fact", async () => {

@@ -12,7 +12,7 @@ import type {
 	RecipeYield,
 	SystemConsumable,
 } from "@bro/domain/consumable";
-import { scaleConstituents } from "@bro/logic";
+import { scaleComposition, scaleConstituents } from "@bro/logic";
 import type { SQLiteDatabase } from "expo-sqlite";
 import { i18n } from "../i18n";
 
@@ -30,6 +30,10 @@ export type LibraryItemDraft = {
 	portionLabel: string;
 	/** Per portion, canonical units. */
 	constituents: ConstituentAmounts;
+	/** Existing portion whose per-portion values are being edited. */
+	portionId?: string | null;
+	/** The portion's volume for a newly created quick item. */
+	volumeL?: number | null;
 };
 
 export type RecipeIngredientDraft = {
@@ -124,7 +128,7 @@ export class LibraryStore {
 		}
 		const portionLabel =
 			draft.portionLabel.trim() || i18n.t("intake:event.defaultPortion");
-		const composition = {
+		const quickComposition = {
 			basis: { type: "portion", portionId: PORTION_ID } as const,
 			constituents: draft.constituents,
 			portions: [
@@ -132,7 +136,7 @@ export class LibraryStore {
 					id: PORTION_ID,
 					label: portionLabel,
 					massKg: null,
-					volumeL: null,
+					volumeL: draft.volumeL ?? null,
 					basisUnits: 1,
 				},
 			],
@@ -143,13 +147,39 @@ export class LibraryStore {
 			if (!existing) {
 				throw new TypeError(i18n.t("validation:intake.consumableNotFound"));
 			}
-			const updated = await this.consumables.update(draft.id, {
+			const selectedPortionId =
+				draft.portionId ??
+				existing.defaultPortionId ??
+				existing.portions[0]?.id;
+			const factor = selectedPortionId
+				? scaleComposition(existing, {
+						type: "portion",
+						portionId: selectedPortionId,
+						quantity: 1,
+					}).factor
+				: 1;
+			const composition = {
+				basis: existing.basis,
+				constituents: scaleConstituents(draft.constituents, 1 / factor),
+				portions: existing.portions.map((portion) =>
+					portion.id === selectedPortionId
+						? { ...portion, label: portionLabel }
+						: portion,
+				),
+				defaultPortionId: existing.defaultPortionId,
+			};
+			const input = {
+				kind: draft.kind,
 				name,
 				brand: draft.brand,
 				barcode: existing.barcode,
 				...composition,
 				recipe: null,
-			});
+			};
+			if (existing.source.type !== "user") {
+				return await this.consumables.createFork(existing.source, input);
+			}
+			const updated = await this.consumables.update(draft.id, input);
 			if (!updated) {
 				throw new TypeError(i18n.t("validation:intake.consumableNotFound"));
 			}
@@ -160,7 +190,7 @@ export class LibraryStore {
 			name,
 			brand: draft.brand,
 			barcode: null,
-			...composition,
+			...quickComposition,
 			recipe: null,
 			source: { type: "user" },
 		});

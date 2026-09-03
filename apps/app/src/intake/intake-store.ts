@@ -942,7 +942,7 @@ export class IntakeStore {
 		const carryingDays = new Set(carrying.map((event) => event.localDay)).size;
 		const bimodal =
 			loggedDays >= INTAKE_BASELINE_MIN_LOGGED_DAYS &&
-			carryingDays * 2 <= loggedDays;
+			carryingDays * 2 < loggedDays;
 		const band = intakeBaseline(
 			code,
 			bimodal ? carrying : inWindow,

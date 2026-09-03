@@ -32,15 +32,16 @@ export function IntakeScreen({ store }: IntakeScreenProps) {
 	const params = useLocalSearchParams<{ day?: string; view?: string }>();
 	const intake = useMemo(() => store ?? createIntakeStore(), [store]);
 	const [busy, setBusy] = useState(false);
-	const today = useMemo(() => localDayOf(new Date()), []);
 	const selectedDay =
 		typeof params.day === "string" && isCalendarDay(params.day)
 			? params.day
-			: today;
+			: null;
 	const segment: IntakeDaySegment = isIntakeDaySegment(params.view)
 		? params.view
 		: "summary";
-	const loadingDay = useRef(selectedDay);
+	const selectedDayRef = useRef(selectedDay);
+	selectedDayRef.current = selectedDay;
+	const loadingDay = useRef(selectedDay ?? localDayOf(new Date()));
 	const {
 		data: snapshot,
 		error,
@@ -49,12 +50,17 @@ export function IntakeScreen({ store }: IntakeScreenProps) {
 		setData: setSnapshot,
 		setError,
 	} = useFocusStoreLoad(
-		useCallback(() => intake.loadDay(loadingDay.current), [intake]),
+		useCallback(() => {
+			const day = selectedDayRef.current ?? localDayOf(new Date());
+			loadingDay.current = day;
+			return intake.loadDay(day);
+		}, [intake]),
 	);
 
 	useEffect(() => {
-		if (loadingDay.current === selectedDay) return;
-		loadingDay.current = selectedDay;
+		const day = selectedDay ?? localDayOf(new Date());
+		if (loadingDay.current === day) return;
+		loadingDay.current = day;
 		void reload();
 	}, [selectedDay, reload]);
 

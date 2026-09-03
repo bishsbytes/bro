@@ -489,5 +489,22 @@ describe("intake store", () => {
 			gauge: null,
 			read: "Most of your days: none.",
 		});
+
+		// Exactly half the logged days carrying alcohol is not "most days none".
+		// Add three carrying days to the four above, preserving fourteen logged days.
+		for (const localDay of [days[0], days[2], days[3]]) {
+			await store.log(
+				{ type: "system", key: "drink:lager-4_5" },
+				{ type: "portion", portionId: "pint-uk", quantity: 1 },
+				{ localDay, time: "19:00" },
+			);
+		}
+		const evenlySplitAlcohol = (await store.loadToday()).totals.find(
+			({ metric }) => metric.slug === "ethanol_intake",
+		);
+		expect(evenlySplitAlcohol?.read).not.toBe("Most of your days: none.");
+		expect(evenlySplitAlcohol?.read).toMatch(
+			/^Your days usually land between /,
+		);
 	});
 });

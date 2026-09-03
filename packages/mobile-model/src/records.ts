@@ -92,7 +92,7 @@ export type CreateConsumable = Omit<
 	"id" | "createdAt" | "updatedAt" | "archivedAt" | "forkedFrom"
 > & { forkedFrom?: ContentSource | null };
 
-/** Kind and provenance are fixed at creation; a fork is its own operation. */
+/** Provenance is fixed at creation; a fork is its own operation. */
 export type UpdateConsumable = Pick<
 	Consumable,
 	| "name"
@@ -103,7 +103,8 @@ export type UpdateConsumable = Pick<
 	| "portions"
 	| "defaultPortionId"
 	| "recipe"
->;
+> &
+	Partial<Pick<Consumable, "kind">>;
 
 /**
  * One line of a recipe: a reference to what went in, plus a snapshot of its

@@ -25,9 +25,24 @@ export type LabelComposition = {
 	volumeL: number | null;
 };
 
+const LABEL_CONSTITUENT_CODES = [
+	"energy",
+	"protein",
+	"carbohydrate",
+	"fat",
+	"fluid",
+	"ethanol",
+	"caffeine",
+	"nicotine",
+] as const;
+
 const GRAMS_PER_KILOGRAM = 1_000;
 const MILLIGRAMS_PER_KILOGRAM = 1_000_000;
 const MILLILITRES_PER_LITRE = 1_000;
+
+function labelNumber(value: number): string {
+	return String(Number(value.toPrecision(12)));
+}
 
 function optionalNumber(
 	value: string | undefined,
@@ -99,4 +114,61 @@ export function compositionFromLabelInputs(
 		constituents.ethanol = ethanolKgFromVolumeAndAbv(volumeL, abvPercent);
 	}
 	return { constituents, volumeL };
+}
+
+/**
+ * Presents a canonical, per-portion composition in the units printed on a
+ * label. Constituents the quick editor does not expose are intentionally not
+ * represented here; callers retain them with {@link mergeLabelInputs}.
+ */
+export function labelInputsFromComposition(
+	constituents: ConstituentAmounts,
+): LabelInputs {
+	const inputs: LabelInputs = {};
+	if (constituents.energy !== undefined) {
+		inputs.energyKcal = labelNumber(constituents.energy);
+	}
+	for (const [code, field] of [
+		["protein", "proteinG"],
+		["carbohydrate", "carbohydrateG"],
+		["fat", "fatG"],
+	] as const) {
+		const amount = constituents[code];
+		if (amount !== undefined) {
+			inputs[field] = labelNumber(amount * GRAMS_PER_KILOGRAM);
+		}
+	}
+	const fluid = constituents.fluid;
+	if (fluid !== undefined) {
+		inputs.fluidMl = labelNumber(fluid * MILLILITRES_PER_LITRE);
+	}
+	const ethanol = constituents.ethanol;
+	if (ethanol !== undefined && fluid !== undefined && fluid > 0) {
+		const pureEthanol = ethanolKgFromVolumeAndAbv(fluid, 100);
+		inputs.abvPercent = labelNumber((ethanol / pureEthanol) * 100);
+	}
+	for (const [code, field] of [
+		["caffeine", "caffeineMg"],
+		["nicotine", "nicotineMg"],
+	] as const) {
+		const amount = constituents[code];
+		if (amount !== undefined) {
+			inputs[field] = labelNumber(amount * MILLIGRAMS_PER_KILOGRAM);
+		}
+	}
+	return inputs;
+}
+
+/** Applies the quick editor's fields without dropping richer provider data. */
+export function mergeLabelInputs(
+	base: ConstituentAmounts,
+	inputs: LabelInputs,
+): LabelComposition {
+	const parsed = compositionFromLabelInputs(inputs);
+	const constituents: Record<string, number> = { ...base };
+	for (const code of LABEL_CONSTITUENT_CODES) {
+		delete constituents[code];
+	}
+	Object.assign(constituents, parsed.constituents);
+	return { ...parsed, constituents };
 }

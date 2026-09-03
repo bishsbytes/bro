@@ -101,7 +101,9 @@ describe("Open Food Facts normalisation", () => {
 			code: "5000112637922",
 			product_name: "Cola",
 			categories_tags: ["en:beverages", "en:sodas"],
-			serving_size: "1 can",
+			serving_size: "330 ml can",
+			serving_quantity: 330,
+			serving_quantity_unit: "ml",
 			nutriments: {
 				"energy-kj_100g": 180,
 				sugars_100g: 10.6,
@@ -110,23 +112,29 @@ describe("Open Food Facts normalisation", () => {
 		});
 		expect(cola).toMatchObject({
 			kind: "drink",
+			basis: { type: "volume", volumeL: 0.1 },
 			constituents: {
 				energy: expect.closeTo(43.021, 3),
 				sugar: 0.0106,
 				sodium: 0,
 			},
-			// A serving with no mass cannot be related to the basis and is not
-			// offered; 100 g always is.
 			portions: [
 				{
-					id: "100g",
-					label: "100 g",
-					massKg: 0.1,
-					volumeL: null,
+					id: "serving",
+					label: "330 ml can",
+					massKg: null,
+					volumeL: 0.33,
+					basisUnits: null,
+				},
+				{
+					id: "100ml",
+					label: "100 ml",
+					massKg: null,
+					volumeL: 0.1,
 					basisUnits: null,
 				},
 			],
-			defaultPortionId: "100g",
+			defaultPortionId: "serving",
 		});
 		expect(cola?.constituents).not.toHaveProperty("protein");
 		// A product the provider knows nothing about nutritionally is not a result.

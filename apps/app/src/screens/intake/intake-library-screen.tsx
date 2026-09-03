@@ -4,6 +4,7 @@ import {
 	RECIPE_YIELD_UNITS,
 	type RecipeYieldUnit,
 } from "@bro/domain/consumable";
+import { scaleComposition } from "@bro/logic";
 import { useCallback, useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { View } from "react-native";
@@ -17,8 +18,10 @@ import { SectionHeader } from "../../components/section-header";
 import {
 	compositionFromLabelInputs,
 	type LabelInputs,
+	labelInputsFromComposition,
 	labelInputsHaveValue,
 	labelInputsValid,
+	mergeLabelInputs,
 } from "../../intake/free-entry";
 import {
 	createIntakeSettingsStore,
@@ -150,10 +153,9 @@ function NutritionFields({
 }
 
 /**
- * The library, first cut: items you have often (a name, a portion, and the
- * numbers you have) and recipes whose numbers come from their ingredients.
- * The composition editor with a chosen basis, the fork banner, and provider
- * import are the next phases.
+ * The compact library editor presents an item's default portion in familiar
+ * label units. Saving maps those values back to its authored basis and keeps
+ * richer hidden nutrients; editing supplied content creates a user-owned fork.
  */
 export function IntakeLibraryScreen({
 	store,
@@ -175,6 +177,11 @@ export function IntakeLibraryScreen({
 	const [brand, setBrand] = useState("");
 	const [portionLabel, setPortionLabel] = useState("");
 	const [inputs, setInputs] = useState<LabelInputs>({});
+	const [baseConstituents, setBaseConstituents] = useState<
+		Consumable["constituents"]
+	>({});
+	const [editingPortionId, setEditingPortionId] = useState<string | null>(null);
+	const [forkedFromName, setForkedFromName] = useState<string | null>(null);
 	const [yieldQuantity, setYieldQuantity] = useState("1");
 	const [yieldUnit, setYieldUnit] = useState<RecipeYieldUnit>("serving");
 	const [ingredients, setIngredients] = useState<IngredientDraft[]>([]);
@@ -197,6 +204,9 @@ export function IntakeLibraryScreen({
 		setBrand("");
 		setPortionLabel("");
 		setInputs({});
+		setBaseConstituents({});
+		setEditingPortionId(null);
+		setForkedFromName(null);
 		setYieldQuantity("1");
 		setYieldUnit("serving");
 		setIngredients([]);
@@ -212,7 +222,24 @@ export function IntakeLibraryScreen({
 			setKind(consumable.kind);
 			setName(consumable.name);
 			setBrand(consumable.brand ?? "");
-			setPortionLabel(consumable.portions[0]?.label ?? "");
+			if (consumable.source.type !== "user") {
+				setForkedFromName(consumable.name);
+			}
+			const portion =
+				consumable.portions.find(
+					({ id }) => id === consumable.defaultPortionId,
+				) ?? consumable.portions[0];
+			const constituents = portion
+				? scaleComposition(consumable, {
+						type: "portion",
+						portionId: portion.id,
+						quantity: 1,
+					}).constituents
+				: consumable.constituents;
+			setPortionLabel(portion?.label ?? "");
+			setEditingPortionId(portion?.id ?? null);
+			setBaseConstituents(constituents);
+			setInputs(labelInputsFromComposition(constituents));
 			if (consumable.recipe) {
 				setYieldQuantity(String(consumable.recipe.yield.quantity));
 				setYieldUnit(consumable.recipe.yield.unit);
@@ -276,7 +303,9 @@ export function IntakeLibraryScreen({
 	const itemValid =
 		name.trim() !== "" &&
 		labelInputsValid(inputs) &&
-		labelInputsHaveValue(inputs);
+		(labelInputsHaveValue(inputs) ||
+			(typeof editing?.id === "string" &&
+				Object.keys(baseConstituents).length > 0));
 	const ingredientValid =
 		ingredientName.trim() !== "" &&
 		isPositiveNumber(ingredientQuantity) &&
@@ -300,6 +329,11 @@ export function IntakeLibraryScreen({
 								: t("intake:library.newTitle")
 						}
 					/>
+					{forkedFromName ? (
+						<AppText variant="caption" color="muted">
+							{t("intake:library.forked", { name: forkedFromName })}
+						</AppText>
+					) : null}
 					{editing.id === null ? (
 						<View style={styles.wrap}>
 							<Button
@@ -445,7 +479,8 @@ export function IntakeLibraryScreen({
 							loading={busy}
 							disabled={editing.mode === "item" ? !itemValid : !recipeValid}
 							style={styles.grow}
-							onPress={() =>
+							onPress={() => {
+								const composition = mergeLabelInputs(baseConstituents, inputs);
 								void mutate(() =>
 									editing.mode === "item"
 										? library.saveItem({
@@ -454,8 +489,9 @@ export function IntakeLibraryScreen({
 												name,
 												brand: brand.trim() || null,
 												portionLabel,
-												constituents:
-													compositionFromLabelInputs(inputs).constituents,
+												constituents: composition.constituents,
+												portionId: editingPortionId,
+												volumeL: composition.volumeL,
 											})
 										: library.saveRecipe({
 												id: editing.id ?? undefined,
@@ -468,8 +504,8 @@ export function IntakeLibraryScreen({
 												},
 												ingredients,
 											}),
-								)
-							}
+								);
+							}}
 						/>
 					</View>
 					{editing.id ? (

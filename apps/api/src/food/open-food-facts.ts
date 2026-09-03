@@ -5,6 +5,7 @@ import {
 	FOOD_DATA_LICENCE,
 	FOOD_DATA_SOURCE,
 	PER_100_G,
+	PER_100_ML,
 	type Portion,
 } from "@bro/domain/food-search";
 
@@ -56,15 +57,16 @@ const PRODUCT_FIELDS = [
 const SALT_GRAMS_PER_SODIUM_GRAM = 2.5;
 const KILOJOULES_PER_KILOCALORIE = 4.184;
 const GRAMS_PER_KILOGRAM = 1_000;
+const MILLILITRES_PER_LITRE = 1_000;
 
 /**
  * Open Food Facts nutriment keys, mapped to constituent codes. Every `_100g`
- * mass value is in grams, whatever unit the label printed; energy is kcal or
- * kJ. Nothing else the provider knows reaches the client — the constituent
- * map is the whole contract.
+ * mass value is in grams; for a liquid the suffix means per 100 ml. Energy is
+ * kcal or kJ. Nothing else the provider knows reaches the client — the
+ * constituent map is the whole contract.
  *
  * Alcohol is deliberately absent: the provider declares it as % by volume
- * against a per-100-g basis, which cannot be converted honestly without a
+ * against a provider basis, which cannot be converted honestly without a
  * density. A beer from a barcode carries its energy and sugar, not its ethanol.
  */
 const MASS_NUTRIMENTS = [
@@ -123,9 +125,9 @@ function energyKcalPer100g(nutriments: OpenFoodFactsNutriments): number | null {
 }
 
 /**
- * The constituent map per 100 g in canonical units: kilocalories for energy,
- * kilograms for every mass. Absent nutriments stay absent — "not applicable or
- * unknown" — and a declared zero stays a zero.
+ * The constituent map per provider 100-unit basis in canonical units:
+ * kilocalories for energy, kilograms for every mass. Absent nutriments stay
+ * absent — "not applicable or unknown" — and a declared zero stays a zero.
  */
 function constituentsPer100g(
 	nutriments: OpenFoodFactsNutriments,
@@ -155,11 +157,14 @@ function kindOf(product: OpenFoodFactsProduct): ConsumableKind {
 }
 
 /**
- * A declared serving becomes a portion only when its mass is known: a portion
- * that cannot be related to the per-100-g basis is not offered rather than
- * guessed. "100 g" is always offered, and is the default when nothing else is.
+ * A declared serving becomes a portion only when its dimension matches the
+ * product's provider basis. A relation that would require guessing density is
+ * omitted. The native 100 g or 100 ml portion is always offered.
  */
-function portionsOf(product: OpenFoodFactsProduct): {
+function portionsOf(
+	product: OpenFoodFactsProduct,
+	kind: ConsumableKind,
+): {
 	portions: Portion[];
 	defaultPortionId: string;
 } {
@@ -169,29 +174,35 @@ function portionsOf(product: OpenFoodFactsProduct): {
 	const servingUnit = nonEmptyString(
 		product.serving_quantity_unit,
 	)?.toLowerCase();
-	const servingInGrams =
+	const expectedUnit = kind === "drink" ? "ml" : "g";
+	const servingMatchesBasis =
 		servingQuantity !== null &&
 		servingQuantity > 0 &&
-		(servingUnit === "g" ||
-			servingUnit === "ml" ||
-			(!servingUnit && servingLabel?.toLowerCase().includes("g")));
-	if (servingLabel && servingInGrams) {
+		(servingUnit === expectedUnit ||
+			(!servingUnit &&
+				new RegExp(`\\b${expectedUnit}\\b`, "i").test(servingLabel ?? "")));
+	if (servingLabel && servingMatchesBasis) {
 		portions.push({
 			id: "serving",
 			label: servingLabel,
-			massKg: servingQuantity / GRAMS_PER_KILOGRAM,
-			volumeL: null,
+			massKg: kind === "food" ? servingQuantity / GRAMS_PER_KILOGRAM : null,
+			volumeL:
+				kind === "drink" ? servingQuantity / MILLILITRES_PER_LITRE : null,
 			basisUnits: null,
 		});
 	}
+	const providerPortion = kind === "drink" ? PER_100_ML : PER_100_G;
 	portions.push({
-		id: "100g",
-		label: "100 g",
-		massKg: PER_100_G.massKg,
-		volumeL: null,
+		id: kind === "drink" ? "100ml" : "100g",
+		label: kind === "drink" ? "100 ml" : "100 g",
+		massKg: providerPortion.type === "mass" ? providerPortion.massKg : null,
+		volumeL: providerPortion.type === "volume" ? providerPortion.volumeL : null,
 		basisUnits: null,
 	});
-	return { portions, defaultPortionId: portions[0]?.id ?? "100g" };
+	return {
+		portions,
+		defaultPortionId: portions[0]?.id ?? (kind === "drink" ? "100ml" : "100g"),
+	};
 }
 
 export function normaliseOpenFoodFactsProduct(
@@ -212,15 +223,16 @@ export function normaliseOpenFoodFactsProduct(
 	// as intake; it is not a result.
 	if (Object.keys(constituents).length === 0) return null;
 
+	const kind = kindOf(product);
 	return {
 		ref: `off:${code}`,
 		name,
 		brand: nonEmptyString(product.brands),
 		barcode: code,
-		kind: kindOf(product),
-		basis: PER_100_G,
+		kind,
+		basis: kind === "drink" ? PER_100_ML : PER_100_G,
 		constituents,
-		...portionsOf(product),
+		...portionsOf(product, kind),
 		source: FOOD_DATA_SOURCE,
 		licence: FOOD_DATA_LICENCE,
 	};

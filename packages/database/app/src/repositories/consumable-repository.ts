@@ -480,7 +480,7 @@ export class ConsumableRepository extends BaseRepository {
 					: { ...input, ...recipeComposition(ingredients, input.recipe.yield) };
 			const normalized = normalizeConsumable({
 				...composed,
-				kind: existing.kind,
+				kind: input.kind ?? existing.kind,
 				source: existing.source,
 				forkedFrom: existing.forkedFrom,
 			});
@@ -657,6 +657,7 @@ export class ConsumableRepository extends BaseRepository {
 		id: string,
 		input: Pick<
 			CreateConsumable,
+			| "kind"
 			| "name"
 			| "brand"
 			| "barcode"
@@ -670,10 +671,11 @@ export class ConsumableRepository extends BaseRepository {
 	): Promise<void> {
 		await this.run(
 			`UPDATE consumables SET
-				name = ?, brand = ?, barcode = ?, basis = ?, constituents = ?,
+				kind = ?, name = ?, brand = ?, barcode = ?, basis = ?, constituents = ?,
 				portions = ?, default_portion_id = ?, recipe = ?, updated_at = ?
 			 WHERE id = ?`,
 			[
+				input.kind,
 				input.name,
 				input.brand,
 				input.barcode,
@@ -710,6 +712,7 @@ export class ConsumableRepository extends BaseRepository {
 		await this.writeComposition(
 			recipe.id,
 			{
+				kind: recipe.kind,
 				name: recipe.name,
 				brand: recipe.brand,
 				barcode: recipe.barcode,
