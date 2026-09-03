@@ -1,42 +1,55 @@
 ---
 type: runtime workflow
 title: Runtime workflows
-description: Startup, authentication, database migration, and API request lifecycles that connect the mobile and server systems.
+description: Startup, optional identity, local migration, food lookup, and server request lifecycles across the Expo Router app, SQLite stores, Better Auth, and Hono API.
 tags: [workflows, lifecycle, runtime]
+openwiki:
+  roles: [architecture, workflow, testing]
+  change_kinds: [startup, authentication, migration]
+  source_paths: [apps/app/src/app/_layout.tsx, packages/auth/app/src/hooks/auth-provider.tsx, apps/api/src/app.ts]
+  symbols: [RootLayout, AuthProvider, createApp, runMigrations, runLocalMigrations]
+  test_paths: [apps/app/src/root-layout.test.tsx, apps/app/src/auth-provider.test.tsx, apps/api/src/food.test.ts]
+  invariants: [Both relational device stores migrate before application providers mount., A user with no remote-session hint issues no session request.]
+  validation_commands: [pnpm nx test @bro/app --runTestsByPath src/root-layout.test.tsx]
 ---
 
 # Runtime workflows
 
-## Mobile startup
+This page collects cross-system ordering. Detailed mobile presentation is owned by [mobile client](../app/mobile-client.md), local storage by [mobile database](../database/mobile.md), and optional identity by [mobile authentication](../auth/client.md).
 
-`App` prevents splash auto-hide, awaits `initDb`, runs `runMigrations`, and only then mounts `AuthProvider`. A database-open or migration failure is rendered as `StartupError`; successful initialization enters Better Auth session loading. This ordering makes local schema readiness a prerequisite for the signed-in/out UI.
+## Mobile startup and routing
+
+`RootLayout` suppresses automatic splash hiding, reads synchronous device settings, applies appearance, opens `bro.db` and `bro-local.db` sequentially, then migrates both in parallel. It waits for fonts as well as storage before mounting `DeviceSettingsProvider`, health/reminder effects, `AuthProvider`, and the protected Expo Router stack. A storage failure presents retry; retry closes both handles and settings before restarting.
 
 ```mermaid
 sequenceDiagram
-  participant App as Expo App
-  participant DB as database-app
-  participant Auth as auth-app
-  participant API as Hono API
-  App->>DB: initDb()
-  DB-->>App: SQLite handle
-  App->>DB: runMigrations(handle)
-  DB-->>App: MigrationResult
-  App->>Auth: mount AuthProvider
-  Auth->>API: useSession request
-  API-->>Auth: session or error
-  Auth-->>App: pending, signed-out, or signed-in state
+  participant Root as RootLayout
+  participant Settings as DeviceSettings
+  participant Product as bro.db
+  participant Local as bro-local.db
+  participant Providers as AppProviders
+  Root->>Settings: readDeviceSettings
+  Root->>Product: initDb
+  Root->>Local: initLocalDb
+  Root->>Product: runMigrations
+  Root->>Local: runLocalMigrations
+  Product-->>Root: migrated
+  Local-->>Root: migrated
+  Root->>Providers: mount after fonts and storage
 ```
 
-The diagram shows the startup boundary and the later session request; the local database is not used as the auth session store.
+Onboarding is the first Router guard. After completion, the tabs and nested routes are available; sign-in/sign-up screens are outside the onboarding-complete group because an account remains optional. Read [mobile product workflows](../app/product-workflows.md) for the screen/store data flow.
 
-## Authentication
+## Optional identity
 
-Sign-up and sign-in screens call `useAuth`, whose provider actions call Better Auth email endpoints through `authClient`. The Expo plugin stores session credentials in SecureStore and uses scheme `app` for redirects. On the server, CORS covers `/api/auth/*`, the route delegates the raw request to Better Auth, and Better Auth persists users/accounts/sessions through Drizzle Postgres. `withSession` can resolve a caller's session for future routes but intentionally does not reject anonymous requests.
+`AuthProvider` receives the device setting `hasStoredRemoteSession`. Only a true marker mounts `RemoteSessionBridge` and requests a Better Auth session. A resolved absent session or 401 clears that marker; ordinary offline failure does not. Sign-in/up set the marker, sign-out clears it before best-effort remote revocation, and deletion clears the local cache/marker after the password-confirmed server action. None of these transitions delete, switch, or scope product rows.
 
-## Database changes
+The server delegates `/api/auth/*` to Better Auth, which uses injected Drizzle/Postgres. This is a remote identity flow, not a prerequisite for journal access. See [server authentication](../auth/server.md) and [server database](../database/server.md) for generated-schema ordering.
 
-Server changes flow from Better Auth options or Drizzle schema to generated `database/api/src/schema`, then SQL under `database/api/drizzle`, then `db:migrate` against Postgres. Mobile changes flow from `database/app/src/schema.ts` through Drizzle Kit and the migration-manifest generator; the manifest is bundled, and the app applies unapplied IDs transactionally at startup. A failed migration prevents the app from proceeding.
+## Anonymous food lookup
 
-## Boundaries and failure modes
+The Intake flow may call `/api/food` for Open Food Facts search/ref/barcode lookup. `createFoodRoutes` validates input, sets `no-store`, rate-limits a coarse address bucket, and delegates to its injected provider. Invalid, unavailable, and rate-limited remote responses must not prevent local intake entries or cache reads. The API behavior and proxy trust boundary are owned by [API server](../api/server.md).
 
-The API requires its database URL, auth secret, and auth URL before composing dependencies. The mobile auth client requires `EXPO_PUBLIC_API_URL`; the mobile database rejects partial Turso credentials. These checks fail early. The app does not currently invoke `triggerSync`, so local writes remain device-local unless a future lifecycle explicitly adds sync scheduling and conflict policy.
+## Focused lifecycle checks
+
+Use `pnpm nx test @bro/app --runTestsByPath src/root-layout.test.tsx` for startup, retry, and provider ordering; `src/auth-provider.test.tsx` for marker transitions; and `src/local-data-continuity.test.tsx` for account lifecycle preservation. Use the API food test for network lookup behavior. Native or full-app smoke testing is conditional on changes to Expo/native adapters, migrations, or real session transport.

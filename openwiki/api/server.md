@@ -1,38 +1,53 @@
 ---
 type: service
 title: Hono API server
-description: Node Hono composition root exposing health and Better Auth routes with environment-injected Postgres and authentication dependencies.
-tags: [api, hono, authentication]
+description: Node Hono service that exposes health, Better Auth, password-confirmed account deletion, and anonymous Open Food Facts lookup with CORS and request-level seams.
+tags: [api, hono, authentication, food]
+openwiki:
+  roles: [architecture, integration, operations, testing]
+  change_kinds: [api-route, external-provider, public-api]
+  source_paths: [apps/api/src/main.ts, apps/api/src/app.ts, apps/api/src/routes/food.ts, apps/api/src/food/open-food-facts.ts]
+  symbols: [createApp, createFoodRoutes, OpenFoodFactsProvider, InMemoryFoodRateLimiter]
+  test_paths: [apps/api/src/food.test.ts, apps/api/src/account-deletion.test.ts]
+  invariants: [Food requests are anonymous, no-store, and rate limited per coarse caller bucket., Forwarded headers are trusted only behind a rewriting proxy.]
+  validation_commands: [pnpm nx test @bro/api --runTestsByPath src/food.test.ts]
 ---
 
 # Hono API server
 
-`apps/api/src/main.ts` is the production/runtime entrypoint: it calls `serve` with `createApp().fetch` and the configured port. `createApp` is intentionally exported separately so request-level checks can use Hono's `app.request(...)` without binding a socket. The application mounts `health` and `authRoutes`; only the auth subtree receives credentialed CORS.
+`apps/api/src/main.ts` is the runtime entrypoint: it creates the dependency-injected Hono app and binds `app.fetch` with `@hono/node-server`. `createApp` in `apps/api/src/app.ts` is separately exported so tests use `app.request(...)` without opening a port. The API composes [server authentication](../auth/server.md), [server database](../database/server.md), and the anonymous food provider used by [mobile product workflows](../app/product-workflows.md).
 
-## Public routes and composition
+## Registered routes
 
-- `GET /health` returns `{ status: "ok" }` from `apps/api/src/routes/health.ts`.
-- `GET` and `POST /api/auth/*` delegate the raw `Request` to `auth.handler` in `apps/api/src/routes/auth.ts`. Better Auth owns the subtree's endpoint semantics.
-- `withSession` in `apps/api/src/middleware/session.ts` calls `auth.api.getSession({ headers: c.req.raw.headers })`, then sets `session` and `user`. `SessionVariables` declares `session` as `NonNullable<SessionResult>["session"] | null` and `user` as `NonNullable<SessionResult>["user"] | null`, where `SessionResult` is `Awaited<ReturnType<Auth["api"]["getSession"]>>`. It is non-blocking for anonymous requests, so a protected handler must check `c.get("user")` or `c.get("session")` and return its own unauthorized response. This differs from the Better Auth route subtree: `/api/auth/*` delegates directly to `auth.handler` and is not a protected application route.
-
-`apps/api/src/env.ts` validates `DATABASE_URL`, `BETTER_AUTH_SECRET`, and `BETTER_AUTH_URL`, defaults CORS to `http://localhost:8081`, and parses `PORT` with default `3000`. A missing or empty required value throws the exact message `${name} must be set. Copy .env.example to .env and fill it in.` during module initialization, before the server starts; `PORT` is `Number(process.env.PORT ?? 3000)`, so a nonnumeric supplied value becomes `NaN` and is passed to the Node server rather than rejected by `env.ts`. It constructs `db` with `createApiDb` and `auth` with `createAuth`; packages do not read process environment themselves.
-
-For `/api/auth/*`, CORS uses `env.corsOrigin`, allows `Content-Type` and `Authorization`, allows `GET`, `POST`, and `OPTIONS`, and sets `credentials: true`. `CORS_ORIGIN` overrides the localhost default and `PORT` controls `serve`; the required database/auth values flow into the Drizzle client and Better Auth factory.
+- `GET /health` returns `{ status: "ok" }`.
+- `GET` and `POST /api/auth/*` delegate raw requests to Better Auth. This includes password-confirmed `delete-user`; the container-backed `account-deletion.test.ts` verifies rejected deletion preserves rows and accepted deletion removes user, account, and sessions.
+- `GET /api/food/search?q=<query>` searches Open Food Facts. The query must be 2–120 trimmed characters.
+- `GET /api/food/barcode/:code` accepts 8–14 digits, and `GET /api/food/:ref` accepts `off:<digits>`; both return an item or 404.
 
 ```mermaid
 flowchart TD
-  Main["main.ts"] --> Create["createApp()"]
-  Create --> Cors["auth CORS"]
-  Create --> Health["GET /health"]
-  Create --> AuthRoute["GET or POST /api/auth/*"]
-  AuthRoute --> BetterAuth["auth.handler"]
-  BetterAuth --> Pg["Drizzle Postgres"]
+  Main["main.ts"] --> App["createApp"]
+  App --> Health["GET /health"]
+  App --> Auth["/api/auth"]
+  Auth --> BetterAuth["auth.handler"]
+  BetterAuth --> Postgres["Drizzle Postgres"]
+  App --> Food["/api/food"]
+  Food --> Limit["rate limit and no-store"]
+  Limit --> Provider["Open Food Facts"]
 ```
 
-This flow shows the server composition and the only currently registered route families.
+This is the complete current server surface: ordinary product records remain device-local and are not API routes.
 
-## Build and validation
+## Food lookup service
 
-Use `pnpm exec nx run @bro/api:serve` to have Nx run the development esbuild bundle in watch mode and restart Node after successful rebuilds. Development bundles third-party packages so the output can run directly from `dist`; production keeps them external for the prune/deployment targets. Use `pnpm exec nx run @bro/api:build` for the production Node ESM output. The package uses `nodenext`-style `.js` relative import suffixes. Run `pnpm exec nx run-many -t typecheck` and `pnpm lint` for cross-package validation. There are no tracked API test files; the exported `createApp` is the narrow seam for adding request tests.
+`createFoodRoutes` injects a `FoodProvider`, `InMemoryFoodRateLimiter`, optional observer, clock, and proxy-header policy. Every food response uses `Cache-Control: no-store`; rate limiting defaults to 30 requests per 60 seconds. Buckets use a coarsened IPv4 /24 or IPv6 /64 address so callers are not collapsed into one bucket. The in-memory limiter is process-local and bounded; it is not a distributed production quota.
 
-The API does not own domain data routes beyond authentication yet. New protected routes should register a route module in `createApp`, apply `withSession` when session context is needed, and keep authorization decisions in the route rather than changing the middleware's anonymous behavior.
+By default the peer socket address is used. `trustProxyHeaders` permits `cf-connecting-ip` or `x-forwarded-for` only when a deployment proxy overwrites them; otherwise a client can spoof its bucket. Over-limit requests return 429 and `Retry-After`; invalid input returns 400/404; upstream failures return 504 for a recognised timeout and 502 otherwise. `FoodRouteObserver` receives hit, miss, rate-limit, and upstream-error events without receiving raw query or address values.
+
+CORS is deliberately different by subtree: `/api/auth/*` permits credentialed `Content-Type`/`Authorization` requests, while `/api/food/*` permits GET and `Content-Type` without credentials. Keep an anonymous lookup route separate from auth middleware and do not turn the optional food service into a prerequisite for local intake logging.
+
+## Change and validation guidance
+
+To add a route, define an injectable route module, register it from `createApp`, choose CORS/auth explicitly, and test it through `app.request`. If the route needs a session, use `withSession` but remember it only attaches nullable values; the handler owns the 401/403 decision. Add exported types through the module and API entrypoint only when consumers need them.
+
+`apps/api/src/food.test.ts` is the focused suite for validation, mapping, timeout, rate-limit, and proxy-boundary behavior. It is the normal check for food changes: `pnpm nx test @bro/api --runTestsByPath src/food.test.ts`. `account-deletion.test.ts` starts Postgres via Testcontainers, so run it conditionally for auth/account-deletion or server-schema changes: `pnpm nx test @bro/api --runTestsByPath src/account-deletion.test.ts`. Run `pnpm nx run @bro/api:build` when changing the deployment bundle or Node ESM imports; a route unit test alone does not validate that consumer-facing build boundary.

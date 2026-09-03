@@ -1,3 +1,3 @@
 # Files
 
-- [Hono API server](server.md) - Node Hono composition root exposing health and Better Auth routes with environment-injected Postgres and authentication dependencies.
+- [Hono API server](server.md) - Node Hono service that exposes health, Better Auth, password-confirmed account deletion, and anonymous Open Food Facts lookup with CORS and request-level seams.

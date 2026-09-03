@@ -1,15 +1,23 @@
 ---
 type: data layer
 title: Server database
-description: Postgres Drizzle schema, client factory, generated Better Auth tables, and migration application owned by the API side.
+description: Postgres Drizzle client, Better Auth generated schema, migration workflow, and API-only persistence boundary for remote identity.
 tags: [database, postgres, drizzle]
+openwiki:
+  roles: [architecture, integration, operations, testing]
+  change_kinds: [server-schema, migration, authentication]
+  source_paths: [packages/database/api/src/index.ts, packages/database/api/src/schema/auth.ts, packages/database/api/src/migrate.ts]
+  symbols: [createApiDb, ApiDb, schema]
+  test_paths: [apps/api/src/account-deletion.test.ts]
+  invariants: [Postgres currently stores remote identity rather than mobile product records., Better Auth schema is generator-owned.]
+  validation_commands: [pnpm nx run @bro/database-api:db:generate]
 ---
 
 # Server database
 
-`@bro/database-api` owns the API database boundary. `createApiDb(connectionString)` creates a `postgres` client and Drizzle client with the schema exported from `src/schema/index.ts`; callers supply the connection string. `ApiDb` is the inferred client type consumed by [server authentication](../auth/server.md).
+`@bro/database-api` owns the API-only Postgres boundary. `createApiDb(connectionString)` creates the `postgres` client and Drizzle client over exports from `src/schema/index.ts`; `ApiDb` is injected into [server authentication](../auth/server.md). The API environment validates the database URL before composition. This database is authoritative for remote users/accounts/sessions, not for the offline product journal described by [mobile database](mobile.md).
 
-The current schema is Better Auth's generated `user`, `session`, `account`, and `verification` tables in `src/schema/auth.ts`. Users have unique email addresses; sessions and accounts reference users with cascade deletion and indexed `userId` fields; sessions have unique tokens and expiry timestamps. Relations expose user-to-sessions/accounts and reverse session/account-to-user navigation.
+The current schema is Better Auth-generated `user`, `session`, `account`, and `verification` tables in `src/schema/auth.ts`. User email and session token are unique; account/session rows reference users with cascade deletion. The account lifecycle integration suite is the consumer-facing proof that a generated schema, Better Auth handler, and Hono app work together.
 
 ```mermaid
 erDiagram
@@ -18,32 +26,26 @@ erDiagram
   USER {
     text id PK
     text email UK
-    text name
   }
   SESSION {
     text id PK
     text token UK
     text userId FK
-    timestamp expiresAt
   }
   ACCOUNT {
     text id PK
     text userId FK
-    text providerId
   }
   VERIFICATION {
     text id PK
     text identifier
-    timestamp expiresAt
   }
 ```
 
-This model is grounded in the generated Drizzle schema; `VERIFICATION` is independently indexed by identifier.
+This is the current remote identity model; it has no product-data table or sync mapping.
 
-## Migration lifecycle
+## Change recipe
 
-`nx run @bro/database-api:db:generate` runs Drizzle Kit from `packages/database/api`; schema changes produce SQL under `drizzle/`. `src/migrate.ts` requires `DATABASE_URL`, resolves the compiled/runtime `../drizzle` folder, and calls Drizzle's Postgres migrator. Apply with `nx run @bro/database-api:db:migrate` after starting the Postgres service.
+For a Better Auth option change, follow [server authentication's schema contract](../auth/server.md#schema-and-lifecycle-contract). For a separately designed server-owned domain, add Drizzle tables/relations under `src/schema`, export them through `src/schema/index.ts`, generate and inspect migration SQL, apply it, then implement the injected query in its owning API route/service and mount that route in `apps/api/src/app.ts`. Use `withSession` plus handler-owned authorization for user-scoped resources. No generic repository or automatic bridge to mobile SQLite exists.
 
-For a new server-persisted domain, add its Drizzle table and relations under `src/schema`, export it through `src/schema/index.ts`, and implement domain queries in the owning API route/service using the injected `ApiDb`; this package has no generic repository abstraction and currently no non-auth domain service. Run `db:generate`, inspect the SQL, apply `db:migrate`, then mount the route in `apps/api/src/app.ts` and add `withSession` plus explicit authorization if it is user-scoped. There is no automatic bridge to `@bro/database-app`.
-
-Changing Better Auth options requires regeneration first, then migration generation and application. Do not hand-edit the generated auth schema unless the generator's output is the intended source. Validate with database migration in a disposable/local Postgres, typecheck, and API build. No tracked database test suite is present.
+`pnpm nx run @bro/database-api:db:generate` creates migration output; `pnpm nx run @bro/database-api:db:migrate` applies it. Run `pnpm nx test @bro/api --runTestsByPath src/account-deletion.test.ts` conditionally when schema/auth deletion behavior changes; it requires Docker/Testcontainers. Run the API build for package/deployment boundary changes, not for an isolated migration inspection.

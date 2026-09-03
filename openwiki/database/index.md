@@ -1,4 +1,4 @@
 # Files
 
-- [Mobile database](mobile.md) - Offline-first embedded SQLite and optional libSQL connection with generated migration manifest and parameterized repository extension seam.
-- [Server database](server.md) - Postgres Drizzle schema, client factory, generated Better Auth tables, and migration application owned by the API side.
+- [Mobile database](mobile.md) - Three device-local SQLite stores with generated Drizzle migration manifests, repository-only runtime access, device settings, and explicit product-data deletion boundaries.
+- [Server database](server.md) - Postgres Drizzle client, Better Auth generated schema, migration workflow, and API-only persistence boundary for remote identity.

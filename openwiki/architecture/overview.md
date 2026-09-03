@@ -1,37 +1,53 @@
 ---
 type: architecture overview
 title: Repository architecture
-description: Nx and pnpm monorepo architecture for an offline-first Expo client, Hono API, split authentication libraries, and split database libraries.
+description: Nx and pnpm monorepo architecture for an offline-first Expo Router client, a small Hono API, device persistence, optional authentication, and shared product packages.
 tags: [architecture, monorepo, boundaries]
+openwiki:
+  roles: [architecture, repository]
+  change_kinds: [workspace, dependency-boundary]
+  source_paths: [package.json, pnpm-workspace.yaml, nx.json, apps/app/package.json, apps/api/package.json]
+  invariants: [Mobile product data is device-local., Server-only drivers and secrets do not enter the Expo bundle.]
+  validation_commands: [pnpm nx show projects]
 ---
 
 # Repository architecture
 
-Bro is a private Nx + pnpm workspace with two runtime applications and four boundary libraries. `apps/app` is an Expo SDK 56 mobile client; `apps/api` is a Node Hono server. `@bro/auth-app` and `@bro/database-app` are bundle-safe client libraries, while `@bro/auth-api` and `@bro/database-api` contain server-only Better Auth, Postgres, Drizzle, and secret-bearing integration.
+Bro is a private Nx + pnpm workspace for an offline-first men's wellbeing journal. `@bro/app` is the Expo Router mobile application and `@bro/api` is a small Node Hono service. The app writes product data to local SQLite and remains usable without an account; the API provides optional identity and anonymous food lookup, not product-data synchronization.
 
 ```mermaid
 flowchart TD
-  Mobile["apps/app Expo"] --> MobileAuth["@bro/auth-app"]
-  Mobile --> MobileDb["@bro/database-app embedded SQLite"]
-  API["apps/api Hono Node"] --> ServerAuth["@bro/auth-api Better Auth"]
-  API --> ServerDb["@bro/database-api Postgres Drizzle"]
-  ServerAuth --> ServerDb
-  MobileAuth -. "HTTP auth requests" .-> API
+  App["@bro/app Expo Router"] --> AuthApp["@bro/auth-app"]
+  App --> DatabaseApp["@bro/database-app"]
+  App --> Domain["@bro/domain"]
+  App --> Logic["@bro/logic"]
+  DatabaseApp --> Model["@bro/mobile-model"]
+  DatabaseApp --> Domain
+  Logic --> Model
+  Logic --> Domain
+  API["@bro/api Hono"] --> AuthAPI["@bro/auth-api"]
+  API --> DatabaseAPI["@bro/database-api"]
+  AuthAPI --> DatabaseAPI
+  AuthApp -. "optional auth HTTP" .-> API
+  App -. "anonymous food HTTP" .-> API
 ```
 
-The API database is authoritative for authentication. The mobile database is an independent embedded store used so UI reads/writes do not wait on network access; remote Turso synchronization is optional low-level scaffolding and is not scheduled by the app. The app and API halves never import each other, preventing server drivers and secrets from entering the React Native bundle.
+This graph separates server-only Postgres/Better Auth code from the React Native bundle and keeps calculations downstream of storage-independent definitions.
 
-## Package and build graph
+## Major concepts
 
-Package names flatten nested directories (`packages/database/api` becomes `@bro/database-api`) and are discovered by the `packages/*/*` pnpm workspace glob. Nx targets live in package manifests rather than project files. The API bundles from `apps/api/src/main.ts`; Expo starts from `apps/app/index.js`; database/auth generation targets write generated schema or migration artifacts that runtime code consumes.
+- [Mobile client](../app/mobile-client.md) owns Expo startup, Router guards, tabs, native integrations, and screens. [Mobile product workflows](../app/product-workflows.md) is the canonical guide to feature stores and user-facing domains.
+- [Mobile database](../database/mobile.md) owns three device stores, migrations, and repositories. It has separate durable-product, disposable-local, and device-settings lifecycles.
+- [Shared domain and logic](shared-domain.md) owns catalogues, units, record contracts, and pure derivations; it must stay free of UI, network, and SQLite implementation dependencies.
+- [API server](../api/server.md) owns Hono composition, health, auth delegation, and food-provider integration. [Server authentication](../auth/server.md) and [server database](../database/server.md) own the injected identity/Postgres boundary.
+- [Mobile authentication](../auth/client.md) owns secure optional identity without making it ownership of local product data.
 
-The most central change paths are [API composition](../api/server.md), [server authentication](../auth/server.md), [server database](../database/server.md), and [mobile startup/storage](../app/mobile-client.md). Cross-system ordering and request flow are collected in [runtime workflows](workflows.md); commands and module-boundary rules are in [development operations](../development/operations.md).
+## Workspace and package boundaries
 
-## Ownership boundaries
+Package names flatten nested directory paths: `packages/database/app` is `@bro/database-app`. Both `packages/*` and `packages/*/*` are workspace globs. Nx resolves project and target configuration; use `pnpm nx show projects` and `pnpm nx show project <name>` rather than assuming targets from a directory. Package manifests carry Nx metadata and package entrypoints/bundles are consumer boundaries.
 
-- API owns HTTP routing, environment validation, session context, and server lifecycle.
-- Server auth owns Better Auth options/factory; server database owns Postgres schema/client/migrations.
-- Mobile auth owns client transport, secure session storage, and React context; mobile database owns embedded connection/migrations/repositories.
-- The mobile UI owns startup gating and presentation, not SQL or raw auth calls.
+A public cross-package API requires the defining implementation, its barrel export, the package root export, any registration/factory wiring, and a consumer import/test. Passing a local module test is not sufficient if `@bro/<package>` cannot resolve the new symbol. Run narrow package tests first; run typecheck when exports or package edges change. Keep API-side Node ESM `.js` relative imports separate from Expo-side extensionless imports.
 
-No navigation, application domain repository, or API business route beyond auth/health is currently implemented; these are scope boundaries, not undocumented services.
+## Scope boundaries
+
+Remote product-data sync, paid entitlements, biometric protection, encrypted SQLite, and a second food-data provider are not shipped behavior. HealthKit/Health Connect are device integrations, not API sync. The source of truth for user-facing product intent is `docs/product.md`; source code and tests prevail if prose conflicts.
