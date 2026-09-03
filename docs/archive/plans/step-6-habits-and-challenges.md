@@ -26,7 +26,7 @@ The step is successful when both loops close: a metric habit whose completion fl
 ## Current baseline
 
 - Migrations 001–005 shipped and proven on real prior-step files; `PRODUCT_TABLE_NAMES` drives migration verification and delete-local-data from one record; the multi-migration path is five-times proven.
-- The challenge catalogue exists ([challenge-catalogue.ts](../../packages/domain/src/content/challenge-catalogue.ts)): thirteen templates, one per `wheel:*` area, each a 3-day intro with day titles and actions, typed `challenge:<slug>` and tagged `areaSlug` — read-only by design, "a person can read one and follow it by hand". The review flow renders them at `review/challenge/[slug]`.
+- The challenge catalogue exists ([challenge-catalogue.ts](../../../packages/domain/src/content/challenge-catalogue.ts)): thirteen templates, one per `wheel:*` area, each a 3-day intro with day titles and actions, typed `challenge:<slug>` and tagged `areaSlug` — read-only by design, "a person can read one and follow it by hand". The review flow renders them at `review/challenge/[slug]`.
 - The resolved-day merge from step 5 is the single function that answers "what was this metric's value on this local day" across user and imported provenance; Trends, Body, and goal progress already call it.
 - The registry carries `aggregation` (`sum`, `mean`, `last`, `presence`) per metric; `steps` and `sleep_duration` are durable daily series with 365-day backfill on connect.
 - `goals` proved the derived-progress pattern: stored target, progress computed by reading the series, never stored.

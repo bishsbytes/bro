@@ -31,11 +31,11 @@ That single difference drives most of what follows:
 
 Unchanged constraints from the umbrella plan. Every proposal below sits inside them.
 
-- **The shipped copy is a promise.** [Welcome](../../apps/app/src/app/onboarding/index.tsx): "A private place to check in with yourself." [Privacy](../../apps/app/src/app/onboarding/privacy.tsx): "Everything you write is stored on this device and nowhere else. We cannot read it, because we never have it." [Start](../../apps/app/src/app/onboarding/start.tsx): "your notes on more than one device."
+- **The shipped copy is a promise.** [Welcome](../../../apps/app/src/app/onboarding/index.tsx): "A private place to check in with yourself." [Privacy](../../../apps/app/src/app/onboarding/privacy.tsx): "Everything you write is stored on this device and nowhere else. We cannot read it, because we never have it." [Start](../../../apps/app/src/app/onboarding/start.tsx): "your notes on more than one device."
 - **Anything in `bro.db` replicates** once a user opts in to sync. Placing a domain is a privacy decision. See [Storage ownership](offline-first-identity-onboarding-premium.md#storage-ownership).
 - **Client-generated UUIDs; `createdAt`/`updatedAt` on every record; no tombstones, no conflict policy** — libSQL serializes at the primary.
 - **No per-account ownership.** See [Why no per-account ownership](offline-first-identity-onboarding-premium.md#why-no-per-account-ownership).
-- One [repository](../../packages/database/app/src/repositories/README.md) per domain, hand-written parameterised SQL. Drizzle authors schema and generates migrations only.
+- One [repository](../../../packages/database/app/src/repositories/README.md) per domain, hand-written parameterised SQL. Drizzle authors schema and generates migrations only.
 
 ## The shape of the data
 

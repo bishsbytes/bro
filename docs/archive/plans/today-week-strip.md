@@ -24,12 +24,12 @@ The step is successful when three things hold: a user can see at a glance which 
 
 Verified against source, not the wiki:
 
-- [calendar.ts](../../packages/domain/src/calendar.ts) has `localDayOf`, `shiftLocalDay` (UTC arithmetic, DST-safe), `isoWeekdayForLocalDay` (Monday is zero, matching the cadence bitmasks), `previousLocalDay`. No `weekStartOf` yet.
-- `HabitsStore.loadToday(localDay = this.today())` ([habits-store.ts](../../apps/app/src/habits/habits-store.ts)) already answers "how did habits go on this day" for any day: manual completion from stored rows, metric completion derived through `metricDayValues` → `resolveMetricDay`, streaks via `deriveHabitStreak`. `toggleManual(habitId, localDay)` and `completeChallengeDay(enrolmentId, dayIndex, localDay)` are day-parameterised. The store takes injectable `now`/`timeZone`/`locale`.
+- [calendar.ts](../../../packages/domain/src/calendar.ts) has `localDayOf`, `shiftLocalDay` (UTC arithmetic, DST-safe), `isoWeekdayForLocalDay` (Monday is zero, matching the cadence bitmasks), `previousLocalDay`. No `weekStartOf` yet.
+- `HabitsStore.loadToday(localDay = this.today())` ([habits-store.ts](../../../apps/app/src/habits/habits-store.ts)) already answers "how did habits go on this day" for any day: manual completion from stored rows, metric completion derived through `metricDayValues` → `resolveMetricDay`, streaks via `deriveHabitStreak`. `toggleManual(habitId, localDay)` and `completeChallengeDay(enrolmentId, dayIndex, localDay)` are day-parameterised. The store takes injectable `now`/`timeZone`/`locale`.
 - `CheckInStore.loadToday(date = this.now())` is today-only by design; `save` stamps capture time.
-- `HistoryStore.loadDay(localDay)` + `assembleHistoryDay` build the full day view; [history-day-screen.tsx](../../apps/app/src/screens/history/history-day-screen.tsx) (383 lines) is the existing edit surface for past days. `HistoryStore.loadHistory()` loads `listAll()` of five tables — fine for the history list, the wrong cost shape for the strip.
+- `HistoryStore.loadDay(localDay)` + `assembleHistoryDay` build the full day view; [history-day-screen.tsx](../../../apps/app/src/screens/history/history-day-screen.tsx) (383 lines) is the existing edit surface for past days. `HistoryStore.loadHistory()` loads `listAll()` of five tables — fine for the history list, the wrong cost shape for the strip.
 - Ranged queries: `ObservationRepository.listByMetricAndDayRange(metricSlug, from, through)` and `DayNoteRepository.listBetweenDays` exist. `HabitCompletionRepository` has `listByDay`/`listByHabit`/`listAll` but no day range.
-- The tab shell ([(tabs)/_layout.tsx](../../apps/app/src/app/(tabs)/_layout.tsx)) renders `AppHeader` above the `Tabs` navigator; the Today header carries the history icon. Tabs are `lazy` and stay mounted.
+- The tab shell ([(tabs)/_layout.tsx](../../../apps/app/src/app/(tabs)/_layout.tsx)) renders `AppHeader` above the `Tabs` navigator; the Today header carries the history icon. Tabs are `lazy` and stay mounted.
 - Tests live flat in `apps/app/src` as `*.test.ts(x)`: real-SQLite store tests, pure-logic tests in the packages, and interaction flow tests. Domain and logic packages have their own suites.
 
 ## Decisions locked for this plan

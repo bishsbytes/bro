@@ -15,8 +15,8 @@ Insights lost its tab in the same pass. It is a read/browse destination visited 
 
 ## What landed
 
-- **`(tabs)/intake.tsx`** — [intake-screen.tsx](../../apps/app/src/screens/intake/intake-screen.tsx), the consumption half of the old log screen: the shared energy total, then a summary row per stream (Food, Drinks, and Smoking & vaping) reading each store's existing `loadToday()`. No new queries.
-- **`(tabs)/body.tsx`** — [body-screen.tsx](../../apps/app/src/screens/body/body-screen.tsx), the measurement half moved across unchanged: tracked cards with entry fields and trends, untracked toggles below. `body-metric-screen`'s "Back to Body" now replaces to `/body`, which finally means what it says.
+- **`(tabs)/intake.tsx`** — [intake-screen.tsx](../../../apps/app/src/screens/intake/intake-screen.tsx), the consumption half of the old log screen: the shared energy total, then a summary row per stream (Food, Drinks, and Smoking & vaping) reading each store's existing `loadToday()`. No new queries.
+- **`(tabs)/body.tsx`** — [body-screen.tsx](../../../apps/app/src/screens/body/body-screen.tsx), the measurement half moved across unchanged: tracked cards with entry fields and trends, untracked toggles below. `body-metric-screen`'s "Back to Body" now replaces to `/body`, which finally means what it says.
 - **Insights became a stack** at `app/insights/` (index + the existing `[id]` detail), reached from a chart icon in the Journal header's leading slot. The calendar icon for History moved to the header's `actions` slot beside Settings.
 - **Copy** followed the structure: the `log` catalogue split into a new `intake` namespace and a measurements block on `body`.
 

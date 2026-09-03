@@ -28,12 +28,12 @@ The step is successful when four properties hold: a food logged from the provide
 
 ## Current baseline
 
-- Migrations 001–007 shipped. `consumption_entries` exists with `kind`, `catalogue_ref`, snapshotted `label`/`serving_label`/`quantity`, canonical `volume_l`/`ethanol_kg`/`caffeine_kg`/`energy_kcal`, the observation spine's `occurred_at`/`local_day`/`tz_offset_minutes`, and its two indexes ([schema.ts](../../packages/database/app/src/schema.ts)).
+- Migrations 001–007 shipped. `consumption_entries` exists with `kind`, `catalogue_ref`, snapshotted `label`/`serving_label`/`quantity`, canonical `volume_l`/`ethanol_kg`/`caffeine_kg`/`energy_kcal`, the observation spine's `occurred_at`/`local_day`/`tz_offset_minutes`, and its two indexes ([schema.ts](../../../packages/database/app/src/schema.ts)).
 - `ConsumptionEntryRepository` covers insert, list by day, list recents, list all, update, and hard delete, and the table is in `PRODUCT_TABLE_NAMES`, so migration verification and delete-local-data inherit it.
-- The registry has a third measurement variant — **consumption-derived** ([metric-registry.ts](../../packages/domain/src/content/metric-registry.ts)) — with `aggregation: "sum"`, `userEnterable: false`, and `enabled: false` defaults. `alcohol_intake` (6), `caffeine_intake` (7), `fluid_intake` (8), and `energy_intake` (9) ship today; **`energy_intake` is already the metric food extends**, in kilocalories, non-sensitive.
-- `resolveMetricDay` ([resolved-day.ts](../../packages/logic/src/health/resolved-day.ts)) resolves over three sources — consumption, imported, user — and everything downstream (Trends, goals, history, insight) reads through it. A new consumption metric needs no new projection path.
+- The registry has a third measurement variant — **consumption-derived** ([metric-registry.ts](../../../packages/domain/src/content/metric-registry.ts)) — with `aggregation: "sum"`, `userEnterable: false`, and `enabled: false` defaults. `alcohol_intake` (6), `caffeine_intake` (7), `fluid_intake` (8), and `energy_intake` (9) ship today; **`energy_intake` is already the metric food extends**, in kilocalories, non-sensitive.
+- `resolveMetricDay` ([resolved-day.ts](../../../packages/logic/src/health/resolved-day.ts)) resolves over three sources — consumption, imported, user — and everything downstream (Trends, goals, history, insight) reads through it. A new consumption metric needs no new projection path.
 - Canonical energy is kcal with an exact kJ display conversion; masses are kilograms with fixed-unit display available (caffeine renders `mg` with no preference row, the precedent macros follow).
-- `bro-local.db` exists with its own migration manifest and `LOCAL_TABLE_NAMES` ([local-tables.ts](../../packages/database/app/src/local-tables.ts)), holding disposable health-import tables today. It is the store the food cache joins.
+- `bro-local.db` exists with its own migration manifest and `LOCAL_TABLE_NAMES` ([local-tables.ts](../../../packages/database/app/src/local-tables.ts)), holding disposable health-import tables today. It is the store the food cache joins.
 - **`apps/api` already exists** — a Hono app with `@bro/auth-api`, a `/health` route, session middleware, and Postgres via `@bro/database-api`. Step 9 is therefore not the first server code, but the search endpoint **is the first unauthenticated endpoint in the free tier's path**, which is the part that matters.
 - Export format v6 parses v1–v6 fixtures with entry-level sensitive exclusion proven.
 - No custom-consumable table exists yet. Step 8 deliberately left it, and drinks join it here.
@@ -175,7 +175,7 @@ Unchanged copy; now also clears `custom_consumables`, `custom_consumable_compone
 
 1. Macro and `consumable_ref` columns, `custom_consumables`, and `custom_consumable_components` into `schema.ts` and `PRODUCT_TABLE_NAMES`; `food_cache` into the local schema and `LOCAL_TABLE_NAMES`; `db:generate`, conflict-tolerant form, commit SQL and manifests.
 2. Real-SQLite migration tests: fresh file applies 001–008; a step-8 file applies only 008; re-runs are no-ops, including the four `ALTER TABLE` statements.
-3. `CustomConsumableRepository` and the `food_cache` reader/writer per [the repository recipe](../../packages/database/app/src/repositories/README.md); `ConsumptionEntryRepository` extended for the new columns. Delete-local-data tests extended with sentinel rows in all three tables.
+3. `CustomConsumableRepository` and the `food_cache` reader/writer per [the repository recipe](../../../packages/database/app/src/repositories/README.md); `ConsumptionEntryRepository` extended for the new columns. Delete-local-data tests extended with sentinel rows in all three tables.
 
 ### Slice 2: Metrics, totals, and the local surfaces — no network yet
 

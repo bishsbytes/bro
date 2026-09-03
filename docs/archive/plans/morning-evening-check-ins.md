@@ -14,13 +14,13 @@ contract is preserved (see Decisions).
 
 A check-in today is an unnamed event: any number per day, each one a Mood
 observation plus whichever optional scores were answered, reconstructed by
-grouping ([check-in-store.ts](../../apps/app/src/check-in/check-in-store.ts)).
+grouping ([check-in-store.ts](../../../apps/app/src/check-in/check-in-store.ts)).
 That gives the day no shape — Today's card says "check in again" without ever
 saying when checking in is done, the reminder planner can only suppress *all*
 of today's reminders after *any* check-in
-([reminder-planner.ts](../../packages/logic/src/reminders/reminder-planner.ts)),
+([reminder-planner.ts](../../../packages/logic/src/reminders/reminder-planner.ts)),
 and the daily mean the insight engine reads
-([daily-signal.ts](../../packages/logic/src/insight/daily-signal.ts)) averages
+([daily-signal.ts](../../../packages/logic/src/insight/daily-signal.ts)) averages
 whatever ad-hoc moments the user happened to log, so no two days are sampled
 alike.
 
@@ -90,20 +90,20 @@ had to land together to keep the tree green.
 ### 1. Domain and database
 
 - `CheckInSlot` type and `completedCheckInSlots` in
-  [metric-registry.ts](../../packages/domain/src/content/metric-registry.ts);
+  [metric-registry.ts](../../../packages/domain/src/content/metric-registry.ts);
   default slot on the four configurable scored metrics;
   `CHECK_IN_METRIC_SLUGS` / `hasCompletedCheckIn` unchanged.
-- [schema.ts](../../packages/database/app/src/schema.ts): nullable `slot` on
+- [schema.ts](../../../packages/database/app/src/schema.ts): nullable `slot` on
   `observations` (non-check-in observations have no sitting), nullable
   `check_in_slots` on `tracked_metrics` (`NULL` follows the registry default),
   and required `slot` on `reminders`. The complete current schema is emitted as
   the single initial product migration.
-- [records.ts](../../packages/mobile-model/src/records.ts): the three types
+- [records.ts](../../../packages/mobile-model/src/records.ts): the three types
   gain their fields; repositories read/write them
-  ([observation-repository](../../packages/database/app/src/repositories/observation-repository.ts),
-  [tracked-metrics-repository](../../packages/database/app/src/repositories/tracked-metrics-repository.ts),
-  [reminder-repository](../../packages/database/app/src/repositories/reminder-repository.ts)).
-- [check-in-export.ts](../../packages/logic/src/export/check-in-export.ts)
+  ([observation-repository](../../../packages/database/app/src/repositories/observation-repository.ts),
+  [tracked-metrics-repository](../../../packages/database/app/src/repositories/tracked-metrics-repository.ts),
+  [reminder-repository](../../../packages/database/app/src/repositories/reminder-repository.ts)).
+- [check-in-export.ts](../../../packages/logic/src/export/check-in-export.ts)
   defines this current shape as export format 1, including observation slots,
   reminder slots, and tracked-metric slot overrides.
 - Tests: the flattened schema exposes all three columns with reminder slot
@@ -112,7 +112,7 @@ had to land together to keep the tree green.
 
 ### 2. Check-in store
 
-- [check-in-store.ts](../../apps/app/src/check-in/check-in-store.ts):
+- [check-in-store.ts](../../../apps/app/src/check-in/check-in-store.ts):
   `TodayCheckIn.entries` becomes `sittings: Record<CheckInSlot, CheckInEntry | null>`
   (canonical pick as decided above); `saveCheckIn(slot, scores, entry?)` writes
   `slot` on every row and rewrites whatever already fills the slot;
@@ -127,39 +127,39 @@ had to land together to keep the tree green.
 
 ### 3. Reminders
 
-- [reminder-planner.ts](../../packages/logic/src/reminders/reminder-planner.ts):
+- [reminder-planner.ts](../../../packages/logic/src/reminders/reminder-planner.ts):
   `todayHasCheckIn: boolean` → `completedSlots: ReadonlySet<CheckInSlot>`; a
   reminder is suppressed for today when its slot is complete.
-- [reminder-materialiser.ts](../../apps/app/src/reminders/reminder-materialiser.ts)
+- [reminder-materialiser.ts](../../../apps/app/src/reminders/reminder-materialiser.ts)
   computes the completed-slot set from today's Mood observations;
-  [reminder-store.ts](../../apps/app/src/reminders/reminder-store.ts) and the
+  [reminder-store.ts](../../../apps/app/src/reminders/reminder-store.ts) and the
   reminders screen present each reminder under its slot.
 - Tests: planner per-slot suppression matrix; materialiser wiring.
 
 ### 4. Screens
 
-- [home-screen.tsx](../../apps/app/src/screens/home/home-screen.tsx): two slot
+- [home-screen.tsx](../../../apps/app/src/screens/home/home-screen.tsx): two slot
   cards replace the mood-faces card, the last-check-in line, and the
   review/edit list. A card opens `/check-in?slot=morning|evening`; a done card
   shows `checkInScoreSummary` and reopens the flow as an edit. Tags and note
   sections unchanged.
-- [check-in-screen.tsx](../../apps/app/src/screens/check-in/check-in-screen.tsx):
+- [check-in-screen.tsx](../../../apps/app/src/screens/check-in/check-in-screen.tsx):
   takes the slot param, titles itself with it, builds its steps from the
   slot's scores; the commit-on-leave and revisit-rewrites semantics carry
   over unchanged.
-- [history-store.ts](../../apps/app/src/history/history-store.ts) /
-  [history-day-screen.tsx](../../apps/app/src/screens/history/history-day-screen.tsx):
+- [history-store.ts](../../../apps/app/src/history/history-store.ts) /
+  [history-day-screen.tsx](../../../apps/app/src/screens/history/history-day-screen.tsx):
   `HistoricalCheckIn` carries its slot, the day orders morning → evening, and
   each entry is labelled with its sitting. `unpairedScored` handling stays.
-- [week-strip.tsx](../../apps/app/src/components/week-strip.tsx) unchanged
+- [week-strip.tsx](../../../apps/app/src/components/week-strip.tsx) unchanged
   (`hasCheckIn` = any). A half-filled indicator for one-of-two slots is a
   follow-up.
 - i18n: new `checkIn` slot strings; retire the "again/count/review" strings.
 
 ### 5. Settings
 
-- [check-in-settings-store.ts](../../apps/app/src/check-in/check-in-settings-store.ts)
-  and [check-in-settings-screen.tsx](../../apps/app/src/screens/settings/check-in-settings-screen.tsx):
+- [check-in-settings-store.ts](../../../apps/app/src/check-in/check-in-settings-store.ts)
+  and [check-in-settings-screen.tsx](../../../apps/app/src/screens/settings/check-in-settings-screen.tsx):
   each optional score gains a Morning / Evening / Both control next to its
   enable toggle, writing the overlay column. Mood is shown as core to both
   and not configurable.
