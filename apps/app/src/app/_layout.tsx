@@ -116,10 +116,6 @@ function RootNavigator() {
 				<Stack.Screen name="settings" options={{ headerShown: false }} />
 				<Stack.Screen name="intake/log" options={{ title: t("intake.log") }} />
 				<Stack.Screen
-					name="intake/[localDay]"
-					options={{ title: t("intake.day") }}
-				/>
-				<Stack.Screen
 					name="intake/goals"
 					options={{ title: t("intake.goals") }}
 				/>

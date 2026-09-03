@@ -45,7 +45,6 @@ export const navigation = {
 	},
 	intake: {
 		log: "Log",
-		day: "Intake record",
 		goals: "Intake goals",
 		library: "Your library",
 	},

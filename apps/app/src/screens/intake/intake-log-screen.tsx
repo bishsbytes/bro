@@ -6,7 +6,7 @@ import type {
 } from "@bro/domain/consumable";
 import type { ExternalConsumable } from "@bro/domain/food-search";
 import type { PortionSelection } from "@bro/logic";
-import { type Href, router, Stack } from "expo-router";
+import { Stack } from "expo-router";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import {
@@ -49,6 +49,7 @@ import {
 } from "../../intake/intake-store";
 import { toMessage } from "../../lib/errors";
 import { useFocusStoreLoad } from "../../lib/use-store-load";
+import { showLoggedIntakeDay } from "../../navigation/intake-flow";
 import { StyleSheet, useUnistyles } from "../../theme/unistyles";
 import { IntakeRow, RowPanel } from "./intake-rows";
 
@@ -961,7 +962,7 @@ export function IntakeLogScreen({
 				onDismiss={dismissConfirmation}
 				onAction={() => {
 					if (confirmation) {
-						router.push(`/intake/${confirmation.localDay}` as Href);
+						showLoggedIntakeDay(confirmation.localDay);
 					}
 				}}
 			/>

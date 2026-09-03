@@ -182,9 +182,6 @@ export const intake = {
 		dismissA11y: "Close entry",
 	},
 	day: {
-		notFound: "Day not found",
-		notFoundBody: "This day could not be loaded.",
-		back: "Back to intake",
 		emptyTitle: "No entries",
 		emptyBody: "Nothing was logged on this day.",
 	},

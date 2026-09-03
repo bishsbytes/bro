@@ -1,5 +1,6 @@
 import { authClient } from "@bro/auth-app";
 import type * as DatabaseApp from "@bro/database-app";
+import * as domain from "@bro/domain";
 import { router as expoRouter } from "expo-router";
 import {
 	act,
@@ -249,5 +250,42 @@ describe("intake flow", () => {
 			[],
 		);
 		expect(globalThis.fetch).not.toHaveBeenCalled();
+	});
+
+	it("finishes a log on the tab, opened on the day it went to and on what is on it", async () => {
+		const db = await databaseApp.initDb();
+		await databaseApp.runMigrations(db);
+		const yesterday = domain.previousLocalDay(domain.localDayOf(new Date()));
+
+		const router = renderRouter("src/app", { initialUrl: "/intake" });
+		const view = await router;
+		await settle(() => view.queryByText("Summary"));
+
+		await act(async () => expoRouter.push("/intake/log"));
+		await settle(() => view.queryByText("Browse"));
+		await fireEvent.press(view.getByLabelText("Log Lager, 4.5%"));
+
+		// Logged against yesterday, so the day the toast offers is not today.
+		await fireEvent.press(await view.findByText("Earlier"));
+		await fireEvent.press(await view.findByText("Yesterday"));
+		await fireEvent.press(view.getByText("Log it"));
+		expect(await view.findByText("Lager, 4.5% added")).toBeTruthy();
+
+		// The toast finishes the flow on the tab rather than stacking a second
+		// copy of the day above the log screen it is done with.
+		await fireEvent.press(view.getByText("View day"));
+		await settle(() => router.getPathname() === "/intake" || undefined);
+		expect(router.getPathname()).toBe("/intake");
+		expect(view.queryByText("Browse")).toBeNull();
+		expect(router.getSearchParams()).toMatchObject({
+			day: yesterday,
+			view: "logged",
+		});
+		// Landed on the day's entries, not its totals.
+		expect(await view.findByText("Yesterday")).toBeTruthy();
+		expect(view.getByText("Lager, 4.5%")).toBeTruthy();
+		// A day carried in the route is still the tab: the shared FAB is gated on
+		// the path, which the parameters do not change.
+		expect(view.getByLabelText("Log")).toBeTruthy();
 	});
 });

@@ -10,9 +10,33 @@ import type {
 import { IntakeScreen } from "./screens/intake/intake-screen";
 
 const mockPush = jest.fn();
+let mockParams: Record<string, string> = {};
+const mockParamListeners = new Set<() => void>();
 
+/**
+ * The screen reads the day on show and the card's open tab from the route, so
+ * the stand-in router has to keep parameters and re-render on a change rather
+ * than swallow them.
+ */
 jest.mock("expo-router", () => ({
-	router: { push: (...args: unknown[]) => mockPush(...args) },
+	router: {
+		push: (...args: unknown[]) => mockPush(...args),
+		setParams: (next: Record<string, string>) => {
+			mockParams = { ...mockParams, ...next };
+			for (const listener of mockParamListeners) listener();
+		},
+	},
+	useLocalSearchParams: () => {
+		const React = jest.requireActual<typeof import("react")>("react");
+		const [, bump] = React.useReducer((turn: number) => turn + 1, 0);
+		React.useEffect(() => {
+			mockParamListeners.add(bump);
+			return () => {
+				mockParamListeners.delete(bump);
+			};
+		}, [bump]);
+		return mockParams;
+	},
 	useFocusEffect: (effect: () => undefined | (() => void)) => {
 		const React = jest.requireActual("react");
 		React.useEffect(effect, [effect]);
@@ -146,7 +170,10 @@ function store(day: IntakeDaySnapshot): Store {
 }
 
 describe("Intake screen", () => {
-	beforeEach(() => jest.clearAllMocks());
+	beforeEach(() => {
+		jest.clearAllMocks();
+		mockParams = {};
+	});
 
 	it("draws one compact gauge per tracked total against the usual band and states it as fact", async () => {
 		const screen = await render(

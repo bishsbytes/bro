@@ -18,12 +18,19 @@ import { StyleSheet, useUnistyles } from "../../theme/unistyles";
 import { IntakeEntrySheet } from "./intake-entry-sheet";
 import { IntakeRow, RowPanel } from "./intake-rows";
 
-type Segment = "summary" | "logged";
+export type IntakeDaySegment = "summary" | "logged";
+
+export function isIntakeDaySegment(value: unknown): value is IntakeDaySegment {
+	return value === "summary" || value === "logged";
+}
 
 type IntakeDayContentProps = {
 	snapshot: IntakeDaySnapshot;
 	error: string | null;
 	busy: boolean;
+	/** Which half of the card is showing; the parent owns it so a caller can open the day on its entries. */
+	segment: IntakeDaySegment;
+	onSelectSegment: (segment: IntakeDaySegment) => void;
 	onSelectDay: (localDay: string) => void;
 	/** Resolves true once the change is saved and the day reloaded. */
 	onSaveEvent: (id: string, edit: IntakeEventEdit) => Promise<boolean>;
@@ -35,11 +42,11 @@ function Segments({
 	value,
 	onChange,
 }: {
-	value: Segment;
-	onChange: (segment: Segment) => void;
+	value: IntakeDaySegment;
+	onChange: (segment: IntakeDaySegment) => void;
 }) {
 	const { t } = useTranslation("intake");
-	const segments: { key: Segment; label: string }[] = [
+	const segments: { key: IntakeDaySegment; label: string }[] = [
 		{ key: "summary", label: t("tab.summary") },
 		{ key: "logged", label: t("tab.logged") },
 	];
@@ -81,13 +88,14 @@ export function IntakeDayContent({
 	snapshot,
 	error,
 	busy,
+	segment,
+	onSelectSegment,
 	onSelectDay,
 	onSaveEvent,
 	onDeleteEvent,
 }: IntakeDayContentProps) {
 	const { t } = useTranslation(["intake", "common"]);
 	const { theme } = useUnistyles();
-	const [segment, setSegment] = useState<Segment>("summary");
 	const [editing, setEditing] = useState<PresentedIntakeEntry | null>(null);
 	const rangeNote =
 		snapshot.totals.length > 0 &&
@@ -136,7 +144,7 @@ export function IntakeDayContent({
 					</View>
 				</View>
 
-				<Segments value={segment} onChange={setSegment} />
+				<Segments value={segment} onChange={onSelectSegment} />
 
 				{segment === "summary" ? (
 					<>
