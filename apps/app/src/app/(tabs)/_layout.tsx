@@ -2,7 +2,8 @@ import { router, usePathname, useSegments } from "expo-router";
 import { NativeTabs } from "expo-router/unstable-native-tabs";
 import { useLayoutEffect, useRef } from "react";
 import { useTranslation } from "react-i18next";
-import { View } from "react-native";
+import { Platform, View } from "react-native";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { BodyLogSurfaceProvider } from "../../body/body-log-surface-context";
 import { AppHeader } from "../../components/app-header";
 import { HeaderIconButton } from "../../components/header-icon-button";
@@ -21,9 +22,18 @@ const TAB_TITLE_KEYS = {
 	"/life": "tabs.life",
 } as const;
 
+// Native tabs own their platform-specific bar, so the floating action clears
+// the standard bar content plus the device's bottom inset.
+const NATIVE_TAB_BAR_CONTENT_HEIGHT = Platform.select({
+	android: 80,
+	ios: 49,
+	default: 56,
+});
+
 function TabShell() {
 	const { t } = useTranslation("navigation");
 	const { theme } = useUnistyles();
+	const insets = useSafeAreaInsets();
 	const pathname = usePathname();
 	const segments = useSegments() as string[];
 	const todayHeaderMonth = useTodayHeaderMonth();
@@ -80,20 +90,15 @@ function TabShell() {
 					}
 					showSettings={!header.isJournal}
 					actions={
-						<>
-							{header.isJournal ? (
-								<HeaderIconButton
-									icon="insights"
-									testID="insights-header-icon"
-									label={t("tabs.openInsights")}
-									onPress={() => router.push("/insights")}
-									surface
-								/>
-							) : null}
-							{canQuickLog ? (
-								<QuickLogFab bodyActive={pathname === "/body"} surface />
-							) : null}
-						</>
+						header.isJournal ? (
+							<HeaderIconButton
+								icon="insights"
+								testID="insights-header-icon"
+								label={t("tabs.openInsights")}
+								onPress={() => router.push("/insights")}
+								surface
+							/>
+						) : null
 					}
 				/>
 			) : null}
@@ -173,6 +178,16 @@ function TabShell() {
 					<NativeTabs.Trigger.Label>{t("tabs.life")}</NativeTabs.Trigger.Label>
 				</NativeTabs.Trigger>
 			</NativeTabs>
+			{canQuickLog ? (
+				<QuickLogFab
+					bottom={
+						NATIVE_TAB_BAR_CONTENT_HEIGHT +
+						insets.bottom +
+						theme.spacing.lg
+					}
+					bodyActive={pathname === "/body"}
+				/>
+			) : null}
 		</View>
 	);
 }

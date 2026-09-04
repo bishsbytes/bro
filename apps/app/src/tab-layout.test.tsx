@@ -2,7 +2,7 @@ import { localDayOf } from "@bro/domain";
 import { fireEvent, render } from "@testing-library/react-native";
 import * as Haptics from "expo-haptics";
 import type { ReactNode } from "react";
-import { StyleSheet as NativeStyleSheet } from "react-native";
+import { Platform, StyleSheet as NativeStyleSheet } from "react-native";
 import TabLayout from "./app/(tabs)/_layout";
 import { monthHeaderLabel } from "./components/today-header-month-context";
 import * as themeModule from "./theme/unistyles";
@@ -14,6 +14,11 @@ const mockSafeAreaInsets = {
 	bottom: 24,
 	left: 0,
 };
+const nativeTabBarContentHeight = Platform.select({
+	android: 80,
+	ios: 49,
+	default: 56,
+});
 
 jest.mock("react-native-safe-area-context", () => ({
 	...jest.requireActual("react-native-safe-area-context"),
@@ -116,7 +121,16 @@ describe("TabLayout", () => {
 		).toMatchObject({ width: 34, height: 34 });
 		expect(
 			NativeStyleSheet.flatten(screen.getByLabelText("Log").props.style),
-		).toMatchObject({ width: 34, height: 34 });
+		).toMatchObject({
+			position: "absolute",
+			bottom:
+				nativeTabBarContentHeight + mockSafeAreaInsets.bottom +
+				16,
+			width: 56,
+			height: 56,
+			borderRadius: 14,
+			backgroundColor: themeModule.lightTheme.colors.accent,
+		});
 		expect(mockNativeTabsProps).toHaveBeenCalledWith(
 			expect.objectContaining({
 				backgroundColor: themeModule.lightTheme.colors.glass,
@@ -132,11 +146,12 @@ describe("TabLayout", () => {
 
 		expect(screen.getAllByText("Intake")).toHaveLength(2);
 		expect(screen.queryByText(currentMonth)).toBeNull();
-		for (const label of ["Log", "Settings"]) {
-			expect(
-				NativeStyleSheet.flatten(screen.getByLabelText(label).props.style),
-			).toMatchObject({ width: 34, height: 34 });
-		}
+		expect(
+			NativeStyleSheet.flatten(screen.getByLabelText("Log").props.style),
+		).toMatchObject({ width: 56, height: 56 });
+		expect(
+			NativeStyleSheet.flatten(screen.getByLabelText("Settings").props.style),
+		).toMatchObject({ width: 34, height: 34 });
 		expect(
 			NativeStyleSheet.flatten(
 				screen.getByTestId("settings-header-icon").parent?.props.style,

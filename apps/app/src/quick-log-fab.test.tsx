@@ -1,12 +1,13 @@
 import { fireEvent, render, waitFor } from "@testing-library/react-native";
 import { router } from "expo-router";
 import { useMemo } from "react";
-import { Button, Text } from "react-native";
+import { Button, StyleSheet as NativeStyleSheet, Text } from "react-native";
 import {
 	BodyLogSurfaceProvider,
 	useRegisterBodyLogSurface,
 } from "./body/body-log-surface-context";
 import { QuickLogFab } from "./components/quick-log-fab";
+import { lightTheme } from "./theme/unistyles";
 
 jest.mock("expo-router", () => ({
 	router: { push: jest.fn() },
@@ -56,6 +57,28 @@ describe("quick log fab", () => {
 
 		await fireEvent.press(view.getByLabelText("Note"));
 		expect(router.push).toHaveBeenCalledWith("/notes/new");
+	});
+
+	it("uses the Helm primary-action treatment while floating", async () => {
+		const view = await render(
+			<QuickLogFab bottom={96} enabledKinds={async () => ["food", "drink"]} />,
+		);
+
+		expect(
+			NativeStyleSheet.flatten(view.getByLabelText("Log").props.style),
+		).toMatchObject({
+			position: "absolute",
+			right: 16,
+			bottom: 96,
+			width: 56,
+			height: 56,
+			borderRadius: 14,
+			backgroundColor: lightTheme.colors.accent,
+		});
+		expect(view.getByTestId("quick-log-icon").props.children.props).toMatchObject({
+			color: lightTheme.colors.onAccent,
+			size: 24,
+		});
 	});
 
 	it("presets the one log screen to the kind chosen", async () => {
