@@ -28,6 +28,24 @@ const STATED_DOMAINS: Partial<Record<MeasurementSlug, DataDomain>> = {
 	resting_heart_rate: "body",
 };
 
+const TERRAIN_BASELINE_Y = 110;
+
+/**
+ * Close each observed run against its own horizontal extent. Closing every
+ * run against the full chart width turns short or isolated runs into the large
+ * crossing triangles that appear when there are gaps between observations.
+ */
+export function terrainPolygonPoints(points: string): string {
+	const coordinates = points.trim().split(/\s+/);
+	const first = coordinates[0];
+	const last = coordinates.at(-1);
+	if (!first || !last) return points;
+
+	const firstX = first.split(",", 1)[0];
+	const lastX = last.split(",", 1)[0];
+	return `${points} ${lastX},${TERRAIN_BASELINE_Y} ${firstX},${TERRAIN_BASELINE_Y}`;
+}
+
 export function dataDomainForMetric(metricSlug: string): DataDomain {
 	const stated = STATED_DOMAINS[metricSlug as MeasurementSlug];
 	if (stated) return stated;
@@ -101,11 +119,11 @@ export function TrendChart({
 			{series.segments.map((points) => (
 				<Fragment key={points}>
 					<Polygon
-						points={`${points} 300,110 0,110`}
+						points={terrainPolygonPoints(points)}
 						fill="url(#terrain-fade)"
 					/>
 					<Polygon
-						points={`${points} 300,110 0,110`}
+						points={terrainPolygonPoints(points)}
 						fill="url(#terrain-hatch)"
 					/>
 					<Polyline
