@@ -6,6 +6,8 @@ import { useTranslation } from "react-i18next";
 import Svg, {
 	Circle,
 	Defs,
+	FeGaussianBlur,
+	Filter,
 	Line,
 	LinearGradient,
 	Pattern,
@@ -125,6 +127,8 @@ export function TrendChart({
 	const definitionId = useId().replaceAll(":", "");
 	const fadeId = `terrain-fade-${definitionId}`;
 	const hatchId = `terrain-hatch-${definitionId}`;
+	const lineGlowId = `terrain-line-glow-${definitionId}`;
+	const markerGlowId = `terrain-marker-glow-${definitionId}`;
 	const corridor = usualRange
 		? {
 				top: terrainYForValue(usualRange.max, series.scale),
@@ -177,6 +181,26 @@ export function TrendChart({
 						strokeWidth="1"
 					/>
 				</Pattern>
+				<Filter
+					id={lineGlowId}
+					x="-12"
+					y="-12"
+					width="324"
+					height="164"
+					filterUnits="userSpaceOnUse"
+				>
+					<FeGaussianBlur stdDeviation={theme.terrain.lineGlow} />
+				</Filter>
+				<Filter
+					id={markerGlowId}
+					x="-12"
+					y="-12"
+					width="324"
+					height="164"
+					filterUnits="userSpaceOnUse"
+				>
+					<FeGaussianBlur stdDeviation={theme.terrain.currentDotGlow} />
+				</Filter>
 			</Defs>
 			{corridor ? (
 				<Rect
@@ -189,7 +213,7 @@ export function TrendChart({
 					fillOpacity="0.8"
 				/>
 			) : null}
-			{series.segments.map((points) => (
+			{series.segments.map((points, index) => (
 				<Fragment key={points}>
 					<Polygon
 						points={terrainPolygonPoints(points)}
@@ -200,14 +224,27 @@ export function TrendChart({
 						fill={`url(#${hatchId})`}
 					/>
 					<Polyline
+						testID={`terrain-line-glow-${index}`}
 						points={points}
 						fill="none"
 						stroke={dataColor}
-						strokeOpacity="0.22"
-						strokeWidth="8"
+						strokeOpacity="0.7"
+						strokeWidth={theme.terrain.line}
 						strokeLinecap="round"
 						strokeLinejoin="round"
+						filter={`url(#${lineGlowId})`}
 					/>
+					{index === series.segments.length - 1 && finalMarker ? (
+						<Circle
+							testID="terrain-line-end-glow"
+							cx={finalMarker.x}
+							cy={finalMarker.y}
+							r={theme.terrain.currentDot}
+							fill={dataColor}
+							fillOpacity="0.7"
+							filter={`url(#${lineGlowId})`}
+						/>
+					) : null}
 					<Polyline
 						points={points}
 						fill="none"
@@ -232,13 +269,24 @@ export function TrendChart({
 				/>
 			) : null}
 			{finalMarker ? (
-				<Circle
-					key={finalMarker.localDay}
-					cx={finalMarker.x}
-					cy={finalMarker.y}
-					r="4"
-					fill={dataColor}
-				/>
+				<Fragment key={finalMarker.localDay}>
+					<Circle
+						testID="terrain-current-glow"
+						cx={finalMarker.x}
+						cy={finalMarker.y}
+						r={theme.terrain.currentDot}
+						fill={dataColor}
+						fillOpacity="0.75"
+						filter={`url(#${markerGlowId})`}
+					/>
+					<Circle
+						testID="terrain-current-marker"
+						cx={finalMarker.x}
+						cy={finalMarker.y}
+						r={theme.terrain.currentDot}
+						fill={dataColor}
+					/>
+				</Fragment>
 			) : null}
 			{corridor && usualRange ? (
 				<>

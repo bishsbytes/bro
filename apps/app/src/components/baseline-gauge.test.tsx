@@ -77,6 +77,31 @@ describe("BaselineGauge", () => {
 		expect(view.getByTestId("gauge-marker")).toBeTruthy();
 	});
 
+	it("uses the measurement domain for the current marker glow", async () => {
+		const view = await render(
+			<BaselineGauge
+				label="Sleep"
+				value="7:12"
+				rail={{ min: 4, max: 10 }}
+				railLabels={{ min: "4h", max: "10h" }}
+				current={7.2}
+				domain="sleep"
+				accessibilityLabel="Sleep, 7 hours 12 minutes"
+			/>,
+		);
+
+		const markerCap = view.getByTestId("gauge-marker").props.children[0];
+		const style = flat(markerCap.props.style);
+		expect(style.boxShadow).toEqual([
+			{
+				offsetX: 0,
+				offsetY: 0,
+				blurRadius: lightTheme.readingMarker.glow,
+				color: lightTheme.colors.sleep,
+			},
+		]);
+	});
+
 	it("renders the unit with caption typography", async () => {
 		const view = await render(
 			<BaselineGauge

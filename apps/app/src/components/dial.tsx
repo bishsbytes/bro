@@ -163,7 +163,7 @@ export function Dial({
 							strokeCap="round"
 							strokeWidth={theme.dial.bandEdge}
 						>
-							<BlurMask blur={5} style="solid" />
+							<BlurMask blur={theme.dial.bandGlow} style="solid" />
 						</Path>
 						<Path
 							path={band}
@@ -182,7 +182,7 @@ export function Dial({
 					color={color}
 					opacity={0.7}
 				>
-					<BlurMask blur={8} style="solid" />
+					<BlurMask blur={theme.dial.markerGlow} style="solid" />
 				</Circle>
 				<Circle
 					cx={marker.x}

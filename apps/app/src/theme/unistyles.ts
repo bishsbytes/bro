@@ -289,12 +289,19 @@ const shared = {
 		markerMini: 5,
 		bandFill: 0.28,
 		bandEdge: 1.5,
+		bandGlow: 5,
+		markerGlow: 8,
 	},
 	terrain: {
 		windowDays: 30,
 		hatch: { size: 6, angle: -20, opacity: 0.22 },
 		line: 2,
+		lineGlow: 5,
 		currentDot: 4,
+		currentDotGlow: 6,
+	},
+	readingMarker: {
+		glow: 6,
 	},
 	figure: {
 		stroke: 11,

@@ -123,6 +123,14 @@ export function MeasurementChangeList({
 												{
 													backgroundColor: theme.colors[change.domain],
 													left: `${position(change.current, change.rail)}%`,
+													boxShadow: [
+														{
+															offsetX: 0,
+															offsetY: 0,
+															blurRadius: theme.readingMarker.glow,
+															color: theme.colors[change.domain],
+														},
+													],
 												},
 											]}
 										/>

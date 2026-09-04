@@ -136,7 +136,20 @@ export function BaselineGauge({
 							style={[styles.marker, { left: `${position(current, rail)}%` }]}
 						>
 							<View
-								style={[styles.markerCap, { backgroundColor: dataColor }]}
+								style={[
+									styles.markerCap,
+									{
+										backgroundColor: dataColor,
+										boxShadow: [
+											{
+												offsetX: 0,
+												offsetY: 0,
+												blurRadius: theme.readingMarker.glow,
+												color: dataColor,
+											},
+										],
+									},
+								]}
 							/>
 							<View
 								style={[styles.markerStem, { backgroundColor: dataColor }]}
@@ -234,8 +247,6 @@ const styles = StyleSheet.create((theme) => ({
 		width: 8,
 		height: 8,
 		transform: [{ rotate: "45deg" }],
-		shadowOpacity: 0.7,
-		shadowRadius: 6,
 	},
 	markerStem: { width: 2, height: RAIL_HEIGHT },
 	scale: {

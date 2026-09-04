@@ -109,4 +109,20 @@ describe("TrendChart", () => {
 		expect(view.queryByTestId("terrain-usual-range-label")).toBeNull();
 		expect(view.queryByTestId("terrain-heading-line")).toBeNull();
 	});
+
+	it("gives the trend line and current point dedicated glow layers", async () => {
+		const view = await render(createElement(TrendChart, { series }));
+
+		expect(view.getByTestId("terrain-line-glow-0").props.filter).toMatch(
+			/^terrain-line-glow-/,
+		);
+		const lineEndGlow = view.getByTestId("terrain-line-end-glow");
+		expect(lineEndGlow.props.cx).toBe(300);
+		expect(lineEndGlow.props.cy).toBe(85);
+		expect(lineEndGlow.props.filter).toMatch(/^terrain-line-glow-/);
+		expect(view.getByTestId("terrain-current-glow").props.filter).toMatch(
+			/^terrain-marker-glow-/,
+		);
+		expect(view.getByTestId("terrain-current-marker").props.filter).toBeFalsy();
+	});
 });
