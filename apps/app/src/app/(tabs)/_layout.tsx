@@ -28,21 +28,22 @@ function TabShell() {
 	const segments = useSegments() as string[];
 	const todayHeaderMonth = useTodayHeaderMonth();
 	const activeTabKey = TAB_TITLE_KEYS[pathname as keyof typeof TAB_TITLE_KEYS];
-	const activeTabTitle = activeTabKey ? t(activeTabKey) : undefined;
 	const isJournalTab = pathname === "/";
-	const activeHeaderTitle = isJournalTab ? t("tabs.journal") : activeTabTitle;
+	const activeHeaderTitle = isJournalTab
+		? todayHeaderMonth
+		: activeTabKey
+			? t(activeTabKey)
+			: undefined;
 	const canQuickLog =
 		pathname === "/" || pathname === "/intake" || pathname === "/body";
 	const lastTabHeader = useRef(
 		activeHeaderTitle
 			? {
 					title: activeHeaderTitle,
-					eyebrow: isJournalTab ? todayHeaderMonth : undefined,
 					isJournal: isJournalTab,
 				}
 			: {
-					title: t("tabs.journal"),
-					eyebrow: todayHeaderMonth,
+					title: todayHeaderMonth,
 					isJournal: true,
 				},
 	);
@@ -51,17 +52,15 @@ function TabShell() {
 		if (activeHeaderTitle) {
 			lastTabHeader.current = {
 				title: activeHeaderTitle,
-				eyebrow: isJournalTab ? todayHeaderMonth : undefined,
 				isJournal: isJournalTab,
 			};
 		}
-	}, [activeHeaderTitle, isJournalTab, todayHeaderMonth]);
+	}, [activeHeaderTitle, isJournalTab]);
 
 	const isNestedTabRoute = segments[0] === "(tabs)" && segments.length > 2;
 	const header = activeHeaderTitle
 		? {
 				title: activeHeaderTitle,
-				eyebrow: isJournalTab ? todayHeaderMonth : undefined,
 				isJournal: isJournalTab,
 			}
 		: lastTabHeader.current;
@@ -73,7 +72,6 @@ function TabShell() {
 			{title ? (
 				<AppHeader
 					title={title}
-					eyebrow={header.eyebrow}
 					eyebrowAccessibilityLabel={
 						header.isJournal ? t("tabs.openHistory") : undefined
 					}
@@ -93,10 +91,7 @@ function TabShell() {
 								/>
 							) : null}
 							{canQuickLog ? (
-								<QuickLogFab
-									bodyActive={pathname === "/body"}
-									surface={header.isJournal}
-								/>
+								<QuickLogFab bodyActive={pathname === "/body"} surface />
 							) : null}
 						</>
 					}

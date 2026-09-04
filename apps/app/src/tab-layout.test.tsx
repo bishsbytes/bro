@@ -97,7 +97,8 @@ describe("TabLayout", () => {
 		const currentMonth = monthHeaderLabel(localDayOf(new Date()));
 
 		expect(screen.getByText(currentMonth)).toBeTruthy();
-		expect(screen.getAllByText("Journal")).toHaveLength(2);
+		// The month owns the page title; Journal remains only as the tab label.
+		expect(screen.getAllByText("Journal")).toHaveLength(1);
 		expect(screen.queryByLabelText("Settings")).toBeNull();
 		const insightsSurface = NativeStyleSheet.flatten(
 			screen.getByTestId("insights-header-icon").parent?.props.style,
@@ -131,6 +132,21 @@ describe("TabLayout", () => {
 
 		expect(screen.getAllByText("Intake")).toHaveLength(2);
 		expect(screen.queryByText(currentMonth)).toBeNull();
+		for (const label of ["Log", "Settings"]) {
+			expect(
+				NativeStyleSheet.flatten(screen.getByLabelText(label).props.style),
+			).toMatchObject({ width: 34, height: 34 });
+		}
+		expect(
+			NativeStyleSheet.flatten(
+				screen.getByTestId("settings-header-icon").parent?.props.style,
+			),
+		).toMatchObject({
+			width: 34,
+			height: 34,
+			borderRadius: 11,
+			backgroundColor: themeModule.lightTheme.colors.surface2,
+		});
 	});
 
 	it("opens quick logging from the journal and sends each choice to a focused screen", async () => {

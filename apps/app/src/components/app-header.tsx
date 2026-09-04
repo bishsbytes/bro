@@ -55,7 +55,9 @@ export function AppHeader({
 				)}
 				<View style={styles.actions}>
 					{actions}
-					{showSettings ? <SettingsButton onPress={onSettingsPress} /> : null}
+					{showSettings ? (
+						<SettingsButton onPress={onSettingsPress} surface />
+					) : null}
 				</View>
 			</View>
 		</SafeAreaView>
