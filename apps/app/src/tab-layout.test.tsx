@@ -32,6 +32,7 @@ jest.mock("./theme/unistyles", () => {
 
 const mockNativeTabsProps = jest.fn();
 const mockNativeTabsListeners = jest.fn();
+const mockTabIconProps = jest.fn();
 let mockPathname = "/";
 let mockSegments = ["(tabs)"];
 
@@ -55,7 +56,10 @@ jest.mock("expo-router/unstable-native-tabs", () => {
 		({ children }: { children: ReactNode }) =>
 			React.createElement(React.Fragment, null, children),
 		{
-			Icon: () => null,
+			Icon: (props: unknown) => {
+				mockTabIconProps(props);
+				return null;
+			},
 			Label: ({ children }: { children: ReactNode }) =>
 				React.createElement(Text, null, children),
 		},
@@ -97,6 +101,8 @@ describe("TabLayout", () => {
 				backgroundColor: themeModule.lightTheme.colors.glass,
 				blurEffect: "systemUltraThinMaterialLight",
 				minimizeBehavior: "onScrollDown",
+				// Android's `auto` labels only the selected tab once there are four.
+				labelVisibilityMode: "labeled",
 			}),
 		);
 
@@ -175,6 +181,8 @@ describe("TabLayout", () => {
 				...themeModule.lightTheme.colors,
 				ink2: "#345678",
 				accent: "#12ABCD",
+				accentDeep: "#004466",
+				tabRipple: "#00446638",
 			},
 		} as unknown as typeof themeModule.lightTheme;
 		mockThemeOverride = themed;
@@ -182,6 +190,8 @@ describe("TabLayout", () => {
 		const screen = await render(<TabLayout />);
 		const nativeOptions = mockNativeTabsProps.mock.calls[0]?.[0] as {
 			iconColor: { default: string; selected: string };
+			indicatorColor: string;
+			rippleColor: string;
 		};
 		const insightsIcon = screen.getByTestId("insights-header-icon");
 		const historyIcon = screen.getByTestId("history-header-icon");
@@ -191,9 +201,30 @@ describe("TabLayout", () => {
 			default: "#345678",
 			selected: "#12ABCD",
 		});
+		// The ripple carries the indicator's colour, so a press fades into the
+		// indicator rather than flashing the host theme's own attribute first.
+		expect(nativeOptions.indicatorColor).toBe("#004466");
+		expect(nativeOptions.rippleColor).toBe("#00446638");
 		expect(insightsIcon.props.children.props.color).toBe("#345678");
 		expect(historyIcon.props.children.props.color).toBe("#345678");
 		expect(settingsIcon.props.children.props.color).toBe("#345678");
+	});
+
+	it("names a platform symbol for every tab icon", async () => {
+		await render(<TabLayout />);
+
+		// The native bar rasterises its icons, so anything it cannot turn into a
+		// UIImage/drawable - a React element in `src`, say - vanishes in silence.
+		const icons = mockTabIconProps.mock.calls.map(
+			([props]) => props as { sf?: unknown; md?: unknown; src?: unknown },
+		);
+
+		expect(icons).toHaveLength(4);
+		for (const icon of icons) {
+			expect(icon.sf).toBeTruthy();
+			expect(icon.md).toBeTruthy();
+			expect(icon.src).toBeUndefined();
+		}
 	});
 
 	it("reaches insights and history from the journal header alone", async () => {

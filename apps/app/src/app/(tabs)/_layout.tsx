@@ -6,7 +6,6 @@ import { View } from "react-native";
 import { BodyLogSurfaceProvider } from "../../body/body-log-surface-context";
 import { AppHeader } from "../../components/app-header";
 import { HeaderIconButton } from "../../components/header-icon-button";
-import { Icon, type IconName } from "../../components/icon";
 import { QuickLogFab } from "../../components/quick-log-fab";
 import {
 	TodayHeaderMonthProvider,
@@ -21,19 +20,6 @@ const TAB_TITLE_KEYS = {
 	"/body": "tabs.body",
 	"/life": "tabs.life",
 } as const;
-
-function TabIcon({ name }: { name: IconName }) {
-	const { theme } = useUnistyles();
-	return (
-		<NativeTabs.Trigger.Icon
-			renderingMode="template"
-			src={{
-				default: <Icon name={name} color={theme.colors.ink2} size={22} />,
-				selected: <Icon name={name} color={theme.colors.accent} size={22} />,
-			}}
-		/>
-	);
-}
 
 function TabShell() {
 	const { t } = useTranslation("navigation");
@@ -115,6 +101,12 @@ function TabShell() {
 					selected: theme.colors.accent,
 				}}
 				indicatorColor={theme.colors.accentDeep}
+				// `auto` drops to selected-only labels past three tabs, and there are
+				// four - so every label is pinned on instead.
+				labelVisibilityMode="labeled"
+				// Left unset, the ripple falls back to the Material `itemRippleColor`
+				// attribute, which the host theme does not define as a flat colour.
+				rippleColor={theme.colors.tabRipple}
 				labelStyle={{
 					default: {
 						fontFamily: theme.fonts.sans,
@@ -135,24 +127,40 @@ function TabShell() {
 					},
 				})}
 			>
+				{/*
+				 * The native bar renders a UIImage/drawable, not React views, so the
+				 * Lucide set the rest of the app draws with cannot reach it - each tab
+				 * names a platform symbol instead. iOS pairs an outline with its `.fill`
+				 * twin where one exists; Material Symbols have no filled twins here and
+				 * signal selection through the indicator, so Android names one symbol.
+				 */}
 				<NativeTabs.Trigger name="index">
-					<TabIcon name="journal" />
+					<NativeTabs.Trigger.Icon
+						sf={{ default: "sun.max", selected: "sun.max.fill" }}
+						md="sunny"
+					/>
 					<NativeTabs.Trigger.Label>
 						{t("tabs.journal")}
 					</NativeTabs.Trigger.Label>
 				</NativeTabs.Trigger>
 				<NativeTabs.Trigger name="intake">
-					<TabIcon name="food" />
+					<NativeTabs.Trigger.Icon sf="fork.knife" md="restaurant" />
 					<NativeTabs.Trigger.Label>
 						{t("tabs.intake")}
 					</NativeTabs.Trigger.Label>
 				</NativeTabs.Trigger>
 				<NativeTabs.Trigger name="body">
-					<TabIcon name="body" />
+					<NativeTabs.Trigger.Icon
+						sf={{ default: "scalemass", selected: "scalemass.fill" }}
+						md="monitor_weight"
+					/>
 					<NativeTabs.Trigger.Label>{t("tabs.body")}</NativeTabs.Trigger.Label>
 				</NativeTabs.Trigger>
 				<NativeTabs.Trigger name="life">
-					<TabIcon name="explore" />
+					<NativeTabs.Trigger.Icon
+						sf={{ default: "safari", selected: "safari.fill" }}
+						md="explore"
+					/>
 					<NativeTabs.Trigger.Label>{t("tabs.life")}</NativeTabs.Trigger.Label>
 				</NativeTabs.Trigger>
 			</NativeTabs>

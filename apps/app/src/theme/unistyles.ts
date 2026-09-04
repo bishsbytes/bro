@@ -387,6 +387,8 @@ export function createTheme(
 		tabBackground: palette.glass,
 		tabInactive: palette.ink2,
 		tabIndicator: accent.accentDeep,
+		// The Android press ripple, tinted to settle into the indicator it sits under.
+		tabRipple: `${accent.accentDeep}38`,
 		brand: accent.accent,
 		onBrand: accent.onAccent,
 		selected: accent.accentDeep,

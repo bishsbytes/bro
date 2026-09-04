@@ -49,6 +49,14 @@ describe("design tokens", () => {
 		expect(shared).toEqual([]);
 	});
 
+	it("tints the Android tab ripple from the indicator it settles into", () => {
+		// A ripple unrelated to the indicator reads as two colours on one press
+		// rather than the indicator arriving.
+		for (const theme of [lightTheme, darkTheme]) {
+			expect(theme.colors.tabRipple).toBe(`${theme.colors.tabIndicator}38`);
+		}
+	});
+
 	it("shares non-colour tokens across themes", () => {
 		expect(darkTheme.spacing).toEqual(lightTheme.spacing);
 		expect(darkTheme.radius).toEqual(lightTheme.radius);
