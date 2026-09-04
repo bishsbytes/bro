@@ -326,6 +326,42 @@ describe("Body screen", () => {
 		expect(screen.queryByTestId("baseline-gauge")).toBeNull();
 	});
 
+	it("formats the hero dial in the reading's display unit", async () => {
+		const weight = weightMetric(true);
+		weight.baseline = {
+			current: {
+				value: 95.75,
+				formatted: "15 st 1 lb",
+				observedAt: Date.parse("2026-09-02T08:00:00.000Z"),
+				localDay: "2026-09-02",
+			},
+			previous: null,
+			direction: "none",
+			changeFormatted: null,
+			usualRange: {
+				min: 95.2,
+				max: 96.2,
+				minFormatted: "15 st 0 lb",
+				maxFormatted: "15 st 2 lb",
+			},
+			rail: {
+				min: 94.82215,
+				max: 97.03085,
+				minFormatted: "14 st 13 lb",
+				maxFormatted: "15 st 4 lb",
+			},
+			readingCount: 14,
+		};
+		const screen = await mountedWith(overviewOf([weight]));
+
+		expect(await screen.findByTestId("dial-value")).toHaveTextContent("15");
+		expect(screen.getByTestId("dial-unit")).toHaveTextContent("st 1 lb");
+		expect(screen.getByTestId("dial-minimum")).toHaveTextContent("14 st 13 lb");
+		expect(screen.getByTestId("dial-maximum")).toHaveTextContent("15 st 4 lb");
+		expect(screen.queryByText("94.82215")).toBeNull();
+		expect(screen.queryByText("97.03085")).toBeNull();
+	});
+
 	it("groups sleep and steps with resting heart rate under Health & fitness", async () => {
 		const sleep = metric({
 			metricSlug: "sleep_duration",

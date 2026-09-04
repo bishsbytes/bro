@@ -514,6 +514,22 @@ export function BodyScreen({ store }: BodyScreenProps) {
 	// The legend describes marks, so it goes on the first card that draws any.
 	const measurementsDrawMarks = measurementChanges.some(hasPlottableRange);
 	const healthFitnessDrawsMarks = healthFitnessChanges.some(hasPlottableRange);
+	const heroFormatted = heroMetric?.baseline.current?.formatted;
+	const heroUnit =
+		heroMetric?.displayUnit ??
+		(heroMetric?.dimension === "rate_bpm" ? "bpm" : null);
+	const heroUnitStart =
+		heroFormatted && heroUnit
+			? heroFormatted.indexOf(heroUnit === "%" ? heroUnit : ` ${heroUnit}`)
+			: -1;
+	const heroValue =
+		heroFormatted && heroUnitStart >= 0
+			? heroFormatted.slice(0, heroUnitStart)
+			: heroFormatted;
+	const heroValueUnit =
+		heroFormatted && heroUnitStart >= 0
+			? heroFormatted.slice(heroUnitStart + (heroUnit === "%" ? 0 : 1))
+			: undefined;
 
 	return (
 		<Screen scroll padded gap="xl">
@@ -529,9 +545,14 @@ export function BodyScreen({ store }: BodyScreenProps) {
 			{heroMetric?.baseline.current && heroMetric.baseline.rail ? (
 				<Dial
 					label={heroMetric.label}
-					value={heroMetric.baseline.current.formatted}
+					value={heroValue ?? heroMetric.baseline.current.formatted}
+					unit={heroValueUnit}
 					current={heroMetric.baseline.current.value}
 					range={heroMetric.baseline.rail}
+					rangeLabels={{
+						min: heroMetric.baseline.rail.minFormatted,
+						max: heroMetric.baseline.rail.maxFormatted,
+					}}
 					usualRange={heroMetric.baseline.usualRange}
 					domain={dataDomainForMetric(heroMetric.metricSlug)}
 					accessibilityLabel={`${heroMetric.label}, ${heroMetric.baseline.current.formatted}`}
