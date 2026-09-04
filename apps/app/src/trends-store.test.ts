@@ -90,7 +90,7 @@ describe("trends store", () => {
 		expect(weight?.series.points.at(-1)?.value).toBe(77.56429527);
 	});
 
-	it("carries a measurement's longer-term usual range into a short chart", async () => {
+	it("carries a measurement's usual range and heading into a short chart", async () => {
 		const now = new Date("2026-08-14T22:00:00.000Z");
 		await new databaseApp.TrackedMetricsRepository(db).configure(
 			"weight",
@@ -118,6 +118,13 @@ describe("trends store", () => {
 				assessmentId: null,
 			});
 		}
+		await new databaseApp.GoalRepository(db).create({
+			metricSlug: "weight",
+			direction: "decrease",
+			targetValue: 60,
+			targetDate: null,
+			startedAt: now.getTime(),
+		});
 
 		const weight = (
 			await new TrendsStore(
@@ -133,7 +140,8 @@ describe("trends store", () => {
 			minFormatted: "77.5 kg",
 			maxFormatted: "92.5 kg",
 		});
-		expect(weight?.series.scale).toEqual({ min: 77.5, max: 100 });
+		expect(weight?.heading).toEqual({ value: 60, formatted: "60.0 kg" });
+		expect(weight?.series.scale).toEqual({ min: 60, max: 100 });
 	});
 
 	it("includes every default score and removes one after opt-out", async () => {

@@ -292,6 +292,14 @@ export function BodyMetricScreen({ metricSlug, store }: BodyMetricScreenProps) {
 				<TrendChart
 					series={detail.series}
 					usualRange={detail.baseline.usualRange}
+					heading={
+						activeGoal
+							? {
+									value: activeGoal.goal.targetValue,
+									formatted: activeGoal.targetFormatted,
+								}
+							: null
+					}
 				/>
 			) : null}
 

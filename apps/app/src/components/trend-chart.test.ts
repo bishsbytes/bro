@@ -78,7 +78,27 @@ describe("TrendChart", () => {
 				.children,
 		).toBe("Aug 29 – Sep 4");
 		expect(
-			view.getByLabelText("weight trend chart. Usual range 75.0 kg to 80.0 kg"),
+			view.getByLabelText("weight trend chart Usual range 75.0 kg to 80.0 kg."),
+		).toBeTruthy();
+	});
+
+	it("plots and announces a heading as a dashed ink line", async () => {
+		const view = await render(
+			createElement(TrendChart, {
+				series,
+				heading: { value: 85, formatted: "85.0 kg" },
+			}),
+		);
+
+		const line = view.getByTestId("terrain-heading-line");
+		expect(line.props.y1).toBe(35);
+		expect(line.props.y2).toBe(35);
+		expect(line.props.strokeDasharray).toEqual(["4", "4"]);
+		expect(
+			view.getByTestId("terrain-heading-label").props.children.props.children,
+		).toBe("85.0 kg heading");
+		expect(
+			view.getByLabelText("weight trend chart Heading 85.0 kg."),
 		).toBeTruthy();
 	});
 
@@ -87,5 +107,6 @@ describe("TrendChart", () => {
 
 		expect(view.queryByTestId("terrain-usual-corridor")).toBeNull();
 		expect(view.queryByTestId("terrain-usual-range-label")).toBeNull();
+		expect(view.queryByTestId("terrain-heading-line")).toBeNull();
 	});
 });

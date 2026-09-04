@@ -149,7 +149,7 @@ export function InsightsScreen({ store, insightStore }: InsightsScreenProps) {
 					</AppText>
 				) : null}
 				{snapshot?.metrics.map(
-					({ metric, label, series, latestFormatted, usualRange }) => (
+					({ metric, label, series, latestFormatted, usualRange, heading }) => (
 						<Card key={metric.slug} style={styles.card}>
 							<SectionHeader
 								title={label}
@@ -164,7 +164,11 @@ export function InsightsScreen({ store, insightStore }: InsightsScreenProps) {
 									{t("trends.latest", { value: latestFormatted })}
 								</AppText>
 							) : null}
-							<TrendChart series={series} usualRange={usualRange} />
+							<TrendChart
+								series={series}
+								usualRange={usualRange}
+								heading={heading}
+							/>
 							{series.daysUntilMeaningful > 0 ? (
 								<AppText color="muted">
 									{t("trends.notEnoughData", {

@@ -12,6 +12,11 @@ export type TrendPoint = {
 
 export type TrendRange = { min: number; max: number };
 
+export type TrendChartReferences = {
+	usualRange?: TrendRange | null;
+	heading?: number | null;
+};
+
 export type TrendSeries = {
 	metricSlug: string;
 	points: TrendPoint[];
@@ -89,7 +94,7 @@ function aggregateDay(
 function chartGeometry(
 	points: readonly TrendPoint[],
 	metric: MetricDefinition,
-	includedRange?: TrendRange | null,
+	references: TrendChartReferences,
 ): Pick<TrendSeries, "segments" | "markers" | "scale"> {
 	const segments: string[] = [];
 	const markers: TrendSeries["markers"] = [];
@@ -100,7 +105,12 @@ function chartGeometry(
 	);
 	const scaleValues = [
 		...observedValues,
-		...(includedRange ? [includedRange.min, includedRange.max] : []),
+		...(references.usualRange
+			? [references.usualRange.min, references.usualRange.max]
+			: []),
+		...(references.heading === null || references.heading === undefined
+			? []
+			: [references.heading]),
 	];
 	const observedMin = scaleValues.length > 0 ? Math.min(...scaleValues) : 0;
 	const observedMax = scaleValues.length > 0 ? Math.max(...scaleValues) : 1;
@@ -139,7 +149,7 @@ export function buildTrendSeries(
 	metric: MetricDefinition,
 	throughLocalDay: string,
 	period: TrendPeriod,
-	includedRange?: TrendRange | null,
+	references: TrendChartReferences = {},
 ): TrendSeries {
 	const { fromLocalDay } = trendRange(throughLocalDay, period);
 	const points: TrendPoint[] = [];
@@ -155,7 +165,7 @@ export function buildTrendSeries(
 	const observedDayCount = points.filter(
 		(point) => point.value !== null,
 	).length;
-	const geometry = chartGeometry(points, metric, includedRange);
+	const geometry = chartGeometry(points, metric, references);
 	return {
 		metricSlug: metric.slug,
 		points,

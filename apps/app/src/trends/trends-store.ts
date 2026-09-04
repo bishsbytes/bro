@@ -1,5 +1,6 @@
 import {
 	DailyMetricRepository,
+	GoalRepository,
 	getDb,
 	IntakeEventRepository,
 	ObservationRepository,
@@ -15,6 +16,7 @@ import {
 import {
 	buildTrendSeries,
 	formatMetricValue,
+	goalStatus,
 	MEASUREMENT_BASELINE_WINDOW_DAYS,
 	metricDisplayUnit,
 	resolveMeasurementBaseline,
@@ -39,6 +41,7 @@ export type MetricTrend = {
 		minFormatted: string;
 		maxFormatted: string;
 	} | null;
+	heading: { value: number; formatted: string } | null;
 };
 
 export type TrendsSnapshot = {
@@ -51,6 +54,7 @@ export type TrendsSnapshot = {
 export class TrendsStore {
 	private readonly observations: ObservationRepository;
 	private readonly dailyMetrics: DailyMetricRepository;
+	private readonly goals: GoalRepository;
 	private readonly intakeEvents: IntakeEventRepository;
 	private readonly trackedMetrics: TrackedMetricsRepository;
 	private readonly unitPreferences: UnitPreferenceRepository;
@@ -68,6 +72,7 @@ export class TrendsStore {
 	) {
 		this.observations = new ObservationRepository(db);
 		this.dailyMetrics = new DailyMetricRepository(db);
+		this.goals = new GoalRepository(db);
 		this.intakeEvents = new IntakeEventRepository(db);
 		this.trackedMetrics = new TrackedMetricsRepository(db);
 		this.unitPreferences = new UnitPreferenceRepository(db);
@@ -89,7 +94,7 @@ export class TrendsStore {
 				measurementSlugs.has(metric.metricSlug) ||
 				listScoredMetrics().some((scored) => scored.slug === metric.metricSlug),
 		);
-		const [overlays, preferences, dailyMetrics, intakeEvents] =
+		const [overlays, preferences, dailyMetrics, intakeEvents, goals] =
 			await Promise.all([
 				this.trackedMetrics.listResolved(trackedDefaults),
 				this.unitPreferences.resolveLatestPerDimension(),
@@ -98,6 +103,7 @@ export class TrendsStore {
 					baselineFromLocalDay,
 					range.throughLocalDay,
 				),
+				this.goals.listAll(),
 			]);
 		const overlayBySlug = new Map(
 			overlays.map((overlay) => [overlay.metricSlug, overlay]),
@@ -161,12 +167,36 @@ export class TrendsStore {
 					metric.kind === "measurement"
 						? resolveMeasurementBaseline(resolvedRows, throughLocalDay)
 						: null;
+				const activeHeading =
+					metric.kind === "measurement"
+						? goals.find(
+								(goal) =>
+									goal.metricSlug === metric.slug &&
+									goalStatus(goal) === "active",
+							)
+						: undefined;
+				const heading =
+					metric.kind === "measurement" && activeHeading
+						? {
+								value: activeHeading.targetValue,
+								formatted: formatMetricValue(
+									metric,
+									activeHeading.targetValue,
+									displayUnit,
+									locale,
+									unitWords(),
+								),
+							}
+						: null;
 				const series = buildTrendSeries(
 					resolvedRows,
 					metric,
 					throughLocalDay,
 					period,
-					baseline?.usualRange,
+					{
+						usualRange: baseline?.usualRange,
+						heading: heading?.value,
+					},
 				);
 				const latestValue = [...series.points]
 					.reverse()
@@ -212,6 +242,7 @@ export class TrendsStore {
 					displayUnit,
 					latestFormatted,
 					usualRange,
+					heading,
 				};
 			}),
 		};

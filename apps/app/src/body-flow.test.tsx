@@ -129,6 +129,7 @@ describe("body metrics flow", () => {
 		await fireEvent.press(view.getByText("Done"));
 		await fireEvent.press(view.getByText("Save heading"));
 		expect(await view.findByText("Heading 12 st 0 lb")).toBeTruthy();
+		expect(view.getByTestId("terrain-heading-line")).toBeTruthy();
 		expect(
 			view.getByText("Started at 12 st 4 lb · Latest 12 st 4 lb"),
 		).toBeTruthy();
@@ -173,6 +174,7 @@ describe("body metrics flow", () => {
 
 		await fireEvent.press(view.getByText("Archive heading"));
 		expect(await view.findByText(/Archived: heading 12 st 0 lb/)).toBeTruthy();
+		expect(view.queryByTestId("terrain-heading-line")).toBeNull();
 
 		const canonicalObservation = (
 			await new databaseApp.ObservationRepository(db).findById(observation.id)

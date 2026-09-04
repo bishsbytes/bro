@@ -590,6 +590,8 @@ export class BodyStore {
 					.map((goal) =>
 						progressFor(goal, resolvedRows, presentation, inputLocale),
 					);
+				const activeGoal =
+					metricGoals.find((progress) => progress.status === "active") ?? null;
 				const tracked = overlay?.enabled ?? false;
 				const hasImportedData = importedRows.length > 0;
 				const resolvedBaseline = resolveMeasurementBaseline(
@@ -617,16 +619,17 @@ export class BodyStore {
 						metric,
 						throughLocalDay,
 						BODY_TREND_PERIOD,
-						resolvedBaseline.usualRange,
+						{
+							usualRange: resolvedBaseline.usualRange,
+							heading: activeGoal?.goal.targetValue,
+						},
 					),
 					baseline: presentBaseline(
 						resolvedBaseline,
 						presentation,
 						inputLocale,
 					),
-					activeGoal:
-						metricGoals.find((progress) => progress.status === "active") ??
-						null,
+					activeGoal,
 				};
 			})
 			.sort(

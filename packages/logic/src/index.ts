@@ -193,6 +193,7 @@ export {
 export {
 	buildTrendSeries,
 	TREND_PERIODS,
+	type TrendChartReferences,
 	type TrendPeriod,
 	type TrendPoint,
 	type TrendRange,

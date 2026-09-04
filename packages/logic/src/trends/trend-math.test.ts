@@ -159,7 +159,7 @@ describe("trend math", () => {
 		expect(series.markers[0]?.y).toBe(60);
 	});
 
-	it("includes a measurement's usual range in the chart scale", () => {
+	it("includes a measurement's usual range and heading in the chart scale", () => {
 		const series = buildTrendSeries(
 			[
 				observation("weight", "2026-08-14", 80, {
@@ -171,11 +171,11 @@ describe("trend math", () => {
 			knownMetric("weight"),
 			"2026-08-14",
 			7,
-			{ min: 70, max: 90 },
+			{ usualRange: { min: 70, max: 90 }, heading: 60 },
 		);
 
-		expect(series.scale).toEqual({ min: 70, max: 90 });
-		expect(series.markers[0]?.y).toBe(60);
+		expect(series.scale).toEqual({ min: 60, max: 90 });
+		expect(series.markers[0]?.y).toBeCloseTo(43.33, 2);
 	});
 
 	it("supports registry-driven sum aggregation", () => {

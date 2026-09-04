@@ -40,6 +40,11 @@ export type TrendChartUsualRange = TrendRange & {
 	maxFormatted: string;
 };
 
+export type TrendChartHeading = {
+	value: number;
+	formatted: string;
+};
+
 /**
  * Close each observed run against its own horizontal extent. Closing every
  * run against the full chart width turns short or isolated runs into the large
@@ -104,11 +109,13 @@ export function TrendChart({
 	height = 170,
 	domain,
 	usualRange,
+	heading,
 }: {
 	series: TrendSeries;
 	height?: number;
 	domain?: DataDomain;
 	usualRange?: TrendChartUsualRange | null;
+	heading?: TrendChartHeading | null;
 }) {
 	const { theme } = useUnistyles();
 	const { t } = useTranslation("common");
@@ -124,18 +131,26 @@ export function TrendChart({
 				bottom: terrainYForValue(usualRange.min, series.scale),
 			}
 		: null;
+	const headingY = heading
+		? terrainYForValue(heading.value, series.scale)
+		: null;
 	const dateRange = terrainDateRangeLabel(series, systemLocale());
 	return (
 		<Svg
-			accessibilityLabel={
+			accessibilityLabel={[
+				t("a11y.trendChart", { metric: series.metricSlug }),
 				usualRange
-					? t("a11y.trendChartWithUsualRange", {
-							metric: series.metricSlug,
+					? t("a11y.trendChartUsualRange", {
 							min: usualRange.minFormatted,
 							max: usualRange.maxFormatted,
 						})
-					: t("a11y.trendChart", { metric: series.metricSlug })
-			}
+					: null,
+				heading
+					? t("a11y.trendChartHeading", { value: heading.formatted })
+					: null,
+			]
+				.filter((part) => part !== null)
+				.join(" ")}
 			viewBox="0 0 300 140"
 			height={height}
 			width="100%"
@@ -203,6 +218,19 @@ export function TrendChart({
 					/>
 				</Fragment>
 			))}
+			{headingY !== null ? (
+				<Line
+					testID="terrain-heading-line"
+					x1="0"
+					y1={headingY}
+					x2="300"
+					y2={headingY}
+					stroke={theme.colors.ink}
+					strokeOpacity="0.8"
+					strokeWidth="1"
+					strokeDasharray="4 4"
+				/>
+			) : null}
 			{finalMarker ? (
 				<Circle
 					key={finalMarker.localDay}
@@ -247,6 +275,18 @@ export function TrendChart({
 						{t("terrain.usualRange")}
 					</SvgText>
 				</>
+			) : null}
+			{headingY !== null && heading ? (
+				<SvgText
+					testID="terrain-heading-label"
+					x="0"
+					y={Math.max(TERRAIN_TOP_Y + 8, headingY - 3)}
+					fill={theme.colors.ink2}
+					fontFamily={theme.typography.monoInline.fontFamily}
+					fontSize="9"
+				>
+					{t("terrain.heading", { value: heading.formatted })}
+				</SvgText>
 			) : null}
 			{dateRange ? (
 				<SvgText
