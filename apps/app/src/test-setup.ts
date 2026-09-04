@@ -25,6 +25,11 @@ jest.mock("@shopify/react-native-skia", () => {
 		cubicTo: jest.fn(),
 		close: jest.fn(),
 	};
+	const pathBuilder = {
+		addArc: jest.fn(),
+		build: jest.fn(() => path),
+	};
+	pathBuilder.addArc.mockReturnValue(pathBuilder);
 
 	return {
 		BlurMask: Primitive,
@@ -36,6 +41,7 @@ jest.mock("@shopify/react-native-skia", () => {
 		Path: Primitive,
 		Skia: {
 			Path: { Make: jest.fn(() => ({ ...path })) },
+			PathBuilder: { Make: jest.fn(() => pathBuilder) },
 			XYWHRect: jest.fn((x, y, width, height) => ({ x, y, width, height })),
 		},
 		vec: jest.fn((x, y) => ({ x, y })),

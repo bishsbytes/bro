@@ -57,15 +57,11 @@ function arcPath(
 	start: number,
 	sweep: number,
 ) {
-	const path = Skia.Path.Make();
 	const insetX = box / 2 - radius;
 	const insetY = centreY - radius;
-	path.addArc(
-		Skia.XYWHRect(insetX, insetY, radius * 2, radius * 2),
-		start,
-		sweep,
-	);
-	return path;
+	return Skia.PathBuilder.Make()
+		.addArc(Skia.XYWHRect(insetX, insetY, radius * 2, radius * 2), start, sweep)
+		.build();
 }
 
 /** Helm's open instrument dial. Domain colour describes the measurement only. */
