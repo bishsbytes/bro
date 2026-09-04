@@ -339,6 +339,8 @@ describe("delete local data", () => {
 		expect(await view.findByText("Morning")).toBeTruthy();
 		expect(view.queryByText("Logged today")).toBeNull();
 
+		await fireEvent.press(view.getByLabelText(/^Life, tab/));
+		await waitFor(() => expect(router.getPathname()).toBe("/life"));
 		await fireEvent.press(view.getByLabelText("Settings"));
 		expect(await view.findByText("ada@example.com")).toBeTruthy();
 		expect(mockedAuthClient.useSession).toHaveBeenCalled();

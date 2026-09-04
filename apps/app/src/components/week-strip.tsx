@@ -235,14 +235,6 @@ export function WeekStrip({
 						const selected = localDay === selectedDay;
 						const future = localDay > todayLocalDay;
 						const presentation = dayPresentation.get(localDay);
-						const adherence =
-							indicator.habitsScheduled === 0
-								? "none"
-								: indicator.habitsCompleted >= indicator.habitsScheduled
-									? "complete"
-									: indicator.habitsCompleted > 0
-										? "partial"
-										: "empty";
 						return (
 							<Pressable
 								key={localDay}
@@ -265,46 +257,34 @@ export function WeekStrip({
 									future && styles.futureDay,
 								]}
 							>
-								<AppText
-									variant="micro"
-									color={selected ? "brand" : "subtle"}
-									style={selected && styles.selectedText}
-								>
+								<AppText variant="micro" color="subtle" style={styles.weekday}>
 									{presentation?.weekday ?? weekdayLabel(localDay)}
 								</AppText>
 								<AppText
 									variant="monoInline"
-									color={selected ? "brand" : "subtle"}
-									style={[
-										localDay === todayLocalDay && styles.todayNumber,
-										selected && styles.selectedText,
-									]}
+									color={
+										localDay === todayLocalDay || selected ? "brand" : "subtle"
+									}
+									style={styles.dayNumber}
 								>
 									{presentation?.number ?? dayNumber(localDay)}
 								</AppText>
 								<View style={styles.indicators}>
-									<View
-										testID={`week-strip-check-in-${localDay}`}
-										style={[
-											styles.checkIn,
-											indicator.hasCheckIn && {
-												backgroundColor: theme.colors.mind,
-												borderColor: theme.colors.mind,
-											},
-										]}
-									/>
-									{adherence !== "none" ? (
+									{indicator.hasCheckIn ? (
+										<View
+											testID={`week-strip-check-in-${localDay}`}
+											style={[
+												styles.indicator,
+												{ backgroundColor: theme.colors.mind },
+											]}
+										/>
+									) : null}
+									{indicator.habitsCompleted > 0 ? (
 										<View
 											testID={`week-strip-adherence-${localDay}`}
 											style={[
-												styles.adherence,
-												adherence === "partial" && {
-													borderColor: theme.colors.textMuted,
-												},
-												adherence === "complete" && {
-													backgroundColor: theme.colors.body,
-													borderColor: theme.colors.body,
-												},
+												styles.indicator,
+												{ backgroundColor: theme.colors.body },
 											]}
 										/>
 									) : null}
@@ -325,6 +305,7 @@ const styles = StyleSheet.create((theme) => ({
 	},
 	week: {
 		flexDirection: "row",
+		gap: theme.spacing.xs,
 		paddingHorizontal: theme.spacing.sm,
 		paddingVertical: theme.spacing.xs,
 	},
@@ -336,32 +317,25 @@ const styles = StyleSheet.create((theme) => ({
 		gap: 2,
 		borderRadius: theme.radius.control,
 	},
-	today: { borderWidth: 1, borderColor: theme.colors.hairlineStrong },
+	today: {
+		borderWidth: 1,
+		borderColor: theme.colors.hairlineStrong,
+		backgroundColor: theme.colors.surface2,
+	},
 	selectedDay: { backgroundColor: theme.colors.surface2 },
-	selectedText: { fontWeight: "700" },
 	futureDay: { opacity: theme.opacity.disabled },
-	todayNumber: { fontWeight: "700" },
+	weekday: { fontWeight: "500" },
+	dayNumber: { fontSize: 15, lineHeight: 18 },
 	indicators: {
 		position: "absolute",
-		bottom: 1,
+		bottom: theme.spacing.xs,
 		flexDirection: "row",
 		alignItems: "center",
 		gap: theme.spacing.xs,
 	},
-	checkIn: {
+	indicator: {
 		width: 5,
 		height: 5,
-		borderWidth: 1,
-		borderColor: theme.colors.lineStrong,
-		borderStyle: "dashed",
-		borderRadius: theme.radius.pill,
-	},
-	adherence: {
-		width: 6,
-		height: 6,
-		borderWidth: 1.5,
-		borderColor: theme.colors.lineStrong,
-		borderStyle: "dashed",
 		borderRadius: theme.radius.pill,
 	},
 }));

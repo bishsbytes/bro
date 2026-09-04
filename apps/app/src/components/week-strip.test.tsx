@@ -113,6 +113,29 @@ describe("WeekStrip", () => {
 			NativeStyleSheet.flatten(within(yesterday).getByText("19").props.style)
 				.color,
 		).toBe("accent-colour");
+		expect(
+			NativeStyleSheet.flatten(within(yesterday).getByText("We").props.style)
+				.color,
+		).toBe(themeModule.lightTheme.colors.ink3);
+		expect(
+			NativeStyleSheet.flatten(yesterday.props.style).backgroundColor,
+		).toBe(themeModule.lightTheme.colors.surface2);
+		const today = view.getByTestId("week-strip-day-2026-08-20");
+		expect(NativeStyleSheet.flatten(today.props.style)).toMatchObject({
+			backgroundColor: themeModule.lightTheme.colors.surface2,
+			borderColor: themeModule.lightTheme.colors.hairlineStrong,
+			borderWidth: 1,
+		});
+		expect(
+			NativeStyleSheet.flatten(within(today).getByText("20").props.style).color,
+		).toBe("accent-colour");
+		expect(
+			NativeStyleSheet.flatten(within(today).getByText("20").props.style)
+				.fontWeight,
+		).not.toBe("700");
+		expect(NativeStyleSheet.flatten(yesterday.parent?.props.style).gap).toBe(
+			themeModule.lightTheme.spacing.xs,
+		);
 		await fireEvent.press(view.getByTestId("week-strip-day-2026-08-18"));
 		expect(onSelectDay).toHaveBeenCalledWith("2026-08-18");
 	});
@@ -132,6 +155,7 @@ describe("WeekStrip", () => {
 		expect(
 			view.getByTestId("week-strip-day-2026-08-17").props.accessibilityLabel,
 		).toMatch(/no check-in, no habits scheduled$/);
+		expect(view.queryByTestId("week-strip-check-in-2026-08-17")).toBeNull();
 		expect(view.queryByTestId("week-strip-adherence-2026-08-17")).toBeNull();
 		expect(
 			view.getByTestId("week-strip-day-2026-08-18").props.accessibilityLabel,
@@ -143,9 +167,28 @@ describe("WeekStrip", () => {
 			view.getByTestId("week-strip-day-2026-08-20").props.accessibilityLabel,
 		).toMatch(/check-in logged, 3 of 3 habits done$/);
 		expect(view.getByTestId("week-strip-check-in-2026-08-20")).toBeTruthy();
-		expect(view.getByTestId("week-strip-adherence-2026-08-18")).toBeTruthy();
+		expect(view.queryByTestId("week-strip-check-in-2026-08-18")).toBeNull();
+		expect(view.queryByTestId("week-strip-adherence-2026-08-18")).toBeNull();
 		expect(view.getByTestId("week-strip-adherence-2026-08-19")).toBeTruthy();
 		expect(view.getByTestId("week-strip-adherence-2026-08-20")).toBeTruthy();
+		expect(
+			NativeStyleSheet.flatten(
+				view.getByTestId("week-strip-check-in-2026-08-20").props.style,
+			),
+		).toMatchObject({
+			width: 5,
+			height: 5,
+			backgroundColor: themeModule.lightTheme.colors.mind,
+		});
+		expect(
+			NativeStyleSheet.flatten(
+				view.getByTestId("week-strip-adherence-2026-08-19").props.style,
+			),
+		).toMatchObject({
+			width: 5,
+			height: 5,
+			backgroundColor: themeModule.lightTheme.colors.body,
+		});
 	});
 
 	it("reveals earlier pages with a rightward swipe and extends backward", async () => {

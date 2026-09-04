@@ -205,6 +205,8 @@ async function openSettings(
 	view: Awaited<ReturnType<typeof launch>>["view"],
 ) {
 	await waitFor(() => expect(router.getPathname()).toBe("/"));
+	await fireEvent.press(await view.findByLabelText(/^Life, tab/));
+	await waitFor(() => expect(router.getPathname()).toBe("/life"));
 	await fireEvent.press(await view.findByLabelText("Settings"));
 	await waitFor(() => expect(router.getPathname()).toBe("/settings"));
 }
@@ -247,7 +249,9 @@ describe("app entry", () => {
 
 	it("moves between the four human-domain tabs", async () => {
 		const { router, view } = await launch({ onboardingComplete: true });
-		expect(view.getByLabelText("Settings")).toBeTruthy();
+		// Journal keeps the reference's two compact actions. Settings remains one
+		// tab away instead of competing with the date context and quick log.
+		expect(view.queryByLabelText("Settings")).toBeNull();
 
 		await fireEvent.press(view.getByLabelText(/^Intake, tab/));
 		await waitFor(() => expect(router.getPathname()).toBe("/intake"));
@@ -476,9 +480,10 @@ describe("app entry", () => {
 		expect(router.getPathname()).toBe("/settings");
 
 		// Returning from a sign-in entered here dismisses back onto Settings
-		// rather than stacking a second copy of it under the first.
+		// rather than stacking a second copy of it under the first. Closing
+		// Settings then reveals the tab it was opened from.
 		await act(async () => expoRouter.back());
-		await waitFor(() => expect(router.getPathname()).toBe("/"));
-		expect(await view.findByText("Morning")).toBeTruthy();
+		await waitFor(() => expect(router.getPathname()).toBe("/life"));
+		expect(await view.findByText("Wheel of life")).toBeTruthy();
 	});
 });

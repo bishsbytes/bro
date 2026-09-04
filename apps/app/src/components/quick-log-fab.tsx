@@ -70,10 +70,12 @@ export function intakeLogHref(kind: ConsumableKind): Href {
 export function QuickLogFab({
 	bodyActive = false,
 	enabledKinds = enabledIntakeKinds,
+	surface = false,
 }: {
 	bottom?: number;
 	bodyActive?: boolean;
 	enabledKinds?: () => Promise<ConsumableKind[]>;
+	surface?: boolean;
 }) {
 	const { t } = useTranslation("navigation");
 	const { theme } = useUnistyles();
@@ -128,10 +130,13 @@ export function QuickLogFab({
 				accessibilityRole="button"
 				accessibilityLabel={t("quickLog.open")}
 				activeOpacity={0.72}
-				style={styles.trigger}
+				hitSlop={theme.spacing.sm}
+				style={[styles.trigger, surface && styles.surfaceTrigger]}
 				onPress={openSheet}
 			>
-				<Icon name="add" color={theme.colors.ink2} size={20} />
+				<View style={surface ? styles.triggerSurface : undefined}>
+					<Icon name="add" color={theme.colors.ink2} size={surface ? 18 : 20} />
+				</View>
 			</TouchableOpacity>
 
 			<ModalSheet
@@ -215,6 +220,20 @@ const styles = StyleSheet.create((theme) => ({
 		justifyContent: "center",
 		borderRadius: theme.radius.pill,
 		backgroundColor: "transparent",
+	},
+	surfaceTrigger: {
+		width: 34,
+		height: 34,
+	},
+	triggerSurface: {
+		width: 34,
+		height: 34,
+		alignItems: "center",
+		justifyContent: "center",
+		borderWidth: 1,
+		borderColor: theme.colors.hairline,
+		borderRadius: 11,
+		backgroundColor: theme.colors.surface2,
 	},
 	actions: { gap: theme.spacing.sm },
 	loading: { alignItems: "center", gap: theme.spacing.md },

@@ -2,6 +2,7 @@ import { localDayOf } from "@bro/domain";
 import { fireEvent, render } from "@testing-library/react-native";
 import * as Haptics from "expo-haptics";
 import type { ReactNode } from "react";
+import { StyleSheet as NativeStyleSheet } from "react-native";
 import TabLayout from "./app/(tabs)/_layout";
 import { monthHeaderLabel } from "./components/today-header-month-context";
 import * as themeModule from "./theme/unistyles";
@@ -96,6 +97,25 @@ describe("TabLayout", () => {
 		const currentMonth = monthHeaderLabel(localDayOf(new Date()));
 
 		expect(screen.getByText(currentMonth)).toBeTruthy();
+		expect(screen.getAllByText("Journal")).toHaveLength(2);
+		expect(screen.queryByLabelText("Settings")).toBeNull();
+		const insightsSurface = NativeStyleSheet.flatten(
+			screen.getByTestId("insights-header-icon").parent?.props.style,
+		);
+		expect(insightsSurface).toMatchObject({
+			width: 34,
+			height: 34,
+			borderRadius: 11,
+			backgroundColor: themeModule.lightTheme.colors.surface2,
+		});
+		expect(
+			NativeStyleSheet.flatten(
+				screen.getByLabelText("Open insights").props.style,
+			),
+		).toMatchObject({ width: 34, height: 34 });
+		expect(
+			NativeStyleSheet.flatten(screen.getByLabelText("Log").props.style),
+		).toMatchObject({ width: 34, height: 34 });
 		expect(mockNativeTabsProps).toHaveBeenCalledWith(
 			expect.objectContaining({
 				backgroundColor: themeModule.lightTheme.colors.glass,
@@ -165,7 +185,7 @@ describe("TabLayout", () => {
 
 		const retainedMonth = screen.getByText(currentMonth);
 		expect(retainedMonth).toBeTruthy();
-		expect(screen.getByTestId("history-header-icon")).toBeTruthy();
+		expect(screen.getByLabelText("Open history")).toBeTruthy();
 
 		mockPathname = "/body/weight";
 		mockSegments = ["(tabs)", "body", "[slug]"];
@@ -194,8 +214,6 @@ describe("TabLayout", () => {
 			rippleColor: string;
 		};
 		const insightsIcon = screen.getByTestId("insights-header-icon");
-		const historyIcon = screen.getByTestId("history-header-icon");
-		const settingsIcon = screen.getByTestId("settings-header-icon");
 
 		expect(nativeOptions.iconColor).toEqual({
 			default: "#345678",
@@ -206,7 +224,10 @@ describe("TabLayout", () => {
 		expect(nativeOptions.indicatorColor).toBe("#004466");
 		expect(nativeOptions.rippleColor).toBe("#00446638");
 		expect(insightsIcon.props.children.props.color).toBe("#345678");
-		expect(historyIcon.props.children.props.color).toBe("#345678");
+
+		mockPathname = "/intake";
+		await screen.rerender(<TabLayout />);
+		const settingsIcon = screen.getByTestId("settings-header-icon");
 		expect(settingsIcon.props.children.props.color).toBe("#345678");
 	});
 

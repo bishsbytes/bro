@@ -37,4 +37,22 @@ describe("AppHeader", () => {
 		expect(screen.getByLabelText("Settings")).toBeTruthy();
 		expect(screen.getByTestId("settings-header-icon")).toBeTruthy();
 	});
+
+	it("renders a compact date context above the title as one accessible target", async () => {
+		const onOpenHistory = jest.fn();
+		const screen = await render(
+			<AppHeader
+				title="Journal"
+				eyebrow="September"
+				eyebrowAccessibilityLabel="Open history"
+				onEyebrowPress={onOpenHistory}
+				showSettings={false}
+			/>,
+		);
+
+		expect(screen.getByText("September")).toBeTruthy();
+		expect(screen.getByText("Journal")).toBeTruthy();
+		await fireEvent.press(screen.getByLabelText("Open history"));
+		expect(onOpenHistory).toHaveBeenCalledTimes(1);
+	});
 });

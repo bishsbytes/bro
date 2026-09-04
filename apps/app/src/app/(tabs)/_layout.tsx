@@ -29,29 +29,41 @@ function TabShell() {
 	const todayHeaderMonth = useTodayHeaderMonth();
 	const activeTabKey = TAB_TITLE_KEYS[pathname as keyof typeof TAB_TITLE_KEYS];
 	const activeTabTitle = activeTabKey ? t(activeTabKey) : undefined;
-	const activeHeaderTitle =
-		pathname === "/" ? todayHeaderMonth : activeTabTitle;
 	const isJournalTab = pathname === "/";
+	const activeHeaderTitle = isJournalTab ? t("tabs.journal") : activeTabTitle;
 	const canQuickLog =
 		pathname === "/" || pathname === "/intake" || pathname === "/body";
 	const lastTabHeader = useRef(
 		activeHeaderTitle
-			? { title: activeHeaderTitle, isJournal: isJournalTab }
-			: { title: todayHeaderMonth, isJournal: true },
+			? {
+					title: activeHeaderTitle,
+					eyebrow: isJournalTab ? todayHeaderMonth : undefined,
+					isJournal: isJournalTab,
+				}
+			: {
+					title: t("tabs.journal"),
+					eyebrow: todayHeaderMonth,
+					isJournal: true,
+				},
 	);
 
 	useLayoutEffect(() => {
 		if (activeHeaderTitle) {
 			lastTabHeader.current = {
 				title: activeHeaderTitle,
+				eyebrow: isJournalTab ? todayHeaderMonth : undefined,
 				isJournal: isJournalTab,
 			};
 		}
-	}, [activeHeaderTitle, isJournalTab]);
+	}, [activeHeaderTitle, isJournalTab, todayHeaderMonth]);
 
 	const isNestedTabRoute = segments[0] === "(tabs)" && segments.length > 2;
 	const header = activeHeaderTitle
-		? { title: activeHeaderTitle, isJournal: isJournalTab }
+		? {
+				title: activeHeaderTitle,
+				eyebrow: isJournalTab ? todayHeaderMonth : undefined,
+				isJournal: isJournalTab,
+			}
 		: lastTabHeader.current;
 	const title = isNestedTabRoute ? undefined : header.title;
 	const activeTabName = pathname === "/" ? "index" : pathname.slice(1);
@@ -61,27 +73,29 @@ function TabShell() {
 			{title ? (
 				<AppHeader
 					title={title}
-					leading={
-						header.isJournal ? (
-							<HeaderIconButton
-								icon="insights"
-								testID="insights-header-icon"
-								label={t("tabs.openInsights")}
-								onPress={() => router.push("/insights")}
-							/>
-						) : null
+					eyebrow={header.eyebrow}
+					eyebrowAccessibilityLabel={
+						header.isJournal ? t("tabs.openHistory") : undefined
 					}
+					onEyebrowPress={
+						header.isJournal ? () => router.push("/history") : undefined
+					}
+					showSettings={!header.isJournal}
 					actions={
 						<>
-							{canQuickLog ? (
-								<QuickLogFab bodyActive={pathname === "/body"} />
-							) : null}
 							{header.isJournal ? (
 								<HeaderIconButton
-									icon="calendar"
-									testID="history-header-icon"
-									label={t("tabs.openHistory")}
-									onPress={() => router.push("/history")}
+									icon="insights"
+									testID="insights-header-icon"
+									label={t("tabs.openInsights")}
+									onPress={() => router.push("/insights")}
+									surface
+								/>
+							) : null}
+							{canQuickLog ? (
+								<QuickLogFab
+									bodyActive={pathname === "/body"}
+									surface={header.isJournal}
 								/>
 							) : null}
 						</>
