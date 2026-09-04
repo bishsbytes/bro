@@ -64,7 +64,7 @@ function Segments({
 						onPress={() => onChange(segment.key)}
 						style={({ pressed }) => [
 							styles.segment,
-							index > 0 && styles.segmentDivider,
+							index === 0 ? styles.segmentFirst : styles.segmentLast,
 							selected && styles.segmentSelected,
 							pressed && styles.segmentPressed,
 						]}
@@ -371,25 +371,28 @@ const styles = StyleSheet.create((theme) => ({
 	segments: {
 		flexDirection: "row",
 		width: "100%",
-		borderWidth: 1,
-		borderColor: theme.colors.border,
-		borderRadius: theme.radius.md,
-		backgroundColor: theme.colors.surface,
-		overflow: "hidden",
 	},
 	segment: {
 		flex: 1,
 		alignItems: "center",
 		justifyContent: "center",
+		borderWidth: 1,
+		borderColor: theme.colors.border,
+		backgroundColor: theme.colors.surface,
 		paddingVertical: theme.spacing.sm,
 		paddingHorizontal: theme.spacing.md,
 	},
-	segmentDivider: {
-		borderLeftWidth: 1,
-		borderLeftColor: theme.colors.border,
+	segmentFirst: {
+		borderTopLeftRadius: theme.radius.md,
+		borderBottomLeftRadius: theme.radius.md,
+	},
+	segmentLast: {
+		marginLeft: -1,
+		borderTopRightRadius: theme.radius.md,
+		borderBottomRightRadius: theme.radius.md,
 	},
 	segmentSelected: {
-		borderWidth: 1,
+		zIndex: 1,
 		borderColor: theme.colors.brand,
 		backgroundColor: theme.colors.selected,
 	},
