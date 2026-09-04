@@ -181,9 +181,7 @@ function TabShell() {
 			{canQuickLog ? (
 				<QuickLogFab
 					bottom={
-						NATIVE_TAB_BAR_CONTENT_HEIGHT +
-						insets.bottom +
-						theme.spacing.lg
+						NATIVE_TAB_BAR_CONTENT_HEIGHT + insets.bottom + theme.spacing.lg
 					}
 					bodyActive={pathname === "/body"}
 				/>

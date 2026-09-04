@@ -2,7 +2,7 @@ import { localDayOf } from "@bro/domain";
 import { fireEvent, render } from "@testing-library/react-native";
 import * as Haptics from "expo-haptics";
 import type { ReactNode } from "react";
-import { Platform, StyleSheet as NativeStyleSheet } from "react-native";
+import { StyleSheet as NativeStyleSheet, Platform } from "react-native";
 import TabLayout from "./app/(tabs)/_layout";
 import { monthHeaderLabel } from "./components/today-header-month-context";
 import * as themeModule from "./theme/unistyles";
@@ -123,9 +123,7 @@ describe("TabLayout", () => {
 			NativeStyleSheet.flatten(screen.getByLabelText("Log").props.style),
 		).toMatchObject({
 			position: "absolute",
-			bottom:
-				nativeTabBarContentHeight + mockSafeAreaInsets.bottom +
-				16,
+			bottom: nativeTabBarContentHeight + mockSafeAreaInsets.bottom + 16,
 			width: 56,
 			height: 56,
 			borderRadius: 14,

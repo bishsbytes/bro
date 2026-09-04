@@ -75,7 +75,9 @@ describe("quick log fab", () => {
 			borderRadius: 14,
 			backgroundColor: lightTheme.colors.accent,
 		});
-		expect(view.getByTestId("quick-log-icon").props.children.props).toMatchObject({
+		expect(
+			view.getByTestId("quick-log-icon").props.children.props,
+		).toMatchObject({
 			color: lightTheme.colors.onAccent,
 			size: 24,
 		});

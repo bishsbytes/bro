@@ -133,7 +133,7 @@ Line length ≤ 68ch sans, ≤ 74ch serif.
 | Bordered card per list item | Inset grouped list, one surface, swipe actions |
 | Static page header + back arrow | Large title that collapses into a glass bar |
 | New screen per action | Bottom sheet keeping context beneath |
-| Full-width button mid-page + FAB | One action pinned above the tab bar; "+" in the title bar; no FAB |
+| Full-width button mid-page + header action | One quick-log FAB pinned above the native tab bar |
 | Numbers in body text | One hero Dial/readout, drawn large, mono, with glow |
 | Label-over-box form fields | Inline rows (label left, value right) in grouped lists; save in title bar |
 | No motion | Springs, tickers, haptics, sheet physics |
@@ -237,6 +237,6 @@ reference only; it is not in use.
 - [ ] Every metric shows band + marker + factual read; deltas absolute, in ink, signed.
 - [ ] "Heading" not "goal"; heading rendered as notch/line and reported as fact.
 - [ ] One hero per screen; one alert max.
-- [ ] Lists are inset groups, not bordered cards; no FAB; save actions in title bar.
+- [ ] Lists are inset groups, not bordered cards; one quick-log FAB above the tab bar; save actions in title bars.
 - [ ] Copy passes voice rules; protected lines intact.
 - [ ] Reduced motion, contrast, deuteranopia checked in both themes.

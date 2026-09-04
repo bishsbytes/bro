@@ -27,9 +27,10 @@ Stack: **React Native + Unistyles 3** (`tokens/unistyles.ts`), **Lucide**
 ### Tab bar
 - `react-native-bottom-tabs` so the OS draws the bar (glass on iOS, M3 on Android). Lucide icons at 22, `strokeWidth 1.75`.
 - Four items, in order: Journal, Intake, Body, Life. Active item tinted with
-  `accent`. No FAB anywhere in the app.
-- "+" lives as a trailing toolbar item on Journal; Intake exposes a sheet
-  handle above the tab bar.
+  `accent`.
+- One 56pt quick-log FAB floats 16pt above the native bar on Journal, Intake,
+  and Body. It uses the primary-action treatment (`accent`, `onAccent`, radius
+  14) and never glows. Life has no logging action.
 
 ### Large title with date navigation
 - `native-stack` screen options: `headerLargeTitle: true`, `headerTransparent`,
@@ -132,7 +133,7 @@ Stack: **React Native + Unistyles 3** (`tokens/unistyles.ts`), **Lucide**
 ### Log sheet ("What would you like to log?")
 - Glass sheet, title `19/600`, five rows Note / Food / Drink / Body / Check-in
   with 34pt icon tiles in the domain tint, one-line descriptions (keep copy).
-- Long-press the "+" toolbar item to skip the sheet and repeat the last log.
+- Opens from the quick-log FAB without leaving the current tab.
 
 ### Quick-log sheet
 - Recents as chips ranked by time of day (chip = `surface2`, selected = accent
