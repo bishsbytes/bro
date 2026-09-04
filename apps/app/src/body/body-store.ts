@@ -592,6 +592,10 @@ export class BodyStore {
 					);
 				const tracked = overlay?.enabled ?? false;
 				const hasImportedData = importedRows.length > 0;
+				const resolvedBaseline = resolveMeasurementBaseline(
+					resolvedRows,
+					throughLocalDay,
+				);
 				return {
 					...presentation,
 					userEnterable: metric.userEnterable,
@@ -613,9 +617,10 @@ export class BodyStore {
 						metric,
 						throughLocalDay,
 						BODY_TREND_PERIOD,
+						resolvedBaseline.usualRange,
 					),
 					baseline: presentBaseline(
-						resolveMeasurementBaseline(resolvedRows, throughLocalDay),
+						resolvedBaseline,
 						presentation,
 						inputLocale,
 					),

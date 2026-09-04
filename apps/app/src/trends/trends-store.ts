@@ -6,7 +6,7 @@ import {
 	TrackedMetricsRepository,
 	UnitPreferenceRepository,
 } from "@bro/database-app";
-import { type DisplayUnit, localDayOf } from "@bro/domain";
+import { type DisplayUnit, localDayOf, shiftLocalDay } from "@bro/domain";
 import {
 	DEFAULT_TRACKED_METRICS,
 	type MeasurementMetricDefinition,
@@ -15,7 +15,9 @@ import {
 import {
 	buildTrendSeries,
 	formatMetricValue,
+	MEASUREMENT_BASELINE_WINDOW_DAYS,
 	metricDisplayUnit,
+	resolveMeasurementBaseline,
 	resolveMetricObservations,
 	type TrendPeriod,
 	type TrendSeries,
@@ -31,6 +33,12 @@ export type MetricTrend = {
 	series: TrendSeries;
 	displayUnit: DisplayUnit | null;
 	latestFormatted: string | null;
+	usualRange: {
+		min: number;
+		max: number;
+		minFormatted: string;
+		maxFormatted: string;
+	} | null;
 };
 
 export type TrendsSnapshot = {
@@ -69,6 +77,10 @@ export class TrendsStore {
 		const locale = this.locale();
 		const throughLocalDay = localDayOf(this.now());
 		const range = trendRange(throughLocalDay, period);
+		const baselineFromLocalDay = shiftLocalDay(
+			throughLocalDay,
+			-(MEASUREMENT_BASELINE_WINDOW_DAYS - 1),
+		);
 		const measurementSlugs = new Set<string>(
 			listMeasurements().map((metric) => metric.slug),
 		);
@@ -83,7 +95,7 @@ export class TrendsStore {
 				this.unitPreferences.resolveLatestPerDimension(),
 				this.dailyMetrics.listAll(),
 				this.intakeEvents.listBetween(
-					range.fromLocalDay,
+					baselineFromLocalDay,
 					range.throughLocalDay,
 				),
 			]);
@@ -125,7 +137,7 @@ export class TrendsStore {
 			metrics.map(({ metric }) =>
 				this.observations.listByMetricAndDayRange(
 					metric.slug,
-					range.fromLocalDay,
+					baselineFromLocalDay,
 					range.throughLocalDay,
 				),
 			),
@@ -145,11 +157,16 @@ export class TrendsStore {
 								intakeEvents,
 							)
 						: metricRows;
+				const baseline =
+					metric.kind === "measurement"
+						? resolveMeasurementBaseline(resolvedRows, throughLocalDay)
+						: null;
 				const series = buildTrendSeries(
 					resolvedRows,
 					metric,
 					throughLocalDay,
 					period,
+					baseline?.usualRange,
 				);
 				const latestValue = [...series.points]
 					.reverse()
@@ -168,7 +185,34 @@ export class TrendsStore {
 						unitWords(),
 					);
 				}
-				return { metric, label, series, displayUnit, latestFormatted };
+				const usualRange =
+					metric.kind === "measurement" && baseline?.usualRange
+						? {
+								...baseline.usualRange,
+								minFormatted: formatMetricValue(
+									metric,
+									baseline.usualRange.min,
+									displayUnit,
+									locale,
+									unitWords(),
+								),
+								maxFormatted: formatMetricValue(
+									metric,
+									baseline.usualRange.max,
+									displayUnit,
+									locale,
+									unitWords(),
+								),
+							}
+						: null;
+				return {
+					metric,
+					label,
+					series,
+					displayUnit,
+					latestFormatted,
+					usualRange,
+				};
 			}),
 		};
 	}

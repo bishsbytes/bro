@@ -10,11 +10,14 @@ export type TrendPoint = {
 	value: number | null;
 };
 
+export type TrendRange = { min: number; max: number };
+
 export type TrendSeries = {
 	metricSlug: string;
 	points: TrendPoint[];
 	segments: string[];
 	markers: { localDay: string; x: number; y: number }[];
+	scale: TrendRange;
 	observedDayCount: number;
 	daysUntilMeaningful: number;
 };
@@ -86,7 +89,8 @@ function aggregateDay(
 function chartGeometry(
 	points: readonly TrendPoint[],
 	metric: MetricDefinition,
-): Pick<TrendSeries, "segments" | "markers"> {
+	includedRange?: TrendRange | null,
+): Pick<TrendSeries, "segments" | "markers" | "scale"> {
 	const segments: string[] = [];
 	const markers: TrendSeries["markers"] = [];
 	let current: string[] = [];
@@ -94,8 +98,12 @@ function chartGeometry(
 	const observedValues = points.flatMap((point) =>
 		point.value === null ? [] : [point.value],
 	);
-	const observedMin = Math.min(...observedValues);
-	const observedMax = Math.max(...observedValues);
+	const scaleValues = [
+		...observedValues,
+		...(includedRange ? [includedRange.min, includedRange.max] : []),
+	];
+	const observedMin = scaleValues.length > 0 ? Math.min(...scaleValues) : 0;
+	const observedMax = scaleValues.length > 0 ? Math.max(...scaleValues) : 1;
 	const scaleMin =
 		metric.scaleMin ?? (metric.kind === "measurement" ? observedMin : 0);
 	const scaleMax =
@@ -123,7 +131,7 @@ function chartGeometry(
 	if (current.length > 0) {
 		segments.push(current.join(" "));
 	}
-	return { segments, markers };
+	return { segments, markers, scale: { min: scaleMin, max: scaleMax } };
 }
 
 export function buildTrendSeries(
@@ -131,6 +139,7 @@ export function buildTrendSeries(
 	metric: MetricDefinition,
 	throughLocalDay: string,
 	period: TrendPeriod,
+	includedRange?: TrendRange | null,
 ): TrendSeries {
 	const { fromLocalDay } = trendRange(throughLocalDay, period);
 	const points: TrendPoint[] = [];
@@ -146,7 +155,7 @@ export function buildTrendSeries(
 	const observedDayCount = points.filter(
 		(point) => point.value !== null,
 	).length;
-	const geometry = chartGeometry(points, metric);
+	const geometry = chartGeometry(points, metric, includedRange);
 	return {
 		metricSlug: metric.slug,
 		points,

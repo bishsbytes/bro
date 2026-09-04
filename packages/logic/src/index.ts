@@ -195,6 +195,7 @@ export {
 	TREND_PERIODS,
 	type TrendPeriod,
 	type TrendPoint,
+	type TrendRange,
 	type TrendSeries,
 	trendRange,
 } from "./trends/trend-math";

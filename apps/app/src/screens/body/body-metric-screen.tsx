@@ -289,7 +289,10 @@ export function BodyMetricScreen({ metricSlug, store }: BodyMetricScreenProps) {
 			</Card>
 
 			{detail.series.observedDayCount > 0 ? (
-				<TrendChart series={detail.series} />
+				<TrendChart
+					series={detail.series}
+					usualRange={detail.baseline.usualRange}
+				/>
 			) : null}
 
 			{error ? <AppText color="danger">{error}</AppText> : null}

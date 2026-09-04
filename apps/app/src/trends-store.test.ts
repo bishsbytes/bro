@@ -90,6 +90,52 @@ describe("trends store", () => {
 		expect(weight?.series.points.at(-1)?.value).toBe(77.56429527);
 	});
 
+	it("carries a measurement's longer-term usual range into a short chart", async () => {
+		const now = new Date("2026-08-14T22:00:00.000Z");
+		await new databaseApp.TrackedMetricsRepository(db).configure(
+			"weight",
+			0,
+			true,
+		);
+		await new databaseApp.UnitPreferenceRepository(db).set("mass", "kg");
+		const observations = new databaseApp.ObservationRepository(db);
+		for (const [id, localDay, value] of [
+			["first", "2026-07-20", 70],
+			["second", "2026-08-01", 80],
+			["third", "2026-08-07", 90],
+			["current", "2026-08-14", 100],
+		] as const) {
+			await observations.create({
+				metricSlug: "weight",
+				value,
+				scaleMin: null,
+				scaleMax: null,
+				observedAt: Date.parse(`${localDay}T08:00:00.000Z`),
+				localDay,
+				tzOffsetMinutes: 0,
+				source: "user",
+				sourceRecordId: id,
+				assessmentId: null,
+			});
+		}
+
+		const weight = (
+			await new TrendsStore(
+				db,
+				() => now,
+				() => "en-GB",
+			).load(7)
+		).metrics.find(({ metric }) => metric.slug === "weight");
+
+		expect(weight?.usualRange).toEqual({
+			min: 77.5,
+			max: 92.5,
+			minFormatted: "77.5 kg",
+			maxFormatted: "92.5 kg",
+		});
+		expect(weight?.series.scale).toEqual({ min: 77.5, max: 100 });
+	});
+
 	it("includes every default score and removes one after opt-out", async () => {
 		const tracked = new databaseApp.TrackedMetricsRepository(db);
 		const store = new TrendsStore(db);

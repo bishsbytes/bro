@@ -47,6 +47,8 @@ export const common = {
 		wheelThisReview: "This review",
 		wheelPreviousReview: "Previous review",
 		trendChart: "{{metric}} trend chart",
+		trendChartWithUsualRange:
+			"{{metric}} trend chart. Usual range {{min}} to {{max}}",
 		/** One score button, e.g. "Mood 4". */
 		score: "{{prefix}} {{score}}",
 		/** One adjustable score rail, e.g. "Work & career score". */
@@ -58,6 +60,9 @@ export const common = {
 		habitsDone: "{{done}} of {{scheduled}} habits done",
 		/** The day, then its check-in state, then its habit progress. */
 		daySummary: "{{day}}, {{checkIn}}, {{habits}}",
+	},
+	terrain: {
+		usualRange: "Usual range",
 	},
 	/** A measurement field and the unit it takes, e.g. "Weight (kg)". */
 	measurement: {

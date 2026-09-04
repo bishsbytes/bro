@@ -159,6 +159,25 @@ describe("trend math", () => {
 		expect(series.markers[0]?.y).toBe(60);
 	});
 
+	it("includes a measurement's usual range in the chart scale", () => {
+		const series = buildTrendSeries(
+			[
+				observation("weight", "2026-08-14", 80, {
+					metricSlug: "weight",
+					scaleMin: null,
+					scaleMax: null,
+				}),
+			],
+			knownMetric("weight"),
+			"2026-08-14",
+			7,
+			{ min: 70, max: 90 },
+		);
+
+		expect(series.scale).toEqual({ min: 70, max: 90 });
+		expect(series.markers[0]?.y).toBe(60);
+	});
+
 	it("supports registry-driven sum aggregation", () => {
 		const series = buildTrendSeries(
 			[

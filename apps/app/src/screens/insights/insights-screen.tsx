@@ -148,33 +148,35 @@ export function InsightsScreen({ store, insightStore }: InsightsScreenProps) {
 						})}
 					</AppText>
 				) : null}
-				{snapshot?.metrics.map(({ metric, label, series, latestFormatted }) => (
-					<Card key={metric.slug} style={styles.card}>
-						<SectionHeader
-							title={label}
-							action={
-								<AppText variant="caption" color="muted">
-									{t("trends.loggedDays", { count: series.observedDayCount })}
+				{snapshot?.metrics.map(
+					({ metric, label, series, latestFormatted, usualRange }) => (
+						<Card key={metric.slug} style={styles.card}>
+							<SectionHeader
+								title={label}
+								action={
+									<AppText variant="caption" color="muted">
+										{t("trends.loggedDays", { count: series.observedDayCount })}
+									</AppText>
+								}
+							/>
+							{latestFormatted ? (
+								<AppText color="muted">
+									{t("trends.latest", { value: latestFormatted })}
 								</AppText>
-							}
-						/>
-						{latestFormatted ? (
-							<AppText color="muted">
-								{t("trends.latest", { value: latestFormatted })}
-							</AppText>
-						) : null}
-						<TrendChart series={series} />
-						{series.daysUntilMeaningful > 0 ? (
-							<AppText color="muted">
-								{t("trends.notEnoughData", {
-									count: series.daysUntilMeaningful,
-								})}
-							</AppText>
-						) : (
-							<AppText>{t("trends.enoughData")}</AppText>
-						)}
-					</Card>
-				))}
+							) : null}
+							<TrendChart series={series} usualRange={usualRange} />
+							{series.daysUntilMeaningful > 0 ? (
+								<AppText color="muted">
+									{t("trends.notEnoughData", {
+										count: series.daysUntilMeaningful,
+									})}
+								</AppText>
+							) : (
+								<AppText>{t("trends.enoughData")}</AppText>
+							)}
+						</Card>
+					),
+				)}
 			</View>
 
 			<ListRow
