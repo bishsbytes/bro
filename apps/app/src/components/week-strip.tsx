@@ -320,7 +320,6 @@ const styles = StyleSheet.create((theme) => ({
 	today: {
 		borderWidth: 1,
 		borderColor: theme.colors.hairlineStrong,
-		backgroundColor: theme.colors.surface2,
 	},
 	selectedDay: { backgroundColor: theme.colors.surface2 },
 	futureDay: { opacity: theme.opacity.disabled },

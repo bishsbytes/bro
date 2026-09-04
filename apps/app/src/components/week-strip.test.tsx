@@ -121,11 +121,12 @@ describe("WeekStrip", () => {
 			NativeStyleSheet.flatten(yesterday.props.style).backgroundColor,
 		).toBe(themeModule.lightTheme.colors.surface2);
 		const today = view.getByTestId("week-strip-day-2026-08-20");
-		expect(NativeStyleSheet.flatten(today.props.style)).toMatchObject({
-			backgroundColor: themeModule.lightTheme.colors.surface2,
+		const todayStyle = NativeStyleSheet.flatten(today.props.style);
+		expect(todayStyle).toMatchObject({
 			borderColor: themeModule.lightTheme.colors.hairlineStrong,
 			borderWidth: 1,
 		});
+		expect(todayStyle.backgroundColor).toBeUndefined();
 		expect(
 			NativeStyleSheet.flatten(within(today).getByText("20").props.style).color,
 		).toBe("accent-colour");
