@@ -4,6 +4,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { EmptyState } from "../../components/empty-state";
 import { LoadingScreen, Screen } from "../../components/screen";
+import { playSelectionHaptic } from "../../feedback/selection-haptic";
 import { createIntakeStore, type IntakeStore } from "../../intake/intake-store";
 import { toMessage } from "../../lib/errors";
 import { useFocusStoreLoad } from "../../lib/use-store-load";
@@ -80,6 +81,15 @@ export function IntakeScreen({ store }: IntakeScreenProps) {
 		}
 	}
 
+	const selectSegment = useCallback(
+		(next: IntakeDaySegment) => {
+			if (next === segment) return;
+			playSelectionHaptic();
+			router.setParams({ view: next });
+		},
+		[segment],
+	);
+
 	if (loading) {
 		return <LoadingScreen variant="tab" />;
 	}
@@ -105,7 +115,7 @@ export function IntakeScreen({ store }: IntakeScreenProps) {
 				error={error}
 				busy={busy}
 				segment={segment}
-				onSelectSegment={(next) => router.setParams({ view: next })}
+				onSelectSegment={selectSegment}
 				onSelectDay={(localDay) => router.setParams({ day: localDay })}
 				onSaveEvent={(id, edit) => mutate(() => intake.updateEvent(id, edit))}
 				onDeleteEvent={(id) => mutate(() => intake.deleteEvent(id))}

@@ -1,9 +1,9 @@
 import { previousLocalDay, shiftLocalDay } from "@bro/domain";
 import { INTAKE_BASELINE_MIN_LOGGED_DAYS } from "@bro/logic";
 import { type Href, router } from "expo-router";
-import { useState } from "react";
+import { useEffect, useLayoutEffect, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
-import { Pressable, View } from "react-native";
+import { AccessibilityInfo, Animated, Pressable, View } from "react-native";
 import { AppText } from "../../components/app-text";
 import { BaselineGauge } from "../../components/baseline-gauge";
 import { Card } from "../../components/card";
@@ -60,14 +60,20 @@ function Segments({
 						accessibilityRole="tab"
 						accessibilityLabel={segment.label}
 						accessibilityState={{ selected }}
+						hitSlop={4}
 						onPress={() => onChange(segment.key)}
-						style={[
+						style={({ pressed }) => [
 							styles.segment,
 							index > 0 && styles.segmentDivider,
 							selected && styles.segmentSelected,
+							pressed && styles.segmentPressed,
 						]}
 					>
-						<AppText variant="label" color={selected ? "onBrand" : "muted"}>
+						<AppText
+							variant="caption"
+							color="muted"
+							style={selected && styles.segmentSelectedText}
+						>
 							{segment.label}
 						</AppText>
 					</Pressable>
@@ -97,9 +103,66 @@ export function IntakeDayContent({
 	const { t } = useTranslation(["intake", "common"]);
 	const { theme } = useUnistyles();
 	const [editing, setEditing] = useState<PresentedIntakeEntry | null>(null);
+	const transitionOpacity = useRef(new Animated.Value(1)).current;
+	const transitionOffset = useRef(new Animated.Value(0)).current;
+	const previousSegment = useRef(segment);
+	const reducedMotion = useRef(false);
 	const rangeNote =
 		snapshot.totals.length > 0 &&
 		snapshot.totals.some((total) => total.gauge === null);
+
+	useEffect(() => {
+		let active = true;
+		void AccessibilityInfo.isReduceMotionEnabled()
+			.catch(() => true)
+			.then((enabled) => {
+				if (active) reducedMotion.current = enabled;
+			});
+		const subscription = AccessibilityInfo.addEventListener(
+			"reduceMotionChanged",
+			(enabled) => {
+				reducedMotion.current = enabled;
+			},
+		);
+		return () => {
+			active = false;
+			subscription?.remove();
+		};
+	}, []);
+
+	useLayoutEffect(() => {
+		if (segment === previousSegment.current) return;
+		const direction = segment === "logged" ? 1 : -1;
+		previousSegment.current = segment;
+		if (reducedMotion.current) {
+			transitionOpacity.setValue(1);
+			transitionOffset.setValue(0);
+			return;
+		}
+
+		transitionOpacity.setValue(0);
+		transitionOffset.setValue(direction * theme.spacing.lg);
+		const animation = Animated.parallel([
+			Animated.timing(transitionOpacity, {
+				toValue: 1,
+				duration: theme.motion.duration,
+				useNativeDriver: true,
+			}),
+			Animated.timing(transitionOffset, {
+				toValue: 0,
+				duration: theme.motion.duration,
+				useNativeDriver: true,
+			}),
+		]);
+		animation.start();
+		return () => animation.stop();
+	}, [
+		segment,
+		theme.motion.duration,
+		theme.spacing.lg,
+		transitionOffset,
+		transitionOpacity,
+	]);
 
 	return (
 		<>
@@ -146,85 +209,97 @@ export function IntakeDayContent({
 
 				<Segments value={segment} onChange={onSelectSegment} />
 
-				{segment === "summary" ? (
-					<>
-						{snapshot.totals.length === 0 ? (
-							<AppText variant="caption" color="muted">
-								{t("intake:tab.totalsEmpty")}
+				<Animated.View
+					style={[
+						styles.segmentContent,
+						{
+							opacity: transitionOpacity,
+							transform: [{ translateX: transitionOffset }],
+						},
+					]}
+				>
+					{segment === "summary" ? (
+						<>
+							{snapshot.totals.length === 0 ? (
+								<AppText variant="caption" color="muted">
+									{t("intake:tab.totalsEmpty")}
+								</AppText>
+							) : (
+								snapshot.totals.map((total) => (
+									<BaselineGauge
+										key={total.metric.slug}
+										label={total.metric.label}
+										meta={total.meta}
+										value={total.dayValueParts?.value ?? t("common:emDash")}
+										unit={total.dayValueParts?.unit ?? null}
+										valueVariant="score"
+										rail={total.gauge?.rail ?? null}
+										railLabels={total.gauge?.railLabels ?? null}
+										band={total.gauge?.band ?? null}
+										current={total.dayValue}
+										previous={null}
+										read={total.read}
+										domain={total.domain}
+										accessibilityLabel={t("intake:read.gaugeA11y", {
+											name: total.metric.label,
+											value: total.dayFormatted ?? t("common:emDash"),
+											read: total.read ?? "",
+										}).trim()}
+									/>
+								))
+							)}
+							{rangeNote ? (
+								<AppText variant="caption" color="muted">
+									{t("intake:tab.rangeNote", {
+										count: INTAKE_BASELINE_MIN_LOGGED_DAYS,
+									})}
+								</AppText>
+							) : null}
+							<AppText variant="caption" color="subtle">
+								{t("intake:tab.disclaimer")}
 							</AppText>
-						) : (
-							snapshot.totals.map((total) => (
-								<BaselineGauge
-									key={total.metric.slug}
-									label={total.metric.label}
-									meta={total.meta}
-									value={total.dayValueParts?.value ?? t("common:emDash")}
-									unit={total.dayValueParts?.unit ?? null}
-									valueVariant="score"
-									rail={total.gauge?.rail ?? null}
-									railLabels={total.gauge?.railLabels ?? null}
-									band={total.gauge?.band ?? null}
-									current={total.dayValue}
-									previous={null}
-									read={total.read}
-									domain={total.domain}
-									accessibilityLabel={t("intake:read.gaugeA11y", {
-										name: total.metric.label,
-										value: total.dayFormatted ?? t("common:emDash"),
-										read: total.read ?? "",
-									}).trim()}
-								/>
-							))
-						)}
-						{rangeNote ? (
+						</>
+					) : snapshot.entries.length === 0 ? (
+						<View style={styles.empty}>
+							<AppText variant="label">
+								{t(
+									snapshot.isToday
+										? "intake:tab.emptyTitle"
+										: "intake:day.emptyTitle",
+								)}
+							</AppText>
 							<AppText variant="caption" color="muted">
-								{t("intake:tab.rangeNote", {
-									count: INTAKE_BASELINE_MIN_LOGGED_DAYS,
+								{t(
+									snapshot.isToday
+										? "intake:tab.emptyBody"
+										: "intake:day.emptyBody",
+								)}
+							</AppText>
+						</View>
+					) : (
+						<View testID="intake-entries">
+							<AppText variant="micro" color="subtle">
+								{t("intake:tab.entryCount", {
+									count: snapshot.events.length,
 								})}
 							</AppText>
-						) : null}
-						<AppText variant="caption" color="subtle">
-							{t("intake:tab.disclaimer")}
-						</AppText>
-					</>
-				) : snapshot.entries.length === 0 ? (
-					<View style={styles.empty}>
-						<AppText variant="label">
-							{t(
-								snapshot.isToday
-									? "intake:tab.emptyTitle"
-									: "intake:day.emptyTitle",
-							)}
-						</AppText>
-						<AppText variant="caption" color="muted">
-							{t(
-								snapshot.isToday
-									? "intake:tab.emptyBody"
-									: "intake:day.emptyBody",
-							)}
-						</AppText>
-					</View>
-				) : (
-					<View testID="intake-entries">
-						<AppText variant="micro" color="subtle">
-							{t("intake:tab.entryCount", { count: snapshot.events.length })}
-						</AppText>
-						{snapshot.entries.map((entry, index) => (
-							<IntakeRow
-								key={entry.key}
-								leading={entry.time}
-								title={entry.name}
-								meta={entry.meta}
-								value={entry.value || null}
-								last={index === snapshot.entries.length - 1}
-								disabled={busy}
-								accessibilityLabel={entry.accessibilityLabel}
-								accessibilityHint={t("intake:entry.editHint")}
-								onPress={() => setEditing(entry)}
-							/>
-						))}
-					</View>
-				)}
+							{snapshot.entries.map((entry, index) => (
+								<IntakeRow
+									key={entry.key}
+									leading={entry.time}
+									title={entry.name}
+									meta={entry.meta}
+									value={entry.value || null}
+									last={index === snapshot.entries.length - 1}
+									disabled={busy}
+									accessibilityLabel={entry.accessibilityLabel}
+									accessibilityHint={t("intake:entry.editHint")}
+									onPress={() => setEditing(entry)}
+								/>
+							))}
+						</View>
+					)}
+				</Animated.View>
 			</Card>
 
 			{error ? <AppText color="danger">{error}</AppText> : null}
@@ -295,22 +370,32 @@ const styles = StyleSheet.create((theme) => ({
 	navButtonDisabled: { opacity: theme.opacity.disabled },
 	segments: {
 		flexDirection: "row",
+		width: "100%",
 		borderWidth: 1,
-		borderColor: theme.colors.lineStrong,
+		borderColor: theme.colors.border,
 		borderRadius: theme.radius.md,
+		backgroundColor: theme.colors.surface,
 		overflow: "hidden",
 	},
 	segment: {
 		flex: 1,
-		minHeight: theme.control.buttonMinHeight,
 		alignItems: "center",
 		justifyContent: "center",
+		paddingVertical: theme.spacing.sm,
+		paddingHorizontal: theme.spacing.md,
 	},
 	segmentDivider: {
 		borderLeftWidth: 1,
-		borderLeftColor: theme.colors.lineStrong,
+		borderLeftColor: theme.colors.border,
 	},
-	segmentSelected: { backgroundColor: theme.colors.accent },
+	segmentSelected: {
+		borderWidth: 1,
+		borderColor: theme.colors.brand,
+		backgroundColor: theme.colors.selected,
+	},
+	segmentSelectedText: { color: theme.colors.onSelected },
+	segmentPressed: { opacity: theme.opacity.disabled },
+	segmentContent: { gap: theme.spacing.lg },
 	empty: { gap: theme.spacing.xs, paddingVertical: theme.spacing.sm },
 	section: { gap: theme.spacing.md },
 }));
