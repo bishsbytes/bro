@@ -43,6 +43,24 @@ describe("export flow", () => {
 	});
 
 	afterAll(() => mockSqlite.cleanup());
+	it("pages recorded history days without skipping note-only days", async () => {
+		const notes = new databaseApp.DayNoteRepository(db);
+		for (let day = 1; day <= 31; day++) {
+			await notes.create(
+				`2026-08-${String(day).padStart(2, "0")}`,
+				`Day ${day}`,
+			);
+		}
+		const { HistoryStore } = jest.requireActual(
+			"./history/history-store",
+		) as typeof import("./history/history-store");
+		const history = new HistoryStore(db);
+		const recent = await history.loadHistory();
+		expect(recent).toHaveLength(30);
+		expect(recent[0].localDay).toBe("2026-08-31");
+		expect(recent[29].localDay).toBe("2026-08-02");
+		expect((await history.loadHistory(60))[30].noteBodies).toEqual(["Day 1"]);
+	});
 
 	it("round-trips intake data and applies the sensitive toggle", async () => {
 		const observations = new databaseApp.ObservationRepository(db);
@@ -211,6 +229,49 @@ describe("export flow", () => {
 			"nicotine",
 			"supplement",
 		]);
+		const full = await store.serialize(true, true);
+		await databaseApp.closeDb();
+		db = await databaseApp.initDb("restored-intake.db");
+		await databaseApp.runMigrations(db);
+		const receiver = new ExportStore(db, "1.0.0", () => 1_787_040_000_000);
+		await receiver.restore(full);
+		expect(await receiver.serialize(true, true)).toEqual(full);
+	});
+
+	it("restores a saved record on an empty device and never replaces existing rows", async () => {
+		const notes = new databaseApp.DayNoteRepository(db);
+		await notes.create("2026-08-18", "Private journal words");
+		const exporter = new ExportStore(db, "1.0.0", () => 1787054400000);
+		const shared = parseCheckInExport(await exporter.serialize(false, false));
+		expect(shared.dayNotes).toEqual([]);
+		const payload = await exporter.serialize(true, true);
+		await expect(exporter.restore(payload)).rejects.toThrow(
+			"empty local record",
+		);
+		expect(await notes.listAll()).toHaveLength(1);
+		await databaseApp.closeDb();
+		db = await databaseApp.initDb("restored.db");
+		await databaseApp.runMigrations(db);
+		const restored = new ExportStore(db, "1.0.0", () => 1787054400000);
+		const malformed = JSON.parse(payload);
+		malformed.dayNotes.push({ ...malformed.dayNotes[0], id: "bad", body: 42 });
+		await expect(restored.restore(JSON.stringify(malformed))).rejects.toThrow(
+			"Invalid restore text",
+		);
+		expect(await new databaseApp.DayNoteRepository(db).listAll()).toEqual([]);
+		const badMetadata = JSON.parse(payload);
+		badMetadata.metadata.exportedAt = "not a date";
+		await expect(restored.restore(JSON.stringify(badMetadata))).rejects.toThrow(
+			"Export metadata",
+		);
+		const badAssessment = JSON.parse(payload);
+		badAssessment.assessments.push({ items: [null], focusItemSlugs: [] });
+		await expect(
+			restored.restore(JSON.stringify(badAssessment)),
+		).rejects.toThrow("assessment items");
+		expect(await new databaseApp.DayNoteRepository(db).listAll()).toEqual([]);
+		await restored.restore(payload);
+		expect(await restored.serialize(true, true)).toEqual(payload);
 	});
 
 	it("defaults sensitive data off and hands each generated file to the share action", async () => {
@@ -230,18 +291,20 @@ describe("export flow", () => {
 		);
 
 		await fireEvent.press(screen.getByText("Share or save export"));
-		await waitFor(() => expect(serialize).toHaveBeenCalledWith(false));
+		await waitFor(() => expect(serialize).toHaveBeenCalledWith(false, false));
 		expect(
 			parseCheckInExport(share.mock.calls[0]?.[0]).metadata.formatVersion,
 		).toBe(CHECK_IN_EXPORT_FORMAT_VERSION);
 
 		await fireEvent(
-			screen.getByLabelText("Include sensitive data"),
+			screen.getByLabelText("Include sensitive categories"),
 			"valueChange",
 			true,
 		);
 		await fireEvent.press(screen.getByText("Share or save export"));
-		await waitFor(() => expect(serialize).toHaveBeenLastCalledWith(true));
+		await waitFor(() =>
+			expect(serialize).toHaveBeenLastCalledWith(true, false),
+		);
 		expect(
 			parseCheckInExport(share.mock.calls[1]?.[0]).metadata.formatVersion,
 		).toBe(CHECK_IN_EXPORT_FORMAT_VERSION);

@@ -4,40 +4,97 @@
 // and the mono numerals. Every icon in the app comes from this map so agents
 // can't reach for a random glyph.
 
-import type { LucideProps } from 'lucide-react-native';
+import type { LucideProps } from "lucide-react-native";
 import {
-  Sun, Utensils, Scale, Compass,           // tabs
-  Briefcase, Wallet, HeartPulse, Heart, House, Users, Sprout, PartyPopper, // life areas
-  NotebookPen, CupSoda, ClipboardCheck,    // log sheet
-  Moon, Activity, Footprints, Dumbbell, Beer, Coffee, Cigarette, Pill, Droplets, // streams & readings
-  Plus, ChevronRight, ChevronLeft, Check, X, Settings, Calendar, LineChart, Ruler, Target,
-} from 'lucide-react-native';
+	Activity,
+	Beer,
+	Briefcase,
+	Calendar,
+	Check,
+	ChevronLeft,
+	ChevronRight,
+	Cigarette,
+	ClipboardCheck, // log sheetCoffee, Compass,           // tabsCupSoda, Droplets, // streams & readingsDumbbell, Footprints, Heart, HeartPulse, House, LineChart,
+	Moon,
+	NotebookPen,
+	PartyPopper, // life areasPill,
+	Plus,
+	Ruler,
+	Scale,
+	Settings,
+	Sprout,
+	Sun,
+	Target,
+	Users,
+	Utensils,
+	Wallet,
+	X,
+} from "lucide-react-native";
 
 /** Default props — set once via a wrapper, never per-call. */
 export const iconDefaults: Partial<LucideProps> = {
-  strokeWidth: 1.75,
-  absoluteStrokeWidth: true,
+	strokeWidth: 1.75,
+	absoluteStrokeWidth: true,
 };
 
 /** Sizes: tab bar 22, list/tile 20, inline 16. Nothing else. */
 export const iconSize = { tab: 22, tile: 20, inline: 16 } as const;
 
 export const icons = {
-  // Tab bar — order is fixed: Journal, Intake, Body, Life
-  tab: { journal: Sun, intake: Utensils, body: Scale, life: Compass },
+	// Tab bar — order is fixed: Journal, Intake, Body, Life
+	tab: { journal: Sun, intake: Utensils, body: Scale, life: Compass },
 
-  // Life wheel vertices (clockwise from top)
-  life: { work: Briefcase, money: Wallet, health: HeartPulse, love: Heart, home: House, family: Users, growth: Sprout, fun: PartyPopper },
+	// Life wheel vertices (clockwise from top)
+	life: {
+		work: Briefcase,
+		money: Wallet,
+		health: HeartPulse,
+		love: Heart,
+		home: House,
+		family: Users,
+		growth: Sprout,
+		fun: PartyPopper,
+	},
 
-  // "What would you like to log?" — tile colour = domain of what it logs
-  log: { note: NotebookPen, food: Utensils, drink: CupSoda, body: Scale, checkin: ClipboardCheck },
+	// "What would you like to log?" — tile colour = domain of what it logs
+	log: {
+		note: NotebookPen,
+		food: Utensils,
+		drink: CupSoda,
+		body: Scale,
+		checkin: ClipboardCheck,
+	},
 
-  // Readings and streams
-  reading: { sleep: Moon, restingHeartRate: Activity, steps: Footprints, weight: Scale, tape: Ruler, load: Dumbbell },
-  stream: { alcohol: Beer, caffeine: Coffee, smoking: Cigarette, supplements: Pill, medication: Pill, fluid: Droplets },
+	// Readings and streams
+	reading: {
+		sleep: Moon,
+		restingHeartRate: Activity,
+		steps: Footprints,
+		weight: Scale,
+		tape: Ruler,
+		load: Dumbbell,
+	},
+	stream: {
+		alcohol: Beer,
+		caffeine: Coffee,
+		smoking: Cigarette,
+		supplements: Pill,
+		medication: Pill,
+		fluid: Droplets,
+	},
 
-  // Chrome
-  ui: { add: Plus, chevron: ChevronRight, back: ChevronLeft, check: Check, close: X, settings: Settings, calendar: Calendar, trends: LineChart, heading: Target },
+	// Chrome
+	ui: {
+		add: Plus,
+		chevron: ChevronRight,
+		back: ChevronLeft,
+		check: Check,
+		close: X,
+		settings: Settings,
+		calendar: Calendar,
+		trends: LineChart,
+		heading: Target,
+	},
 } as const;
 
 /* Colour rules for icons (see DESIGN.md):

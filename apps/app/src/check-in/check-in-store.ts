@@ -6,7 +6,9 @@ import {
 	type Observation,
 	ObservationRepository,
 	TrackedMetricsRepository,
+	type TransactionScope,
 	UnitPreferenceRepository,
+	withTransaction,
 } from "@bro/database-app";
 import {
 	isCalendarDay,
@@ -336,7 +338,11 @@ export class CheckInStore {
 			selectedTagSlugs: [
 				...new Set(
 					observations
-						.filter((row) => tagSlugs.has(row.metricSlug))
+						.filter(
+							(row) =>
+								tagSlugs.has(row.metricSlug) &&
+								row.value === TAG_PRESENCE_VALUE,
+						)
 						.map((row) => row.metricSlug),
 				),
 			],
@@ -403,7 +409,7 @@ export class CheckInStore {
 		const observedAt = capturedAt.getTime();
 		const localDay = localDayOf(capturedAt);
 		const tzOffsetMinutes = capturedAt.getTimezoneOffset();
-		await this.db.withTransactionAsync(async () => {
+		await withTransaction(this.db, async (scope) => {
 			// An edit names its own row; otherwise whatever already fills the slot
 			// is what gets rewritten. Read inside the transaction so the slot cannot
 			// be filled between deciding to insert and inserting. The row's own slot
@@ -412,13 +418,15 @@ export class CheckInStore {
 			const target =
 				entry ??
 				sittingsBySlot(
-					groupCheckIns(await this.observations.listByDay(localDay)),
+					groupCheckIns(
+						await this.observations.inTransaction(scope).listByDay(localDay),
+					),
 				)[slot];
 
 			if (target) {
 				// A rewrite keeps the value's scale snapshot: rows recorded under an
 				// older scale must keep the bounds they were scored on.
-				await this.observations.update(target.mood.id, {
+				await this.observations.inTransaction(scope).update(target.mood.id, {
 					value: draft.mood,
 					scaleMin: target.mood.scaleMin,
 					scaleMax: target.mood.scaleMax,
@@ -433,7 +441,7 @@ export class CheckInStore {
 						(row) => row.metricSlug === metricSlug,
 					);
 					if (existing) {
-						await this.observations.update(existing.id, {
+						await this.observations.inTransaction(scope).update(existing.id, {
 							value,
 							scaleMin: existing.scaleMin,
 							scaleMax: existing.scaleMax,
@@ -442,7 +450,7 @@ export class CheckInStore {
 							tzOffsetMinutes: existing.tzOffsetMinutes,
 						});
 					} else {
-						await this.observations.create({
+						await this.observations.inTransaction(scope).create({
 							metricSlug,
 							value,
 							scaleMin: 1,
@@ -459,7 +467,7 @@ export class CheckInStore {
 				}
 				return;
 			}
-			const mood = await this.observations.create({
+			const mood = await this.observations.inTransaction(scope).create({
 				metricSlug: "mood",
 				value: draft.mood,
 				scaleMin: 1,
@@ -473,7 +481,7 @@ export class CheckInStore {
 				slot,
 			});
 			for (const [metricSlug, value] of Object.entries(draft.optional ?? {})) {
-				await this.observations.create({
+				await this.observations.inTransaction(scope).create({
 					metricSlug,
 					value,
 					scaleMin: 1,
@@ -504,6 +512,7 @@ export class CheckInStore {
 	 */
 	async saveDayTags(
 		selectedTagSlugs: readonly string[],
+		reviewed = false,
 	): Promise<TodayCheckIn> {
 		for (const slug of selectedTagSlugs) {
 			const resolved = resolveMetric(slug);
@@ -517,10 +526,12 @@ export class CheckInStore {
 		const tzOffsetMinutes = capturedAt.getTimezoneOffset();
 		const selected = new Set(selectedTagSlugs);
 
-		await this.db.withTransactionAsync(async () => {
+		await withTransaction(this.db, async (scope) => {
 			const [tracked, activeHabits] = await Promise.all([
-				this.trackedMetrics.listResolved(DEFAULT_TRACKED_METRICS),
-				this.habits.listActive(),
+				this.trackedMetrics
+					.inTransaction(scope)
+					.listResolved(DEFAULT_TRACKED_METRICS),
+				this.habits.inTransaction(scope).listActive(),
 			]);
 			// Covered tags are not active here, which keeps them out of the
 			// panel's authority twice over: they cannot be passed in, and
@@ -545,11 +556,13 @@ export class CheckInStore {
 				}
 			}
 			await this.reconcileTags(
+				scope,
 				localDay,
 				observedAt,
 				tzOffsetMinutes,
 				activeTagSlugs,
 				selected,
+				reviewed,
 			);
 		});
 
@@ -557,39 +570,45 @@ export class CheckInStore {
 	}
 
 	private async reconcileTags(
+		scope: TransactionScope,
 		localDay: string,
 		observedAt: number,
 		tzOffsetMinutes: number,
 		active: ReadonlySet<string>,
 		selected: ReadonlySet<string>,
+		reviewed: boolean,
 	): Promise<void> {
-		const current = (await this.observations.listByDay(localDay)).filter(
-			(row) => {
-				const resolved = resolveMetric(row.metricSlug);
-				return (
-					active.has(row.metricSlug) &&
-					resolved.kind === "known" &&
-					resolved.metric.kind === "tag"
-				);
-			},
-		);
+		const current = (
+			await this.observations.inTransaction(scope).listByDay(localDay)
+		).filter((row) => {
+			const resolved = resolveMetric(row.metricSlug);
+			return (
+				active.has(row.metricSlug) &&
+				resolved.kind === "known" &&
+				resolved.metric.kind === "tag"
+			);
+		});
 		const kept = new Set<string>();
 
 		for (const tag of current) {
-			if (!selected.has(tag.metricSlug) || kept.has(tag.metricSlug)) {
-				await this.observations.delete(tag.id);
+			if (
+				(!selected.has(tag.metricSlug) && !reviewed) ||
+				tag.value !== (selected.has(tag.metricSlug) ? 1 : 0) ||
+				kept.has(tag.metricSlug)
+			) {
+				await this.observations.inTransaction(scope).delete(tag.id);
 			} else {
 				kept.add(tag.metricSlug);
 			}
 		}
 
-		for (const slug of selected) {
+		for (const slug of reviewed ? active : selected) {
 			if (kept.has(slug)) {
 				continue;
 			}
-			await this.observations.create({
+			await this.observations.inTransaction(scope).create({
 				metricSlug: slug,
-				value: TAG_PRESENCE_VALUE,
+				value: selected.has(slug) ? TAG_PRESENCE_VALUE : 0,
 				scaleMin: null,
 				scaleMax: null,
 				observedAt,

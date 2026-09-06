@@ -221,7 +221,7 @@ export type MetricResolution =
 	| { kind: "unknown"; slug: string };
 
 /**
- * The only value a tag observation ever carries. A tag that later needs
+ * The presence value for a tag. Zero records an explicitly reviewed absence. A tag that later needs
  * quantity gets a separate quantified-counterpart metric — as when the alcohol
  * and caffeine tags were replaced outright by the consumption-derived
  * `ethanol_intake`/`caffeine_intake`; reusing a tag's value would make
@@ -394,7 +394,7 @@ export const METRIC_REGISTRY = [
 	tag("illness", "Illness", "body", 3),
 	tag("poor_sleep_environment", "Poor sleep environment", "lifestyle", 4),
 	tag("late_screen", "Late screen", "lifestyle", 7),
-	tag("junk_food", "Junk food", "lifestyle", 8),
+	tag("junk_food", "Convenience food", "lifestyle", 8),
 	tag("stress", "Stress", "mind", 9),
 	tag("outdoors", "Outdoors", "mind", 10),
 	tag("social", "Social", "social", 11),

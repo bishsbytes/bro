@@ -1,6 +1,7 @@
 import type { Observation } from "@bro/database-app";
 import type { MeasurementEntry } from "@bro/domain";
 import { isTapeSiteSlug } from "@bro/domain/metric-registry";
+import type { TrendPoint } from "@bro/logic";
 import { router, Stack } from "expo-router";
 import type { TFunction } from "i18next";
 import { useCallback, useMemo, useState } from "react";
@@ -171,6 +172,11 @@ export function BodyMetricScreen({ metricSlug, store }: BodyMetricScreenProps) {
 	const [targetDate, setTargetDate] = useState("");
 	const [targetError, setTargetError] = useState<string | null>(null);
 	const [busy, setBusy] = useState(false);
+	const [explored, setExplored] = useState<{
+		detail: BodyMetricDetail;
+		point: TrendPoint;
+		formatted: string;
+	} | null>(null);
 	const {
 		data: detail,
 		error,
@@ -283,6 +289,7 @@ export function BodyMetricScreen({ metricSlug, store }: BodyMetricScreenProps) {
 			<Card style={styles.summaryCard}>
 				<BodyBaselineGauge
 					metric={detail}
+					explored={explored?.detail === detail ? explored : null}
 					locale={detail.inputLocale}
 					valueVariant="metric"
 				/>
@@ -290,7 +297,13 @@ export function BodyMetricScreen({ metricSlug, store }: BodyMetricScreenProps) {
 
 			{detail.series.observedDayCount > 0 ? (
 				<TrendChart
+					key={detail.metricSlug}
+					onSelect={(point, formatted) =>
+						setExplored(point ? { detail, point, formatted } : null)
+					}
 					series={detail.series}
+					label={detail.label}
+					displayUnit={detail.displayUnit}
 					usualRange={detail.baseline.usualRange}
 					heading={
 						activeGoal

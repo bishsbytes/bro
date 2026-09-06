@@ -319,8 +319,8 @@ export class RawSampleRepository extends BaseRepository {
 		sourceRecordId: string,
 	): Promise<RawSample | null> {
 		return await this.transaction(
-			async () =>
-				await this.deleteBySourceRecordInCurrentTransaction(
+			async (repository) =>
+				await repository.deleteBySourceRecordInCurrentTransaction(
 					source,
 					sourceRecordId,
 				),

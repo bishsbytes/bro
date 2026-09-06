@@ -6,9 +6,30 @@ import { NotesScreen } from "./screens/notes/notes-screen";
 
 type RemoveListener = (event: { preventDefault: () => void }) => void;
 
+let mockDraft: string | null = null;
+let mockClearDraftFails = false;
 let beforeRemove: RemoveListener | null = null;
 let mockRenderedLinkPress: ((event: { url: string }) => void) | undefined;
 
+jest.mock("@bro/database-app", () => ({
+	...jest.requireActual("@bro/database-app"),
+	readNoteDraft: () => mockDraft,
+	writeNoteDraft: (value: string | null) => {
+		if (value === null && mockClearDraftFails)
+			throw new Error("Draft cleanup failed");
+		mockDraft = value;
+	},
+}));
+jest.mock("expo-router/react-navigation", () => ({
+	usePreventRemove: (prevent: boolean, callback: () => void) => {
+		beforeRemove = (event: { preventDefault: () => void }) => {
+			if (prevent) {
+				event.preventDefault();
+				callback();
+			}
+		};
+	},
+}));
 jest.mock("react-native-enriched-markdown", () => {
 	const React = jest.requireActual<typeof import("react")>("react");
 	const shipped = jest.requireActual<
@@ -98,8 +119,27 @@ const NOTES = [
 describe("notes screens", () => {
 	beforeEach(() => {
 		jest.clearAllMocks();
+		mockDraft = null;
+		mockClearDraftFails = false;
 		beforeRemove = null;
 		mockRenderedLinkPress = undefined;
+	});
+
+	it("retains a draft across reopening and guards native back", async () => {
+		const props = { now: FIXED_NOW, store: { createNote: jest.fn() } };
+		let view = await render(<NewNoteScreen {...props} />);
+		await fireEvent.changeText(view.getByLabelText("Note"), "Words to keep");
+		expect(JSON.parse(mockDraft ?? "null")).toMatchObject({
+			body: "Words to keep",
+		});
+		expect(await pressSystemBack()).toHaveBeenCalled();
+		expect(router.back).not.toHaveBeenCalled();
+		await view.unmount();
+		view = await render(<NewNoteScreen {...props} />);
+		expect(view.getByDisplayValue("Words to keep")).toBeTruthy();
+		await fireEvent.press(view.getByText("Discard"));
+		await fireEvent.press(view.getByText("Discard"));
+		expect(mockDraft).toBeNull();
 	});
 
 	it("lists all notes under their days, newest day first", async () => {
@@ -179,6 +219,29 @@ describe("notes screens", () => {
 
 		await fireEvent.press(await screen.findByText("Add note"));
 		expect(router.push).toHaveBeenCalledWith("/notes/new");
+	});
+
+	it("does not duplicate a saved note when draft cleanup needs retrying", async () => {
+		const createNote = jest.fn(async () => ({
+			id: "saved",
+			localDay: "2026-08-14",
+			body: "Keep this",
+			createdAt: 1,
+			updatedAt: 1,
+		}));
+		const screen = await render(
+			<NewNoteScreen now={FIXED_NOW} store={{ createNote }} />,
+		);
+		await fireEvent.changeText(screen.getByLabelText("Note"), "Keep this");
+		mockClearDraftFails = true;
+		await fireEvent.press(screen.getByText("Save note"));
+		await waitFor(() =>
+			expect(screen.getByText("Draft cleanup failed")).toBeTruthy(),
+		);
+		mockClearDraftFails = false;
+		await fireEvent.press(screen.getByText("Save note"));
+		await waitFor(() => expect(router.back).toHaveBeenCalledTimes(1));
+		expect(createNote).toHaveBeenCalledTimes(1);
 	});
 
 	it("creates a note for the selected journal day", async () => {
@@ -329,6 +392,7 @@ describe("note editor", () => {
 
 	beforeEach(() => {
 		jest.clearAllMocks();
+		mockDraft = null;
 		beforeRemove = null;
 		mockRenderedLinkPress = undefined;
 	});

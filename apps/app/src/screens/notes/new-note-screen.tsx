@@ -1,7 +1,9 @@
+import { readNoteDraft, writeNoteDraft } from "@bro/database-app";
 import { isCalendarDay, localDayOf } from "@bro/domain";
 import { formatLocalDayLabelShort } from "@bro/logic";
 import { router, Stack } from "expo-router";
-import { useMemo, useState } from "react";
+import { usePreventRemove } from "expo-router/react-navigation";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { View } from "react-native";
 import { KeyboardAvoidingView } from "react-native-keyboard-controller";
@@ -27,30 +29,95 @@ export function NewNoteScreen({
 }: NewNoteScreenProps) {
 	const { t } = useTranslation("notes");
 	const { theme } = useUnistyles();
+	const [leaving, setLeaving] = useState(false);
+	const [restored] = useState(() => {
+		try {
+			const raw = readNoteDraft();
+			if (!raw) return null;
+			const value: unknown = JSON.parse(raw);
+			if (
+				typeof value !== "object" ||
+				value === null ||
+				!("body" in value) ||
+				!("localDay" in value)
+			)
+				return null;
+			return typeof value.body === "string" &&
+				typeof value.localDay === "string" &&
+				isCalendarDay(value.localDay)
+				? { body: value.body, localDay: value.localDay }
+				: null;
+		} catch {
+			return null;
+		}
+	});
 	const notes = useMemo(() => store ?? createNotesStore(), [store]);
 	const today = localDayOf(now());
 	// Pinned for the life of the composer: a Date rebuilt every render would
 	// hand the picker a new maximum on each keystroke.
 	const latestDay = useMemo(() => now(), [now]);
 	const [localDay, setLocalDay] = useState(
-		initialLocalDay &&
+		restored?.localDay ??
+			(initialLocalDay &&
 			isCalendarDay(initialLocalDay) &&
 			initialLocalDay <= today
-			? initialLocalDay
-			: today,
+				? initialLocalDay
+				: today),
 	);
-	const [body, setBody] = useState("");
+	const [body, setBody] = useState(restored?.body ?? "");
 	const [saving, setSaving] = useState(false);
+	const savedDraft = useRef<string | null>(null);
 	const [error, setError] = useState<string | null>(null);
 	const [confirmingDiscard, setConfirmingDiscard] = useState(false);
 	const empty = body.trim().length === 0;
+
+	usePreventRemove(!leaving && !empty, () => setConfirmingDiscard(true));
+	useEffect(() => {
+		if (leaving) router.back();
+	}, [leaving]);
+
+	function changeBody(next: string) {
+		setBody(next);
+		try {
+			writeNoteDraft(
+				next.trim() ? JSON.stringify({ localDay, body: next }) : null,
+			);
+			setError(null);
+		} catch (caught) {
+			setError(toMessage(caught));
+		}
+	}
+
+	function changeDay(date: string) {
+		setLocalDay(date);
+		try {
+			writeNoteDraft(
+				body.trim() ? JSON.stringify({ localDay: date, body }) : null,
+			);
+		} catch (caught) {
+			setError(toMessage(caught));
+		}
+	}
+
+	function discardDraft() {
+		try {
+			writeNoteDraft(null);
+		} catch (caught) {
+			setError(toMessage(caught));
+			return;
+		}
+		setLeaving(true);
+	}
 
 	async function save() {
 		if (saving || empty) return;
 		setSaving(true);
 		setError(null);
 		try {
-			const saved = await notes.createNote(localDay, body);
+			const fingerprint = JSON.stringify({ localDay, body });
+			const saved =
+				savedDraft.current === fingerprint ||
+				(await notes.createNote(localDay, body));
 			if (!saved) {
 				// The store keeps nothing for a blank body. The button is disabled
 				// until there is something to keep, so this is a race the composer
@@ -59,7 +126,9 @@ export function NewNoteScreen({
 				setSaving(false);
 				return;
 			}
-			router.back();
+			savedDraft.current = fingerprint;
+			writeNoteDraft(null);
+			setLeaving(true);
 		} catch (caught) {
 			setError(toMessage(caught));
 			setSaving(false);
@@ -85,7 +154,7 @@ export function NewNoteScreen({
 							label={t("new.day")}
 							value={localDay}
 							displayValue={formatLocalDayLabelShort(localDay, today)}
-							onChangeDate={setLocalDay}
+							onChangeDate={changeDay}
 							maximumDate={latestDay}
 						/>
 					),
@@ -109,7 +178,8 @@ export function NewNoteScreen({
 				<MarkdownField
 					label={t("new.field")}
 					showLabel={false}
-					onChangeMarkdown={setBody}
+					defaultValue={restored?.body}
+					onChangeMarkdown={changeBody}
 					placeholder={t("new.prompt")}
 					autoFocus
 					// The whole screen is the note, so a box drawn around it would
@@ -138,7 +208,7 @@ export function NewNoteScreen({
 								label={t("new.discard")}
 								variant="danger"
 								style={styles.action}
-								onPress={() => router.back()}
+								onPress={discardDraft}
 							/>
 						</View>
 					</View>

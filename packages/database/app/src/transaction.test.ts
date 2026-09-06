@@ -116,4 +116,50 @@ describe("transaction scope", () => {
 			}),
 		).rejects.toThrow("different database connection");
 	});
+	it("keeps an independent save outside a transaction that rolls back", async () => {
+		let release!: () => void;
+		let entered!: () => void;
+		const gate = new Promise<void>((resolve) => {
+			release = resolve;
+		});
+		const started = new Promise<void>((resolve) => {
+			entered = resolve;
+		});
+		const notes = new databaseApp.DayNoteRepository(db, {
+			createId: () => "independent",
+		});
+		const transaction = databaseApp.withTransaction(db, async (scope) => {
+			await new databaseApp.DayNoteRepository(db, {
+				createId: () => "rolled-back",
+			})
+				.inTransaction(scope)
+				.create("2026-08-17", "Import transaction");
+			entered();
+			await gate;
+			throw new Error("import failed");
+		});
+		const failed = expect(transaction).rejects.toThrow("import failed");
+		await started;
+		let saved = false;
+		const independent = notes.create("2026-08-17", "Keep my words").then(() => {
+			saved = true;
+		});
+		await Promise.resolve();
+		expect(saved).toBe(false);
+		release();
+		await failed;
+		await independent;
+		expect(await notes.listAll()).toMatchObject([
+			{ id: "independent", body: "Keep my words" },
+		]);
+	});
+
+	it("rejects repository use after its transaction has ended", async () => {
+		const scoped = await databaseApp.withTransaction(db, async (scope) =>
+			new databaseApp.DayNoteRepository(db).inTransaction(scope),
+		);
+		await expect(scoped.listAll()).rejects.toThrow(
+			"Transaction scope has ended",
+		);
+	});
 });

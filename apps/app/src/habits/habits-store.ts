@@ -14,6 +14,7 @@ import {
 	type Observation,
 	ObservationRepository,
 	TrackedMetricsRepository,
+	type TransactionScope,
 	UnitPreferenceRepository,
 	withTransaction,
 } from "@bro/database-app";
@@ -595,16 +596,22 @@ export class HabitsStore {
 		const tagSlug = habit === null ? null : habitTagSlug(habit.slug);
 
 		await withTransaction(this.db, async (scope) => {
-			const existing = await this.completions.findByHabitDay(habitId, localDay);
+			const existing = await this.completions
+				.inTransaction(scope)
+				.findByHabitDay(habitId, localDay);
 			if (existing) {
-				await this.completions.uncomplete(habitId, localDay);
+				await this.completions
+					.inTransaction(scope)
+					.uncomplete(habitId, localDay);
 				if (tagSlug !== null) {
-					await this.releaseHabitTag(habitId, tagSlug, localDay);
+					await this.releaseHabitTag(scope, habitId, tagSlug, localDay);
 				}
 			} else {
-				await this.completions.complete(habitId, localDay, scope);
+				await this.completions
+					.inTransaction(scope)
+					.complete(habitId, localDay, scope);
 				if (tagSlug !== null) {
-					await this.recordHabitTag(habitId, tagSlug, localDay);
+					await this.recordHabitTag(scope, habitId, tagSlug, localDay);
 				}
 			}
 		});
@@ -617,15 +624,20 @@ export class HabitsStore {
 	 * collapse later.
 	 */
 	private async recordHabitTag(
+		scope: TransactionScope,
 		habitId: string,
 		tagSlug: string,
 		localDay: string,
 	): Promise<void> {
-		const existing = await this.tagRowsForDay(tagSlug, localDay);
-		if (existing.length > 0) return;
+		const existing = await this.observations
+			.inTransaction(scope)
+			.listByMetricAndDayRange(tagSlug, localDay, localDay);
+		if (existing.some((row) => row.value === TAG_PRESENCE_VALUE)) return;
+		for (const row of existing)
+			await this.observations.inTransaction(scope).delete(row.id);
 
 		const capturedAt = this.now();
-		await this.observations.create({
+		await this.observations.inTransaction(scope).create({
 			metricSlug: tagSlug,
 			value: TAG_PRESENCE_VALUE,
 			scaleMin: null,
@@ -646,24 +658,19 @@ export class HabitsStore {
 	 * record.
 	 */
 	private async releaseHabitTag(
+		scope: TransactionScope,
 		habitId: string,
 		tagSlug: string,
 		localDay: string,
 	): Promise<void> {
-		const rows = await this.tagRowsForDay(tagSlug, localDay);
+		const rows = await this.observations
+			.inTransaction(scope)
+			.listByMetricAndDayRange(tagSlug, localDay, localDay);
 		for (const row of rows) {
 			if (row.sourceRecordId === habitId) {
-				await this.observations.delete(row.id);
+				await this.observations.inTransaction(scope).delete(row.id);
 			}
 		}
-	}
-
-	private async tagRowsForDay(
-		tagSlug: string,
-		localDay: string,
-	): Promise<Observation[]> {
-		const rows = await this.observations.listByDay(localDay);
-		return rows.filter((row) => row.metricSlug === tagSlug);
 	}
 
 	async loadSettings(): Promise<HabitSettingsSnapshot> {
@@ -839,12 +846,12 @@ export class HabitsStore {
 		const habit = active[index];
 		const neighbour = active[index + offset];
 		if (!habit || !neighbour) return;
-		await this.db.withTransactionAsync(async () => {
-			await this.habits.update(habit.id, {
+		await withTransaction(this.db, async (scope) => {
+			await this.habits.inTransaction(scope).update(habit.id, {
 				...habitUpdateInput(habit),
 				position: neighbour.position,
 			});
-			await this.habits.update(neighbour.id, {
+			await this.habits.inTransaction(scope).update(neighbour.id, {
 				...habitUpdateInput(neighbour),
 				position: habit.position,
 			});

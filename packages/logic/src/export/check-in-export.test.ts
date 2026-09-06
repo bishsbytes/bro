@@ -595,7 +595,7 @@ describe("check-in export", () => {
 		expect(exported.trackedMetrics.map((row) => row.metricSlug)).toEqual([
 			"future_metric",
 		]);
-		expect(exported.dayNotes).toEqual([note]);
+		expect(exported.dayNotes).toEqual([]);
 		expect(exported.assessments).toHaveLength(1);
 		expect(exported.assessments[0]?.items.map((item) => item.slug)).toEqual([
 			"wheel:career",

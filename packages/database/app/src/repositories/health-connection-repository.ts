@@ -52,8 +52,8 @@ export class HealthConnectionRepository extends BaseRepository {
 		assertPlatform(platform);
 		const slug = normalizedMetricSlug(metricSlug);
 
-		return await this.transaction(async () => {
-			const existing = await this.first<HealthConnectionRow>(
+		return await this.transaction(async (repository) => {
+			const existing = await repository.first<HealthConnectionRow>(
 				`SELECT ${SELECT_COLUMNS} FROM health_connections
 				 WHERE platform = ? AND metric_slug = ?
 				 ORDER BY updated_at DESC, id DESC LIMIT 1`,
@@ -63,9 +63,9 @@ export class HealthConnectionRepository extends BaseRepository {
 				return toConnection(existing);
 			}
 
-			const now = this.now();
+			const now = repository.now();
 			const connection: HealthConnection = {
-				id: this.createId(now),
+				id: repository.createId(now),
 				platform,
 				metricSlug: slug,
 				changeToken: null,
@@ -74,7 +74,7 @@ export class HealthConnectionRepository extends BaseRepository {
 				createdAt: now,
 				updatedAt: now,
 			};
-			await this.run(
+			await repository.run(
 				`INSERT INTO health_connections (
 					id, platform, metric_slug, change_token, connected_at,
 					last_imported_at, created_at, updated_at

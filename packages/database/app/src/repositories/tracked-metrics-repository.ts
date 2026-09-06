@@ -110,8 +110,8 @@ export class TrackedMetricsRepository extends BaseRepository {
 		enabled: boolean,
 	): Promise<TrackedMetric> {
 		assertPosition(position);
-		return await this.transaction(async () =>
-			this.configureWithin(metricSlug, position, enabled),
+		return await this.transaction(async (repository) =>
+			repository.configureWithin(metricSlug, position, enabled),
 		);
 	}
 
@@ -122,11 +122,11 @@ export class TrackedMetricsRepository extends BaseRepository {
 		for (const entry of entries) {
 			assertPosition(entry.position);
 		}
-		return await this.transaction(async () => {
+		return await this.transaction(async (repository) => {
 			const configured: TrackedMetric[] = [];
 			for (const entry of entries) {
 				configured.push(
-					await this.configureWithin(
+					await repository.configureWithin(
 						entry.metricSlug,
 						entry.position,
 						entry.enabled,
@@ -227,12 +227,12 @@ export class TrackedMetricsRepository extends BaseRepository {
 		assertPosition(position);
 		const normalizedLabel = customLabel?.trim() || null;
 
-		return await this.transaction(async () => {
-			const existing = await this.findLatestOverlay(metricSlug);
-			const now = this.now();
+		return await this.transaction(async (repository) => {
+			const existing = await repository.findLatestOverlay(metricSlug);
+			const now = repository.now();
 
 			if (existing) {
-				await this.run(
+				await repository.run(
 					`UPDATE tracked_metrics
 					 SET custom_label = ?, updated_at = ?
 					 WHERE id = ?`,
@@ -245,8 +245,8 @@ export class TrackedMetricsRepository extends BaseRepository {
 				});
 			}
 
-			return await this.insertOverlay({
-				id: this.createId(now),
+			return await repository.insertOverlay({
+				id: repository.createId(now),
 				metricSlug,
 				position,
 				addedAt: enabled ? now : null,
@@ -272,12 +272,12 @@ export class TrackedMetricsRepository extends BaseRepository {
 		const { position, enabled = true } = fallback;
 		assertPosition(position);
 
-		return await this.transaction(async () => {
-			const existing = await this.findLatestOverlay(metricSlug);
-			const now = this.now();
+		return await this.transaction(async (repository) => {
+			const existing = await repository.findLatestOverlay(metricSlug);
+			const now = repository.now();
 
 			if (existing) {
-				await this.run(
+				await repository.run(
 					`UPDATE tracked_metrics
 					 SET check_in_slots = ?, updated_at = ?
 					 WHERE id = ?`,
@@ -290,8 +290,8 @@ export class TrackedMetricsRepository extends BaseRepository {
 				});
 			}
 
-			return await this.insertOverlay({
-				id: this.createId(now),
+			return await repository.insertOverlay({
+				id: repository.createId(now),
 				metricSlug,
 				position,
 				addedAt: enabled ? now : null,

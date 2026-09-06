@@ -78,6 +78,16 @@ export function createNodeSqliteMock(): NodeSqliteMock {
 				db.prepare(sql).all(...(bindParams(params) as never[])),
 			runAsync: async (sql: string, ...params: unknown[]) =>
 				db.prepare(sql).run(...(bindParams(params) as never[])),
+			withTransactionSync: (work: () => void) => {
+				db.exec("BEGIN");
+				try {
+					work();
+					db.exec("COMMIT");
+				} catch (error) {
+					db.exec("ROLLBACK");
+					throw error;
+				}
+			},
 			withTransactionAsync: async (work: () => Promise<void>) => {
 				db.exec("BEGIN");
 				try {

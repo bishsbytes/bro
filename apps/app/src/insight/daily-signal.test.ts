@@ -149,11 +149,8 @@ describe("daily insight signal", () => {
 		expect(
 			readDailySignal("caffeine_intake", "2026-08-15", source)?.value,
 		).toBe(0.000_095);
-		// A check-in day with no entries reads as zero intake; a day without a
-		// check-in stays unknown rather than claiming abstinence.
-		expect(readDailySignal("ethanol_intake", "2026-08-16", source)?.value).toBe(
-			0,
-		);
+		// A mood check-in does not establish intake or activity absence.
+		expect(readDailySignal("ethanol_intake", "2026-08-16", source)).toBeNull();
 		expect(readDailySignal("ethanol_intake", "2026-08-17", source)).toBeNull();
 		expect(
 			readDailySignal("training", "2026-08-16", {
@@ -161,7 +158,7 @@ describe("daily insight signal", () => {
 				tagActive: () => false,
 			}),
 		).toBeNull();
-		expect(readDailySignal("training", "2026-08-16", source)?.value).toBe(0);
+		expect(readDailySignal("training", "2026-08-16", source)).toBeNull();
 		expect(readDailySignal("training", "2026-08-17", source)).toBeNull();
 		expect(
 			readDailySignal("sleep_duration", base.localDay, source)?.value,

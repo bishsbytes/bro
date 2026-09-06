@@ -1,4 +1,13 @@
 export const insights = {
+	recent: {
+		title: "Your last {{count}} days",
+		recorded_one: "Mood recorded on {{count}} day.",
+		recorded_other: "Mood recorded on {{count}} days.",
+		read: "{{from}}: {{first}}. {{through}}: {{last}}. Daily averages on your 1–5 scale.",
+		empty:
+			"Your first check-in will appear here. You can see your record before there is enough history for a pattern.",
+		note: "Missing days stay unknown. These readings describe your record; they do not establish a pattern.",
+	},
 	intro:
 		"See the patterns in your record and how every tracked measure changes over time.",
 	patterns: {
@@ -8,7 +17,7 @@ export const insights = {
 		loadFailed: "Insights could not be loaded",
 		emptyTitle: "Your patterns start with check-ins",
 		emptyBody:
-			"As your record grows, this space compares days to show associations that you did not have to type in yourself.",
+			"Patterns compare recorded days across a 90-day window. They need enough observations in both halves, so new records usually need at least seven weeks. Your recent readings are available immediately.",
 		watchingTitle_one: "Watching {{count}} pattern",
 		watchingTitle_other: "Watching {{count}} patterns",
 		rowTitle: "Pattern in your record",

@@ -69,7 +69,7 @@ function aggregateDay(
 		return null;
 	}
 	if (metric.aggregation === "presence") {
-		return 1;
+		return rows.some((row) => row.value > 0) ? 1 : 0;
 	}
 	if (metric.aggregation === "last") {
 		const latest = [...rows].sort(

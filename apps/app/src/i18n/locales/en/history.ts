@@ -3,6 +3,7 @@ export const history = {
 	emptyTitle: "Nothing logged yet",
 	emptyBody: "Your check-ins will appear here.",
 	openDay: "Open {{day}}",
+	showOlder: "Show older days",
 	summary: {
 		/** Both are comma-separated lists of the day's scores. */
 		scores: "Mood {{mood}} · Energy {{energy}}",

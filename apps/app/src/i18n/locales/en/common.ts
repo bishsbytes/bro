@@ -3,6 +3,13 @@
  * here; anything one screen owns stays in that feature's catalogue.
  */
 export const common = {
+	support: {
+		title: "Mental health support (UK)",
+		detail:
+			"Open the NHS website for support options. Opens in your browser and needs an internet connection.",
+		failed:
+			"The NHS page could not be opened. Visit nhs.uk and search for urgent mental health help.",
+	},
 	actions: {
 		tryAgain: "Try again",
 		viewLog: "View log",
@@ -62,6 +69,14 @@ export const common = {
 		daySummary: "{{day}}, {{checkIn}}, {{habits}}",
 	},
 	terrain: {
+		explore:
+			"Drag sideways or use the reading controls to explore dates and values.",
+		missing: "No reading",
+		previous: "Previous day",
+		next: "Next day",
+		latest: "Back to latest",
+		showReadings: "Show readings",
+		hideReadings: "Hide readings",
 		usualRange: "Usual range",
 		heading: "{{value}} heading",
 	},

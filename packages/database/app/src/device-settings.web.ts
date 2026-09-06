@@ -74,3 +74,12 @@ export const {
 	setRemoteSessionMarker,
 	closeDeviceSettings,
 } = settings;
+
+/** A composer draft is install-local and never part of an account or shared export. */
+export function readNoteDraft(): string | null {
+	return getStorage().getItem(`${STORAGE_PREFIX}noteDraft`);
+}
+export function writeNoteDraft(value: string | null): void {
+	if (value === null) getStorage().removeItem(`${STORAGE_PREFIX}noteDraft`);
+	else getStorage().setItem(`${STORAGE_PREFIX}noteDraft`, value);
+}

@@ -138,8 +138,8 @@ export class AssessmentRepository extends BaseRepository {
 			updatedAt: now,
 		};
 
-		return await this.transaction(async () => {
-			await this.run(
+		return await this.transaction(async (repository) => {
+			await repository.run(
 				`INSERT INTO assessments (
 					id, template_slug, template_version, started_at, completed_at, items,
 					focus_item_slugs, created_at, updated_at
@@ -157,9 +157,9 @@ export class AssessmentRepository extends BaseRepository {
 				],
 			);
 
-			const observationRepository = new ObservationRepository(this.db, {
+			const observationRepository = new ObservationRepository(repository.db, {
 				now: () => now,
-				createId: this.createId,
+				createId: repository.createId,
 			});
 			const observations: Observation[] = [];
 			for (const observation of input.observations) {

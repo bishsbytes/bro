@@ -4,7 +4,7 @@ export const body = {
 	backToBody: "Back to Body",
 	overview: {
 		intro:
-			"Every reading is measured against itself. Once a measurement has a few readings behind it, a row shows the range it usually sits in.",
+			"Every reading is measured against itself. Your usual range contains the middle half of your readings, not a health target. Readings outside it are part of ordinary variation too.",
 		loadFailed: "Your measurements could not be loaded",
 		loadFailedBody: "Try again.",
 	},

@@ -45,4 +45,4 @@ The scheduled OpenWiki GitHub Actions workflow refreshes the repository wiki. Do
 ## Verifying a change
 
 - `pnpm biome check .` is part of verification, alongside the relevant `nx` test/typecheck/lint targets. It is repo-wide, not project-scoped, and covers what `lint` does not: formatting and import ordering.
-- There is no CI workflow for tests, lint, or format — the OpenWiki refresh is the only one. Nothing runs these but you, so run them before reporting work complete.
+- The Checks workflow runs tests, typecheck, lint, and formatting on pull requests and main. Run the relevant checks locally before reporting work complete.

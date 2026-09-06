@@ -42,17 +42,17 @@ export class UnitPreferenceRepository extends BaseRepository {
 		const normalizedDimension = dimension.trim();
 		const normalizedUnit = unit.trim();
 
-		return await this.transaction(async () => {
-			const existing = await this.first<UnitPreferenceRow>(
+		return await this.transaction(async (repository) => {
+			const existing = await repository.first<UnitPreferenceRow>(
 				`SELECT ${SELECT_COLUMNS} FROM unit_preferences
 				 WHERE dimension = ?
 				 ORDER BY updated_at DESC, id DESC LIMIT 1`,
 				[normalizedDimension],
 			);
-			const now = this.now();
+			const now = repository.now();
 
 			if (existing) {
-				await this.run(
+				await repository.run(
 					`UPDATE unit_preferences SET unit = ?, updated_at = ? WHERE id = ?`,
 					[normalizedUnit, now, existing.id],
 				);
@@ -64,13 +64,13 @@ export class UnitPreferenceRepository extends BaseRepository {
 			}
 
 			const preference: UnitPreference = {
-				id: this.createId(now),
+				id: repository.createId(now),
 				dimension: normalizedDimension,
 				unit: normalizedUnit,
 				createdAt: now,
 				updatedAt: now,
 			};
-			await this.run(
+			await repository.run(
 				`INSERT INTO unit_preferences (
 					id, dimension, unit, created_at, updated_at
 				) VALUES (?, ?, ?, ?, ?)`,

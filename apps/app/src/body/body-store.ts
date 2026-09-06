@@ -7,6 +7,7 @@ import {
 	ObservationRepository,
 	TrackedMetricsRepository,
 	UnitPreferenceRepository,
+	withTransaction,
 } from "@bro/database-app";
 import { type DisplayUnit, localDayOf, systemLocale } from "@bro/domain";
 import {
@@ -320,8 +321,8 @@ export class BodyStore {
 			return null;
 		}
 		const [observations, dailyMetrics, goals] = await Promise.all([
-			this.observations.listAll(),
-			this.dailyMetrics.listAll(),
+			this.observations.listByMetric(metricSlug),
+			this.dailyMetrics.listByMetric(metricSlug),
 			this.goals.listAll(),
 		]);
 		const metricRows = observations.filter(
@@ -421,9 +422,9 @@ export class BodyStore {
 		const observedAt = capturedAt.getTime();
 		const localDay = localDayOf(capturedAt);
 		const tzOffsetMinutes = capturedAt.getTimezoneOffset();
-		await this.db.withTransactionAsync(async () => {
+		await withTransaction(this.db, async (scope) => {
 			for (const { metric, canonicalValue } of resolved) {
-				await this.observations.create({
+				await this.observations.inTransaction(scope).create({
 					metricSlug: metric.slug,
 					value: canonicalValue,
 					scaleMin: null,
@@ -479,8 +480,8 @@ export class BodyStore {
 		const metric = resolveMeasurement(metricSlug);
 		assertCanonicalValue(metric, targetValue);
 		const [observations, dailyMetrics, goals] = await Promise.all([
-			this.observations.listAll(),
-			this.dailyMetrics.listAll(),
+			this.observations.listByMetric(metricSlug),
+			this.dailyMetrics.listByMetric(metricSlug),
 			this.goals.listAll(),
 		]);
 		const metricRows = observations.filter(

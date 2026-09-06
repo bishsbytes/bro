@@ -7,6 +7,9 @@ export const home = {
 	tags: {
 		title: "What happened",
 		hint: "Tap anything that applied today.",
+		reviewHint:
+			"When you have reviewed every tag shown, confirm the selection to record the others as absent. Otherwise they stay unknown.",
+		confirm: "Confirm today’s tags",
 	},
 	measurements: {
 		title: "Measurements",

@@ -11,6 +11,7 @@ import { Icon } from "../../components/icon";
 import { ListRow } from "../../components/list-row";
 import { LoadingScreen, Screen } from "../../components/screen";
 import { SectionHeader } from "../../components/section-header";
+import { SupportLink } from "../../components/support-link";
 import { WheelChart } from "../../components/wheel-chart";
 import {
 	createHabitsStore,
@@ -249,6 +250,7 @@ export function LifeScreen({ reviewStore, habitsStore, now }: LifeScreenProps) {
 					/>
 				</Card>
 			) : null}
+			<SupportLink />
 		</Screen>
 	);
 }

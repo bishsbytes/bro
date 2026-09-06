@@ -98,7 +98,10 @@ export class TrendsStore {
 			await Promise.all([
 				this.trackedMetrics.listResolved(trackedDefaults),
 				this.unitPreferences.resolveLatestPerDimension(),
-				this.dailyMetrics.listAll(),
+				this.dailyMetrics.listBetween(
+					baselineFromLocalDay,
+					range.throughLocalDay,
+				),
 				this.intakeEvents.listBetween(
 					baselineFromLocalDay,
 					range.throughLocalDay,

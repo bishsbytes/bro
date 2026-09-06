@@ -227,7 +227,9 @@ describe("app entry", () => {
 
 		expect(router.getPathname()).toBe("/onboarding");
 		expect(
-			view.getByText("No account. No sign-up. Nothing to fill in first."),
+			view.getByText(
+				"Check in with how you feel, add context if you want, and return to see your own record. No account needed.",
+			),
 		).toBeTruthy();
 	});
 
@@ -340,7 +342,7 @@ describe("app entry", () => {
 		await press(view, "Data");
 		await waitFor(() => expect(router.getPathname()).toBe("/settings/data"));
 		expect(view.getByText("Data licences")).toBeTruthy();
-		expect(view.getByText("Export your data")).toBeTruthy();
+		expect(view.getByText("Export or restore your data")).toBeTruthy();
 		expect(view.getByText("Delete local data")).toBeTruthy();
 		await press(view, "Privacy");
 		await waitFor(() =>

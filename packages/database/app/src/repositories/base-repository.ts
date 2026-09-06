@@ -1,6 +1,7 @@
 import type { SQLiteDatabase, SQLiteRunResult } from "expo-sqlite";
 import {
 	assertScopeFor,
+	coordinatedDatabase,
 	type TransactionScope,
 	withTransaction,
 } from "../transaction";
@@ -44,8 +45,17 @@ export abstract class BaseRepository {
 		protected readonly db: SQLiteDatabase,
 		options: RepositoryOptions = {},
 	) {
+		this.db = coordinatedDatabase(db);
 		this.now = options.now ?? Date.now;
 		this.createId = options.createId ?? createUuidV7;
+	}
+
+	/** Copies repository dependencies without changing a shared instance's connection. */
+	inTransaction(scope: TransactionScope): this {
+		assertScopeFor(scope, this.db);
+		return Object.assign(Object.create(Object.getPrototypeOf(this)), this, {
+			db: scope.database,
+		});
 	}
 
 	/** Rows matching a query, or an empty array. */
@@ -81,13 +91,16 @@ export abstract class BaseRepository {
 	 * scope and hand it straight to here.
 	 */
 	protected async transaction<Result>(
-		work: () => Promise<Result>,
+		work: (repository: this) => Promise<Result>,
 		scope?: TransactionScope,
 	): Promise<Result> {
 		if (scope !== undefined) {
 			assertScopeFor(scope, this.db);
-			return await work();
+			return await work(this.inTransaction(scope));
 		}
-		return await withTransaction(this.db, async () => await work());
+		return await withTransaction(
+			this.db,
+			async (owned) => await work(this.inTransaction(owned)),
+		);
 	}
 }

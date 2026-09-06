@@ -60,6 +60,8 @@ export type CheckInExportOptions = {
 	appVersion: string;
 	exportedAt: number;
 	excludeSensitiveMetrics?: boolean;
+	/** Journals and intake notes need an independent, explicit sharing choice. */
+	excludeNotes?: boolean;
 };
 
 export type CheckInExport = {
@@ -450,7 +452,10 @@ export function buildCheckInExport(
 					left.createdAt - right.createdAt ||
 					compareText(left.id, right.id),
 			),
-		dayNotes: input.dayNotes
+		dayNotes: ((options.excludeNotes ?? options.excludeSensitiveMetrics)
+			? []
+			: input.dayNotes
+		)
 			.map(copyDayNote)
 			.sort(
 				(left, right) =>
@@ -564,7 +569,13 @@ export function buildCheckInExport(
 				(event) =>
 					!options.excludeSensitiveMetrics || !isSensitiveIntake(event),
 			)
-			.map(copyIntakeEvent)
+			.map((event) => ({
+				...copyIntakeEvent(event),
+				notes:
+					(options.excludeNotes ?? options.excludeSensitiveMetrics)
+						? null
+						: event.notes,
+			}))
 			.sort(
 				(left, right) =>
 					compareText(left.localDay, right.localDay) ||
@@ -655,6 +666,16 @@ export function parseCheckInExport(serialized: string): CheckInExport {
 	if (parsed.metadata.formatVersion !== CHECK_IN_EXPORT_FORMAT_VERSION) {
 		throw new RangeError(
 			`Unsupported export format version: ${String(parsed.metadata.formatVersion)}`,
+		);
+	}
+	if (
+		typeof parsed.metadata.appVersion !== "string" ||
+		!parsed.metadata.appVersion.trim() ||
+		typeof parsed.metadata.exportedAt !== "string" ||
+		!Number.isFinite(Date.parse(parsed.metadata.exportedAt))
+	) {
+		throw new TypeError(
+			"Export metadata must contain a version and valid export date.",
 		);
 	}
 	if (!isRecord(parsed.registry)) {

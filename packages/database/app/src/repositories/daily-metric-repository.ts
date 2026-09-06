@@ -1,3 +1,4 @@
+import { isCalendarDay } from "@bro/domain";
 import type { DailyMetric, UpsertDailyMetric } from "@bro/mobile-model";
 import type { SQLiteDatabase } from "expo-sqlite";
 import { createDailyMetricId } from "../uuid-v5";
@@ -126,6 +127,16 @@ export class DailyMetricRepository extends BaseRepository {
 			 WHERE metric_slug = ?
 			 ORDER BY local_day ASC, source ASC, id ASC`,
 			[required(metricSlug, "Daily metric slug")],
+		);
+		return rows.map(toDailyMetric);
+	}
+
+	async listBetween(from: string, through: string): Promise<DailyMetric[]> {
+		if (!isCalendarDay(from) || !isCalendarDay(through) || from > through)
+			throw new TypeError("Invalid date range.");
+		const rows = await this.all<DailyMetricRow>(
+			`SELECT ${SELECT_COLUMNS} FROM daily_metrics WHERE local_day >= ? AND local_day <= ? ORDER BY local_day, created_at, id`,
+			[from, through],
 		);
 		return rows.map(toDailyMetric);
 	}

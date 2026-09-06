@@ -1,53 +1,100 @@
 import type { SQLiteDatabase } from "expo-sqlite";
 
-const SCOPE_DATABASE = Symbol("transactionScopeDatabase");
+const owners = new WeakMap<SQLiteDatabase, SQLiteDatabase>();
+const queues = new WeakMap<SQLiteDatabase, Promise<unknown>>();
+const connections = new WeakMap<SQLiteDatabase, SQLiteDatabase>();
+const scopes = new WeakMap<SQLiteDatabase, TransactionScope>();
 
-/**
- * Proof that the holder is already inside an open transaction on a database.
- *
- * SQLite has no nested `BEGIN`, so a repository method that opens its own
- * transaction cannot be called from inside another one. A caller that already
- * holds a transaction passes its scope down, and the method runs its work
- * directly instead of opening a second.
- *
- * The scope is passed explicitly rather than tracked ambiently on the database.
- * JavaScript cannot tell a genuinely nested call from an unrelated one that
- * merely interleaved with it, so ambient tracking would silently enrol an
- * independent write into someone else's transaction — and roll it back with
- * them. An argument cannot be wrong about which call it came from.
- */
 export type TransactionScope = {
-	readonly [SCOPE_DATABASE]: SQLiteDatabase;
+	readonly database: SQLiteDatabase;
+	readonly owner: SQLiteDatabase;
+	active: boolean;
 };
 
-/**
- * Runs `work` inside one transaction, handing it a scope to pass to any
- * repository method that would otherwise open its own.
- */
+function ownerOf(db: SQLiteDatabase): SQLiteDatabase {
+	return owners.get(db) ?? db;
+}
+
+function enqueue<Result>(
+	db: SQLiteDatabase,
+	work: () => Promise<Result>,
+): Promise<Result> {
+	const owner = ownerOf(db);
+	const pending = queues.get(owner) ?? Promise.resolve();
+	const result = pending.then(work, work);
+	queues.set(
+		owner,
+		result.catch(() => undefined),
+	);
+	return result;
+}
+
+/** All repository I/O joins the connection queue. Only an explicit scope bypasses it. */
+export function coordinatedDatabase(db: SQLiteDatabase): SQLiteDatabase {
+	if (scopes.has(db)) return db;
+	const owner = ownerOf(db);
+	const existing = connections.get(owner);
+	if (existing) return existing;
+	const proxy = new Proxy(owner, {
+		get(target, key) {
+			const value = Reflect.get(target, key, target);
+			if (typeof value !== "function") return value;
+			if (typeof key === "string" && key.endsWith("Async")) {
+				return (...args: unknown[]) =>
+					enqueue(owner, () => value.apply(target, args));
+			}
+			return value.bind(target);
+		},
+	});
+	owners.set(proxy, owner);
+	connections.set(owner, proxy);
+	return proxy;
+}
+
+/** A scoped connection is valid only inside the awaited callback that owns it. */
 export async function withTransaction<Result>(
 	db: SQLiteDatabase,
 	work: (scope: TransactionScope) => Promise<Result>,
 ): Promise<Result> {
-	const scope: TransactionScope = { [SCOPE_DATABASE]: db };
-	let result: Result | undefined;
-	await db.withTransactionAsync(async () => {
-		result = await work(scope);
+	const joined = scopes.get(db);
+	if (joined) {
+		assertScopeFor(joined, db);
+		return work(joined);
+	}
+	const owner = ownerOf(db);
+	return enqueue(owner, async () => {
+		let result: Result | undefined;
+		const proxy = new Proxy(owner, {
+			get(target, key) {
+				const value = Reflect.get(target, key, target);
+				if (typeof value !== "function") return value;
+				return (...args: unknown[]) => {
+					if (!scope.active) throw new Error("Transaction scope has ended.");
+					return value.apply(target, args);
+				};
+			},
+		});
+		const scope: TransactionScope = { database: proxy, owner, active: true };
+		owners.set(proxy, owner);
+		scopes.set(proxy, scope);
+		try {
+			await owner.withTransactionAsync(async () => {
+				result = await work(scope);
+			});
+			return result as Result;
+		} finally {
+			scope.active = false;
+		}
 	});
-	return result as Result;
 }
 
-/**
- * Throws unless the scope belongs to `db`. A scope from another connection is
- * proof of nothing here, and honouring it would skip a transaction that was
- * never opened — the app holds two connections, so this is reachable.
- */
 export function assertScopeFor(
 	scope: TransactionScope,
 	db: SQLiteDatabase,
 ): void {
-	if (scope[SCOPE_DATABASE] !== db) {
+	if (scope.owner !== ownerOf(db))
 		throw new TypeError(
 			"Transaction scope belongs to a different database connection.",
 		);
-	}
+	if (!scope.active) throw new Error("Transaction scope has ended.");
 }

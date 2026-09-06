@@ -14,11 +14,13 @@ export {
 	GRAPHITE_ACCENT_CHROMA,
 	normalizeAccentHue,
 	readDeviceSettings,
+	readNoteDraft,
 	setAppearance,
 	setAppLock,
 	setOnboardingComplete,
 	setRemoteSessionMarker,
 	type ThemeMode,
+	writeNoteDraft,
 } from "./device-settings";
 export {
 	closeLocalDb,
@@ -111,6 +113,7 @@ export {
 	HealthConnectionRepository,
 	type HealthPlatform,
 } from "./repositories/health-connection-repository";
+export { HistoryDaysRepository } from "./repositories/history-days-repository";
 export {
 	type CreateIntakeEvent,
 	type IntakeEvent,
@@ -148,6 +151,7 @@ export {
 	type UnitPreference,
 	UnitPreferenceRepository,
 } from "./repositories/unit-preference-repository";
+export { restoreProductData } from "./restore-product-data";
 export {
 	assertScopeFor,
 	type TransactionScope,

@@ -165,7 +165,7 @@ describe("check-in screen", () => {
 
 		expect(await screen.findByText("1 of 2")).toBeTruthy();
 		expect(screen.getByText("Very bad")).toBeTruthy();
-		expect(screen.getByText("Very good")).toBeTruthy();
+		expect(screen.getAllByText("Very good")[0]).toBeTruthy();
 		await fireEvent.press(screen.getByLabelText("Mood 5"));
 		await fireEvent.press(await screen.findByLabelText("Energy 4"));
 

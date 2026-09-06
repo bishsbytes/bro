@@ -5,7 +5,7 @@ export const checkIn = {
 		flat: "Flat",
 		okay: "Okay",
 		good: "Good",
-		sharp: "Sharp",
+		sharp: "Very good",
 	},
 	/** The two sittings a day holds, named wherever one is shown or chosen. */
 	slots: {

@@ -1,3 +1,6 @@
+import { parseCheckInExport } from "@bro/logic";
+import { File } from "expo-file-system";
+import { router } from "expo-router";
 import { useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { View } from "react-native";
@@ -14,10 +17,15 @@ import {
 	shareExport,
 } from "../../export/share-export";
 import { toMessage } from "../../lib/errors";
+import {
+	refreshReminderNotifications,
+	reportReminderRefreshFailure,
+} from "../../reminders/reminder-materialiser";
 import { StyleSheet } from "../../theme/unistyles";
 
 type ExportScreenProps = {
-	store?: Pick<ExportStore, "serialize">;
+	store?: Pick<ExportStore, "serialize"> &
+		Partial<Pick<ExportStore, "restore">>;
 	share?: (payload: string, fileName: string) => Promise<ExportShareResult>;
 };
 
@@ -27,7 +35,10 @@ export function ExportScreen({
 }: ExportScreenProps) {
 	const { t } = useTranslation("settings");
 	const exporter = useMemo(() => store ?? createExportStore(), [store]);
+	const [restorePayload, setRestorePayload] = useState<string | null>(null);
+	const [restorePreview, setRestorePreview] = useState<string | null>(null);
 	const [includeSensitive, setIncludeSensitive] = useState(false);
+	const [includeNotes, setIncludeNotes] = useState(false);
 	const [busy, setBusy] = useState(false);
 	const [result, setResult] = useState<string | null>(null);
 	const [error, setError] = useState<string | null>(null);
@@ -37,9 +48,54 @@ export function ExportScreen({
 		setError(null);
 		setResult(null);
 		try {
-			const payload = await exporter.serialize(includeSensitive);
+			const payload = await exporter.serialize(includeSensitive, includeNotes);
 			const shared = await share(payload, exportFileName());
 			setResult(shared.message);
+		} catch (caught) {
+			setError(toMessage(caught));
+		} finally {
+			setBusy(false);
+		}
+	}
+
+	async function chooseRestore() {
+		setBusy(true);
+		setError(null);
+		setRestorePayload(null);
+		setRestorePreview(null);
+		try {
+			const selected = await File.pickFileAsync({
+				mimeTypes: ["application/json", "text/plain"],
+			});
+			if (selected.canceled) return;
+			if (selected.result.size > 50 * 1024 * 1024)
+				throw new Error(t("export.restoreTooLarge"));
+			const payload = await selected.result.text();
+			const parsed = parseCheckInExport(payload);
+			setRestorePreview(
+				t("export.restorePreview", {
+					date: parsed.metadata.exportedAt,
+					notes: parsed.dayNotes.length,
+					readings: parsed.observations.length,
+				}),
+			);
+			setRestorePayload(payload);
+		} catch (caught) {
+			setError(toMessage(caught));
+		} finally {
+			setBusy(false);
+		}
+	}
+	async function restore() {
+		if (!restorePayload || !exporter.restore) return;
+		setBusy(true);
+		setError(null);
+		try {
+			await exporter.restore(restorePayload);
+			await refreshReminderNotifications().catch(reportReminderRefreshFailure);
+			setRestorePayload(null);
+			setRestorePreview(null);
+			setResult(t("export.restored"));
 		} catch (caught) {
 			setError(toMessage(caught));
 		} finally {
@@ -67,6 +123,23 @@ export function ExportScreen({
 						onValueChange={setIncludeSensitive}
 					/>
 				</View>
+				<View style={styles.toggleRow}>
+					<View style={styles.toggleCopy}>
+						<AppText variant="label">{t("export.includeNotes")}</AppText>
+						<AppText variant="caption" color="muted">
+							{t("export.includeNotesDetail")}
+						</AppText>
+					</View>
+					<ThemedSwitch
+						accessibilityLabel={t("export.includeNotes")}
+						value={includeNotes}
+						disabled={busy}
+						onValueChange={setIncludeNotes}
+					/>
+				</View>
+				<AppText variant="caption" color="muted">
+					{t("export.reviewContents")}
+				</AppText>
 			</Card>
 
 			{result ? <AppText>{result}</AppText> : null}
@@ -75,6 +148,41 @@ export function ExportScreen({
 				label={t("export.share")}
 				loading={busy}
 				onPress={() => void exportData()}
+			/>
+			<Card style={styles.card}>
+				<SectionHeader title={t("export.restoreTitle")} />
+				<AppText color="muted">{t("export.restoreDetail")}</AppText>
+				<Button
+					label={t("export.chooseRestore")}
+					variant="secondary"
+					disabled={busy}
+					onPress={() => void chooseRestore()}
+				/>
+				{restorePayload ? (
+					<>
+						<AppText>{restorePreview}</AppText>
+						<Button
+							label={t("export.confirmRestore")}
+							loading={busy}
+							onPress={() => void restore()}
+						/>
+						<Button
+							label={t("account.cancel")}
+							variant="text"
+							disabled={busy}
+							onPress={() => {
+								setRestorePayload(null);
+								setRestorePreview(null);
+							}}
+						/>
+					</>
+				) : null}
+			</Card>
+			<Button
+				label={t("localData.backToToday")}
+				variant="text"
+				disabled={busy}
+				onPress={() => router.replace("/")}
 			/>
 		</Screen>
 	);

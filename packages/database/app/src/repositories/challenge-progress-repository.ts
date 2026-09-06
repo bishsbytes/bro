@@ -47,11 +47,14 @@ export class ChallengeProgressRepository extends BaseRepository {
 			);
 		}
 
-		return await this.transaction(async () => {
-			const existing = await this.findByEnrolmentDay(enrolmentId, dayIndex);
+		return await this.transaction(async (repository) => {
+			const existing = await repository.findByEnrolmentDay(
+				enrolmentId,
+				dayIndex,
+			);
 			if (existing) return existing;
 
-			const enrolment = await this.first<{
+			const enrolment = await repository.first<{
 				duration_days: number;
 				completed_at: number | null;
 				abandoned_at: number | null;
@@ -72,7 +75,7 @@ export class ChallengeProgressRepository extends BaseRepository {
 				);
 			}
 
-			const completedDays = await this.all<{ day_index: number }>(
+			const completedDays = await repository.all<{ day_index: number }>(
 				`SELECT day_index FROM challenge_progress
 				 WHERE enrolment_id = ? ORDER BY day_index ASC`,
 				[enrolmentId],
@@ -88,9 +91,9 @@ export class ChallengeProgressRepository extends BaseRepository {
 				);
 			}
 
-			const now = this.now();
+			const now = repository.now();
 			const progress: ChallengeProgress = {
-				id: this.createId(now),
+				id: repository.createId(now),
 				enrolmentId,
 				dayIndex,
 				localDay,
@@ -98,7 +101,7 @@ export class ChallengeProgressRepository extends BaseRepository {
 				createdAt: now,
 				updatedAt: now,
 			};
-			await this.run(
+			await repository.run(
 				`INSERT INTO challenge_progress (
 					id, enrolment_id, day_index, local_day, completed_at, created_at,
 					updated_at
@@ -115,7 +118,7 @@ export class ChallengeProgressRepository extends BaseRepository {
 			);
 
 			if (dayIndex === enrolment.duration_days) {
-				await this.run(
+				await repository.run(
 					`UPDATE challenge_enrolments
 					 SET completed_at = ?, updated_at = ?
 					 WHERE id = ? AND completed_at IS NULL AND abandoned_at IS NULL`,
@@ -152,6 +155,23 @@ export class ChallengeProgressRepository extends BaseRepository {
 		const rows = await this.all<ChallengeProgressRow>(
 			`SELECT ${SELECT_COLUMNS} FROM challenge_progress
 			 ORDER BY local_day ASC, completed_at ASC, id ASC`,
+		);
+		return rows.map(toChallengeProgress);
+	}
+
+	async listBetweenDays(
+		from: string,
+		through: string,
+	): Promise<ChallengeProgress[]> {
+		if (!isCalendarDay(from) || !isCalendarDay(through) || from > through)
+			throw new TypeError(
+				"Challenge progress range must use ordered calendar dates.",
+			);
+		const rows = await this.all<ChallengeProgressRow>(
+			`SELECT ${SELECT_COLUMNS} FROM challenge_progress
+			 WHERE local_day >= ? AND local_day <= ?
+			 ORDER BY completed_at ASC, created_at ASC, id ASC`,
+			[from, through],
 		);
 		return rows.map(toChallengeProgress);
 	}

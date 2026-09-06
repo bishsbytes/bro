@@ -1,3 +1,4 @@
+import { isCalendarDay } from "@bro/domain";
 import { isCheckInSlot } from "@bro/domain/metric-registry";
 import type {
 	CreateObservation,
@@ -132,6 +133,24 @@ export class ObservationRepository extends BaseRepository {
 			[id],
 		);
 		return row ? toObservation(row) : null;
+	}
+
+	async listBetween(from: string, through: string): Promise<Observation[]> {
+		if (!isCalendarDay(from) || !isCalendarDay(through) || from > through)
+			throw new TypeError("Invalid date range.");
+		const rows = await this.all<ObservationRow>(
+			`SELECT ${SELECT_COLUMNS} FROM observations WHERE local_day >= ? AND local_day <= ? ORDER BY local_day, created_at, id`,
+			[from, through],
+		);
+		return rows.map(toObservation);
+	}
+
+	async listByMetric(metricSlug: string): Promise<Observation[]> {
+		const rows = await this.all<ObservationRow>(
+			`SELECT ${SELECT_COLUMNS} FROM observations WHERE metric_slug = ? ORDER BY observed_at, created_at, id`,
+			[metricSlug],
+		);
+		return rows.map(toObservation);
 	}
 
 	async listAll(): Promise<Observation[]> {

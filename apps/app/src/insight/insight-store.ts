@@ -66,8 +66,8 @@ export class InsightStore {
 			row.localDay >= earliestLocalDay && row.localDay <= throughLocalDay;
 		const [observations, dailyMetrics, intakeEvents, trackedMetrics] =
 			await Promise.all([
-				this.observations.listAll(),
-				this.dailyMetrics.listAll(),
+				this.observations.listBetween(earliestLocalDay, throughLocalDay),
+				this.dailyMetrics.listBetween(earliestLocalDay, throughLocalDay),
 				this.intakeEvents.listBetween(earliestLocalDay, throughLocalDay),
 				this.trackedMetrics.listAll(),
 			]);

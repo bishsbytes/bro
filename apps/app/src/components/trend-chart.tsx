@@ -1,8 +1,15 @@
-import { systemLocale } from "@bro/domain";
+import { type DisplayUnit, systemLocale } from "@bro/domain";
 import type { MeasurementSlug } from "@bro/domain/metric-registry";
-import type { TrendRange, TrendSeries } from "@bro/logic";
-import { Fragment, useId } from "react";
+import {
+	formatMetricValue,
+	metricDisplayUnit,
+	type TrendPoint,
+	type TrendRange,
+	type TrendSeries,
+} from "@bro/logic";
+import { Fragment, useId, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
+import { View } from "react-native";
 import Svg, {
 	Circle,
 	Defs,
@@ -17,7 +24,11 @@ import Svg, {
 	Stop,
 	Text as SvgText,
 } from "react-native-svg";
+import { resolveMetric } from "../content";
 import { useUnistyles } from "../theme/unistyles";
+import { unitWords } from "../units/unit-words";
+import { AppText } from "./app-text";
+import { Button } from "./button";
 
 export type DataDomain = "mind" | "body" | "sleep" | "load";
 
@@ -112,15 +123,67 @@ export function TrendChart({
 	domain,
 	usualRange,
 	heading,
+	displayUnit,
+	label,
+	onSelect,
 }: {
 	series: TrendSeries;
 	height?: number;
 	domain?: DataDomain;
 	usualRange?: TrendChartUsualRange | null;
 	heading?: TrendChartHeading | null;
+	displayUnit?: DisplayUnit | null;
+	label?: string;
+	onSelect?: (point: TrendPoint | null, formatted: string) => void;
 }) {
 	const { theme } = useUnistyles();
 	const { t } = useTranslation("common");
+	const [selectedDay, setSelectedDay] = useState<string | null>(null);
+	const [showReadings, setShowReadings] = useState(false);
+	const width = useRef(300);
+	const touchStart = useRef({ x: 0, y: 0 });
+	const resolved = resolveMetric(series.metricSlug);
+	const metricLabel =
+		label ??
+		(resolved.kind === "known" ? resolved.metric.label : series.metricSlug);
+	const selected =
+		series.points.find((point) => point.localDay === selectedDay) ?? null;
+	const format = (value: number | null) => {
+		if (value === null) return t("terrain.missing");
+		if (resolved.kind === "known" && resolved.metric.kind === "measurement") {
+			return formatMetricValue(
+				resolved.metric,
+				value,
+				displayUnit === undefined
+					? metricDisplayUnit(resolved.metric, new Map(), systemLocale())
+					: displayUnit,
+				systemLocale(),
+				unitWords(),
+			);
+		}
+		return new Intl.NumberFormat(systemLocale(), {
+			maximumFractionDigits: 1,
+		}).format(value);
+	};
+	function select(index: number) {
+		const point =
+			series.points[Math.max(0, Math.min(series.points.length - 1, index))];
+		if (!point) return;
+		setSelectedDay(point.localDay);
+		onSelect?.(point, format(point.value));
+	}
+	function selectAt(x: number) {
+		select(
+			Math.round((x / Math.max(1, width.current)) * (series.points.length - 1)),
+		);
+	}
+	const selectedIndex = selected
+		? series.points.indexOf(selected)
+		: series.points.length - 1;
+	const selectionLabel = selected
+		? `${selected.localDay}: ${format(selected.value)}`
+		: t("terrain.explore");
+
 	const dataColor =
 		theme.colors[domain ?? dataDomainForMetric(series.metricSlug)];
 	const finalMarker = series.markers.at(-1);
@@ -140,215 +203,318 @@ export function TrendChart({
 		: null;
 	const dateRange = terrainDateRangeLabel(series, systemLocale());
 	return (
-		<Svg
-			accessibilityLabel={[
-				t("a11y.trendChart", { metric: series.metricSlug }),
-				usualRange
-					? t("a11y.trendChartUsualRange", {
-							min: usualRange.minFormatted,
-							max: usualRange.maxFormatted,
-						})
-					: null,
-				heading
-					? t("a11y.trendChartHeading", { value: heading.formatted })
-					: null,
-			]
-				.filter((part) => part !== null)
-				.join(" ")}
-			viewBox="0 0 300 140"
-			height={height}
-			width="100%"
-		>
-			<Defs>
-				<LinearGradient id={fadeId} x1="0" y1="0" x2="0" y2="1">
-					<Stop offset="0" stopColor={dataColor} stopOpacity="0.35" />
-					<Stop offset="1" stopColor={dataColor} stopOpacity="0" />
-				</LinearGradient>
-				<Pattern
-					id={hatchId}
-					width="6"
-					height="6"
-					patternUnits="userSpaceOnUse"
-					patternTransform="rotate(-20)"
+		<View>
+			<View
+				testID="terrain-explorer"
+				accessible
+				accessibilityRole="adjustable"
+				accessibilityLabel={`${metricLabel}. ${selectionLabel}`}
+				accessibilityHint={t("terrain.explore")}
+				accessibilityActions={[{ name: "increment" }, { name: "decrement" }]}
+				onAccessibilityAction={(event) =>
+					select(
+						selectedIndex +
+							(event.nativeEvent.actionName === "increment" ? 1 : -1),
+					)
+				}
+				onLayout={(event) => {
+					width.current = event.nativeEvent.layout.width;
+				}}
+				onTouchStart={(event) => {
+					touchStart.current = {
+						x: event.nativeEvent.pageX,
+						y: event.nativeEvent.pageY,
+					};
+				}}
+				onMoveShouldSetResponder={(event) =>
+					Math.abs(event.nativeEvent.pageX - touchStart.current.x) > 8 &&
+					Math.abs(event.nativeEvent.pageX - touchStart.current.x) >
+						Math.abs(event.nativeEvent.pageY - touchStart.current.y)
+				}
+				onResponderGrant={(event) => selectAt(event.nativeEvent.locationX)}
+				onResponderMove={(event) => selectAt(event.nativeEvent.locationX)}
+			>
+				<Svg
+					accessibilityLabel={[
+						t("a11y.trendChart", { metric: series.metricSlug }),
+						usualRange
+							? t("a11y.trendChartUsualRange", {
+									min: usualRange.minFormatted,
+									max: usualRange.maxFormatted,
+								})
+							: null,
+						heading
+							? t("a11y.trendChartHeading", { value: heading.formatted })
+							: null,
+					]
+						.filter((part) => part !== null)
+						.join(" ")}
+					viewBox="0 0 300 140"
+					height={height}
+					width="100%"
 				>
-					<Line
-						x1="0"
-						y1="0"
-						x2="0"
-						y2="6"
-						stroke={dataColor}
-						strokeOpacity="0.22"
-						strokeWidth="1"
-					/>
-				</Pattern>
-				<Filter
-					id={lineGlowId}
-					x="-12"
-					y="-12"
-					width="324"
-					height="164"
-					filterUnits="userSpaceOnUse"
-				>
-					<FeGaussianBlur stdDeviation={theme.terrain.lineGlow} />
-				</Filter>
-				<Filter
-					id={markerGlowId}
-					x="-12"
-					y="-12"
-					width="324"
-					height="164"
-					filterUnits="userSpaceOnUse"
-				>
-					<FeGaussianBlur stdDeviation={theme.terrain.currentDotGlow} />
-				</Filter>
-			</Defs>
-			{corridor ? (
-				<Rect
-					testID="terrain-usual-corridor"
-					x="0"
-					y={corridor.top}
-					width="300"
-					height={Math.max(corridor.bottom - corridor.top, 1)}
-					fill={theme.colors.surface3}
-					fillOpacity="0.8"
-				/>
-			) : null}
-			{series.segments.map((points, index) => (
-				<Fragment key={points}>
-					<Polygon
-						points={terrainPolygonPoints(points)}
-						fill={`url(#${fadeId})`}
-					/>
-					<Polygon
-						points={terrainPolygonPoints(points)}
-						fill={`url(#${hatchId})`}
-					/>
-					<Polyline
-						testID={`terrain-line-glow-${index}`}
-						points={points}
-						fill="none"
-						stroke={dataColor}
-						strokeOpacity="0.7"
-						strokeWidth={theme.terrain.line}
-						strokeLinecap="round"
-						strokeLinejoin="round"
-						filter={`url(#${lineGlowId})`}
-					/>
-					{index === series.segments.length - 1 && finalMarker ? (
-						<Circle
-							testID="terrain-line-end-glow"
-							cx={finalMarker.x}
-							cy={finalMarker.y}
-							r={theme.terrain.currentDot}
-							fill={dataColor}
-							fillOpacity="0.7"
-							filter={`url(#${lineGlowId})`}
+					<Defs>
+						<LinearGradient id={fadeId} x1="0" y1="0" x2="0" y2="1">
+							<Stop offset="0" stopColor={dataColor} stopOpacity="0.35" />
+							<Stop offset="1" stopColor={dataColor} stopOpacity="0" />
+						</LinearGradient>
+						<Pattern
+							id={hatchId}
+							width="6"
+							height="6"
+							patternUnits="userSpaceOnUse"
+							patternTransform="rotate(-20)"
+						>
+							<Line
+								x1="0"
+								y1="0"
+								x2="0"
+								y2="6"
+								stroke={dataColor}
+								strokeOpacity="0.22"
+								strokeWidth="1"
+							/>
+						</Pattern>
+						<Filter
+							id={lineGlowId}
+							x="-12"
+							y="-12"
+							width="324"
+							height="164"
+							filterUnits="userSpaceOnUse"
+						>
+							<FeGaussianBlur stdDeviation={theme.terrain.lineGlow} />
+						</Filter>
+						<Filter
+							id={markerGlowId}
+							x="-12"
+							y="-12"
+							width="324"
+							height="164"
+							filterUnits="userSpaceOnUse"
+						>
+							<FeGaussianBlur stdDeviation={theme.terrain.currentDotGlow} />
+						</Filter>
+					</Defs>
+					{corridor ? (
+						<Rect
+							testID="terrain-usual-corridor"
+							x="0"
+							y={corridor.top}
+							width="300"
+							height={Math.max(corridor.bottom - corridor.top, 1)}
+							fill={theme.colors.surface3}
+							fillOpacity="0.8"
 						/>
 					) : null}
-					<Polyline
-						points={points}
-						fill="none"
-						stroke={dataColor}
-						strokeWidth="2"
-						strokeLinecap="round"
-						strokeLinejoin="round"
-					/>
-				</Fragment>
-			))}
-			{headingY !== null ? (
-				<Line
-					testID="terrain-heading-line"
-					x1="0"
-					y1={headingY}
-					x2="300"
-					y2={headingY}
-					stroke={theme.colors.ink}
-					strokeOpacity="0.8"
-					strokeWidth="1"
-					strokeDasharray="4 4"
-				/>
-			) : null}
-			{finalMarker ? (
-				<Fragment key={finalMarker.localDay}>
-					<Circle
-						testID="terrain-current-glow"
-						cx={finalMarker.x}
-						cy={finalMarker.y}
-						r={theme.terrain.currentDot}
-						fill={dataColor}
-						fillOpacity="0.75"
-						filter={`url(#${markerGlowId})`}
-					/>
-					<Circle
-						testID="terrain-current-marker"
-						cx={finalMarker.x}
-						cy={finalMarker.y}
-						r={theme.terrain.currentDot}
-						fill={dataColor}
-					/>
-				</Fragment>
-			) : null}
-			{corridor && usualRange ? (
-				<>
-					<SvgText
-						testID="terrain-usual-max-label"
-						x="0"
-						y={Math.max(TERRAIN_TOP_Y + 8, corridor.top - 3)}
-						fill={theme.colors.ink3}
-						fontFamily={theme.typography.monoInline.fontFamily}
-						fontSize="9"
-					>
-						{usualRange.maxFormatted}
-					</SvgText>
-					{usualRange.minFormatted !== usualRange.maxFormatted ? (
+					{series.segments.map((points, index) => (
+						<Fragment key={points}>
+							<Polygon
+								points={terrainPolygonPoints(points)}
+								fill={`url(#${fadeId})`}
+							/>
+							<Polygon
+								points={terrainPolygonPoints(points)}
+								fill={`url(#${hatchId})`}
+							/>
+							<Polyline
+								testID={`terrain-line-glow-${index}`}
+								points={points}
+								fill="none"
+								stroke={dataColor}
+								strokeOpacity="0.7"
+								strokeWidth={theme.terrain.line}
+								strokeLinecap="round"
+								strokeLinejoin="round"
+								filter={`url(#${lineGlowId})`}
+							/>
+							{index === series.segments.length - 1 && finalMarker ? (
+								<Circle
+									testID="terrain-line-end-glow"
+									cx={finalMarker.x}
+									cy={finalMarker.y}
+									r={theme.terrain.currentDot}
+									fill={dataColor}
+									fillOpacity="0.7"
+									filter={`url(#${lineGlowId})`}
+								/>
+							) : null}
+							<Polyline
+								points={points}
+								fill="none"
+								stroke={dataColor}
+								strokeWidth="2"
+								strokeLinecap="round"
+								strokeLinejoin="round"
+							/>
+						</Fragment>
+					))}
+					{series.segments
+						.filter((points) => points.trim().split(/\s+/).length === 1)
+						.map((points) => {
+							const [x, y] = points.split(",").map(Number);
+							return (
+								<Line
+									key={points}
+									testID="terrain-isolated-reading"
+									x1={x - 2}
+									x2={x + 2}
+									y1={y}
+									y2={y}
+									stroke={dataColor}
+									strokeWidth="2"
+								/>
+							);
+						})}
+					{selected && selected.value !== null ? (
+						<Line
+							testID="terrain-selected-reading"
+							x1={(selectedIndex / Math.max(series.points.length - 1, 1)) * 300}
+							x2={(selectedIndex / Math.max(series.points.length - 1, 1)) * 300}
+							y1="10"
+							y2="110"
+							stroke={theme.colors.ink}
+							strokeDasharray="3 3"
+						/>
+					) : null}
+					{headingY !== null ? (
+						<Line
+							testID="terrain-heading-line"
+							x1="0"
+							y1={headingY}
+							x2="300"
+							y2={headingY}
+							stroke={theme.colors.ink}
+							strokeOpacity="0.8"
+							strokeWidth="1"
+							strokeDasharray="4 4"
+						/>
+					) : null}
+					{finalMarker ? (
+						<Fragment key={finalMarker.localDay}>
+							<Circle
+								testID="terrain-current-glow"
+								cx={finalMarker.x}
+								cy={finalMarker.y}
+								r={theme.terrain.currentDot}
+								fill={dataColor}
+								fillOpacity="0.75"
+								filter={`url(#${markerGlowId})`}
+							/>
+							<Circle
+								testID="terrain-current-marker"
+								cx={finalMarker.x}
+								cy={finalMarker.y}
+								r={theme.terrain.currentDot}
+								fill={dataColor}
+							/>
+						</Fragment>
+					) : null}
+					{corridor && usualRange ? (
+						<>
+							<SvgText
+								testID="terrain-usual-max-label"
+								x="0"
+								y={Math.max(TERRAIN_TOP_Y + 8, corridor.top - 3)}
+								fill={theme.colors.ink2}
+								fontFamily={theme.typography.monoInline.fontFamily}
+								fontSize="12"
+							>
+								{usualRange.maxFormatted}
+							</SvgText>
+							{usualRange.minFormatted !== usualRange.maxFormatted ? (
+								<SvgText
+									testID="terrain-usual-min-label"
+									x="0"
+									y={Math.min(TERRAIN_BASELINE_Y, corridor.bottom + 10)}
+									fill={theme.colors.ink2}
+									fontFamily={theme.typography.monoInline.fontFamily}
+									fontSize="12"
+								>
+									{usualRange.minFormatted}
+								</SvgText>
+							) : null}
+							<SvgText
+								testID="terrain-usual-range-label"
+								x="0"
+								y="136"
+								fill={theme.colors.ink2}
+								fontFamily={theme.typography.caption.fontFamily}
+								fontSize="12"
+							>
+								{t("terrain.usualRange")}
+							</SvgText>
+						</>
+					) : null}
+					{headingY !== null && heading ? (
 						<SvgText
-							testID="terrain-usual-min-label"
+							testID="terrain-heading-label"
 							x="0"
-							y={Math.min(TERRAIN_BASELINE_Y, corridor.bottom + 10)}
-							fill={theme.colors.ink3}
+							y={Math.max(TERRAIN_TOP_Y + 8, headingY - 3)}
+							fill={theme.colors.ink2}
 							fontFamily={theme.typography.monoInline.fontFamily}
-							fontSize="9"
+							fontSize="12"
 						>
-							{usualRange.minFormatted}
+							{t("terrain.heading", { value: heading.formatted })}
 						</SvgText>
 					) : null}
-					<SvgText
-						testID="terrain-usual-range-label"
-						x="0"
-						y="136"
-						fill={theme.colors.ink3}
-						fontFamily={theme.typography.caption.fontFamily}
-						fontSize="9"
-					>
-						{t("terrain.usualRange")}
-					</SvgText>
-				</>
+					{dateRange ? (
+						<SvgText
+							testID="terrain-date-range-label"
+							x="300"
+							y="136"
+							textAnchor="end"
+							fill={theme.colors.ink2}
+							fontFamily={theme.typography.monoInline.fontFamily}
+							fontSize="12"
+						>
+							{dateRange}
+						</SvgText>
+					) : null}
+				</Svg>
+			</View>
+			{selected ? (
+				<View>
+					<AppText variant="monoInline">{selectionLabel}</AppText>
+					<Button
+						label={t("terrain.latest")}
+						variant="text"
+						onPress={() => {
+							setSelectedDay(null);
+							onSelect?.(null, "");
+						}}
+					/>
+				</View>
 			) : null}
-			{headingY !== null && heading ? (
-				<SvgText
-					testID="terrain-heading-label"
-					x="0"
-					y={Math.max(TERRAIN_TOP_Y + 8, headingY - 3)}
-					fill={theme.colors.ink2}
-					fontFamily={theme.typography.monoInline.fontFamily}
-					fontSize="9"
-				>
-					{t("terrain.heading", { value: heading.formatted })}
-				</SvgText>
-			) : null}
-			{dateRange ? (
-				<SvgText
-					testID="terrain-date-range-label"
-					x="300"
-					y="136"
-					textAnchor="end"
-					fill={theme.colors.ink3}
-					fontFamily={theme.typography.monoInline.fontFamily}
-					fontSize="9"
-				>
-					{dateRange}
-				</SvgText>
-			) : null}
-		</Svg>
+			<View style={{ flexDirection: "row", gap: theme.spacing.sm }}>
+				<Button
+					label={t("terrain.previous")}
+					variant="text"
+					disabled={selectedIndex <= 0}
+					onPress={() => select(selectedIndex - 1)}
+				/>
+				<Button
+					label={t("terrain.next")}
+					variant="text"
+					disabled={selectedIndex >= series.points.length - 1}
+					onPress={() => select(selectedIndex + 1)}
+				/>
+			</View>
+			<Button
+				label={t(
+					showReadings ? "terrain.hideReadings" : "terrain.showReadings",
+				)}
+				variant="text"
+				onPress={() => setShowReadings(!showReadings)}
+			/>
+			{showReadings
+				? series.points.map((point) => (
+						<AppText
+							key={point.localDay}
+							variant="monoInline"
+						>{`${point.localDay}: ${format(point.value)}`}</AppText>
+					))
+				: null}
+		</View>
 	);
 }

@@ -6,6 +6,7 @@ import {
 	type HealthPlatform,
 	type RawSample,
 	RawSampleRepository,
+	withTransaction,
 } from "@bro/database-app";
 import {
 	applyHealthSampleChanges,
@@ -353,16 +354,13 @@ export class HealthImportEngine {
 			additions.length === 0 &&
 			batch.deletions.length === 0
 		) {
-			await importDb.withTransactionAsync(async () => {
-				await rawRepository.pruneEndedBefore(
-					daysBefore(importedAt, RAW_SAMPLE_RETENTION_DAYS),
-				);
-				await connectionRepository.markImported(
-					platform,
-					metricSlug,
-					batch.nextToken,
-					importedAt,
-				);
+			await withTransaction(importDb, async (importScope) => {
+				await rawRepository
+					.inTransaction(importScope)
+					.pruneEndedBefore(daysBefore(importedAt, RAW_SAMPLE_RETENTION_DAYS));
+				await connectionRepository
+					.inTransaction(importScope)
+					.markImported(platform, metricSlug, batch.nextToken, importedAt);
 			});
 			return 0;
 		}
@@ -372,12 +370,12 @@ export class HealthImportEngine {
 			now: () => importedAt,
 		});
 
-		await importDb.withTransactionAsync(async () => {
+		await withTransaction(importDb, async (importScope) => {
 			const existing =
 				batch.mode === "snapshot"
 					? []
 					: await this.retainedSamplesForBatch(
-							rawRepository,
+							rawRepository.inTransaction(importScope),
 							metricSlug,
 							batch,
 							additions,
@@ -388,54 +386,58 @@ export class HealthImportEngine {
 			});
 
 			if (batch.mode === "snapshot") {
-				await rawRepository.deleteByMetricSourceInCurrentTransaction(
-					metricSlug,
-					platform,
-				);
+				await rawRepository
+					.inTransaction(importScope)
+					.deleteByMetricSourceInCurrentTransaction(metricSlug, platform);
 			} else {
 				for (const deletion of batch.deletions) {
-					await rawRepository.deleteBySourceRecordInCurrentTransaction(
-						deletion.source,
-						deletion.sourceRecordId,
-					);
+					await rawRepository
+						.inTransaction(importScope)
+						.deleteBySourceRecordInCurrentTransaction(
+							deletion.source,
+							deletion.sourceRecordId,
+						);
 				}
 			}
-			await rawRepository.upsertMany(
-				additions.map((sample) => ({ ...sample, importedAt })),
-			);
+			await rawRepository
+				.inTransaction(importScope)
+				.upsertMany(additions.map((sample) => ({ ...sample, importedAt })));
 
-			await productDb.withTransactionAsync(async () => {
+			await withTransaction(productDb, async (productScope) => {
 				if (batch.mode === "snapshot") {
-					await dailyRepository.deleteByMetricSourceFromDay(
-						metricSlug,
-						platform,
-						localDayAt(backfill.from, timeZone),
-					);
+					await dailyRepository
+						.inTransaction(productScope)
+						.deleteByMetricSourceFromDay(
+							metricSlug,
+							platform,
+							localDayAt(backfill.from, timeZone),
+						);
 				}
 				for (const rollup of applied.rollups) {
 					if (rollup.value === null) {
-						await dailyRepository.deleteNaturalKey(
-							rollup.metricSlug,
-							rollup.localDay,
-							rollup.source,
-						);
+						await dailyRepository
+							.inTransaction(productScope)
+							.deleteNaturalKey(
+								rollup.metricSlug,
+								rollup.localDay,
+								rollup.source,
+							);
 					} else {
-						await dailyRepository.upsert({ ...rollup, value: rollup.value });
+						await dailyRepository
+							.inTransaction(productScope)
+							.upsert({ ...rollup, value: rollup.value });
 					}
 				}
 			});
 
-			await rawRepository.pruneEndedBefore(
-				daysBefore(importedAt, RAW_SAMPLE_RETENTION_DAYS),
-			);
+			await rawRepository
+				.inTransaction(importScope)
+				.pruneEndedBefore(daysBefore(importedAt, RAW_SAMPLE_RETENTION_DAYS));
 			// Advance only after the durable rollup transaction commits. A failure
 			// above rolls back both the raw writes and token so replay stays safe.
-			await connectionRepository.markImported(
-				platform,
-				metricSlug,
-				batch.nextToken,
-				importedAt,
-			);
+			await connectionRepository
+				.inTransaction(importScope)
+				.markImported(platform, metricSlug, batch.nextToken, importedAt);
 		});
 		return additions.length;
 	}

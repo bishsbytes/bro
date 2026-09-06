@@ -76,3 +76,13 @@ app startup:
 const observations = new ObservationRepository(getDb());
 const today = await observations.listByDay("2026-08-14");
 ```
+
+Repository calls share a per-connection queue. For multiple atomic operations,
+use `withTransaction(db, async (scope) => { ... })` and call repositories through
+`repository.inTransaction(scope)`. Inside a repository's `this.transaction`
+callback, use its `repository` argument. Do not call the original unscoped
+repository inside the callback: it will wait for the transaction to finish.
+Await every scoped operation and never retain a scoped repository after the
+callback. Startup migrations run before repositories are exposed to the UI;
+runtime product operations must use this coordination rather than opening raw
+`withTransactionAsync` transactions.

@@ -449,6 +449,7 @@ export function HomeScreen({
 		null,
 	);
 	const [selectedTags, setSelectedTags] = useState<string[]>([]);
+	const [reviewingTags, setReviewingTags] = useState(false);
 	const [error, setError] = useState<string | null>(null);
 	// Only the latest tag toggle may apply its result, and a reload must not
 	// pull the chips back to a set the user has already moved on from.
@@ -748,6 +749,21 @@ export function HomeScreen({
 		}
 	}
 
+	async function confirmTags() {
+		if (tagsInFlightRef.current > 0 || reviewingTags) return;
+		setReviewingTags(true);
+		try {
+			const saved = await checkIns.saveDayTags(selectedTags, true);
+			setToday(saved);
+			setSelectedTags(saved.selectedTagSlugs);
+			setError(null);
+		} catch (caught) {
+			setError(toMessage(caught));
+		} finally {
+			setReviewingTags(false);
+		}
+	}
+
 	async function toggleTag(slug: string) {
 		const next = selectedTags.includes(slug)
 			? selectedTags.filter((selected) => selected !== slug)
@@ -884,6 +900,7 @@ export function HomeScreen({
 												styles.tagButton,
 												selected && styles.choiceSelected,
 											]}
+											disabled={reviewingTags}
 											onPress={() => void toggleTag(tag.slug)}
 										>
 											<AppText
@@ -900,6 +917,15 @@ export function HomeScreen({
 						</View>
 					) : null,
 				)}
+				<AppText variant="caption" color="muted">
+					{t("tags.reviewHint")}
+				</AppText>
+				<Button
+					label={t("tags.confirm")}
+					loading={reviewingTags}
+					variant="text"
+					onPress={() => void confirmTags()}
+				/>
 			</View>
 		) : null;
 

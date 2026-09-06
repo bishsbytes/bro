@@ -6,6 +6,7 @@ import { View } from "react-native";
 import { ListRow } from "../../components/list-row";
 import { StackScreen as Screen } from "../../components/screen";
 import { SectionHeader } from "../../components/section-header";
+import { SupportLink } from "../../components/support-link";
 import type { HealthGatewayAvailability } from "../../health/gateway";
 import { healthImportEngine } from "../../health/import-service";
 import { healthPlatformLabel } from "../../health/platform-label";
@@ -117,6 +118,7 @@ export function SettingsScreen({
 				accessibilityLabel={t("index.dataA11y")}
 				onPress={() => router.push("/settings/data" as Href)}
 			/>
+			<SupportLink />
 		</Screen>
 	);
 }

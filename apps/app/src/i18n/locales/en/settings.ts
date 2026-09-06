@@ -33,8 +33,9 @@ export const settings = {
 		licences: "Data licences",
 		licencesDetail: "Attribution for data used in bro.",
 		licencesA11y: "Data licences",
-		export: "Export your data",
-		exportDetail: "Share or save a copy of the record on this device.",
+		export: "Export or restore your data",
+		exportDetail:
+			"Save a copy of your record, or restore one on an empty device.",
 		exportA11y: "Export your data",
 	},
 	localData: {
@@ -239,10 +240,24 @@ export const settings = {
 			"Disconnecting stops future imports. Data already imported stays in bro. Revoke the phone's permission in {{platform}} settings.",
 	},
 	export: {
+		restoreTitle: "Restore a saved record",
+		restoreDetail:
+			"Choose an export you saved from bro. Restore works only when this device has no local records. It restores only what the file includes; health permissions and device settings stay on this device.",
+		chooseRestore: "Choose export file",
+		confirmRestore: "Restore this record",
+		restorePreview:
+			"Exported {{date}}. Contains {{readings}} observations and {{notes}} journal notes.",
+		restoreTooLarge: "This file is larger than the 50 MB restore limit.",
+		restored: "Your record has been restored on this device.",
 		intro:
 			"This JSON file contains the record stored by bro on this device. It leaves only when you choose where to share or save it.",
 		title: "What to include",
-		includeSensitive: "Include sensitive data",
+		includeSensitive: "Include sensitive categories",
+		includeNotes: "Include journal and intake notes",
+		includeNotesDetail:
+			"Includes everything you wrote in journal entries and intake notes. These may contain private information.",
+		reviewContents:
+			"Food names and other record labels remain in the export. Review the file before sharing. For recovery, include both categories and notes.",
 		includeSensitiveDetail:
 			"Includes sensitive metrics, custom habits, and sensitive life areas.",
 		share: "Share or save export",

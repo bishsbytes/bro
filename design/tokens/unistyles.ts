@@ -1,25 +1,31 @@
 // bro — Unistyles 3 setup for Helm
 // Import this file once, before any StyleSheet.create call (e.g. at the top of App.tsx / _layout.tsx).
 
-import { StyleSheet, UnistylesRuntime } from 'react-native-unistyles';
-import { darkTheme, lightTheme, deriveAccent, normalizeHue, type HelmTheme } from './helm';
+import { StyleSheet, UnistylesRuntime } from "react-native-unistyles";
+import {
+	darkTheme,
+	deriveAccent,
+	type HelmTheme,
+	lightTheme,
+	normalizeHue,
+} from "./helm";
 
 type AppThemes = { dark: HelmTheme; light: HelmTheme };
 type AppBreakpoints = { xs: 0; sm: 380; md: 600 };
 
-declare module 'react-native-unistyles' {
-  export interface UnistylesThemes extends AppThemes {}
-  export interface UnistylesBreakpoints extends AppBreakpoints {}
+declare module "react-native-unistyles" {
+	export interface UnistylesThemes extends AppThemes {}
+	export interface UnistylesBreakpoints extends AppBreakpoints {}
 }
 
 StyleSheet.configure({
-  themes: { dark: darkTheme, light: lightTheme },
-  breakpoints: { xs: 0, sm: 380, md: 600 },
-  settings: {
-    // Follow the OS, but the app *defaults* to dark on first run (see DESIGN.md rule 2).
-    adaptiveThemes: true,
-    initialTheme: 'dark',
-  },
+	themes: { dark: darkTheme, light: lightTheme },
+	breakpoints: { xs: 0, sm: 380, md: 600 },
+	settings: {
+		// Follow the OS, but the app *defaults* to dark on first run (see DESIGN.md rule 2).
+		adaptiveThemes: true,
+		initialTheme: "dark",
+	},
 });
 
 /**
@@ -28,19 +34,27 @@ StyleSheet.configure({
  * Persist only the integer hue.
  */
 export function setAccentHue(hue: number) {
-  const h = normalizeHue(hue);
-  UnistylesRuntime.updateTheme('dark', (t) => ({ ...t, accentHue: h, colors: { ...t.colors, ...deriveAccent(h, true) } }));
-  UnistylesRuntime.updateTheme('light', (t) => ({ ...t, accentHue: h, colors: { ...t.colors, ...deriveAccent(h, false) } }));
+	const h = normalizeHue(hue);
+	UnistylesRuntime.updateTheme("dark", (t) => ({
+		...t,
+		accentHue: h,
+		colors: { ...t.colors, ...deriveAccent(h, true) },
+	}));
+	UnistylesRuntime.updateTheme("light", (t) => ({
+		...t,
+		accentHue: h,
+		colors: { ...t.colors, ...deriveAccent(h, false) },
+	}));
 }
 
 /** Manual override (Settings → Appearance). Pass undefined to return to following the OS. */
-export function setAppearance(mode?: 'dark' | 'light') {
-  if (mode) {
-    UnistylesRuntime.setAdaptiveThemes(false);
-    UnistylesRuntime.setTheme(mode);
-  } else {
-    UnistylesRuntime.setAdaptiveThemes(true);
-  }
+export function setAppearance(mode?: "dark" | "light") {
+	if (mode) {
+		UnistylesRuntime.setAdaptiveThemes(false);
+		UnistylesRuntime.setTheme(mode);
+	} else {
+		UnistylesRuntime.setAdaptiveThemes(true);
+	}
 }
 
 /* Usage in a component:

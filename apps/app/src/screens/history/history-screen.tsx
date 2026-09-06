@@ -1,9 +1,10 @@
 import { localDayOf } from "@bro/domain";
 import { formatLocalDayLabel } from "@bro/logic";
 import { router } from "expo-router";
-import { useCallback, useMemo } from "react";
+import { useCallback, useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { AppText } from "../../components/app-text";
+import { Button } from "../../components/button";
 import { EmptyState } from "../../components/empty-state";
 import { ListRow } from "../../components/list-row";
 import { MarkdownText } from "../../components/markdown-text";
@@ -21,13 +22,16 @@ type HistoryScreenProps = {
 export function HistoryScreen({ store }: HistoryScreenProps) {
 	const { t } = useTranslation(["history", "common"]);
 	const history = useMemo(() => store ?? createHistoryStore(), [store]);
+	const [dayLimit, setDayLimit] = useState(30);
 	const todayLocalDay = localDayOf(new Date());
 	const {
 		data: days,
 		error,
 		loading,
 		reload,
-	} = useFocusStoreLoad(useCallback(() => history.loadHistory(), [history]));
+	} = useFocusStoreLoad(
+		useCallback(() => history.loadHistory(dayLimit), [history, dayLimit]),
+	);
 
 	if (loading) {
 		return <LoadingScreen />;
@@ -107,6 +111,13 @@ export function HistoryScreen({ store }: HistoryScreenProps) {
 					</ListRow>
 				);
 			})}
+			{days && days.length >= dayLimit ? (
+				<Button
+					label={t("showOlder")}
+					variant="secondary"
+					onPress={() => setDayLimit((limit) => limit + 30)}
+				/>
+			) : null}
 		</Screen>
 	);
 }

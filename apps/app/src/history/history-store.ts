@@ -12,9 +12,11 @@ import {
 	type HabitCompletion,
 	HabitCompletionRepository,
 	HabitRepository,
+	HistoryDaysRepository,
 	type Observation,
 	ObservationRepository,
 	UnitPreferenceRepository,
+	withTransaction,
 } from "@bro/database-app";
 import { previousLocalDay } from "@bro/domain";
 import {
@@ -285,7 +287,7 @@ export function assembleHistoryDay(
 		if (resolved.kind === "unknown") {
 			unknown.push(observation);
 		} else if (resolved.metric.kind === "tag") {
-			tags.push(observation);
+			if (observation.value === 1) tags.push(observation);
 		} else if (resolved.metric.kind === "assessment") {
 			assessments.push(observation);
 		} else if (resolved.metric.kind === "measurement") {
@@ -425,7 +427,11 @@ export class HistoryStore {
 		this.challengeProgress = new ChallengeProgressRepository(db);
 	}
 
-	async loadHistory(): Promise<HistoryDaySummary[]> {
+	async loadHistory(dayLimit = 30): Promise<HistoryDaySummary[]> {
+		const days = await new HistoryDaysRepository(this.db).listRecent(dayLimit);
+		if (days.length === 0) return [];
+		const from = days[days.length - 1];
+		const through = days[0];
 		const [
 			observations,
 			notes,
@@ -435,13 +441,13 @@ export class HistoryStore {
 			enrolments,
 			challengeProgress,
 		] = await Promise.all([
-			this.observations.listAll(),
-			this.notes.listAll(),
-			this.dailyMetrics.listAll(),
+			this.observations.listBetween(from, through),
+			this.notes.listBetweenDays(from, through),
+			this.dailyMetrics.listBetween(from, through),
 			this.habits.listAll(),
-			this.habitCompletions.listAll(),
+			this.habitCompletions.listBetweenDays(from, through),
 			this.enrolments.listAll(),
-			this.challengeProgress.listAll(),
+			this.challengeProgress.listBetweenDays(from, through),
 		]);
 		const assessmentObservations: Observation[] = [];
 		const dailyObservations: Observation[] = [];
@@ -474,7 +480,9 @@ export class HistoryStore {
 				);
 				const tags = dayObservations.flatMap((row) => {
 					const resolved = resolveMetric(row.metricSlug);
-					return resolved.kind === "known" && resolved.metric.kind === "tag"
+					return resolved.kind === "known" &&
+						resolved.metric.kind === "tag" &&
+						row.value === 1
 						? [resolved.metric.label]
 						: [];
 				});
@@ -580,8 +588,8 @@ export class HistoryStore {
 		mood: number,
 		optional: Readonly<Record<string, number>> = {},
 	): Promise<HistoryDay> {
-		await this.db.withTransactionAsync(async () => {
-			await this.observations.update(checkIn.mood.id, {
+		await withTransaction(this.db, async (scope) => {
+			await this.observations.inTransaction(scope).update(checkIn.mood.id, {
 				value: mood,
 				scaleMin: checkIn.mood.scaleMin,
 				scaleMax: checkIn.mood.scaleMax,
@@ -592,7 +600,7 @@ export class HistoryStore {
 			for (const score of checkIn.optionalScores) {
 				const value = optional[score.metricSlug];
 				if (value === undefined) continue;
-				await this.observations.update(score.id, {
+				await this.observations.inTransaction(scope).update(score.id, {
 					value,
 					scaleMin: score.scaleMin,
 					scaleMax: score.scaleMax,
@@ -606,10 +614,10 @@ export class HistoryStore {
 	}
 
 	async deleteCheckIn(checkIn: HistoricalCheckIn): Promise<HistoryDay> {
-		await this.db.withTransactionAsync(async () => {
-			await this.observations.delete(checkIn.mood.id);
+		await withTransaction(this.db, async (scope) => {
+			await this.observations.inTransaction(scope).delete(checkIn.mood.id);
 			for (const score of checkIn.optionalScores) {
-				await this.observations.delete(score.id);
+				await this.observations.inTransaction(scope).delete(score.id);
 			}
 		});
 		return await this.loadDay(checkIn.mood.localDay);

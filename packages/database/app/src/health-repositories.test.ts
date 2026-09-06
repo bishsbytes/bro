@@ -7,6 +7,9 @@ jest.mock("expo-sqlite", () => ({
 	openDatabaseSync: mockSqlite.openDatabaseSync,
 	openDatabaseAsync: mockSqlite.openDatabaseAsync,
 }));
+jest.mock("expo-sqlite/kv-store", () => ({
+	SQLiteStorage: mockSqlite.SQLiteStorage,
+}));
 jest.mock("expo-crypto", () => ({
 	getRandomBytes: jest.fn((length: number) => new Uint8Array(length)),
 }));

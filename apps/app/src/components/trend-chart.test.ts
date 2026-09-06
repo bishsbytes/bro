@@ -1,5 +1,5 @@
 import type { TrendSeries } from "@bro/logic";
-import { render } from "@testing-library/react-native";
+import { fireEvent, render } from "@testing-library/react-native";
 import { createElement } from "react";
 import {
 	TrendChart,
@@ -25,6 +25,33 @@ const series: TrendSeries = {
 };
 
 describe("TrendChart", () => {
+	it("exposes selectable readings and an accessible text history", async () => {
+		const onSelect = jest.fn();
+		const view = await render(
+			createElement(TrendChart, { series, onSelect, displayUnit: "kg" }),
+		);
+		await fireEvent(
+			view.getByTestId("terrain-explorer"),
+			"accessibilityAction",
+			{ nativeEvent: { actionName: "decrement" } },
+		);
+		expect(onSelect).toHaveBeenLastCalledWith(series.points[0], "80.0 kg");
+		await fireEvent.press(view.getByText("Show readings"));
+		expect(view.getAllByText(/2026-08-29:/).length).toBeGreaterThan(0);
+		expect(view.getByText(/2026-09-04:/)).toBeTruthy();
+		await fireEvent.press(view.getByText("Back to latest"));
+		expect(onSelect).toHaveBeenLastCalledWith(null, "");
+	});
+
+	it("renders earlier isolated measurements without joining gaps", async () => {
+		const view = await render(
+			createElement(TrendChart, {
+				series: { ...series, segments: ["0.00,60.00", "300.00,85.00"] },
+			}),
+		);
+		expect(view.getAllByTestId("terrain-isolated-reading")).toHaveLength(2);
+	});
+
 	it("closes a terrain segment against the baseline at its own edges", () => {
 		expect(terrainPolygonPoints("120.00,60.00 180.00,30.00")).toBe(
 			"120.00,60.00 180.00,30.00 180.00,110 120.00,110",

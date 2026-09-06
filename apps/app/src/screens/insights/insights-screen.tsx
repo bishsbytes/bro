@@ -53,9 +53,38 @@ export function InsightsScreen({ store, insightStore }: InsightsScreenProps) {
 		reload: reloadInsights,
 	} = useFocusStoreLoad(useCallback(() => insights.load(), [insights]));
 
+	const moodSeries = snapshot?.metrics.find(
+		({ metric }) => metric.slug === "mood",
+	)?.series;
+	const recordedMood =
+		moodSeries?.points.filter((point) => point.value !== null) ?? [];
+	const firstMood = recordedMood[0];
+	const lastMood = recordedMood.at(-1);
+
 	return (
 		<Screen scroll padded contentContainerStyle={styles.content}>
 			<AppText color="muted">{t("intro")}</AppText>
+			<Card style={styles.card}>
+				<SectionHeader title={t("recent.title", { count: period })} />
+				<AppText color="muted">
+					{t("recent.recorded", { count: recordedMood.length })}
+				</AppText>
+				{firstMood && lastMood ? (
+					<AppText>
+						{t("recent.read", {
+							from: firstMood.localDay,
+							first: String(firstMood.value),
+							through: lastMood.localDay,
+							last: String(lastMood.value),
+						})}
+					</AppText>
+				) : (
+					<AppText color="muted">{t("recent.empty")}</AppText>
+				)}
+				<AppText variant="caption" color="muted">
+					{t("recent.note")}
+				</AppText>
+			</Card>
 
 			<View style={styles.section}>
 				<SectionHeader
@@ -149,7 +178,15 @@ export function InsightsScreen({ store, insightStore }: InsightsScreenProps) {
 					</AppText>
 				) : null}
 				{snapshot?.metrics.map(
-					({ metric, label, series, latestFormatted, usualRange, heading }) => (
+					({
+						metric,
+						label,
+						series,
+						latestFormatted,
+						usualRange,
+						heading,
+						displayUnit,
+					}) => (
 						<Card key={metric.slug} style={styles.card}>
 							<SectionHeader
 								title={label}
@@ -166,6 +203,8 @@ export function InsightsScreen({ store, insightStore }: InsightsScreenProps) {
 							) : null}
 							<TrendChart
 								series={series}
+								label={label}
+								displayUnit={displayUnit}
 								usualRange={usualRange}
 								heading={heading}
 							/>

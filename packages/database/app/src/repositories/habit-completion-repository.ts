@@ -50,8 +50,8 @@ export class HabitCompletionRepository extends BaseRepository {
 			);
 		}
 
-		return await this.transaction(async () => {
-			const habit = await this.first<{ kind: string }>(
+		return await this.transaction(async (repository) => {
+			const habit = await repository.first<{ kind: string }>(
 				"SELECT kind FROM habits WHERE id = ?",
 				[habitId],
 			);
@@ -64,21 +64,21 @@ export class HabitCompletionRepository extends BaseRepository {
 				);
 			}
 
-			const existing = await this.findByHabitDay(habitId, localDay);
+			const existing = await repository.findByHabitDay(habitId, localDay);
 			if (existing) {
 				return existing;
 			}
 
-			const now = this.now();
+			const now = repository.now();
 			const completion: HabitCompletion = {
-				id: this.createId(now),
+				id: repository.createId(now),
 				habitId,
 				localDay,
 				completedAt: now,
 				createdAt: now,
 				updatedAt: now,
 			};
-			await this.run(
+			await repository.run(
 				`INSERT OR IGNORE INTO habit_completions (
 					id, habit_id, local_day, completed_at, created_at, updated_at
 				) VALUES (?, ?, ?, ?, ?, ?)`,
@@ -91,7 +91,7 @@ export class HabitCompletionRepository extends BaseRepository {
 					completion.updatedAt,
 				],
 			);
-			const persisted = await this.findByHabitDay(habitId, localDay);
+			const persisted = await repository.findByHabitDay(habitId, localDay);
 			if (!persisted) {
 				throw new Error("Habit completion did not persist a row.");
 			}

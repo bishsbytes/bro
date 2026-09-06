@@ -74,6 +74,34 @@ describe("check-in store", () => {
 		mockSqlite.cleanup();
 	});
 
+	it("records absent tags only after explicit review", async () => {
+		const store = new CheckInStore(db, () => CAPTURED_AT);
+		const before = await store.loadToday();
+		const tag = before.availableTags[0];
+		expect(tag).toBeDefined();
+		await store.saveDayTags([]);
+		const observations = new databaseApp.ObservationRepository(db);
+		expect(
+			(await observations.listByDay(LOCAL_DAY)).filter(
+				(row) => row.metricSlug === tag.slug,
+			),
+		).toEqual([]);
+		const reviewed = await store.saveDayTags([], true);
+		expect(reviewed.selectedTagSlugs).toEqual([]);
+		expect(
+			(await observations.listByDay(LOCAL_DAY)).find(
+				(row) => row.metricSlug === tag.slug,
+			)?.value,
+		).toBe(0);
+		const selected = await store.saveDayTags([tag.slug]);
+		expect(selected.selectedTagSlugs).toEqual([tag.slug]);
+		expect(
+			(await observations.listByDay(LOCAL_DAY)).find(
+				(row) => row.metricSlug === tag.slug,
+			)?.value,
+		).toBe(1);
+	});
+
 	it("preserves a row's scale snapshot when an entry is edited", async () => {
 		const observations = new databaseApp.ObservationRepository(db);
 		const mood = await observations.create({

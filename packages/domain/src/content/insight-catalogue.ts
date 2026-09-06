@@ -230,8 +230,8 @@ export const INSIGHT_CATALOGUE = [
 		tier: "premium",
 		copy: {
 			summary:
-				"Your energy averaged {trueMean} on days after junk food ({trueCount} days), against {falseMean} otherwise ({falseCount} days).",
-			trueArmLabel: "Days after junk food",
+				"Your energy averaged {trueMean} on days after convenience food ({trueCount} days), against {falseMean} otherwise ({falseCount} days).",
+			trueArmLabel: "Days after convenience food",
 			falseArmLabel: "After other days",
 		},
 	},
@@ -249,9 +249,9 @@ export const INSIGHT_CATALOGUE = [
 		tier: "premium",
 		copy: {
 			summary:
-				"Your energy averaged {trueMean} on days after logging 4 or more units ({trueCount} days), against {falseMean} after lower-alcohol days ({falseCount} days).",
+				"Your energy averaged {trueMean} on days after logging 4 or more units ({trueCount} days), against {falseMean} after days with lower logged alcohol totals ({falseCount} days).",
 			trueArmLabel: "After 4 or more units",
-			falseArmLabel: "After fewer than 4 units",
+			falseArmLabel: "After fewer than 4 logged units",
 		},
 	},
 	{
@@ -268,9 +268,9 @@ export const INSIGHT_CATALOGUE = [
 		tier: "premium",
 		copy: {
 			summary:
-				"Your sleep averaged {trueMean} after logging 4 or more units ({trueCount} days), against {falseMean} after lower-alcohol days ({falseCount} days).",
+				"Your sleep averaged {trueMean} after logging 4 or more units ({trueCount} days), against {falseMean} after days with lower logged alcohol totals ({falseCount} days).",
 			trueArmLabel: "After 4 or more units",
-			falseArmLabel: "After fewer than 4 units",
+			falseArmLabel: "After fewer than 4 logged units",
 		},
 	},
 ] as const satisfies readonly InsightCatalogueEntry[];

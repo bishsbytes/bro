@@ -1,5 +1,6 @@
 import { localDayOf } from "@bro/domain";
 import { isTapeSiteSlug } from "@bro/domain/metric-registry";
+import type { TrendPoint } from "@bro/logic";
 import { useTranslation } from "react-i18next";
 import type { BodyMetricSummary } from "../../body/body-store";
 import { BaselineGauge } from "../../components/baseline-gauge";
@@ -77,23 +78,37 @@ export function BodyBaselineGauge({
 	metric,
 	locale,
 	valueVariant = "score",
+	explored,
 }: {
 	metric: BodyMetricSummary;
 	locale: string | undefined;
 	valueVariant?: "metric" | "score";
+	explored?: { point: TrendPoint; formatted: string } | null;
 }) {
 	const { t } = useTranslation(["body", "common"]);
 	const todayLocalDay = localDayOf(new Date());
 	const { baseline } = metric;
 	const displayed = gaugeValueParts(metric);
-	const read = readLine(t, metric, todayLocalDay, locale);
+	const read = explored
+		? explored.point.localDay
+		: readLine(t, metric, todayLocalDay, locale);
 
 	return (
 		<BaselineGauge
 			label={metric.label}
-			meta={readingMeta(t, metric, todayLocalDay, locale)}
-			value={baseline.current ? displayed.value : t("common:emDash")}
-			unit={displayed.unit}
+			meta={
+				explored
+					? explored.point.localDay
+					: readingMeta(t, metric, todayLocalDay, locale)
+			}
+			value={
+				explored
+					? explored.formatted
+					: baseline.current
+						? displayed.value
+						: t("common:emDash")
+			}
+			unit={explored ? null : displayed.unit}
 			valueVariant={valueVariant}
 			rail={baseline.rail}
 			railLabels={
@@ -105,12 +120,15 @@ export function BodyBaselineGauge({
 					: null
 			}
 			band={baseline.usualRange}
-			current={baseline.current?.value}
-			previous={baseline.previous?.value ?? null}
+			current={explored ? explored.point.value : baseline.current?.value}
+			previous={explored ? null : (baseline.previous?.value ?? null)}
 			read={read}
 			accessibilityLabel={t("body:read.gaugeA11y", {
 				name: metric.label,
-				value: baseline.current?.formatted ?? t("common:emDash"),
+				value:
+					explored?.formatted ??
+					baseline.current?.formatted ??
+					t("common:emDash"),
 				read,
 			})}
 			domain={dataDomainForMetric(metric.metricSlug)}

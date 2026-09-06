@@ -13,11 +13,13 @@ import {
 	IntakeStreamRepository,
 	ObservationRepository,
 	ReminderRepository,
+	restoreProductData,
 	TrackedMetricsRepository,
 	UnitPreferenceRepository,
+	withTransaction,
 } from "@bro/database-app";
 import { METRIC_REGISTRY } from "@bro/domain/metric-registry";
-import { serializeCheckInExport } from "@bro/logic";
+import { parseCheckInExport, serializeCheckInExport } from "@bro/logic";
 import Constants from "expo-constants";
 import type { SQLiteDatabase } from "expo-sqlite";
 
@@ -28,7 +30,33 @@ export class ExportStore {
 		private readonly now: () => number = Date.now,
 	) {}
 
-	async serialize(includeSensitive: boolean): Promise<string> {
+	async restore(payload: string): Promise<number> {
+		const parsed = parseCheckInExport(payload);
+		return restoreProductData(this.db, parsed, async (database) => {
+			// Exercise every repository decoder before committing the restored rows.
+			await new ExportStore(database, this.appVersion, this.now).serialize(
+				true,
+				true,
+			);
+		});
+	}
+
+	async serialize(
+		includeSensitive: boolean,
+		includeNotes = false,
+	): Promise<string> {
+		return withTransaction(this.db, async ({ database }) =>
+			new ExportStore(database, this.appVersion, this.now).serializeWithin(
+				includeSensitive,
+				includeNotes,
+			),
+		);
+	}
+
+	private async serializeWithin(
+		includeSensitive: boolean,
+		includeNotes = false,
+	): Promise<string> {
 		const consumableRepository = new ConsumableRepository(this.db);
 		const [
 			observations,
@@ -95,6 +123,7 @@ export class ExportStore {
 				appVersion: this.appVersion,
 				exportedAt: this.now(),
 				excludeSensitiveMetrics: !includeSensitive,
+				excludeNotes: !includeNotes,
 			},
 		);
 	}

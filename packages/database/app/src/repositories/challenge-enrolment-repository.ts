@@ -69,16 +69,16 @@ export class ChallengeEnrolmentRepository extends BaseRepository {
 			);
 		}
 
-		return await this.transaction(async () => {
-			const active = await this.findActiveBySlug(challengeSlug);
+		return await this.transaction(async (repository) => {
+			const active = await repository.findActiveBySlug(challengeSlug);
 			if (active) {
 				throw new Error(
 					`Challenge already has an active enrolment: ${challengeSlug}`,
 				);
 			}
-			const now = this.now();
+			const now = repository.now();
 			const enrolment: ChallengeEnrolment = {
-				id: this.createId(now),
+				id: repository.createId(now),
 				challengeSlug,
 				title,
 				durationDays: input.durationDays,
@@ -89,7 +89,7 @@ export class ChallengeEnrolmentRepository extends BaseRepository {
 				createdAt: now,
 				updatedAt: now,
 			};
-			await this.run(
+			await repository.run(
 				`INSERT INTO challenge_enrolments (
 					id, challenge_slug, title, duration_days, area_slug, started_on,
 					completed_at, abandoned_at, created_at, updated_at

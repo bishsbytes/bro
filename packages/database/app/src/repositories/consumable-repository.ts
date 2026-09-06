@@ -467,8 +467,8 @@ export class ConsumableRepository extends BaseRepository {
 		if (!existing) {
 			return null;
 		}
-		return await this.transaction(async () => {
-			const ingredients = await this.listIngredients(id);
+		return await this.transaction(async (repository) => {
+			const ingredients = await repository.listIngredients(id);
 			if (input.recipe === null && ingredients.length > 0) {
 				throw new TypeError(
 					"Remove a recipe's ingredients before making it a plain consumable.",
@@ -484,8 +484,8 @@ export class ConsumableRepository extends BaseRepository {
 				source: existing.source,
 				forkedFrom: existing.forkedFrom,
 			});
-			await this.writeComposition(id, normalized, this.now());
-			return await this.findById(id);
+			await repository.writeComposition(id, normalized, repository.now());
+			return await repository.findById(id);
 		});
 	}
 
@@ -508,13 +508,15 @@ export class ConsumableRepository extends BaseRepository {
 
 	/** Hard delete, with the recipe's own ingredient rows. Events keep their snapshot. */
 	async delete(id: string): Promise<boolean> {
-		return await this.transaction(async () => {
-			await this.run("DELETE FROM recipe_ingredients WHERE recipe_id = ?", [
-				id,
-			]);
-			const result = await this.run("DELETE FROM consumables WHERE id = ?", [
-				id,
-			]);
+		return await this.transaction(async (repository) => {
+			await repository.run(
+				"DELETE FROM recipe_ingredients WHERE recipe_id = ?",
+				[id],
+			);
+			const result = await repository.run(
+				"DELETE FROM consumables WHERE id = ?",
+				[id],
+			);
 			return result.changes > 0;
 		});
 	}
@@ -533,12 +535,16 @@ export class ConsumableRepository extends BaseRepository {
 		input: CreateRecipeIngredient,
 	): Promise<RecipeIngredient> {
 		const normalized = normalizeIngredient(input);
-		return await this.transaction(async () => {
-			const recipe = await this.requireRecipe(recipeId);
-			await this.assertNoCycle(recipeId, normalized.consumableId);
-			const now = this.now();
-			const ingredient = await this.insertIngredient(recipeId, normalized, now);
-			await this.recompute(recipe, now);
+		return await this.transaction(async (repository) => {
+			const recipe = await repository.requireRecipe(recipeId);
+			await repository.assertNoCycle(recipeId, normalized.consumableId);
+			const now = repository.now();
+			const ingredient = await repository.insertIngredient(
+				recipeId,
+				normalized,
+				now,
+			);
+			await repository.recompute(recipe, now);
 			return ingredient;
 		});
 	}
@@ -552,11 +558,14 @@ export class ConsumableRepository extends BaseRepository {
 			return null;
 		}
 		const normalized = normalizeIngredient(input);
-		return await this.transaction(async () => {
-			const recipe = await this.requireRecipe(existing.recipeId);
-			await this.assertNoCycle(existing.recipeId, normalized.consumableId);
-			const now = this.now();
-			await this.run(
+		return await this.transaction(async (repository) => {
+			const recipe = await repository.requireRecipe(existing.recipeId);
+			await repository.assertNoCycle(
+				existing.recipeId,
+				normalized.consumableId,
+			);
+			const now = repository.now();
+			await repository.run(
 				`UPDATE recipe_ingredients SET
 					position = ?, consumable_id = ?, source_ref = ?, name = ?,
 					portion_label = ?, quantity = ?, mass_kg = ?, volume_l = ?,
@@ -576,8 +585,8 @@ export class ConsumableRepository extends BaseRepository {
 					id,
 				],
 			);
-			await this.recompute(recipe, now);
-			return await this.findIngredientById(id);
+			await repository.recompute(recipe, now);
+			return await repository.findIngredientById(id);
 		});
 	}
 
@@ -586,10 +595,10 @@ export class ConsumableRepository extends BaseRepository {
 		if (!existing) {
 			return false;
 		}
-		await this.transaction(async () => {
-			const recipe = await this.requireRecipe(existing.recipeId);
-			await this.run("DELETE FROM recipe_ingredients WHERE id = ?", [id]);
-			await this.recompute(recipe, this.now());
+		await this.transaction(async (repository) => {
+			const recipe = await repository.requireRecipe(existing.recipeId);
+			await repository.run("DELETE FROM recipe_ingredients WHERE id = ?", [id]);
+			await repository.recompute(recipe, repository.now());
 		});
 		return true;
 	}
@@ -601,22 +610,23 @@ export class ConsumableRepository extends BaseRepository {
 		scope?: TransactionScope,
 	): Promise<RecipeIngredient[]> {
 		const normalized = inputs.map(normalizeIngredient);
-		return await this.transaction(async () => {
-			const recipe = await this.requireRecipe(recipeId);
+		return await this.transaction(async (repository) => {
+			const recipe = await repository.requireRecipe(recipeId);
 			for (const ingredient of normalized) {
-				await this.assertNoCycle(recipeId, ingredient.consumableId);
+				await repository.assertNoCycle(recipeId, ingredient.consumableId);
 			}
-			const now = this.now();
-			await this.run("DELETE FROM recipe_ingredients WHERE recipe_id = ?", [
-				recipeId,
-			]);
+			const now = repository.now();
+			await repository.run(
+				"DELETE FROM recipe_ingredients WHERE recipe_id = ?",
+				[recipeId],
+			);
 			const ingredients: RecipeIngredient[] = [];
 			for (const ingredient of normalized) {
 				ingredients.push(
-					await this.insertIngredient(recipeId, ingredient, now),
+					await repository.insertIngredient(recipeId, ingredient, now),
 				);
 			}
-			await this.recompute(recipe, now);
+			await repository.recompute(recipe, now);
 			return ingredients;
 		}, scope);
 	}

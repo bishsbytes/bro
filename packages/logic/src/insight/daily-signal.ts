@@ -49,13 +49,6 @@ export function createDailySignalReader(
 		if (events) events.push(event);
 		else intakeEventsByDay.set(event.localDay, [event]);
 	}
-	const checkInDays = new Set<string>();
-	for (const row of source.observations) {
-		const resolved = resolveMetric(row.metricSlug);
-		if (resolved.kind === "known" && resolved.metric.kind === "scored") {
-			checkInDays.add(row.localDay);
-		}
-	}
 
 	return (metricSlug, localDay) => {
 		const resolved = resolveMetric(metricSlug);
@@ -69,8 +62,9 @@ export function createDailySignalReader(
 			if (present) {
 				return { metricSlug, localDay, value: 1 };
 			}
-			return checkInDays.has(localDay) &&
-				(source.tagActive?.(metricSlug, localDay) ?? true)
+			// Only an explicit absence is a negative observation. A mood check-in
+			// does not establish whether the person reviewed their activity tags.
+			return dayRows.some((row) => row.value === 0)
 				? { metricSlug, localDay, value: 0 }
 				: null;
 		}
@@ -86,16 +80,7 @@ export function createDailySignalReader(
 			if (value !== null) {
 				return { metricSlug, localDay, value };
 			}
-			// An intake metric has no "not logged" state a user can express, so
-			// a check-in day with no events reads as zero intake —
-			// the denominator both intake presence and threshold insights need.
-			// Imported measurements (sleep, steps) keep dropping absent days.
-			const consumptionDerived =
-				"measurementSource" in metric &&
-				metric.measurementSource === "consumption";
-			return consumptionDerived && checkInDays.has(localDay)
-				? { metricSlug, localDay, value: 0 }
-				: null;
+			return null;
 		}
 
 		const rows = dayRows.filter(
