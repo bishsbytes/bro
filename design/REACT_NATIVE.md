@@ -1,6 +1,6 @@
 # Grounded Editorial in the Expo app
 
-Use the September 2026 guide and JSON tokens. Runtime styles come from `apps/app/src/theme/unistyles.ts`. Components import that module so Unistyles is configured before route evaluation. Reuse the bundled Instrument Serif for headings and platform sans for interface text and tabular readings. Existing legacy `mono*` roles now resolve to tabular sans; stored accent preferences are retained for compatibility, while current UI uses the fixed brand and Log colours.
+Use the September 2026 guide and JSON tokens. Runtime styles come from `apps/app/src/theme/unistyles.ts`. Components import that module so Unistyles is configured before route evaluation. Use bundled Caladea Regular for headings and Caladea Regular for notes (both editing and reading), with bold and italic for note formatting, and platform sans for interface text and tabular readings. Bundle Caladea regular, italic and bold; Instrument Serif, Instrument Sans and Geist Mono are retired. Existing legacy `mono*` roles now resolve to tabular sans; stored accent preferences are retained for compatibility, while current UI uses the fixed brand and Log colours.
 
 System / Light / Dark resolves through `DeviceSettingsProvider`, before the splash hides. Native tab and stack navigation remains in place. Picker and sheet styles resolve from the same theme. Do not remount screens to change appearance.
 

@@ -157,15 +157,15 @@ const sans = Platform.select({
 	default: "system-ui",
 });
 const largeTitle = {
-	fontFamily: "InstrumentSerif_400Regular",
-	fontSize: 32,
-	lineHeight: 38,
+	fontFamily: "Caladea_400Regular",
+	fontSize: 34,
+	lineHeight: 40,
 	letterSpacing: -0.4,
 };
 const title = {
-	fontFamily: "InstrumentSerif_400Regular",
-	fontSize: 28,
-	lineHeight: 34,
+	fontFamily: "Caladea_400Regular",
+	fontSize: 30,
+	lineHeight: 36,
 	letterSpacing: -0.3,
 };
 const section = {
@@ -234,7 +234,7 @@ const monoInline = {
 	fontVariant: tabular,
 };
 const serifQuote = {
-	fontFamily: sans,
+	fontFamily: "Caladea_400Regular",
 	fontSize: 20,
 	lineHeight: 26,
 };
@@ -257,7 +257,7 @@ const typography = {
 	metric: monoHero,
 	display: largeTitle,
 	score: monoList,
-	lead: serifQuote,
+	lead: { ...serifQuote, fontFamily: sans },
 	label: { ...bodyMedium, fontSize: 14, lineHeight: 20 },
 	micro: footnote,
 	face: { fontSize: 22, lineHeight: 28 },
@@ -276,7 +276,7 @@ const shared = {
 	fonts: {
 		sans,
 		mono: sans,
-		serif: "InstrumentSerif_400Regular",
+		serif: "Caladea_400Regular",
 	},
 	control: {
 		buttonMinHeight: 52,
@@ -492,7 +492,7 @@ export function stackScreenOptions(
 			color: theme.colors.ink,
 		},
 		headerTitleStyle: {
-			fontFamily: theme.fonts.serif,
+			fontFamily: theme.typography.title.fontFamily,
 			fontWeight: "400" as const,
 			color: theme.colors.ink,
 		},

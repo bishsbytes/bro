@@ -80,7 +80,7 @@ const styles = StyleSheet.create((theme) => ({
 	// Two lines plus the largest gap a pair of formatted list items can carry.
 	// A fixed preview viewport keeps list rows level without flattening Markdown.
 	preview: {
-		height: theme.typography.lead.lineHeight * 2 + theme.spacing.xs,
+		height: theme.typography.serifQuote.lineHeight * 2 + theme.spacing.xs,
 		overflow: "hidden",
 	},
 }));

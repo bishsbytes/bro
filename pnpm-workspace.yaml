@@ -22,9 +22,7 @@ catalog:
   '@babel/runtime': ~7.27.6
   '@better-auth/expo': ^1.6.27
   '@biomejs/biome': ^2.5.7
-  '@expo-google-fonts/geist-mono': ^0.4.3
-  '@expo-google-fonts/instrument-sans': ^0.4.2
-  '@expo-google-fonts/instrument-serif': ^0.4.1
+  '@expo-google-fonts/caladea': ^0.4.2
   '@expo/cli': ~56.1.14
   '@expo/metro': ~56.0.0
   '@expo/metro-runtime': ~56.0.14

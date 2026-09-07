@@ -95,11 +95,11 @@ export function MarkdownField({
 	// the stylesheet below.
 	const flush = appearance === "flush";
 	const inputStyle: TextStyle = {
-		fontFamily: theme.typography.lead.fontFamily,
-		fontSize: theme.typography.lead.fontSize,
+		fontFamily: theme.typography.serifQuote.fontFamily,
+		fontSize: theme.typography.serifQuote.fontSize,
 		// The enriched native editor interprets lineHeight as physical pixels on
-		// Android while fontSize is density-scaled. Supplying Helm's 26pt line
-		// height therefore clips the 21pt serif face on high-density screens.
+		// Android while fontSize is density-scaled. An explicit line height
+		// therefore clips the serif face on high-density screens.
 		// Let the native typeface provide its own readable leading here.
 		fontWeight: "400",
 		color: theme.colors.ink,

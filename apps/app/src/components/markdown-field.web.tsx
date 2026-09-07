@@ -50,7 +50,7 @@ export function MarkdownField({
 const styles = StyleSheet.create((theme) => ({
 	container: { gap: theme.spacing.sm, minHeight: 0 },
 	input: {
-		...theme.typography.lead,
+		...theme.typography.serifQuote,
 		color: theme.colors.ink,
 		minHeight: theme.control.noteMinHeight,
 		textAlignVertical: "top",

@@ -34,7 +34,8 @@ describe("NoteRow", () => {
 		expect(
 			NativeStyleSheet.flatten(screen.getByText("A thought").props.style),
 		).toMatchObject({
-			height: lightTheme.typography.lead.lineHeight * 2 + lightTheme.spacing.xs,
+			height:
+				lightTheme.typography.serifQuote.lineHeight * 2 + lightTheme.spacing.xs,
 			overflow: "hidden",
 		});
 	});

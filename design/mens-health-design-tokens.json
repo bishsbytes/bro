@@ -44,12 +44,12 @@
 	},
 	"type": {
 		"display": {
-			"size": 32,
-			"lineHeight": 38
+			"size": 34,
+			"lineHeight": 40
 		},
 		"title": {
-			"size": 28,
-			"lineHeight": 34
+			"size": 30,
+			"lineHeight": 36
 		},
 		"section": {
 			"size": 20,
@@ -68,7 +68,8 @@
 			"lineHeight": 16
 		},
 		"familyRoles": {
-			"display": "Licensed sturdy editorial serif, exact face to confirm",
+			"display": "Caladea Regular",
+			"notes": "Caladea",
 			"ui": "Native platform sans serif"
 		},
 		"scaleWithSystem": true,

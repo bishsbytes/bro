@@ -307,7 +307,7 @@ Let titles wrap, cards grow and long unit/value pairs reflow. Horizontal control
 | Light colour | Canvas #FFFDFA; surface #F4F1EB; ink #202725; secondary #626B65. | The base of all four primary areas; surfaces are darker than the canvas. |
 | Brand / action | Deep teal #174F4A; on-brand #FFFFFF; clay #A14F36. | Teal primary/selection; clay reserved for the labelled add action. |
 | Control boundary | Interactive border #78847D; selected-soft #E0ECE7; error #A33932. | Distinguishable controls. Pale dividers remain decorative only. |
-| Typography | Display 32/38; title 28/34; section 20/26; body 16/24; label 14/20. | Serif headlines only; sans-serif metrics, units, forms and chart labels. |
+| Typography | Display 34/40; title 30/36; section 20/26; body 16/24; label 14/20. | Caladea Regular headlines and Caladea Regular notes; notes use 20/26 when reading, with native leading in the editor. Sans-serif metrics, units, other forms and chart labels. |
 | Layout | Page inset 24; spacing 4 / 8 / 12 / 16 / 24 / 32 / 48. | Repeated rhythm, generous separation between tasks. |
 | Components | Card radius 16; input radius 12; primary button 52 high; hit area at least 48. | Rows and cards grow with content; dimensions are starting points. |
 | Feedback | State feedback 120-180 ms; sheet transitions 220-280 ms. | Optional subtle haptics; honour reduced motion. |

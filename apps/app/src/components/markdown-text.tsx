@@ -31,9 +31,9 @@ export function MarkdownText({
 	// on a theme change, and this is a plain object literal either way.
 	const markdownStyle: MarkdownStyle = {
 		paragraph: {
-			fontFamily: theme.typography.lead.fontFamily,
-			fontSize: theme.typography.lead.fontSize,
-			lineHeight: theme.typography.lead.lineHeight,
+			fontFamily: theme.typography.serifQuote.fontFamily,
+			fontSize: theme.typography.serifQuote.fontSize,
+			lineHeight: theme.typography.serifQuote.lineHeight,
 			color: theme.colors.ink,
 			marginTop: 0,
 			// The editor treats each paragraph as the next line in one note. Keep
@@ -42,15 +42,15 @@ export function MarkdownText({
 		},
 		// The real cuts are loaded, so tell the renderer to set them as they are
 		// instead of slanting and thickening the regular face on top of them.
-		strong: { fontFamily: "InstrumentSerif_400Regular", fontWeight: "normal" },
+		strong: { fontFamily: "Caladea_700Bold", fontWeight: "normal" },
 		em: {
-			fontFamily: "InstrumentSerif_400Regular_Italic",
+			fontFamily: "Caladea_400Regular_Italic",
 			fontStyle: "normal",
 		},
 		list: {
-			fontFamily: theme.typography.lead.fontFamily,
-			fontSize: theme.typography.lead.fontSize,
-			lineHeight: theme.typography.lead.lineHeight,
+			fontFamily: theme.typography.serifQuote.fontFamily,
+			fontSize: theme.typography.serifQuote.fontSize,
+			lineHeight: theme.typography.serifQuote.lineHeight,
 			color: theme.colors.ink,
 			bulletColor: theme.colors.ink2,
 			markerColor: theme.colors.ink2,

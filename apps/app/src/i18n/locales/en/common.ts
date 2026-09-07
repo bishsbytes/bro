@@ -16,7 +16,9 @@ export const common = {
 		failed:
 			"The NHS page could not be opened. Visit nhs.uk and search for urgent mental health help.",
 	},
+	event: { date: "Date", time: "Time", today: "Today" },
 	actions: {
+		close: "Close",
 		undo: "Undo",
 		tryAgain: "Try again",
 		viewLog: "View log",

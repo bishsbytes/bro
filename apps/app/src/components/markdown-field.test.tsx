@@ -79,7 +79,7 @@ describe("MarkdownField", () => {
 		const style = StyleSheet.flatten(screen.getByLabelText("Note").props.style);
 
 		expect(style).toMatchObject({
-			fontFamily: "System",
+			fontFamily: "Caladea_400Regular",
 			fontSize: 20,
 			fontWeight: "400",
 			color: expect.stringMatching(/^#/),

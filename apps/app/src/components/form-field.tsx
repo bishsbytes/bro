@@ -91,9 +91,9 @@ const styles = StyleSheet.create((theme) => ({
 	invalid: { borderColor: theme.colors.alert },
 	multiline: {
 		minHeight: theme.control.noteMinHeight,
-		fontFamily: theme.typography.lead.fontFamily,
-		fontSize: theme.typography.lead.fontSize,
-		lineHeight: theme.typography.lead.lineHeight,
+		fontFamily: theme.typography.serifQuote.fontFamily,
+		fontSize: theme.typography.serifQuote.fontSize,
+		lineHeight: theme.typography.serifQuote.lineHeight,
 		textAlignVertical: "top",
 	},
 	error: { marginTop: theme.spacing.xs },
