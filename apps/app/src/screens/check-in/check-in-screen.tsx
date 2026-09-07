@@ -38,7 +38,7 @@ type CheckInStep = {
 	label: string;
 	question: string;
 	labels?: readonly string[];
-	description: string;
+	description?: string;
 	endLabels: Readonly<{ minimum: string; maximum: string }>;
 };
 
@@ -140,7 +140,6 @@ export function CheckInScreen({
 					t("mood.good"),
 					t("mood.sharp"),
 				],
-				description: t(`slots.${slot}.moodHint`),
 				endLabels: {
 					minimum: t("common:ratingEnds.veryBad"),
 					maximum: t("common:ratingEnds.veryGood"),
@@ -490,9 +489,11 @@ export function CheckInScreen({
 					<AppText variant="display" accessibilityRole="header">
 						{step.question}
 					</AppText>
-					<AppText color="muted" style={styles.leftText}>
-						{step.description}
-					</AppText>
+					{step.description ? (
+						<AppText color="muted" style={styles.leftText}>
+							{step.description}
+						</AppText>
+					) : null}
 				</View>
 				<ScoreRow
 					accessibilityPrefix={step.label}

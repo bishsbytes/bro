@@ -8,6 +8,8 @@ Light appearance uses an off-white canvas (`#FFFDFA`) and darker warm stone card
 
 Day tiles have subtle borders inside their spacing; the full tile area remains tappable. Header action surfaces are borderless circles. Factor chips have 12-point corners and a 40-point visual height inside a minimum 48-point touch target; allow growth for larger text. Unselected chips are transparent with faint outlines; selected chips use the soft selection tint and a checkmark without a contrasting border.
 
+Check-in choices are borderless surfaces with a brand fill and checkmark for selection. The mood question leads directly into the choices without a supporting caption.
+
 ## Component contracts
 
 Paths below are relative to `apps/app/src`.

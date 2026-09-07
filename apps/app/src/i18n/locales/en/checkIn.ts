@@ -13,13 +13,11 @@ export const checkIn = {
 			title: "Morning check-in",
 			name: "Morning",
 			tagline: "Start with how you feel.",
-			moodHint: "How you feel as the day starts.",
 		},
 		evening: {
 			title: "Evening check-in",
 			name: "Evening",
 			tagline: "Reflect and unwind",
-			moodHint: "How you feel as the day ends.",
 		},
 	},
 	/** Panel group headings shared by the check-in and its settings screen. */

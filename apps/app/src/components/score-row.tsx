@@ -125,8 +125,7 @@ const styles = StyleSheet.create((theme) => ({
 		flexDirection: "row",
 		gap: theme.spacing.md,
 		padding: theme.spacing.lg,
-		borderWidth: 1,
-		borderColor: theme.colors.interactiveBorder,
+		borderWidth: 0,
 		minHeight: theme.control.scoreMinHeight,
 		alignItems: "center",
 		justifyContent: "center",
@@ -137,7 +136,6 @@ const styles = StyleSheet.create((theme) => ({
 	numericLabel: { minWidth: 20, fontVariant: ["tabular-nums"] },
 	selected: {
 		backgroundColor: theme.colors.brand,
-		borderColor: theme.colors.brand,
 	},
 	selectedText: { color: theme.colors.onBrand },
 	disabled: { opacity: theme.opacity.disabled },
