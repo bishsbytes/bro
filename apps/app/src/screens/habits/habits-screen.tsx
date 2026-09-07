@@ -434,7 +434,7 @@ const styles = StyleSheet.create((theme) => ({
 		paddingVertical: theme.spacing.xs,
 		borderWidth: 1,
 		borderColor: theme.colors.border,
-		borderRadius: theme.radius.sm,
+		borderRadius: theme.radius.pill,
 	},
 	weekday: {
 		flex: 1,
@@ -443,7 +443,7 @@ const styles = StyleSheet.create((theme) => ({
 		justifyContent: "center",
 		borderWidth: 1,
 		borderColor: theme.colors.border,
-		borderRadius: theme.radius.sm,
+		borderRadius: theme.radius.pill,
 	},
 	selected: {
 		backgroundColor: theme.colors.selected,

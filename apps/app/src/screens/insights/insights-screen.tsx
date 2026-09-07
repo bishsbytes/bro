@@ -242,7 +242,7 @@ const styles = StyleSheet.create((theme) => ({
 		paddingVertical: theme.spacing.sm,
 		borderWidth: 1,
 		borderColor: theme.colors.border,
-		borderRadius: theme.radius.sm,
+		borderRadius: theme.radius.pill,
 	},
 	periodSelected: {
 		backgroundColor: theme.colors.selected,

@@ -249,7 +249,7 @@ const styles = StyleSheet.create((theme) => ({
 	retryButton: {
 		marginTop: theme.spacing.xl,
 		backgroundColor: theme.colors.brand,
-		borderRadius: theme.radius.sm,
+		borderRadius: theme.radius.pill,
 		paddingHorizontal: theme.spacing.xl,
 		paddingVertical: theme.spacing.md,
 	},

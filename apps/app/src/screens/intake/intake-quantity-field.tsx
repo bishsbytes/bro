@@ -160,7 +160,7 @@ const styles = StyleSheet.create((theme) => ({
 		paddingVertical: theme.spacing.sm,
 		borderWidth: 1,
 		borderColor: theme.colors.line,
-		borderRadius: theme.radius.control,
+		borderRadius: theme.radius.pill,
 	},
 	unitText: { flexShrink: 1, textAlign: "center" },
 	options: { gap: theme.spacing.sm },

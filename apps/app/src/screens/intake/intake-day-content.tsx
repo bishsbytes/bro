@@ -389,7 +389,7 @@ const styles = StyleSheet.create((theme) => ({
 		alignItems: "center",
 		justifyContent: "center",
 		backgroundColor: theme.colors.surface,
-		borderRadius: theme.radius.md,
+		borderRadius: theme.radius.pill,
 	},
 	navButtonPressed: { backgroundColor: theme.colors.surfaceSunk },
 	navButtonDisabled: { opacity: theme.opacity.disabled },

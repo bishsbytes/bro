@@ -14,6 +14,8 @@ The header date, check-in card sitting names and check-in screen sitting label u
 
 ## Component contracts
 
+Buttons use fully rounded ends (`theme.radius.pill`) across primary, secondary, destructive and text variants. Reuse `components/button.tsx` for labelled actions and inherit its radius instead of overriding it per screen. Custom compact action buttons use the same pill token; square icon actions are circular. Cards, fields, selectable rows and factor chips retain their own shape tokens.
+
 Paths below are relative to `apps/app/src`.
 
 | Contract | Implementation |

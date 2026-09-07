@@ -1255,13 +1255,12 @@ const styles = StyleSheet.create((theme) => ({
 		flexWrap: "wrap",
 		gap: theme.spacing.xs,
 		backgroundColor: theme.colors.surface,
-		borderRadius: theme.radius.control,
+		borderRadius: theme.radius.pill,
 	},
 	typeOption: {
 		flexGrow: 1,
 		borderWidth: 0,
 		minWidth: "40%",
-		borderRadius: theme.radius.control,
 	},
 	nutritionSection: { gap: theme.spacing.sm },
 	nutritionField: {
@@ -1294,7 +1293,6 @@ const styles = StyleSheet.create((theme) => ({
 	centered: { textAlign: "center" },
 	actions: { flexDirection: "column", gap: theme.spacing.sm },
 	filter: {
-		borderRadius: theme.radius.pill,
 		borderWidth: 0,
 		minHeight: theme.control.minHitArea,
 	},

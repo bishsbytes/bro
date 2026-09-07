@@ -74,7 +74,7 @@ const styles = StyleSheet.create((theme) => ({
 		minHeight: theme.control.buttonMinHeight,
 		alignItems: "center",
 		justifyContent: "center",
-		borderRadius: theme.radius.control,
+		borderRadius: theme.radius.pill,
 		paddingHorizontal: theme.spacing.lg,
 		paddingVertical: theme.spacing.md,
 	},
