@@ -1,4 +1,3 @@
-import { previousLocalDay, shiftLocalDay } from "@bro/domain";
 import { INTAKE_BASELINE_MIN_LOGGED_DAYS } from "@bro/logic";
 import { type Href, router } from "expo-router";
 import { useEffect, useLayoutEffect, useRef, useState } from "react";
@@ -8,7 +7,6 @@ import { AppText } from "../../components/app-text";
 import { BaselineGauge } from "../../components/baseline-gauge";
 import { Button } from "../../components/button";
 import { Card } from "../../components/card";
-import { Icon } from "../../components/icon";
 import { SectionHeader } from "../../components/section-header";
 import type {
 	IntakeDaySnapshot,
@@ -33,7 +31,6 @@ type IntakeDayContentProps = {
 	/** Which half of the card is showing; the parent owns it so a caller can open the day on its entries. */
 	segment: IntakeDaySegment;
 	onSelectSegment: (segment: IntakeDaySegment) => void;
-	onSelectDay: (localDay: string) => void;
 	/** Resolves true once the change is saved and the day reloaded. */
 	onSaveEvent: (id: string, edit: IntakeEventEdit) => Promise<boolean>;
 	onDeleteEvent: (id: string) => Promise<boolean>;
@@ -87,7 +84,7 @@ function Segments({
 
 /**
  * Daily entries and totals share the same selected date:
- * arrows walk back through the days, and a segmented control switches between
+ * a segmented control switches between
  * one compact baseline gauge per tracked total against the user's own usual
  * and the day's entries as illustrated rows. The invitation and shared Log
  * action preserve that date. Nothing here is a budget or a meal slot.
@@ -98,7 +95,6 @@ export function IntakeDayContent({
 	busy,
 	segment,
 	onSelectSegment,
-	onSelectDay,
 	onSaveEvent,
 	onDeleteEvent,
 }: IntakeDayContentProps) {
@@ -168,40 +164,6 @@ export function IntakeDayContent({
 
 	return (
 		<>
-			<View style={styles.dayHeading}>
-				<View style={styles.dayCopy}>
-					<AppText variant="title">{snapshot.dayLabel}</AppText>
-				</View>
-				<View style={styles.dayNav}>
-					<Pressable
-						accessibilityRole="button"
-						accessibilityLabel={t("intake:tab.previousDay")}
-						disabled={busy}
-						onPress={() => onSelectDay(previousLocalDay(snapshot.localDay))}
-						style={({ pressed }) => [
-							styles.navButton,
-							pressed && styles.navButtonPressed,
-						]}
-					>
-						<Icon name="chevron-left" size={24} color={theme.colors.ink} />
-					</Pressable>
-					{/* The future is not loggable, so the arrow stops at today. */}
-					<Pressable
-						accessibilityRole="button"
-						accessibilityLabel={t("intake:tab.nextDay")}
-						accessibilityState={{ disabled: snapshot.isToday }}
-						disabled={busy || snapshot.isToday}
-						onPress={() => onSelectDay(shiftLocalDay(snapshot.localDay, 1))}
-						style={({ pressed }) => [
-							styles.navButton,
-							pressed && styles.navButtonPressed,
-							snapshot.isToday && styles.navButtonDisabled,
-						]}
-					>
-						<Icon name="chevron-right" size={24} color={theme.colors.ink} />
-					</Pressable>
-				</View>
-			</View>
 			{snapshot.isToday ? (
 				<Card style={styles.invitation}>
 					<AppText variant="title" style={styles.invitationText}>
@@ -376,23 +338,6 @@ const styles = StyleSheet.create((theme) => ({
 	hero: { gap: theme.spacing.lg },
 	invitation: { gap: theme.spacing.md, backgroundColor: theme.colors.brand },
 	invitationText: { color: theme.colors.onBrand },
-	dayHeading: {
-		flexDirection: "row",
-		alignItems: "center",
-		gap: theme.spacing.md,
-	},
-	dayCopy: { flex: 1, gap: theme.spacing.xs },
-	dayNav: { flexDirection: "row", gap: theme.spacing.sm },
-	navButton: {
-		width: theme.control.buttonMinHeight,
-		height: theme.control.buttonMinHeight,
-		alignItems: "center",
-		justifyContent: "center",
-		backgroundColor: theme.colors.surface,
-		borderRadius: theme.radius.pill,
-	},
-	navButtonPressed: { backgroundColor: theme.colors.surfaceSunk },
-	navButtonDisabled: { opacity: theme.opacity.disabled },
 	segments: {
 		flexDirection: "row",
 		width: "100%",
