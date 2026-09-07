@@ -4,6 +4,7 @@ import {
 	isCompoundDisplayUnit,
 	type MeasurementEntry,
 } from "@bro/domain";
+import type { ComponentProps } from "react";
 import { useTranslation } from "react-i18next";
 import { View } from "react-native";
 import { StyleSheet } from "../theme/unistyles";
@@ -35,6 +36,7 @@ type MeasurementFieldProps = {
 	placeholder?: string;
 	error?: string | null;
 	editable?: boolean;
+	inputComponent?: ComponentProps<typeof FormField>["inputComponent"];
 };
 
 /**
@@ -51,24 +53,40 @@ export function MeasurementField({
 	placeholder,
 	error,
 	editable = true,
+	inputComponent,
 }: MeasurementFieldProps) {
 	const { t } = useTranslation("common");
 
 	if (unit === "bpm" || !isCompoundDisplayUnit(unit)) {
 		return (
-			<FormField
-				label={t("measurement.labelledUnit", { label, unit })}
-				accessibilityLabel={
-					accessibilityLabel ?? t("measurement.labelledUnit", { label, unit })
-				}
-				value={entry.major}
-				onChangeText={(major) => onChangeEntry({ major, minor: "" })}
-				placeholder={placeholder}
-				keyboardType="decimal-pad"
-				autoCapitalize="none"
-				editable={editable}
-				error={error}
-			/>
+			<View>
+				<AppText variant="label" style={styles.label}>
+					{label}
+				</AppText>
+				<View style={styles.parts}>
+					<FormField
+						inputComponent={inputComponent}
+						label={t("measurement.labelledUnit", { label, unit })}
+						accessibilityLabel={
+							accessibilityLabel ??
+							t("measurement.labelledUnit", { label, unit })
+						}
+						showLabel={false}
+						containerStyle={styles.partInput}
+						style={styles.value}
+						value={entry.major}
+						onChangeText={(major) => onChangeEntry({ major, minor: "" })}
+						placeholder={placeholder}
+						keyboardType="decimal-pad"
+						autoCapitalize="none"
+						editable={editable}
+						error={error}
+					/>
+					<View style={styles.unit}>
+						<AppText color="muted">{unit}</AppText>
+					</View>
+				</View>
+			</View>
 		);
 	}
 
@@ -83,6 +101,7 @@ export function MeasurementField({
 			<View style={styles.parts}>
 				<View style={styles.part}>
 					<FormField
+						inputComponent={inputComponent}
 						label={t("measurement.labelledUnit", {
 							label: spokenBase,
 							unit: t(UNIT_PART_KEYS[unit]),
@@ -100,6 +119,7 @@ export function MeasurementField({
 				</View>
 				<View style={styles.part}>
 					<FormField
+						inputComponent={inputComponent}
 						label={t("measurement.labelledUnit", {
 							label: spokenBase,
 							unit: t(UNIT_PART_KEYS[minorUnit]),
@@ -126,7 +146,16 @@ export function MeasurementField({
 }
 
 const styles = StyleSheet.create((theme) => ({
-	label: { marginBottom: theme.spacing.sm, fontWeight: "600" },
+	label: { marginBottom: theme.spacing.sm },
+	value: { ...theme.typography.monoReadout },
+	unit: {
+		minHeight: theme.control.buttonMinHeight,
+		alignSelf: "flex-start",
+		justifyContent: "center",
+		paddingHorizontal: theme.spacing.lg,
+		borderRadius: theme.radius.control,
+		backgroundColor: theme.colors.surface1,
+	},
 	parts: { flexDirection: "row", gap: theme.spacing.md },
 	part: {
 		flex: 1,

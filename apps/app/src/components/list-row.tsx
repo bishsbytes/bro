@@ -39,7 +39,7 @@ export function ListRow({
 						{title}
 					</AppText>
 					{value ? (
-						<AppText variant="monoInline" color="muted">
+						<AppText variant="monoInline" color="muted" style={styles.value}>
 							{value}
 						</AppText>
 					) : null}
@@ -60,6 +60,7 @@ export function ListRow({
 
 const styles = StyleSheet.create((theme) => ({
 	row: {
+		minHeight: theme.control.minHitArea,
 		flexDirection: "row",
 		alignItems: "center",
 		gap: theme.spacing.md,
@@ -79,5 +80,6 @@ const styles = StyleSheet.create((theme) => ({
 		justifyContent: "space-between",
 		gap: theme.spacing.md,
 	},
-	title: {},
+	title: { flex: 1 },
+	value: { flexShrink: 1, maxWidth: "55%", textAlign: "right" },
 }));

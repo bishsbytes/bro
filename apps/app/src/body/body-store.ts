@@ -111,6 +111,8 @@ export type BodyOverview = {
 export type BodyMeasurementDraft = {
 	metricSlug: string;
 	canonicalValue: number;
+	/** Event time chosen in the form; omitted callers still record at capture time. */
+	observedAt?: number;
 };
 
 export type BodyHistoryEntry = {
@@ -405,6 +407,12 @@ export class BodyStore {
 			seen.add(draft.metricSlug);
 			const metric = resolveMeasurement(draft.metricSlug);
 			assertCanonicalValue(metric, draft.canonicalValue);
+			if (
+				draft.observedAt !== undefined &&
+				!Number.isFinite(new Date(draft.observedAt).getTime())
+			) {
+				throw new TypeError("Invalid measurement time");
+			}
 			return { ...draft, metric };
 		});
 		const overlays = await this.trackedMetrics.listResolved(
@@ -419,11 +427,17 @@ export class BodyStore {
 			}
 		}
 		const capturedAt = this.now();
-		const observedAt = capturedAt.getTime();
-		const localDay = localDayOf(capturedAt);
-		const tzOffsetMinutes = capturedAt.getTimezoneOffset();
 		await withTransaction(this.db, async (scope) => {
-			for (const { metric, canonicalValue } of resolved) {
+			for (const {
+				metric,
+				canonicalValue,
+				observedAt: eventTime,
+			} of resolved) {
+				const eventDate =
+					eventTime === undefined ? capturedAt : new Date(eventTime);
+				const observedAt = eventDate.getTime();
+				const localDay = localDayOf(eventDate);
+				const tzOffsetMinutes = eventDate.getTimezoneOffset();
 				await this.observations.inTransaction(scope).create({
 					metricSlug: metric.slug,
 					value: canonicalValue,

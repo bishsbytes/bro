@@ -1,4 +1,9 @@
-import { localDayOf, type MeasurementEntry } from "@bro/domain";
+import {
+	localDayOf,
+	localTimeOf,
+	type MeasurementEntry,
+	resolveLocalMoment,
+} from "@bro/domain";
 import {
 	type BodyMetricGroup,
 	isTapeSiteSlug,
@@ -24,12 +29,14 @@ import { AppText } from "../../components/app-text";
 import { Button } from "../../components/button";
 import { Card } from "../../components/card";
 import { EmptyState } from "../../components/empty-state";
+import { EventWhenFields } from "../../components/event-when-fields";
 import { ListRow } from "../../components/list-row";
 import { MeasurementField } from "../../components/measurement-field";
-import { OptionSheet } from "../../components/option-sheet";
+import { ModalSheet, SheetTextInput } from "../../components/modal-sheet";
 import { LoadingScreen, Screen } from "../../components/screen";
 import { SectionHeader } from "../../components/section-header";
-import { dataDomainForMetric, TrendChart } from "../../components/trend-chart";
+import { ThemedSwitch } from "../../components/themed-switch";
+import { TrendChart } from "../../components/trend-chart";
 import { healthPlatformLabel } from "../../health/platform-label";
 import { toMessage } from "../../lib/errors";
 import { useFocusStoreLoad } from "../../lib/use-store-load";
@@ -41,11 +48,17 @@ import {
 import { StyleSheet } from "../../theme/unistyles";
 import { type BodyText, changeSentence } from "./baseline-copy";
 import { BodyBaselineGauge } from "./body-baseline-gauge";
-import {
-	hasPlottableRange,
-	type MeasurementChange,
-	MeasurementChangeList,
-} from "./measurement-change-list";
+
+type MeasurementRow = {
+	slug: string;
+	label: string;
+	value: string;
+	since: string | null;
+	change: string;
+	current: number | null;
+	previous: number | null;
+	accessibilityLabel: string;
+};
 
 type BodyScreenProps = {
 	store?: Pick<BodyStore, "loadOverview" | "setTracked" | "recordMeasurements">;
@@ -89,6 +102,9 @@ function BodyLogContent({
 	onBackToQuickLog,
 	onClose,
 }: BodyLogContentProps) {
+	const [day, setDay] = useState(() => localDayOf(new Date()));
+	const [time, setTime] = useState(() => localTimeOf(Date.now()));
+	const [dateError, setDateError] = useState<string | null>(null);
 	const [logMode, setLogMode] = useState<LogMode>("options");
 	const [entries, setEntries] = useState<Record<string, MeasurementEntry>>({});
 	const [entryErrors, setEntryErrors] = useState<Record<string, string>>({});
@@ -168,7 +184,16 @@ function BodyLogContent({
 		}
 		setEntryErrors(nextErrors);
 		if (Object.keys(nextErrors).length > 0) return;
-		onSave(drafts, onClose);
+		try {
+			const moment = resolveLocalMoment({ localDay: day, time });
+			setDateError(null);
+			onSave(
+				drafts.map((draft) => ({ ...draft, observedAt: moment.occurredAt })),
+				onClose,
+			);
+		} catch {
+			setDateError(t("body:log.invalidDate"));
+		}
 	}
 
 	if (logMode === "options") {
@@ -255,6 +280,8 @@ function BodyLogContent({
 				if (!presentation) return null;
 				return (
 					<MeasurementField
+						inputComponent={SheetTextInput}
+						editable={busySlug === null}
 						key={metric.metricSlug}
 						label={metric.label}
 						unit={presentation.displayUnit}
@@ -267,7 +294,20 @@ function BodyLogContent({
 					/>
 				);
 			})}
-			{error ? <AppText color="danger">{error}</AppText> : null}
+			<EventWhenFields
+				localDay={day}
+				time={time}
+				today={localDayOf(new Date())}
+				disabled={busySlug !== null}
+				onChangeDay={setDay}
+				onChangeTime={setTime}
+			/>
+			<AppText variant="caption" color="muted">
+				{t("body:history.source", { source: t("body:reading.manual") })}
+			</AppText>
+			{dateError || error ? (
+				<AppText color="danger">{dateError ?? error}</AppText>
+			) : null}
 			<Button
 				label={
 					logMode === "measurements"
@@ -324,36 +364,38 @@ function BodyLogSurfaceRegistration({
 	return null;
 }
 
-/**
- * One group's rows under a shared column heading. The legend is passed rather
- * than repeated per card: it is a screen-wide convention, and stating it twice
- * makes two sibling groups read as two unrelated widgets.
- */
 function ChangeCard({
-	t,
 	testID,
 	changes,
-	legend,
 	onOpen,
 }: {
-	t: BodyText;
 	testID: string;
-	changes: readonly MeasurementChange[];
-	legend: boolean;
+	changes: readonly MeasurementRow[];
 	onOpen: (slug: string) => void;
 }) {
 	return (
-		<Card testID={testID} style={styles.listCard}>
-			<View style={styles.changeHeading}>
-				<AppText variant="label">{t("body:change.title")}</AppText>
-				{legend ? (
-					<AppText variant="micro" color="subtle">
-						{t("body:change.legend")}
-					</AppText>
-				) : null}
-			</View>
-			<MeasurementChangeList changes={changes} onOpen={onOpen} />
-		</Card>
+		<View testID={testID}>
+			{changes.map((change, index) => (
+				<ListRow
+					key={change.slug}
+					title={change.label}
+					value={change.value}
+					detail={
+						change.current === null
+							? undefined
+							: change.previous === null
+								? (change.since ?? undefined)
+								: `${change.change} · ${change.since}`
+					}
+					accessibilityLabel={change.accessibilityLabel}
+					onPress={() => onOpen(change.slug)}
+					style={[
+						styles.measurementRow,
+						index === changes.length - 1 && styles.lastRow,
+					]}
+				/>
+			))}
+		</View>
 	);
 }
 
@@ -456,7 +498,7 @@ export function BodyScreen({ store }: BodyScreenProps) {
 		});
 	}
 
-	function changeOf(metric: BodyMetricSummary): MeasurementChange {
+	function changeOf(metric: BodyMetricSummary): MeasurementRow {
 		const { current, previous, direction, changeFormatted } = metric.baseline;
 		const change =
 			!current || !previous
@@ -483,17 +525,15 @@ export function BodyScreen({ store }: BodyScreenProps) {
 				? healthPlatformLabel(metric.latest.source)
 				: null;
 		return {
+			value: current?.formatted ?? t("body:measurements.nothingLogged"),
 			slug: metric.metricSlug,
 			label: metric.label,
 			since: platform
 				? t("body:change.meta", { source: platform, comparison })
 				: comparison,
 			change,
-			rail: metric.baseline.rail,
-			band: metric.baseline.usualRange,
 			current: current?.value ?? null,
 			previous: previous?.value ?? null,
-			domain: dataDomainForMetric(metric.metricSlug),
 			accessibilityLabel: t("body:change.rowA11y", {
 				name: metric.label,
 				change: changeSentence(t, metric, todayLocalDay, locale),
@@ -514,9 +554,6 @@ export function BodyScreen({ store }: BodyScreenProps) {
 	const healthFitnessChanges = overview.metrics
 		.filter((metric) => metric.bodyGroup === "health_fitness" && metric.visible)
 		.map(changeOf);
-	// The legend describes marks, so it goes on the first card that draws any.
-	const measurementsDrawMarks = measurementChanges.some(hasPlottableRange);
-	const healthFitnessDrawsMarks = healthFitnessChanges.some(hasPlottableRange);
 
 	return (
 		<Screen
@@ -533,7 +570,7 @@ export function BodyScreen({ store }: BodyScreenProps) {
 				onSave={saveMeasurements}
 				onManageMeasurements={openManageMeasurements}
 			/>
-			<AppText color="muted">{t("body:overview.intro")}</AppText>
+
 			{heroMetric?.baseline.current ? (
 				<Card style={styles.section}>
 					<BodyBaselineGauge
@@ -543,6 +580,7 @@ export function BodyScreen({ store }: BodyScreenProps) {
 					/>
 					{heroMetric.series.observedDayCount > 0 ? (
 						<TrendChart
+							compact
 							series={heroMetric.series}
 							label={heroMetric.label}
 							displayUnit={heroMetric.displayUnit}
@@ -560,7 +598,8 @@ export function BodyScreen({ store }: BodyScreenProps) {
 					action={
 						measurementChanges.length > 0 ? (
 							<Button
-								label={t("body:management.measurementsAction")}
+								label={t("body:management.manage")}
+								accessibilityLabel={t("body:management.measurementsAction")}
 								variant="text"
 								disabled={busySlug !== null}
 								onPress={openManageMeasurements}
@@ -571,10 +610,8 @@ export function BodyScreen({ store }: BodyScreenProps) {
 
 				{measurementChanges.length > 0 ? (
 					<ChangeCard
-						t={t}
 						testID="body-measurements-card"
 						changes={measurementChanges}
-						legend={measurementsDrawMarks}
 						onOpen={openMetric}
 					/>
 				) : (
@@ -603,10 +640,8 @@ export function BodyScreen({ store }: BodyScreenProps) {
 				/>
 				{healthFitnessChanges.length > 0 ? (
 					<ChangeCard
-						t={t}
 						testID="body-health-fitness-card"
 						changes={healthFitnessChanges}
-						legend={!measurementsDrawMarks && healthFitnessDrawsMarks}
 						onOpen={openMetric}
 					/>
 				) : (
@@ -619,48 +654,74 @@ export function BodyScreen({ store }: BodyScreenProps) {
 				)}
 			</View>
 
+			<AppText variant="caption" color="muted">
+				{t("body:overview.rangeNote")}
+			</AppText>
 			{editingGroup ? (
-				<OptionSheet
+				<ModalSheet
 					visible
-					selection="multiple"
-					title={t(`body:management.${editingGroup}.title`)}
-					intro={t(`body:management.${editingGroup}.intro`)}
 					closeAccessibilityLabel={t(
 						`body:management.${editingGroup}.dismissA11y`,
 					)}
-					options={overview.metrics
-						.filter((metric) => metric.bodyGroup === editingGroup)
-						.map((metric) => ({
-							value: metric.metricSlug,
-							label: metric.label,
-							accessibilityLabel: metric.userEnterable
-								? metric.tracked
-									? t("body:measurements.stopTracking", {
-											name: metric.label,
-										})
-									: t("body:measurements.track", { name: metric.label })
-								: metric.tracked
-									? t("body:management.hideFromBody", {
-											name: metric.label,
-										})
-									: t("body:management.showOnBody", {
-											name: metric.label,
-										}),
-						}))}
-					selected={overview.metrics
-						.filter(
-							(metric) => metric.bodyGroup === editingGroup && metric.tracked,
-						)
-						.map((metric) => metric.metricSlug)}
-					disabled={busySlug !== null}
-					onSelect={(metricSlug) => {
-						const metric = overview.metrics.find(
-							(candidate) => candidate.metricSlug === metricSlug,
-						);
-						if (metric) void setTracked(metricSlug, !metric.tracked);
+					onClose={() => {
+						if (!busySlug) setEditingGroup(null);
 					}}
-					onClose={() => setEditingGroup(null)}
-				/>
+				>
+					<AppText variant="eyebrow">
+						{t(`body:management.${editingGroup}.title`)}
+					</AppText>
+					<AppText variant="largeTitle">{t("body:management.title")}</AppText>
+					<AppText color="muted">
+						{t(`body:management.${editingGroup}.intro`)}
+					</AppText>
+					<View>
+						{overview.metrics
+							.filter((metric) => metric.bodyGroup === editingGroup)
+							.map((metric) => (
+								<View key={metric.metricSlug} style={styles.managementRow}>
+									<AppText style={styles.managementLabel}>
+										{metric.label}
+									</AppText>
+									<ThemedSwitch
+										hitSlop={{ top: 14, bottom: 14, left: 8, right: 8 }}
+										value={metric.tracked}
+										disabled={busySlug !== null}
+										accessibilityLabel={
+											metric.userEnterable
+												? metric.tracked
+													? t("body:measurements.stopTracking", {
+															name: metric.label,
+														})
+													: t("body:measurements.track", { name: metric.label })
+												: metric.tracked
+													? t("body:management.hideFromBody", {
+															name: metric.label,
+														})
+													: t("body:management.showOnBody", {
+															name: metric.label,
+														})
+										}
+										onValueChange={(enabled) =>
+											void setTracked(metric.metricSlug, enabled)
+										}
+									/>
+								</View>
+							))}
+					</View>
+					{error ? <AppText color="danger">{error}</AppText> : null}
+					<ListRow
+						title={t("body:management.units")}
+						onPress={() => {
+							setEditingGroup(null);
+							router.push("/settings/units");
+						}}
+					/>
+					<Button
+						label={t("common:datePicker.done")}
+						disabled={busySlug !== null}
+						onPress={() => setEditingGroup(null)}
+					/>
+				</ModalSheet>
 			) : null}
 		</Screen>
 	);
@@ -668,17 +729,25 @@ export function BodyScreen({ store }: BodyScreenProps) {
 
 const styles = StyleSheet.create((theme) => ({
 	section: { gap: theme.spacing.md },
-	listCard: {
-		gap: theme.spacing.sm,
-		paddingHorizontal: theme.spacing.md,
-		paddingVertical: theme.spacing.sm,
+	measurementRow: {
+		backgroundColor: "transparent",
+		borderRadius: 0,
+		paddingHorizontal: 0,
+		borderBottomWidth: 1,
+		borderBottomColor: theme.colors.line,
+		minHeight: theme.control.minHitArea,
 	},
-	changeHeading: {
+	lastRow: { borderBottomWidth: 0 },
+	managementRow: {
 		flexDirection: "row",
-		alignItems: "baseline",
-		justifyContent: "space-between",
+		alignItems: "center",
 		gap: theme.spacing.md,
+		minHeight: theme.control.buttonMinHeight,
+		paddingVertical: theme.spacing.sm,
+		borderBottomWidth: 1,
+		borderBottomColor: theme.colors.line,
 	},
+	managementLabel: { flex: 1 },
 	logSheet: { gap: theme.spacing.lg },
 }));
 

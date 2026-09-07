@@ -1,12 +1,14 @@
 import { localDayOf } from "@bro/domain";
-import { isTapeSiteSlug } from "@bro/domain/metric-registry";
-import type { TrendPoint } from "@bro/logic";
+import { MEASUREMENT_BASELINE_WINDOW_DAYS, type TrendPoint } from "@bro/logic";
+import { useState } from "react";
 import { useTranslation } from "react-i18next";
+import { Pressable, View } from "react-native";
 import type { BodyMetricSummary } from "../../body/body-store";
-import { BaselineGauge } from "../../components/baseline-gauge";
-import { dataDomainForMetric } from "../../components/trend-chart";
-import { healthPlatformLabel } from "../../health/platform-label";
-import { type BodyText, changeSentence, dayLabel } from "./baseline-copy";
+import { AppText } from "../../components/app-text";
+import { Icon } from "../../components/icon";
+import { SourceStamp } from "../../components/source-stamp";
+import { StyleSheet, useUnistyles } from "../../theme/unistyles";
+import { changeSentence } from "./baseline-copy";
 
 function gaugeValueParts(metric: BodyMetricSummary): {
 	value: string;
@@ -30,108 +32,112 @@ function gaugeValueParts(metric: BodyMetricSummary): {
 	};
 }
 
-/** How and when the reading was taken — taped by hand, or brought in by a platform. */
-function readingMeta(
-	t: BodyText,
-	metric: BodyMetricSummary,
-	todayLocalDay: string,
-	locale: string | undefined,
-): string | null {
-	const current = metric.baseline.current;
-	if (!current) return null;
-	const when = dayLabel(current.localDay, todayLocalDay, locale);
-	const platform =
-		metric.latest && metric.latest.source !== "user"
-			? healthPlatformLabel(metric.latest.source)
-			: null;
-	if (platform) return t("body:reading.imported", { source: platform, when });
-	if (isTapeSiteSlug(metric.metricSlug)) {
-		return t("body:reading.taped", { when });
-	}
-	return t("body:reading.measured", { when });
-}
-
-/** The gauge's one-line read: where this reading sits, then how far it moved. */
-function readLine(
-	t: BodyText,
-	metric: BodyMetricSummary,
-	todayLocalDay: string,
-	locale: string | undefined,
-): string {
-	const { current, usualRange } = metric.baseline;
-	if (!current) return t("body:measurements.nothingLogged");
-	const range = usualRange
-		? t(
-				current.value >= usualRange.min && current.value <= usualRange.max
-					? "body:read.insideUsual"
-					: "body:read.outsideUsual",
-				{ min: usualRange.minFormatted, max: usualRange.maxFormatted },
-			)
-		: t("body:read.noRange");
-	return t("body:read.joined", {
-		range,
-		change: changeSentence(t, metric, todayLocalDay, locale),
-	});
-}
-
+/** Shared editorial readout for the overview card and measurement detail. */
 export function BodyBaselineGauge({
 	metric,
 	locale,
 	valueVariant = "score",
 	explored,
+	showLabel = true,
 }: {
 	metric: BodyMetricSummary;
 	locale: string | undefined;
 	valueVariant?: "metric" | "score";
 	explored?: { point: TrendPoint; formatted: string } | null;
+	showLabel?: boolean;
 }) {
 	const { t } = useTranslation(["body", "common"]);
-	const todayLocalDay = localDayOf(new Date());
+	const { theme } = useUnistyles();
+	const [showMethod, setShowMethod] = useState(false);
 	const { baseline } = metric;
 	const displayed = gaugeValueParts(metric);
-	const read = explored
-		? explored.point.localDay
-		: readLine(t, metric, todayLocalDay, locale);
-
 	return (
-		<BaselineGauge
-			label={metric.label}
-			meta={
-				explored
-					? explored.point.localDay
-					: readingMeta(t, metric, todayLocalDay, locale)
-			}
-			value={
-				explored
-					? explored.formatted
-					: baseline.current
-						? displayed.value
-						: t("common:emDash")
-			}
-			unit={explored ? null : displayed.unit}
-			valueVariant={valueVariant}
-			rail={baseline.rail}
-			railLabels={
-				baseline.rail
-					? {
-							min: baseline.rail.minFormatted,
-							max: baseline.rail.maxFormatted,
-						}
-					: null
-			}
-			band={baseline.usualRange}
-			current={explored ? explored.point.value : baseline.current?.value}
-			previous={explored ? null : (baseline.previous?.value ?? null)}
-			read={read}
-			accessibilityLabel={t("body:read.gaugeA11y", {
-				name: metric.label,
-				value:
-					explored?.formatted ??
-					baseline.current?.formatted ??
-					t("common:emDash"),
-				read,
-			})}
-			domain={dataDomainForMetric(metric.metricSlug)}
-		/>
+		<View testID="measurement-readout" style={styles.summary}>
+			{showLabel ? <AppText variant="label">{metric.label}</AppText> : null}
+			<AppText
+				variant={valueVariant}
+				accessibilityLabel={t("body:read.gaugeA11y", {
+					name: metric.label,
+					value:
+						explored?.formatted ??
+						baseline.current?.formatted ??
+						t("common:emDash"),
+					read:
+						explored?.point.localDay ??
+						changeSentence(t, metric, localDayOf(new Date()), locale),
+				})}
+			>
+				{explored?.formatted ??
+					(baseline.current ? displayed.value : t("common:emDash"))}
+				{!explored && displayed.unit ? (
+					<AppText variant="monoReadout">{` ${displayed.unit}`}</AppText>
+				) : null}
+			</AppText>
+			{explored ? (
+				<AppText variant="caption" color="muted">
+					{explored.point.localDay}
+				</AppText>
+			) : baseline.current ? (
+				<SourceStamp
+					source={metric.latest?.source ?? "user"}
+					observedAt={baseline.current.observedAt}
+					localDay={baseline.current.localDay}
+					locale={locale}
+				/>
+			) : (
+				<AppText color="muted">{t("body:measurements.nothingLogged")}</AppText>
+			)}
+			{baseline.current ? (
+				<>
+					<Pressable
+						accessibilityRole="button"
+						accessibilityLabel={t("body:read.aboutRange")}
+						accessibilityState={{ expanded: showMethod }}
+						onPress={() => setShowMethod(!showMethod)}
+						style={styles.range}
+					>
+						{baseline.usualRange ? <View style={styles.swatch} /> : null}
+						<AppText variant="caption" color="muted" style={styles.rangeCopy}>
+							{baseline.usualRange
+								? t("body:read.range", {
+										min: baseline.usualRange.minFormatted,
+										max: baseline.usualRange.maxFormatted,
+									})
+								: t("body:read.noRange")}
+						</AppText>
+						<Icon name="chevron-down" size={16} color={theme.colors.ink2} />
+					</Pressable>
+					{showMethod ? (
+						<AppText variant="caption" color="muted">
+							{t("body:read.method", {
+								count: baseline.readingCount,
+								days: MEASUREMENT_BASELINE_WINDOW_DAYS,
+							})}
+						</AppText>
+					) : null}
+				</>
+			) : null}
+			{baseline.previous && !explored ? (
+				<AppText variant="caption" color="muted">
+					{changeSentence(t, metric, localDayOf(new Date()), locale)}
+				</AppText>
+			) : null}
+		</View>
 	);
 }
+const styles = StyleSheet.create((theme) => ({
+	summary: { gap: theme.spacing.sm },
+	range: {
+		minHeight: theme.control.minHitArea,
+		flexDirection: "row",
+		alignItems: "center",
+		gap: theme.spacing.sm,
+	},
+	rangeCopy: { flex: 1 },
+	swatch: {
+		width: 32,
+		height: 16,
+		borderRadius: theme.radius.pill,
+		backgroundColor: theme.colors.historyFill,
+	},
+}));

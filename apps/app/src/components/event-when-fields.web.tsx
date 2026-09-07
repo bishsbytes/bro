@@ -1,10 +1,10 @@
 import { useState } from "react";
 import { useTranslation } from "react-i18next";
 import { View } from "react-native";
-import { AppText } from "./app-text";
-import { useWebPickerInputStyle } from "./web-picker-input";
 import { StyleSheet } from "../theme/unistyles";
+import { AppText } from "./app-text";
 import type { EventWhenFields as NativeEventWhenFields } from "./event-when-fields";
+import { useWebPickerInputStyle } from "./web-picker-input";
 
 export function EventWhenFields({
 	localDay,

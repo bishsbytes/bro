@@ -93,7 +93,11 @@ describe("body metrics flow", () => {
 		expect(await view.findByText("No measurements tracked")).toBeTruthy();
 
 		await fireEvent.press(view.getByLabelText("Manage measurements"));
-		await fireEvent.press(await view.findByLabelText("Track Weight"));
+		await fireEvent(
+			await view.findByLabelText("Track Weight"),
+			"valueChange",
+			true,
+		);
 		await fireEvent.press(
 			view.getByTestId("modal-sheet-backdrop", { includeHiddenElements: true }),
 		);
@@ -115,7 +119,25 @@ describe("body metrics flow", () => {
 		await act(async () => expoRouter.replace("/body"));
 		await fireEvent.press(await view.findByLabelText("Weight. First reading."));
 		expect(await view.findByLabelText(/^Weight, 12 st 4 lb\./)).toBeTruthy();
-		expect(view.getByTestId("gauge-marker")).toBeTruthy();
+		expect(view.getByTestId("measurement-readout")).toBeTruthy();
+		await fireEvent.press(view.getByRole("radio", { name: "Week" }));
+		expect(
+			view.getByRole("radio", { name: "Week" }).props.accessibilityState
+				.checked,
+		).toBe(true);
+		const weekWindow = view.getByTestId("terrain-date-range-label").props
+			.children.props.children;
+		await fireEvent.press(view.getByLabelText("Show readings"));
+		await fireEvent.press(view.getByRole("radio", { name: "Month" }));
+		expect(
+			view.getByRole("radio", { name: "Month" }).props.accessibilityState
+				.checked,
+		).toBe(true);
+		expect(
+			view.getByTestId("terrain-date-range-label").props.children.props
+				.children,
+		).not.toEqual(weekWindow);
+		await fireEvent.press(view.getByLabelText("Add heading"));
 
 		await fireEvent.changeText(view.getByLabelText("Heading (stones)"), "12");
 		await fireEvent.changeText(view.getByLabelText("Heading (pounds)"), "0");
@@ -151,7 +173,7 @@ describe("body metrics flow", () => {
 		expect(await view.findByLabelText("Weight. First reading.")).toBeTruthy();
 
 		await act(async () => expoRouter.replace("/body/weight"));
-		expect(await view.findByText("12 st 3 lb")).toBeTruthy();
+		expect(await view.findByLabelText(/^Weight, 12 st 3 lb\./)).toBeTruthy();
 		expect(view.queryByLabelText("How to measure")).toBeNull();
 		const observation = (
 			await new databaseApp.ObservationRepository(db).listAll()
@@ -159,6 +181,7 @@ describe("body metrics flow", () => {
 			.filter((row) => row.metricSlug === "weight")
 			.at(-1);
 		if (!observation) throw new Error("Expected a saved weight observation.");
+		await fireEvent.press(view.getByLabelText(`Edit Weight ${observation.id}`));
 		await fireEvent.changeText(
 			view.getByLabelText(`Edit Weight ${observation.id} (pounds)`),
 			"2",
@@ -166,7 +189,9 @@ describe("body metrics flow", () => {
 		await fireEvent.press(
 			view.getByLabelText(`Save measurement ${observation.id}`),
 		);
-		await waitFor(() => expect(view.getByText("12 st 2 lb")).toBeTruthy());
+		await waitFor(() =>
+			expect(view.getByLabelText(/^Weight, 12 st 2 lb\./)).toBeTruthy(),
+		);
 		expect(
 			(await new databaseApp.ObservationRepository(db).findById(observation.id))
 				?.value,

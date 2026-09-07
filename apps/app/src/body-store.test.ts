@@ -312,6 +312,39 @@ describe("body store", () => {
 		);
 	});
 
+	it("saves the chosen event time and rejects invalid session times before writing", async () => {
+		const store = new BodyStore(
+			db,
+			() => new Date("2026-08-14T12:00:00.000Z"),
+			() => "en-GB",
+		);
+		await store.setTracked("weight", true);
+		await store.setTracked("waist", true);
+		const observedAt = new Date(2026, 7, 10, 8, 12).getTime();
+		await store.recordMeasurements([
+			{ metricSlug: "weight", canonicalValue: 81.2, observedAt },
+		]);
+		const rows = await new databaseApp.ObservationRepository(db).listByDay(
+			"2026-08-10",
+		);
+		expect(rows).toHaveLength(1);
+		expect(rows[0]).toMatchObject({
+			value: 81.2,
+			observedAt,
+			source: "user",
+			tzOffsetMinutes: new Date(observedAt).getTimezoneOffset(),
+		});
+		await expect(
+			store.recordMeasurements([
+				{ metricSlug: "weight", canonicalValue: 82 },
+				{ metricSlug: "waist", canonicalValue: 0.85, observedAt: Number.NaN },
+			]),
+		).rejects.toThrow("Invalid measurement time");
+		expect(
+			await new databaseApp.ObservationRepository(db).listByDay("2026-08-14"),
+		).toHaveLength(0);
+	});
+
 	it("derives decreasing goal progress from canonical history across unit changes", async () => {
 		let now = new Date("2026-08-14T12:00:00.000Z");
 		const observations = new databaseApp.ObservationRepository(db);

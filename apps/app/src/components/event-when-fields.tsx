@@ -1,9 +1,9 @@
 import { useTranslation } from "react-i18next";
 import { Pressable, View } from "react-native";
+import { StyleSheet, useUnistyles } from "../theme/unistyles";
 import { AppText } from "./app-text";
 import { Icon } from "./icon";
 import { usePickerDialog } from "./picker-dialog";
-import { StyleSheet, useUnistyles } from "../theme/unistyles";
 
 export function EventWhenFields({
 	localDay,

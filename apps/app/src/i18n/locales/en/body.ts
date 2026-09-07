@@ -3,6 +3,7 @@ export const body = {
 	notFoundBody: "This measurement is not available.",
 	backToBody: "Back to Body",
 	overview: {
+		rangeNote: "Usual does not mean healthy or unhealthy.",
 		intro:
 			"Every reading is measured against itself. Your usual range contains the middle half of your readings, not a health target. Readings outside it are part of ordinary variation too.",
 		loadFailed: "Your measurements could not be loaded",
@@ -21,6 +22,10 @@ export const body = {
 		logMetric: "Log {{name}}",
 	},
 	log: {
+		newReading: "New reading",
+		addTitle: "Add a measurement.",
+		addReading: "Add reading",
+		invalidDate: "Choose a valid date and time.",
 		title: "Log body",
 		intro: "Choose what you measured. Connected data appears automatically.",
 		weight: "Weight",
@@ -68,6 +73,9 @@ export const body = {
 		},
 	},
 	management: {
+		title: "Your measurements.",
+		units: "Measurement units",
+		manage: "Manage",
 		measurementsAction: "Manage measurements",
 		healthAction: "Manage health data",
 		showOnBody: "Show {{name}} on Body",
@@ -86,12 +94,17 @@ export const body = {
 		},
 	},
 	reading: {
+		manual: "Manual entry",
 		/** {{when}} is a day: "Today", "Yesterday", or "3 Aug". */
 		taped: "Taped {{when}}",
 		measured: "Measured {{when}}",
 		imported: "{{source}}, {{when}}",
 	},
 	read: {
+		range: "Your recent range: {{min}}–{{max}}",
+		method:
+			"The middle half of {{count}} readings in the last {{days}} days. Based on your own readings.",
+		aboutRange: "About your recent range",
 		/** The band under the marker is the user's own range, never a target. */
 		insideUsual: "Inside your usual {{min}}–{{max}}.",
 		outsideUsual: "Outside your usual {{min}}–{{max}}.",
@@ -126,7 +139,14 @@ export const body = {
 	readOnly:
 		"Imported measurements are read-only in bro. Manage access in your health platform settings.",
 	sourceYou: "You",
+	period: {
+		title: "Chart period",
+		week: "Week",
+		month: "Month",
+		empty: "No readings in this period.",
+	},
 	goal: {
+		add: "Add heading",
 		title: "Heading",
 		target: "Heading {{value}}",
 		/** Appends a status note to the target line. */

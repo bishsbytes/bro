@@ -119,8 +119,11 @@ export function TrendChart({
 	displayUnit,
 	label,
 	onSelect,
+	compact = false,
 }: {
 	series: TrendSeries;
+	/** Show detailed exploration controls only after a reading is selected. */
+	compact?: boolean;
 	height?: number;
 	domain?: DataDomain;
 	usualRange?: TrendChartUsualRange | null;
@@ -172,7 +175,10 @@ export function TrendChart({
 	}
 	function selectAt(x: number) {
 		select(
-			Math.round((x / Math.max(1, width.current)) * (series.points.length - 1)),
+			Math.round(
+				(((x / Math.max(1, width.current)) * 308 - 4) / 300) *
+					(series.points.length - 1),
+			),
 		);
 	}
 	const selectedIndex = selected
@@ -243,7 +249,7 @@ export function TrendChart({
 					]
 						.filter((part) => part !== null)
 						.join(" ")}
-					viewBox="0 0 300 140"
+					viewBox="-4 0 308 140"
 					height={height}
 					width="100%"
 				>
@@ -256,6 +262,30 @@ export function TrendChart({
 							height={Math.max(corridor.bottom - corridor.top, 1)}
 							fill={theme.colors.historyFill}
 						/>
+					) : null}
+					{!corridor ? (
+						<>
+							<SvgText
+								x="0"
+								y="20"
+								fill={theme.colors.ink2}
+								fontSize={chartLabelSize}
+								fontFamily={theme.typography.monoInline.fontFamily}
+							>
+								{format(series.scale.max)}
+							</SvgText>
+							{format(series.scale.min) !== format(series.scale.max) ? (
+								<SvgText
+									x="0"
+									y="110"
+									fill={theme.colors.ink2}
+									fontSize={chartLabelSize}
+									fontFamily={theme.typography.monoInline.fontFamily}
+								>
+									{format(series.scale.min)}
+								</SvgText>
+							) : null}
+						</>
 					) : null}
 					{series.segments.map((points) => (
 						<Polyline
@@ -394,26 +424,28 @@ export function TrendChart({
 					/>
 				</View>
 			) : null}
-			<View
-				style={{
-					flexDirection: "row",
-					flexWrap: "wrap",
-					gap: theme.spacing.sm,
-				}}
-			>
-				<Button
-					label={t("terrain.previous")}
-					variant="text"
-					disabled={selectedIndex <= 0}
-					onPress={() => select(selectedIndex - 1)}
-				/>
-				<Button
-					label={t("terrain.next")}
-					variant="text"
-					disabled={selectedIndex >= series.points.length - 1}
-					onPress={() => select(selectedIndex + 1)}
-				/>
-			</View>
+			{!compact || selected || showReadings ? (
+				<View
+					style={{
+						flexDirection: "row",
+						flexWrap: "wrap",
+						gap: theme.spacing.sm,
+					}}
+				>
+					<Button
+						label={t("terrain.previous")}
+						variant="text"
+						disabled={selectedIndex <= 0}
+						onPress={() => select(selectedIndex - 1)}
+					/>
+					<Button
+						label={t("terrain.next")}
+						variant="text"
+						disabled={selectedIndex >= series.points.length - 1}
+						onPress={() => select(selectedIndex + 1)}
+					/>
+				</View>
+			) : null}
 			<Button
 				label={t(
 					showReadings ? "terrain.hideReadings" : "terrain.showReadings",

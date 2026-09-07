@@ -201,6 +201,7 @@ describe("Body screen", () => {
 			{
 				metricSlug: "weight",
 				canonicalValue: 172 * KILOGRAMS_PER_POUND,
+				observedAt: expect.any(Number),
 			},
 		]);
 		expect(screen.queryByLabelText("Weight (stones)")).toBeNull();
@@ -270,8 +271,16 @@ describe("Body screen", () => {
 		await fireEvent.press(screen.getByLabelText("Save measurements"));
 
 		expect(recordMeasurements).toHaveBeenCalledWith([
-			{ metricSlug: "body_fat", canonicalValue: 0.18 },
-			{ metricSlug: "waist", canonicalValue: 0.86 },
+			{
+				metricSlug: "body_fat",
+				canonicalValue: 0.18,
+				observedAt: expect.any(Number),
+			},
+			{
+				metricSlug: "waist",
+				canonicalValue: 0.86,
+				observedAt: expect.any(Number),
+			},
 		]);
 	});
 
@@ -292,11 +301,15 @@ describe("Body screen", () => {
 		await fireEvent.press(screen.getByLabelText("Save reading"));
 
 		expect(recordMeasurements).toHaveBeenCalledWith([
-			{ metricSlug: "resting_heart_rate", canonicalValue: 58 },
+			{
+				metricSlug: "resting_heart_rate",
+				canonicalValue: 58,
+				observedAt: expect.any(Number),
+			},
 		]);
 	});
 
-	it("places resting heart rate in its own compact-gauge card", async () => {
+	it("shows resting heart rate as the lead reading when it is the available metric", async () => {
 		const heartRate = restingHeartRateMetric(true);
 		heartRate.baseline = {
 			current: {
@@ -323,7 +336,7 @@ describe("Body screen", () => {
 			await screen.findByLabelText("Resting heart rate. First reading."),
 		).toBeTruthy();
 		expect(screen.getByTestId("body-health-fitness-card")).toBeTruthy();
-		expect(screen.getByTestId("baseline-gauge")).toBeTruthy();
+		expect(screen.getByTestId("measurement-readout")).toBeTruthy();
 	});
 
 	it("formats the hero reading in the reading's display unit", async () => {
@@ -354,12 +367,12 @@ describe("Body screen", () => {
 		};
 		const screen = await mountedWith(overviewOf([weight]));
 
-		expect(await screen.findByTestId("baseline-gauge")).toHaveTextContent(
+		expect(await screen.findByTestId("measurement-readout")).toHaveTextContent(
 			/15 st 1 lb/,
 		);
-		expect(screen.getByTestId("gauge-unit")).toHaveTextContent(/st 1 lb/);
-		expect(screen.getByText("14 st 13 lb")).toBeTruthy();
-		expect(screen.getByText("15 st 4 lb")).toBeTruthy();
+		expect(
+			screen.getByText("Your recent range: 15 st 0 lb–15 st 2 lb"),
+		).toBeTruthy();
 		expect(screen.queryByText("94.82215")).toBeNull();
 		expect(screen.queryByText("97.03085")).toBeNull();
 	});
@@ -478,7 +491,7 @@ describe("Body screen", () => {
 		expect(screen.queryByLabelText("Chest (cm)")).toBeNull();
 
 		await fireEvent.press(screen.getByLabelText("Manage measurements"));
-		await fireEvent.press(screen.getByLabelText("Track Chest"));
+		await fireEvent(screen.getByLabelText("Track Chest"), "valueChange", true);
 		await fireEvent.press(
 			screen.getByTestId("modal-sheet-backdrop", {
 				includeHiddenElements: true,
@@ -496,7 +509,7 @@ describe("Body screen", () => {
 		expect(screen.getByLabelText("Chest (cm)")).toBeTruthy();
 	});
 
-	it("summarises a taped site in a compact baseline-change row", async () => {
+	it("summarises a taped site with its value and dated comparison", async () => {
 		const screen = await mountedWith(
 			overviewOf([metric({ baseline: TAPED_WAIST })]),
 		);
@@ -504,13 +517,13 @@ describe("Body screen", () => {
 		expect(
 			await screen.findByLabelText("Waist. 1.5 cm down since 3 Aug."),
 		).toBeTruthy();
-		expect(screen.getByText("−1.5 cm")).toBeTruthy();
-		expect(screen.getByText("since 3 Aug")).toBeTruthy();
+		expect(screen.getByText(/−1.5 cm · since 3 Aug/)).toBeTruthy();
+		expect(screen.getByText("−1.5 cm · since 3 Aug")).toBeTruthy();
 		expect(screen.getByTestId("body-measurements-card")).toBeTruthy();
 		expect(screen.queryByText("How to measure")).toBeNull();
 	});
 
-	it("leaves the track bare until a measurement has a usual range", async () => {
+	it("shows sparse comparisons without range marks", async () => {
 		// Two readings scale the rail to themselves, so marks would sit on the
 		// same two spots whatever the change was. The figures still state it.
 		const secondReading = metric({
@@ -525,7 +538,7 @@ describe("Body screen", () => {
 		expect(
 			await screen.findByLabelText("Waist. 1.5 cm down since 3 Aug."),
 		).toBeTruthy();
-		expect(screen.getByText("−1.5 cm")).toBeTruthy();
+		expect(screen.getByText(/−1.5 cm · since 3 Aug/)).toBeTruthy();
 		expect(screen.queryByTestId("change-current-waist")).toBeNull();
 		expect(screen.queryByTestId("change-previous-waist")).toBeNull();
 		expect(screen.queryByTestId("change-band-waist")).toBeNull();
@@ -533,21 +546,20 @@ describe("Body screen", () => {
 		expect(screen.queryByText("○ then · ● now")).toBeNull();
 	});
 
-	it("draws the marks and states the legend once a range exists", async () => {
+	it("explains the unchanged personal-range method on demand", async () => {
 		const screen = await mountedWith(
-			overviewOf([
-				metric({ baseline: TAPED_WAIST }),
-				restingHeartRateMetric(true),
-			]),
+			overviewOf([metric({ baseline: TAPED_WAIST })]),
 		);
-
-		expect(await screen.findByTestId("change-current-waist")).toBeTruthy();
-		expect(screen.getByTestId("change-previous-waist")).toBeTruthy();
-		expect(screen.getByTestId("change-band-waist")).toBeTruthy();
-		// One legend for the screen, on the first card that draws marks, not one
-		// per card: the two groups are siblings, not unrelated widgets.
-		expect(screen.getAllByText("○ then · ● now")).toHaveLength(1);
-		expect(screen.getAllByText("Since last time")).toHaveLength(2);
+		expect(
+			await screen.findByText("Your recent range: 85.0 cm–88.0 cm"),
+		).toBeTruthy();
+		await fireEvent.press(screen.getByLabelText("About your recent range"));
+		expect(
+			screen.getByText(
+				"The middle half of 6 readings in the last 180 days. Based on your own readings.",
+			),
+		).toBeTruthy();
+		expect(screen.queryByTestId("change-current-waist")).toBeNull();
 	});
 
 	it("names a source on a row only when the reading was imported", async () => {
@@ -568,9 +580,11 @@ describe("Body screen", () => {
 			]),
 		);
 
-		expect(await screen.findByText("Apple Health · since 3 Aug")).toBeTruthy();
+		expect(
+			await screen.findByText("−1.5 cm · Apple Health · since 3 Aug"),
+		).toBeTruthy();
 		// A reading the man took himself does not spend the row on saying so.
-		expect(screen.getByText("since 3 Aug")).toBeTruthy();
+		expect(screen.getByText("−1.5 cm · since 3 Aug")).toBeTruthy();
 		expect(screen.queryByText("You · since 3 Aug")).toBeNull();
 	});
 
@@ -632,7 +646,7 @@ describe("Body screen", () => {
 			]),
 		);
 
-		expect(screen.getByTestId("baseline-gauge")).toBeTruthy();
+		expect(screen.getByTestId("measurement-readout")).toBeTruthy();
 		const waistRow = await screen.findByLabelText(
 			"Waist. 1.5 cm down since 3 Aug.",
 		);

@@ -1,12 +1,16 @@
 import type { Observation } from "@bro/database-app";
-import type { MeasurementEntry } from "@bro/domain";
+import { localDayOf, type MeasurementEntry } from "@bro/domain";
 import { isTapeSiteSlug } from "@bro/domain/metric-registry";
-import type { TrendPoint } from "@bro/logic";
+import {
+	buildTrendSeries,
+	type TrendPeriod,
+	type TrendPoint,
+} from "@bro/logic";
 import { router, Stack } from "expo-router";
 import type { TFunction } from "i18next";
 import { useCallback, useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
-import { View } from "react-native";
+import { ScrollView, View } from "react-native";
 import {
 	type BodyMetricDetail,
 	type BodyStore,
@@ -18,11 +22,15 @@ import { Button } from "../../components/button";
 import { Card } from "../../components/card";
 import { DateField } from "../../components/date-field";
 import { EmptyState } from "../../components/empty-state";
+import { FormSheet } from "../../components/form-sheet";
 import { HeaderIconButton } from "../../components/header-icon-button";
+import { ListRow } from "../../components/list-row";
 import { MeasurementField } from "../../components/measurement-field";
 import { LoadingScreen, StackScreen as Screen } from "../../components/screen";
 import { SectionHeader } from "../../components/section-header";
+import { SegmentedControl } from "../../components/segmented-control";
 import { TrendChart } from "../../components/trend-chart";
+import { resolveMetric } from "../../content";
 import { healthPlatformLabel } from "../../health/platform-label";
 import { toMessage } from "../../lib/errors";
 import { useFocusStoreLoad } from "../../lib/use-store-load";
@@ -33,12 +41,14 @@ import {
 } from "../../measurements/measurement-entry";
 import { StyleSheet } from "../../theme/unistyles";
 import { BodyBaselineGauge } from "./body-baseline-gauge";
+import { BodyReadingSheet } from "./body-reading-sheet";
 
 type BodyMetricScreenProps = {
 	metricSlug: string;
 	store?: Pick<
 		BodyStore,
 		| "loadMetric"
+		| "recordMeasurements"
 		| "updateMeasurement"
 		| "deleteMeasurement"
 		| "createGoal"
@@ -59,7 +69,10 @@ function dateTimeLabel(observation: Observation): string {
 }
 
 function sourceLabel(t: TFunction<"body">, source: string): string {
-	return healthPlatformLabel(source) ?? t("sourceYou");
+	return (
+		healthPlatformLabel(source) ??
+		(source === "user" ? t("reading.manual") : source)
+	);
 }
 
 function HistoryEditor({
@@ -111,7 +124,9 @@ function HistoryEditor({
 				onChangeEntry={setValue}
 			/>
 			<AppText variant="micro" color="subtle">
-				{t("history.source", { source: entry.observation.source })}
+				{t("history.source", {
+					source: sourceLabel(t, entry.observation.source),
+				})}
 			</AppText>
 			<View style={styles.actions}>
 				<Button
@@ -140,34 +155,13 @@ function HistoryEditor({
 	);
 }
 
-function ImportedHistoryRow({
-	entry,
-}: {
-	entry: BodyMetricDetail["history"][number];
-}) {
-	const { t } = useTranslation("body");
-
-	return (
-		<Card style={styles.historyCard}>
-			<AppText variant="section">{entry.formattedValue}</AppText>
-			<AppText variant="caption" color="muted">
-				{t("latestWithSource", {
-					when: dateTimeLabel(entry.observation),
-					source: sourceLabel(t, entry.observation.source),
-				})}
-			</AppText>
-			{entry.selected ? (
-				<AppText variant="micro" color="brand">
-					{t("history.usedForDay")}
-				</AppText>
-			) : null}
-		</Card>
-	);
-}
-
 export function BodyMetricScreen({ metricSlug, store }: BodyMetricScreenProps) {
 	const { t } = useTranslation(["body", "common"]);
 	const body = useMemo(() => store ?? createBodyStore(), [store]);
+	const [adding, setAdding] = useState(false);
+	const [editingId, setEditingId] = useState<string | null>(null);
+	const [editingHeading, setEditingHeading] = useState(false);
+	const [period, setPeriod] = useState<TrendPeriod>(30);
 	const [target, setTarget] = useState<MeasurementEntry>(EMPTY_ENTRY);
 	const [targetDate, setTargetDate] = useState("");
 	const [targetError, setTargetError] = useState<string | null>(null);
@@ -192,6 +186,7 @@ export function BodyMetricScreen({ metricSlug, store }: BodyMetricScreenProps) {
 		setError(null);
 		try {
 			setDetail(await work());
+			setEditingId(null);
 		} catch (caught) {
 			setError(toMessage(caught));
 		} finally {
@@ -238,6 +233,7 @@ export function BodyMetricScreen({ metricSlug, store }: BodyMetricScreenProps) {
 			);
 			setTarget(EMPTY_ENTRY);
 			setTargetDate("");
+			setEditingHeading(false);
 			setDetail(await body.loadMetric(metricSlug));
 		} catch (caught) {
 			setError(toMessage(caught));
@@ -264,182 +260,325 @@ export function BodyMetricScreen({ metricSlug, store }: BodyMetricScreenProps) {
 	}
 
 	const activeGoal = detail.goals.find((goal) => goal.status === "active");
+	const resolved = resolveMetric(detail.metricSlug);
+	const series =
+		resolved.kind === "known"
+			? buildTrendSeries(
+					detail.history
+						.filter((entry) => entry.selected)
+						.map((entry) => entry.observation),
+					resolved.metric,
+					localDayOf(new Date()),
+					period,
+					{
+						usualRange: detail.baseline.usualRange,
+						heading: activeGoal?.goal.targetValue,
+					},
+				)
+			: detail.series;
+	const editingEntry = detail.history.find(
+		(entry) => entry.observation.id === editingId && entry.editable,
+	);
 
 	return (
-		<Screen scroll padded gap="lg" keyboardShouldPersistTaps="handled">
-			<Stack.Screen
-				options={{
-					headerRight: isTapeSiteSlug(detail.metricSlug)
-						? () => (
-								<HeaderIconButton
-									icon="measure"
-									testID="measuring-guide-header-icon"
-									label={t("measuring.link")}
-									onPress={() =>
-										router.push({
-											pathname: "/body/measuring",
-											params: { site: detail.metricSlug },
-										})
+		<Screen contentContainerStyle={{ flex: 1, minHeight: 0 }}>
+			<ScrollView
+				style={styles.scroll}
+				contentContainerStyle={styles.content}
+				keyboardShouldPersistTaps="handled"
+			>
+				<Stack.Screen
+					options={{
+						headerRight: isTapeSiteSlug(detail.metricSlug)
+							? () => (
+									<HeaderIconButton
+										icon="measure"
+										testID="measuring-guide-header-icon"
+										label={t("measuring.link")}
+										onPress={() =>
+											router.push({
+												pathname: "/body/measuring",
+												params: { site: detail.metricSlug },
+											})
+										}
+									/>
+								)
+							: undefined,
+					}}
+				/>
+				<View style={styles.summaryCard}>
+					<AppText variant="largeTitle">{detail.label}</AppText>
+					<BodyBaselineGauge
+						metric={detail}
+						showLabel={false}
+						explored={explored?.detail === detail ? explored : null}
+						locale={detail.inputLocale}
+						valueVariant="metric"
+					/>
+				</View>
+				<SegmentedControl
+					label={t("period.title")}
+					options={[
+						{ value: 7, label: t("period.week") },
+						{ value: 30, label: t("period.month") },
+					]}
+					value={period}
+					onChange={(value) => {
+						setPeriod(value as TrendPeriod);
+						setExplored(null);
+					}}
+				/>
+
+				{series.observedDayCount > 0 ? (
+					<TrendChart
+						compact
+						key={`${detail.metricSlug}:${period}`}
+						onSelect={(point, formatted) =>
+							setExplored(point ? { detail, point, formatted } : null)
+						}
+						series={series}
+						label={detail.label}
+						displayUnit={detail.displayUnit}
+						usualRange={detail.baseline.usualRange}
+						heading={
+							activeGoal
+								? {
+										value: activeGoal.goal.targetValue,
+										formatted: activeGoal.targetFormatted,
 									}
+								: null
+						}
+					/>
+				) : (
+					<AppText variant="caption" color="muted">
+						{t("period.empty")}
+					</AppText>
+				)}
+
+				{error ? <AppText color="danger">{error}</AppText> : null}
+
+				{detail.editablePresentation ? (
+					<View style={styles.section}>
+						<SectionHeader title={t("goal.title")} />
+						{activeGoal ? (
+							<Card style={styles.goalCard}>
+								<AppText variant="section">
+									{t("goal.target", { value: activeGoal.targetFormatted })}
+								</AppText>
+								<AppText color="muted">
+									{t("goal.summary", {
+										start: activeGoal.startFormatted
+											? t("goal.startValue", {
+													value: activeGoal.startFormatted,
+												})
+											: t("goal.startValueUnknown"),
+										current: activeGoal.currentFormatted
+											? t("goal.currentValue", {
+													value: activeGoal.currentFormatted,
+												})
+											: t("goal.currentValueUnknown"),
+									})}
+								</AppText>
+								{activeGoal.goal.targetDate ? (
+									<AppText variant="caption" color="subtle">
+										{t("goal.targetDate", { date: activeGoal.goal.targetDate })}
+									</AppText>
+								) : null}
+								<View style={styles.actions}>
+									<Button
+										label={t("goal.achieve")}
+										variant="secondary"
+										disabled={busy}
+										style={styles.actionButton}
+										onPress={() =>
+											void updateGoal(activeGoal.goal.id, "achieve")
+										}
+									/>
+									<Button
+										label={t("goal.abandon")}
+										variant="text"
+										disabled={busy}
+										style={styles.actionButton}
+										onPress={() =>
+											void updateGoal(activeGoal.goal.id, "abandon")
+										}
+									/>
+								</View>
+							</Card>
+						) : detail.latest && !editingHeading ? (
+							<Button
+								label={t("goal.add")}
+								variant="secondary"
+								onPress={() => setEditingHeading(true)}
+							/>
+						) : detail.latest ? (
+							<Card style={styles.goalCard}>
+								<MeasurementField
+									label={t("goal.targetField")}
+									unit={detail.editablePresentation.displayUnit}
+									entry={target}
+									error={targetError}
+									onChangeEntry={setTarget}
 								/>
-							)
-						: undefined,
-				}}
-			/>
-			<Card style={styles.summaryCard}>
-				<BodyBaselineGauge
-					metric={detail}
-					explored={explored?.detail === detail ? explored : null}
-					locale={detail.inputLocale}
-					valueVariant="metric"
-				/>
-			</Card>
+								<DateField
+									label={t("goal.targetDateField")}
+									value={targetDate}
+									onChangeDate={setTargetDate}
+									allowClear
+								/>
+								<Button
+									label={t("goal.save")}
+									loading={busy}
+									onPress={() => void saveGoal()}
+								/>
+							</Card>
+						) : (
+							<AppText color="muted">{t("goal.needMeasurement")}</AppText>
+						)}
 
-			{detail.series.observedDayCount > 0 ? (
-				<TrendChart
-					key={detail.metricSlug}
-					onSelect={(point, formatted) =>
-						setExplored(point ? { detail, point, formatted } : null)
-					}
-					series={detail.series}
-					label={detail.label}
-					displayUnit={detail.displayUnit}
-					usualRange={detail.baseline.usualRange}
-					heading={
-						activeGoal
-							? {
-									value: activeGoal.goal.targetValue,
-									formatted: activeGoal.targetFormatted,
-								}
-							: null
-					}
-				/>
-			) : null}
+						{detail.goals
+							.filter((goal) => goal.status !== "active")
+							.map((goal) => (
+								<AppText key={goal.goal.id} variant="caption" color="muted">
+									{t("goal.pastGoal", {
+										status:
+											goal.status === "achieved"
+												? t("goal.statusAchieved")
+												: t("goal.statusAbandoned"),
+										value: goal.targetFormatted,
+									})}
+								</AppText>
+							))}
+					</View>
+				) : (
+					<AppText color="muted">{t("readOnly")}</AppText>
+				)}
 
-			{error ? <AppText color="danger">{error}</AppText> : null}
-
-			{detail.editablePresentation ? (
 				<View style={styles.section}>
-					<SectionHeader title={t("goal.title")} />
-					{activeGoal ? (
-						<Card style={styles.goalCard}>
-							<AppText variant="section">
-								{t("goal.target", { value: activeGoal.targetFormatted })}
+					<SectionHeader title={t("history.title")} />
+					{detail.history.length === 0 ? (
+						<AppText color="muted">{t("history.empty")}</AppText>
+					) : null}
+					{detail.history.map((entry) => (
+						<ListRow
+							key={`${entry.observation.id}:${entry.observation.updatedAt}`}
+							title={dateTimeLabel(entry.observation)}
+							value={entry.formattedValue}
+							showChevron={
+								entry.editable && Boolean(detail.editablePresentation)
+							}
+							disabled={busy || !entry.editable}
+							accessibilityRole={entry.editable ? "button" : "text"}
+							accessibilityLabel={
+								entry.editable
+									? t("history.editA11y", {
+											name: detail.label,
+											id: entry.observation.id,
+										})
+									: `${entry.formattedValue}. ${dateTimeLabel(entry.observation)}. ${sourceLabel(t, entry.observation.source)}`
+							}
+							onPress={() => setEditingId(entry.observation.id)}
+							style={styles.historyRow}
+						>
+							<AppText variant="caption" color="muted">
+								{sourceLabel(t, entry.observation.source)}
 							</AppText>
-							<AppText color="muted">
-								{t("goal.summary", {
-									start: activeGoal.startFormatted
-										? t("goal.startValue", {
-												value: activeGoal.startFormatted,
-											})
-										: t("goal.startValueUnknown"),
-									current: activeGoal.currentFormatted
-										? t("goal.currentValue", {
-												value: activeGoal.currentFormatted,
-											})
-										: t("goal.currentValueUnknown"),
-								})}
-							</AppText>
-							{activeGoal.goal.targetDate ? (
-								<AppText variant="caption" color="subtle">
-									{t("goal.targetDate", { date: activeGoal.goal.targetDate })}
+							{entry.selected && entry.observation.source !== "user" ? (
+								<AppText variant="caption" color="muted">
+									{t("history.usedForDay")}
 								</AppText>
 							) : null}
-							<View style={styles.actions}>
-								<Button
-									label={t("goal.achieve")}
-									variant="secondary"
-									disabled={busy}
-									style={styles.actionButton}
-									onPress={() => void updateGoal(activeGoal.goal.id, "achieve")}
-								/>
-								<Button
-									label={t("goal.abandon")}
-									variant="text"
-									disabled={busy}
-									style={styles.actionButton}
-									onPress={() => void updateGoal(activeGoal.goal.id, "abandon")}
-								/>
-							</View>
-						</Card>
-					) : detail.latest ? (
-						<Card style={styles.goalCard}>
-							<MeasurementField
-								label={t("goal.targetField")}
-								unit={detail.editablePresentation.displayUnit}
-								entry={target}
-								error={targetError}
-								onChangeEntry={setTarget}
-							/>
-							<DateField
-								label={t("goal.targetDateField")}
-								value={targetDate}
-								onChangeDate={setTargetDate}
-								allowClear
-							/>
-							<Button
-								label={t("goal.save")}
-								loading={busy}
-								onPress={() => void saveGoal()}
-							/>
-						</Card>
-					) : (
-						<AppText color="muted">{t("goal.needMeasurement")}</AppText>
-					)}
-
-					{detail.goals
-						.filter((goal) => goal.status !== "active")
-						.map((goal) => (
-							<AppText key={goal.goal.id} variant="caption" color="muted">
-								{t("goal.pastGoal", {
-									status:
-										goal.status === "achieved"
-											? t("goal.statusAchieved")
-											: t("goal.statusAbandoned"),
-									value: goal.targetFormatted,
-								})}
-							</AppText>
-						))}
+						</ListRow>
+					))}
 				</View>
-			) : (
-				<AppText color="muted">{t("readOnly")}</AppText>
-			)}
-
-			<View style={styles.section}>
-				<SectionHeader title={t("history.title")} />
-				{detail.history.length === 0 ? (
-					<AppText color="muted">{t("history.empty")}</AppText>
-				) : null}
-				{detail.history.map((entry) =>
-					entry.editable && detail.editablePresentation ? (
-						<HistoryEditor
-							key={`${entry.observation.id}:${entry.observation.updatedAt}`}
-							entry={entry}
-							presentation={detail.editablePresentation}
-							inputLocale={detail.inputLocale}
-							busy={busy}
-							onSave={(canonicalValue) =>
-								void mutate(() =>
-									body.updateMeasurement(entry.observation.id, canonicalValue),
-								)
-							}
-							onDelete={() =>
-								void mutate(() => body.deleteMeasurement(entry.observation.id))
-							}
+			</ScrollView>
+			{detail.tracked && detail.editablePresentation ? (
+				<View style={styles.footer}>
+					<Button
+						label={t("log.addReading")}
+						disabled={busy}
+						onPress={() => {
+							setError(null);
+							setAdding(true);
+						}}
+					/>
+				</View>
+			) : null}
+			{adding ? (
+				<BodyReadingSheet
+					metric={detail}
+					locale={detail.inputLocale}
+					busy={busy}
+					error={error}
+					onClose={() => setAdding(false)}
+					onSave={(draft) => {
+						if (busy) return;
+						setBusy(true);
+						setError(null);
+						void body
+							.recordMeasurements([draft])
+							.then(async () => {
+								setAdding(false);
+								setDetail(await body.loadMetric(metricSlug));
+							})
+							.catch((caught) => setError(toMessage(caught)))
+							.finally(() => setBusy(false));
+					}}
+				/>
+			) : null}
+			{editingEntry && detail.editablePresentation ? (
+				<FormSheet
+					visible
+					title={t("history.valueField")}
+					busy={busy}
+					onClose={() => setEditingId(null)}
+					footer={
+						<Button
+							label={t("common:datePicker.cancel")}
+							variant="secondary"
+							disabled={busy}
+							onPress={() => setEditingId(null)}
 						/>
-					) : (
-						<ImportedHistoryRow
-							key={`${entry.observation.id}:${entry.observation.updatedAt}`}
-							entry={entry}
-						/>
-					),
-				)}
-			</View>
+					}
+				>
+					<HistoryEditor
+						key={`${editingEntry.observation.id}:${editingEntry.observation.updatedAt}`}
+						entry={editingEntry}
+						presentation={detail.editablePresentation}
+						inputLocale={detail.inputLocale}
+						busy={busy}
+						onSave={(value) =>
+							void mutate(() =>
+								body.updateMeasurement(editingEntry.observation.id, value),
+							)
+						}
+						onDelete={() =>
+							void mutate(() =>
+								body.deleteMeasurement(editingEntry.observation.id),
+							)
+						}
+					/>
+					{error ? <AppText color="danger">{error}</AppText> : null}
+				</FormSheet>
+			) : null}
 		</Screen>
 	);
 }
 
 const styles = StyleSheet.create((theme) => ({
+	scroll: { flex: 1 },
+	content: { padding: theme.spacing.gutter, gap: theme.spacing.lg },
+	footer: {
+		paddingHorizontal: theme.spacing.gutter,
+		paddingVertical: theme.spacing.md,
+	},
+	historyRow: {
+		backgroundColor: "transparent",
+		borderRadius: 0,
+		paddingHorizontal: 0,
+		borderBottomWidth: 1,
+		borderBottomColor: theme.colors.line,
+	},
 	summaryCard: { gap: theme.spacing.md },
 	section: { gap: theme.spacing.md },
 	goalCard: { gap: theme.spacing.md },

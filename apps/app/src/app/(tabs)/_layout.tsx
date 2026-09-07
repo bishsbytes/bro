@@ -50,13 +50,16 @@ function TabShell() {
 	const activeTabKey = TAB_TITLE_KEYS[pathname as keyof typeof TAB_TITLE_KEYS];
 	const isJournalTab = pathname === "/";
 	const isIntakeTab = pathname === "/intake";
+	const isBodyTab = pathname === "/body";
 	const activeHeaderTitle = isIntakeTab
 		? t("tabs.intakeTitle")
 		: isJournalTab
 			? t("tabs.journalTitle")
-			: activeTabKey
-				? t(activeTabKey)
-				: undefined;
+			: isBodyTab
+				? t("tabs.bodyTitle")
+				: activeTabKey
+					? t(activeTabKey)
+					: undefined;
 	const canQuickLog =
 		pathname === "/" ||
 		pathname === "/intake" ||
@@ -68,11 +71,13 @@ function TabShell() {
 					title: activeHeaderTitle,
 					isJournal: isJournalTab,
 					isIntake: isIntakeTab,
+					isBody: isBodyTab,
 				}
 			: {
 					title: t("tabs.journalTitle"),
 					isJournal: true,
 					isIntake: false,
+					isBody: false,
 				},
 	);
 
@@ -82,9 +87,10 @@ function TabShell() {
 				title: activeHeaderTitle,
 				isJournal: isJournalTab,
 				isIntake: isIntakeTab,
+				isBody: isBodyTab,
 			};
 		}
-	}, [activeHeaderTitle, isJournalTab, isIntakeTab]);
+	}, [activeHeaderTitle, isJournalTab, isIntakeTab, isBodyTab]);
 
 	const isNestedTabRoute = segments[0] === "(tabs)" && segments.length > 2;
 	const header = activeHeaderTitle
@@ -92,6 +98,7 @@ function TabShell() {
 				title: activeHeaderTitle,
 				isJournal: isJournalTab,
 				isIntake: isIntakeTab,
+				isBody: isBodyTab,
 			}
 		: lastTabHeader.current;
 	const title = isNestedTabRoute ? undefined : header.title;
@@ -102,9 +109,13 @@ function TabShell() {
 			{title ? (
 				<AppHeader
 					title={title}
-					stacked={header.isJournal || header.isIntake}
+					stacked={header.isJournal || header.isIntake || header.isBody}
 					eyebrow={
-						header.isJournal || header.isIntake ? journalDate : undefined
+						header.isJournal || header.isIntake
+							? journalDate
+							: header.isBody
+								? t("tabs.body")
+								: undefined
 					}
 					eyebrowAccessibilityLabel={
 						header.isJournal ? t("tabs.openHistory") : undefined

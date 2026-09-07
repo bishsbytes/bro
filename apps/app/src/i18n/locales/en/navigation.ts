@@ -6,6 +6,7 @@ export const navigation = {
 		intake: "Intake",
 		intakeTitle: "What you’ve had.",
 		body: "Body",
+		bodyTitle: "Your body, over time.",
 		life: "Life",
 		openHistory: "Open history",
 		openInsights: "Open insights",

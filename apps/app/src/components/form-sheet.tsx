@@ -8,9 +8,9 @@ import {
 	View,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
+import { StyleSheet, useUnistyles } from "../theme/unistyles";
 import { AppText } from "./app-text";
 import { Button } from "./button";
-import { StyleSheet, useUnistyles } from "../theme/unistyles";
 
 /** A full-height form, with actions kept above the keyboard and safe area. */
 export function FormSheet({

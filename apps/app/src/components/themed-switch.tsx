@@ -24,7 +24,11 @@ export function switchColors(
 			? checked
 				? theme.colors.brand
 				: theme.colors.textSubtle
-			: undefined,
+			: platform === "web"
+				? checked
+					? theme.colors.onBrand
+					: theme.colors.textMuted
+				: undefined,
 	};
 }
 
