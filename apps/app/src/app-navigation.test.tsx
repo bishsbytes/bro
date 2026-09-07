@@ -257,11 +257,15 @@ describe("app entry", () => {
 		await fireEvent.press(view.getByLabelText(/^Intake, tab/));
 		await waitFor(() => expect(router.getPathname()).toBe("/intake"));
 		expect(await view.findByText("Summary")).toBeTruthy();
+		expect(view.getByText("What you’ve had.")).toBeTruthy();
+		expect(view.queryByText("A moment for yourself.")).toBeNull();
 		expect(view.getByLabelText("Settings")).toBeTruthy();
 
 		await fireEvent.press(view.getByLabelText(/^Body, tab/));
 		await waitFor(() => expect(router.getPathname()).toBe("/body"));
 		expect(await view.findByText("No measurements tracked")).toBeTruthy();
+		expect(view.getByText("Your body, over time.")).toBeTruthy();
+		expect(view.queryByText("What you’ve had.")).toBeNull();
 		expect(view.getByLabelText("Settings")).toBeTruthy();
 
 		await press(view, "Life");
@@ -273,6 +277,9 @@ describe("app entry", () => {
 		await fireEvent.press(view.getByLabelText(/^Journal, tab/));
 		await waitFor(() => expect(router.getPathname()).toBe("/"));
 		expect(await view.findByText("Morning")).toBeTruthy();
+		expect(view.getByText("A moment for yourself.")).toBeTruthy();
+		expect(view.getByLabelText("Open insights")).toBeTruthy();
+		expect(view.queryByLabelText("Settings")).toBeNull();
 	});
 
 	it("opens insights from the journal header now that it has no tab of its own", async () => {

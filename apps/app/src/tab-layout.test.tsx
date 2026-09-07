@@ -38,7 +38,6 @@ const mockNativeTabsProps = jest.fn();
 const mockNativeTabsListeners = jest.fn();
 const mockTabIconProps = jest.fn();
 let mockPathname = "/";
-let mockSegments = ["(tabs)"];
 
 jest.mock("@bro/auth-app", () => ({
 	useAuth: () => ({ user: null }),
@@ -48,7 +47,6 @@ jest.mock("expo-router", () => {
 	return {
 		router: { push: jest.fn() },
 		usePathname: () => mockPathname,
-		useSegments: () => mockSegments,
 	};
 });
 
@@ -90,38 +88,15 @@ jest.mock("expo-router/unstable-native-tabs", () => {
 describe("TabLayout", () => {
 	beforeEach(() => {
 		mockPathname = "/";
-		mockSegments = ["(tabs)"];
 		mockThemeOverride = undefined;
 		jest.clearAllMocks();
 	});
 
-	it("owns one stable header above native glass tabs", async () => {
+	it("leaves headers to the tab pages and owns native glass tabs", async () => {
 		const screen = await render(<TabLayout />);
-		const currentDate = new Intl.DateTimeFormat("en", {
-			weekday: "long",
-			day: "numeric",
-			month: "long",
-		}).format(new Date());
-
-		expect(screen.getByText(currentDate)).toBeTruthy();
-		expect(screen.getByText("A moment for yourself.")).toBeTruthy();
-		expect(screen.getAllByText("Journal")).toHaveLength(1);
+		expect(screen.queryByText("A moment for yourself.")).toBeNull();
+		expect(screen.queryByLabelText("Open insights")).toBeNull();
 		expect(screen.queryByLabelText("Settings")).toBeNull();
-		const insightsSurface = NativeStyleSheet.flatten(
-			screen.getByTestId("insights-header-icon").parent?.props.style,
-		);
-		expect(insightsSurface).toMatchObject({
-			width: 40,
-			height: 40,
-			borderRadius: 20,
-			borderWidth: 0,
-			backgroundColor: themeModule.lightTheme.colors.surface2,
-		});
-		expect(
-			NativeStyleSheet.flatten(
-				screen.getByLabelText("Open insights").props.style,
-			),
-		).toMatchObject({ width: 48, height: 48 });
 		expect(
 			NativeStyleSheet.flatten(screen.getByLabelText("Log").props.style),
 		).toMatchObject({
@@ -140,30 +115,6 @@ describe("TabLayout", () => {
 				labelVisibilityMode: "labeled",
 			}),
 		);
-
-		mockPathname = "/intake";
-		await screen.rerender(<TabLayout />);
-
-		expect(screen.getAllByText("Intake")).toHaveLength(1);
-		expect(screen.getByText("What you’ve had.")).toBeTruthy();
-		expect(screen.getByText(currentDate)).toBeTruthy();
-		expect(
-			NativeStyleSheet.flatten(screen.getByLabelText("Log").props.style),
-		).toMatchObject({ minHeight: 52 });
-		expect(
-			NativeStyleSheet.flatten(screen.getByLabelText("Settings").props.style),
-		).toMatchObject({ width: 48, height: 48 });
-		expect(
-			NativeStyleSheet.flatten(
-				screen.getByTestId("settings-header-icon").parent?.props.style,
-			),
-		).toMatchObject({
-			width: 40,
-			height: 40,
-			borderRadius: 20,
-			borderWidth: 0,
-			backgroundColor: themeModule.lightTheme.colors.surface2,
-		});
 	});
 
 	it("opens quick logging from the journal and sends each choice to a focused screen", async () => {
@@ -208,29 +159,6 @@ describe("TabLayout", () => {
 		expect(Haptics.selectionAsync).toHaveBeenCalledTimes(1);
 	});
 
-	it("keeps the complete last tab header mounted behind root-stack transitions", async () => {
-		const screen = await render(<TabLayout />);
-		const currentDate = new Intl.DateTimeFormat("en", {
-			weekday: "long",
-			day: "numeric",
-			month: "long",
-		}).format(new Date());
-
-		mockPathname = "/settings";
-		mockSegments = ["settings"];
-		await screen.rerender(<TabLayout />);
-
-		const retainedDate = screen.getByText(currentDate);
-		expect(retainedDate).toBeTruthy();
-		expect(screen.getByLabelText("Open history")).toBeTruthy();
-
-		mockPathname = "/body/weight";
-		mockSegments = ["(tabs)", "body", "[slug]"];
-		await screen.rerender(<TabLayout />);
-
-		expect(screen.queryByText(currentDate)).toBeNull();
-	});
-
 	it("keeps chrome quiet and reserves accent for the selected tab", async () => {
 		const themed = {
 			...themeModule.lightTheme,
@@ -244,13 +172,12 @@ describe("TabLayout", () => {
 		} as unknown as typeof themeModule.lightTheme;
 		mockThemeOverride = themed;
 
-		const screen = await render(<TabLayout />);
+		await render(<TabLayout />);
 		const nativeOptions = mockNativeTabsProps.mock.calls[0]?.[0] as {
 			iconColor: { default: string; selected: string };
 			indicatorColor: string;
 			rippleColor: string;
 		};
-		const insightsIcon = screen.getByTestId("insights-header-icon");
 
 		expect(nativeOptions.iconColor).toEqual({
 			default: "#345678",
@@ -260,12 +187,6 @@ describe("TabLayout", () => {
 		// indicator rather than flashing the host theme's own attribute first.
 		expect(nativeOptions.indicatorColor).toBe("#004466");
 		expect(nativeOptions.rippleColor).toBe("#00446638");
-		expect(insightsIcon.props.children.props.color).toBe("#345678");
-
-		mockPathname = "/intake";
-		await screen.rerender(<TabLayout />);
-		const settingsIcon = screen.getByTestId("settings-header-icon");
-		expect(settingsIcon.props.children.props.color).toBe("#345678");
 	});
 
 	it("names a platform symbol for every tab icon", async () => {
@@ -283,23 +204,5 @@ describe("TabLayout", () => {
 			expect(icon.md).toBeTruthy();
 			expect(icon.src).toBeUndefined();
 		}
-	});
-
-	it("reaches insights and history from the journal header alone", async () => {
-		const screen = await render(<TabLayout />);
-		const { router } = jest.requireMock("expo-router") as {
-			router: { push: jest.Mock };
-		};
-
-		await fireEvent.press(screen.getByLabelText("Open insights"));
-		expect(router.push).toHaveBeenLastCalledWith("/insights");
-		await fireEvent.press(screen.getByLabelText("Open history"));
-		expect(router.push).toHaveBeenLastCalledWith("/history");
-
-		// Neither belongs to a tab any more, so no other tab may offer them.
-		mockPathname = "/intake";
-		await screen.rerender(<TabLayout />);
-		expect(screen.queryByLabelText("Open insights")).toBeNull();
-		expect(screen.queryByLabelText("Open history")).toBeNull();
 	});
 });
