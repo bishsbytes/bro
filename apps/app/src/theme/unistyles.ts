@@ -281,6 +281,7 @@ const shared = {
 	control: {
 		buttonMinHeight: 52,
 		minHitArea: 48,
+		headerActionVisualSize: 40,
 		factorChipVisualHeight: 40,
 		scoreMinHeight: 56,
 		noteMinHeight: 112,

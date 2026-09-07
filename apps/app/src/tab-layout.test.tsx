@@ -111,9 +111,9 @@ describe("TabLayout", () => {
 			screen.getByTestId("insights-header-icon").parent?.props.style,
 		);
 		expect(insightsSurface).toMatchObject({
-			width: 48,
-			height: 48,
-			borderRadius: 24,
+			width: 40,
+			height: 40,
+			borderRadius: 20,
 			borderWidth: 0,
 			backgroundColor: themeModule.lightTheme.colors.surface2,
 		});
@@ -158,9 +158,9 @@ describe("TabLayout", () => {
 				screen.getByTestId("settings-header-icon").parent?.props.style,
 			),
 		).toMatchObject({
-			width: 48,
-			height: 48,
-			borderRadius: 24,
+			width: 40,
+			height: 40,
+			borderRadius: 20,
 			borderWidth: 0,
 			backgroundColor: themeModule.lightTheme.colors.surface2,
 		});

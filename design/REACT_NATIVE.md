@@ -4,9 +4,9 @@ Use the September 2026 guide and JSON tokens. Runtime styles come from `apps/app
 
 System / Light / Dark resolves through `DeviceSettingsProvider`, before the splash hides. Native tab and stack navigation remains in place. Picker and sheet styles resolve from the same theme. Do not remount screens to change appearance.
 
-Light appearance uses an off-white canvas (`#FFFDFA`) and darker warm stone cards and controls (`#F4F1EB`), matching the screen studies. Custom app and check-in headers use 24-point horizontal insets, 16 points above and 12 below, inside the top safe area. Keep header actions at least 48 points and allow editorial titles the full width below the date/action row.
+Light appearance uses an off-white canvas (`#FFFDFA`) and darker warm stone cards and controls (`#F4F1EB`), matching the screen studies. Custom app headers use 24-point horizontal insets and 8-point vertical padding on every tab, inside the top safe area. Check-in headers use 24-point horizontal insets, 16 points above and 12 below. Keep header action touch targets at least 48 points and allow editorial titles the full width below the date/action row.
 
-Day tiles have subtle borders inside their spacing; the full tile area remains tappable. Header action surfaces are borderless circles. Factor chips have 12-point corners and a 40-point visual height inside a minimum 48-point touch target; allow growth for larger text. Unselected chips are transparent with faint outlines; selected chips use the soft selection tint and a checkmark without a contrasting border.
+Day tiles have subtle borders inside their spacing; the full tile area remains tappable. Header action surfaces are borderless 40-point circles inside 48-point touch targets. Factor chips have 12-point corners and a 40-point visual height inside a minimum 48-point touch target; allow growth for larger text. Unselected chips are transparent with faint outlines; selected chips use the soft selection tint and a checkmark without a contrasting border.
 
 Check-in choices are borderless surfaces with a brand fill and checkmark for selection. The mood question leads directly into the choices without a supporting caption.
 

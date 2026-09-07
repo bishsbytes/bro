@@ -16,7 +16,6 @@ type AppHeaderProps = {
 	onSettingsPress?: () => void;
 	/** Places the title below the date and actions, giving editorial titles full width. */
 	stacked?: boolean;
-	compact?: boolean;
 };
 
 export function AppHeader({
@@ -30,18 +29,11 @@ export function AppHeader({
 	showSettings = true,
 	onSettingsPress,
 	stacked = false,
-	compact = false,
 }: AppHeaderProps) {
 	if (stacked) {
 		return (
 			<SafeAreaView style={styles.safeArea} edges={["top"]}>
-				<View
-					style={[
-						styles.headerInsets,
-						styles.stackedHeader,
-						compact && styles.compact,
-					]}
-				>
+				<View style={[styles.headerInsets, styles.stackedHeader]}>
 					<View style={styles.dateRow}>
 						{onEyebrowPress ? (
 							<Pressable
@@ -112,10 +104,8 @@ const styles = StyleSheet.create((theme) => ({
 	safeArea: { backgroundColor: theme.colors.background },
 	headerInsets: {
 		paddingHorizontal: theme.spacing.gutter,
-		paddingTop: theme.spacing.lg,
-		paddingBottom: theme.spacing.md,
+		paddingVertical: theme.spacing.sm,
 	},
-	compact: { paddingTop: theme.spacing.sm, paddingBottom: theme.spacing.sm },
 	stackedHeader: {
 		gap: theme.spacing.xs,
 	},

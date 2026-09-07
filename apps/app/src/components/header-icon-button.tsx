@@ -53,14 +53,16 @@ const styles = StyleSheet.create((theme) => ({
 	surfaceButton: {
 		width: theme.control.minHitArea,
 		height: theme.control.minHitArea,
+		// Align the visible circle with the header inset, keeping the full hit area.
+		alignItems: "flex-end",
 	},
 	surface: {
-		width: theme.control.minHitArea,
-		height: theme.control.minHitArea,
+		width: theme.control.headerActionVisualSize,
+		height: theme.control.headerActionVisualSize,
 		alignItems: "center",
 		justifyContent: "center",
 		borderWidth: 0,
-		borderRadius: theme.control.minHitArea / 2,
+		borderRadius: theme.control.headerActionVisualSize / 2,
 		backgroundColor: theme.colors.surface2,
 	},
 }));
