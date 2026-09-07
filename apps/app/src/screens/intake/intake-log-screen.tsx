@@ -1,5 +1,5 @@
 import type { Consumable } from "@bro/database-app";
-import { localTimeOf, previousLocalDay } from "@bro/domain";
+import { localTimeOf } from "@bro/domain";
 import type {
 	ConsumableComposition,
 	ConsumableKind,
@@ -23,16 +23,13 @@ import {
 import { SafeAreaView } from "react-native-safe-area-context";
 import { AppText } from "../../components/app-text";
 import { Button } from "../../components/button";
-import { DateField } from "../../components/date-field";
 import { EmptyState } from "../../components/empty-state";
 import { FormField } from "../../components/form-field";
 import { Icon } from "../../components/icon";
 import { LoadingIndicator } from "../../components/loading-indicator";
 import { LogConfirmationToast } from "../../components/log-confirmation-toast";
-import { ModalSheet } from "../../components/modal-sheet";
 import { LoadingScreen, Screen } from "../../components/screen";
 import { SectionHeader } from "../../components/section-header";
-import { TimeField } from "../../components/time-field";
 import {
 	compositionFromLabelInputs,
 	type LabelInputs,
@@ -56,8 +53,10 @@ import { useFocusStoreLoad } from "../../lib/use-store-load";
 import { showLoggedIntakeDay } from "../../navigation/intake-flow";
 import { StyleSheet, useUnistyles } from "../../theme/unistyles";
 import { IntakeArtwork } from "./intake-artwork";
+import { IntakeFormSheet } from "./intake-form-sheet";
 import { IntakeQuantityField } from "./intake-quantity-field";
 import { IntakeRow, RowPanel } from "./intake-rows";
+import { IntakeWhenFields } from "./intake-when-fields";
 
 type IntakeLogScreenProps = {
 	initialKind?: ConsumableKind;
@@ -85,6 +84,16 @@ type Pick_ =
 type WhenMode = "now" | "earlier";
 
 const SEARCH_DEBOUNCE_MS = 300;
+const NUTRITION_UNITS = {
+	energyKcal: "kcal",
+	proteinG: "g",
+	carbohydrateG: "g",
+	fatG: "g",
+	fluidMl: "ml",
+	abvPercent: "%",
+	caffeineMg: "mg",
+	nicotineMg: "mg",
+} as const;
 const NUTRITION_LABELS = {
 	energyKcal: "energy",
 	proteinG: "protein",
@@ -292,7 +301,16 @@ export function IntakeLogScreen({
 		}
 	}
 
+	function prepareTime() {
+		if (whenMode === "now" && snapshot) {
+			setLocalDay(snapshot.today);
+			setTime(localTimeOf(Date.now()));
+			setWhenMode("earlier");
+		}
+	}
+
 	function open(next: Pick_) {
+		prepareTime();
 		Keyboard.dismiss();
 		setPick(next);
 		setNutritionOpen(false);
@@ -501,6 +519,53 @@ export function IntakeLogScreen({
 			: byAmount
 				? isPositiveNumber(amount)
 				: portionId !== null && quantityValid);
+
+	function selectPortion(id: string) {
+		if (!pickComposition) return;
+		const portion = pickComposition.portions.find(
+			(candidate) => candidate.id === id,
+		);
+		const current = pickComposition.portions.find(
+			(candidate) => candidate.id === portionId,
+		);
+		const sizeOf = (value: typeof portion) =>
+			pickBasis?.type === "mass"
+				? value?.massKg
+				: pickBasis?.type === "volume"
+					? value?.volumeL
+					: value?.basisUnits;
+		const size = sizeOf(portion);
+		const oldSize = sizeOf(current);
+		if (byAmount)
+			setCustomQuantity(
+				size && isPositiveNumber(amount)
+					? String(Number((Number(amount) / 1000 / size).toFixed(6)))
+					: "",
+			);
+		else if (id !== portionId)
+			setCustomQuantity(
+				size && oldSize && quantityValid
+					? String(Number(((effectiveQuantity * oldSize) / size).toFixed(6)))
+					: "",
+			);
+		setPortionId(id);
+		setAmount("");
+		setAmountMode(false);
+	}
+
+	function selectAmount() {
+		if (byAmount || !pickComposition) return;
+		const portion = pickComposition.portions.find(
+			(candidate) => candidate.id === portionId,
+		);
+		const base = amountUnit === "g" ? portion?.massKg : portion?.volumeL;
+		setAmount(
+			base != null && quantityValid
+				? String(Number((base * effectiveQuantity * 1000).toFixed(6)))
+				: "",
+		);
+		setAmountMode(true);
+	}
 
 	let pickNutrition: LabelInputs = {};
 	let compositionError: string | null = null;
@@ -779,6 +844,7 @@ export function IntakeLogScreen({
 						onPress={() => {
 							Keyboard.dismiss();
 							if (!freeName.trim()) setFreeKind(kind ?? "food");
+							prepareTime();
 							setError(null);
 							setFreeOpen(true);
 						}}
@@ -789,106 +855,154 @@ export function IntakeLogScreen({
 				</View>
 			</SafeAreaView>
 
-			<ModalSheet
+			<IntakeFormSheet
 				visible={freeOpen}
 				onClose={() => {
 					if (!busy) setFreeOpen(false);
 				}}
-				closeAccessibilityLabel={t("intake:log.dismissA11y")}
+				busy={busy}
+				title={t("intake:library.newTitle")}
+				footer={
+					<View style={styles.actions}>
+						<Button
+							label={t("intake:free.save")}
+							loading={busy}
+							disabled={!freeValid || !whenValid}
+							onPress={() => void saveFree()}
+						/>
+						<Button
+							label={t("intake:log.cancel")}
+							variant="secondary"
+							disabled={busy}
+							onPress={() => setFreeOpen(false)}
+						/>
+					</View>
+				}
 			>
 				<View style={styles.sheet}>
 					<AppText variant="display">{t("intake:free.title")}</AppText>
-					<AppText variant="label">{t("intake:free.type")}</AppText>
-					<View style={styles.wrap}>
-						{snapshot.enabledKinds.map((candidate) => (
-							<Button
-								key={candidate}
-								label={t(`intake:kinds.${candidate}`)}
-								accessibilityState={{ selected: freeKind === candidate }}
-								variant={freeKind === candidate ? "primary" : "secondary"}
-								disabled={busy}
-								onPress={() => setFreeKind(candidate)}
-							/>
-						))}
-					</View>
 					<FormField
 						label={t("intake:free.name")}
 						placeholder={t("intake:free.namePlaceholder")}
 						value={freeName}
+						editable={!busy}
 						onChangeText={setFreeName}
 					/>
+					<View style={styles.section}>
+						<AppText variant="label">{t("intake:free.type")}</AppText>
+						<View
+							style={styles.typeOptions}
+							accessibilityRole="radiogroup"
+							accessibilityLabel={t("intake:free.type")}
+						>
+							{snapshot.enabledKinds.map((candidate) => (
+								<Button
+									key={candidate}
+									accessibilityRole="radio"
+									style={styles.typeOption}
+									label={t(`intake:kinds.${candidate}`)}
+									accessibilityState={{
+										selected: freeKind === candidate,
+										checked: freeKind === candidate,
+									}}
+									variant={freeKind === candidate ? "primary" : "secondary"}
+									disabled={busy}
+									onPress={() => setFreeKind(candidate)}
+								/>
+							))}
+						</View>
+					</View>
+
 					<FormField
 						label={t("intake:free.portionLabel")}
 						placeholder={t("intake:free.portionPlaceholder")}
 						value={freePortion}
+						editable={!busy}
 						onChangeText={setFreePortion}
 					/>
 					<IntakeQuantityField
-						label={t("intake:log.quantity")}
+						label={t("intake:log.amount")}
 						value={freeQuantity}
 						onChange={setFreeQuantity}
 						unit={freePortion || t("intake:event.defaultPortion")}
 						step={0.5}
 						disabled={busy}
 					/>
-					<AppText variant="section">{t("intake:free.nutritionTitle")}</AppText>
-					<AppText variant="caption" color="muted">
-						{t("intake:free.detailsHint")}
-					</AppText>
-					{freeFields.map((field) => (
-						<FormField
-							key={field}
-							label={t(`intake:free.${NUTRITION_LABELS[field]}`)}
-							value={freeInputs[field] ?? ""}
-							onChangeText={(value) =>
-								setFreeInputs((current) => ({ ...current, [field]: value }))
-							}
-							keyboardType="decimal-pad"
-							editable={!busy}
-						/>
-					))}
-					{freeKind !== "nicotine" ? (
-						<Button
-							label={t(
-								freeMore
-									? "intake:free.fewerDetails"
-									: "intake:free.moreDetails",
-							)}
-							variant="text"
-							accessibilityState={{ expanded: freeMore }}
-							onPress={() => setFreeMore((current) => !current)}
-						/>
-					) : null}
-					<WhenFields
-						t={t}
-						isToday={snapshot.localDay === snapshot.today}
-						whenMode={whenMode}
+					<View style={styles.nutritionSection}>
+						<AppText variant="label">{t("intake:free.nutritionTitle")}</AppText>
+						{freeFields.map((field) => (
+							<View key={field} style={styles.nutritionField}>
+								<AppText variant="caption" style={styles.grow}>
+									{t(`intake:nutrition.${NUTRITION_LABELS[field]}`)}
+								</AppText>
+								<FormField
+									label={t(`intake:free.${NUTRITION_LABELS[field]}`)}
+									showLabel={false}
+									value={freeInputs[field] ?? ""}
+									onChangeText={(value) =>
+										setFreeInputs((current) => ({ ...current, [field]: value }))
+									}
+									keyboardType="decimal-pad"
+									editable={!busy}
+									containerStyle={styles.nutritionInput}
+								/>
+								<AppText
+									variant="caption"
+									color="muted"
+									style={styles.nutritionUnit}
+								>
+									{NUTRITION_UNITS[field]}
+								</AppText>
+							</View>
+						))}
+						{freeKind !== "nicotine" ? (
+							<Pressable
+								accessibilityRole="button"
+								accessibilityLabel={t(
+									freeMore
+										? "intake:free.fewerDetails"
+										: "intake:free.moreDetails",
+								)}
+								accessibilityState={{ expanded: freeMore, disabled: busy }}
+								disabled={busy}
+								onPress={() => setFreeMore((current) => !current)}
+								style={styles.moreDetails}
+							>
+								<Icon
+									name={freeMore ? "chevron-down" : "add"}
+									size={16}
+									color={theme.colors.brand}
+								/>
+								<AppText
+									variant="caption"
+									style={{ color: theme.colors.brand }}
+								>
+									{t(
+										freeMore
+											? "intake:free.fewerDetails"
+											: "intake:free.moreDetails",
+									)}
+								</AppText>
+							</Pressable>
+						) : null}
+						<AppText variant="caption" color="muted">
+							{t("intake:free.detailsHint")}
+						</AppText>
+					</View>
+					<IntakeWhenFields
 						localDay={localDay}
 						time={time}
 						today={snapshot.today}
-						onChangeMode={setWhenMode}
-						onChangeDay={setLocalDay}
-						onChangeTime={setTime}
+						disabled={busy}
+						onChangeDay={(day) => {
+							setLocalDay(day);
+							setWhenMode("earlier");
+						}}
+						onChangeTime={(value) => {
+							setTime(value);
+							setWhenMode("earlier");
+						}}
 					/>
-					<AppText variant="caption" color="muted">
-						{t("intake:free.hint")}
-					</AppText>
-					<View style={styles.actions}>
-						<Button
-							label={t("intake:log.cancel")}
-							variant="text"
-							disabled={busy}
-							style={styles.grow}
-							onPress={() => setFreeOpen(false)}
-						/>
-						<Button
-							label={t("intake:free.save")}
-							loading={busy}
-							disabled={!freeValid || !whenValid}
-							style={styles.grow}
-							onPress={() => void saveFree()}
-						/>
-					</View>
 
 					{error ? (
 						<AppText accessibilityRole="alert" color="danger">
@@ -896,14 +1010,31 @@ export function IntakeLogScreen({
 						</AppText>
 					) : null}
 				</View>
-			</ModalSheet>
+			</IntakeFormSheet>
 
-			<ModalSheet
+			<IntakeFormSheet
 				visible={pick !== null}
 				onClose={() => {
 					if (!busy) setPick(null);
 				}}
-				closeAccessibilityLabel={t("intake:log.dismissA11y")}
+				busy={busy}
+				title={t("intake:log.addEntry")}
+				footer={
+					<View style={styles.actions}>
+						<Button
+							label={t("intake:log.save")}
+							loading={busy}
+							disabled={!pickValid || compositionError !== null}
+							onPress={() => void savePick()}
+						/>
+						<Button
+							label={t("intake:log.cancel")}
+							variant="secondary"
+							disabled={busy}
+							onPress={() => setPick(null)}
+						/>
+					</View>
+				}
 			>
 				{pick ? (
 					<View style={styles.sheet}>
@@ -937,7 +1068,7 @@ export function IntakeLogScreen({
 											: pick.artworkRef
 							}
 						/>
-						<AppText variant="caption" color="muted" style={styles.centered}>
+						<AppText variant="caption" color="muted" style={styles.sourceBadge}>
 							{t(
 								pick.type === "recent"
 									? "intake:log.recordedItem"
@@ -946,100 +1077,8 @@ export function IntakeLogScreen({
 										: "intake:log.savedItem",
 							)}
 						</AppText>
-						{pickComposition && pickComposition.portions.length > 0 ? (
-							<>
-								<AppText variant="label">{t("intake:log.portion")}</AppText>
-								<View style={styles.wrap}>
-									{pickComposition.portions.map((portion) => (
-										<Button
-											key={portion.id}
-											disabled={busy}
-											label={portion.label}
-											accessibilityState={{
-												selected: portionId === portion.id && !byAmount,
-											}}
-											variant={
-												portionId === portion.id && !byAmount
-													? "primary"
-													: "secondary"
-											}
-											onPress={() => {
-												const current = pickComposition.portions.find(
-													(candidate) => candidate.id === portionId,
-												);
-												const size =
-													pickBasis?.type === "mass"
-														? portion.massKg
-														: pickBasis?.type === "volume"
-															? portion.volumeL
-															: portion.basisUnits;
-												const oldSize =
-													pickBasis?.type === "mass"
-														? current?.massKg
-														: pickBasis?.type === "volume"
-															? current?.volumeL
-															: current?.basisUnits;
-												if (byAmount)
-													setCustomQuantity(
-														size && isPositiveNumber(amount)
-															? String(
-																	Number(
-																		(Number(amount) / 1000 / size).toFixed(6),
-																	),
-																)
-															: "",
-													);
-												else if (portion.id !== portionId)
-													setCustomQuantity(
-														size && oldSize && quantityValid
-															? String(
-																	Number(
-																		(
-																			(effectiveQuantity * oldSize) /
-																			size
-																		).toFixed(6),
-																	),
-																)
-															: "",
-													);
-												setPortionId(portion.id);
-												setAmount("");
-												setAmountMode(false);
-											}}
-										/>
-									))}
-								</View>
-							</>
-						) : null}
-						{amountUnit ? (
-							<Button
-								label={amountUnit}
-								accessibilityLabel={t("intake:log.useUnit", {
-									unit: amountUnit,
-								})}
-								accessibilityState={{ selected: byAmount }}
-								variant={byAmount ? "primary" : "secondary"}
-								disabled={busy}
-								onPress={() => {
-									if (byAmount || !pickComposition) return;
-									const portion = pickComposition.portions.find(
-										(candidate) => candidate.id === portionId,
-									);
-									const base =
-										amountUnit === "g" ? portion?.massKg : portion?.volumeL;
-									setAmount(
-										base != null && quantityValid
-											? String(
-													Number((base * effectiveQuantity * 1000).toFixed(6)),
-												)
-											: "",
-									);
-									setAmountMode(true);
-								}}
-							/>
-						) : null}
 						<IntakeQuantityField
-							label={t("intake:log.quantity")}
+							label={t("intake:log.amount")}
 							value={byAmount ? amount : (customQuantity ?? String(quantity))}
 							onChange={byAmount ? setAmount : setCustomQuantity}
 							unit={byAmount ? (amountUnit ?? "") : portionWord}
@@ -1055,29 +1094,69 @@ export function IntakeLogScreen({
 										: 0.5
 							}
 							disabled={busy}
+							options={
+								pickComposition &&
+								(pickComposition.portions.length > 1 || amountUnit)
+									? [
+											...pickComposition.portions.map((portion) => ({
+												id: portion.id,
+												label: portion.label,
+												selected: !byAmount && portionId === portion.id,
+												onSelect: () => selectPortion(portion.id),
+											})),
+											...(amountUnit
+												? [
+														{
+															id: "amount",
+															label: amountUnit,
+															accessibilityLabel: t("intake:log.useUnit", {
+																unit: amountUnit,
+															}),
+															selected: byAmount,
+															onSelect: selectAmount,
+														},
+													]
+												: []),
+										]
+									: undefined
+							}
 						/>
 
 						<AppText variant="caption" color="muted">
 							{t("intake:log.amountHint")}
 						</AppText>
 
-						<WhenFields
-							t={t}
-							isToday={snapshot.localDay === snapshot.today}
-							whenMode={whenMode}
+						<IntakeWhenFields
 							localDay={localDay}
 							time={time}
 							today={snapshot.today}
-							onChangeMode={setWhenMode}
-							onChangeDay={setLocalDay}
-							onChangeTime={setTime}
+							disabled={busy}
+							onChangeDay={(day) => {
+								setLocalDay(day);
+								setWhenMode("earlier");
+							}}
+							onChangeTime={(value) => {
+								setTime(value);
+								setWhenMode("earlier");
+							}}
 						/>
-						<Button
-							label={t("intake:log.nutritionDetails")}
-							variant="text"
-							accessibilityState={{ expanded: nutritionOpen }}
+						<Pressable
+							accessibilityRole="button"
+							accessibilityLabel={t("intake:log.nutritionDetails")}
+							accessibilityState={{ expanded: nutritionOpen, disabled: busy }}
+							disabled={busy}
 							onPress={() => setNutritionOpen((current) => !current)}
-						/>
+							style={styles.detailRow}
+						>
+							<AppText style={styles.grow}>
+								{t("intake:log.nutritionDetails")}
+							</AppText>
+							<Icon
+								name={nutritionOpen ? "chevron-down" : "chevron-right"}
+								size={20}
+								color={theme.colors.ink2}
+							/>
+						</Pressable>
 						{compositionError ? (
 							<AppText color="danger" accessibilityRole="alert">
 								{compositionError}
@@ -1110,26 +1189,9 @@ export function IntakeLogScreen({
 								{error}
 							</AppText>
 						) : null}
-
-						<View style={styles.actions}>
-							<Button
-								label={t("intake:log.cancel")}
-								variant="text"
-								disabled={busy}
-								style={styles.grow}
-								onPress={() => setPick(null)}
-							/>
-							<Button
-								label={t("intake:log.save")}
-								loading={busy}
-								disabled={!pickValid || compositionError !== null}
-								style={styles.grow}
-								onPress={() => void savePick()}
-							/>
-						</View>
 					</View>
 				) : null}
-			</ModalSheet>
+			</IntakeFormSheet>
 
 			<LogConfirmationToast
 				message={
@@ -1170,82 +1232,6 @@ export function IntakeLogScreen({
 	);
 }
 
-type WhenFieldsProps = {
-	t: ReturnType<typeof useTranslation<["intake", "common"]>>["t"];
-	isToday: boolean;
-	whenMode: WhenMode;
-	localDay: string;
-	time: string;
-	today: string;
-	onChangeMode: (mode: WhenMode) => void;
-	onChangeDay: (localDay: string) => void;
-	onChangeTime: (time: string) => void;
-};
-
-/** Now, or a day and time: an entry carries a timestamp, never a meal slot. */
-function WhenFields({
-	t,
-	whenMode,
-	localDay,
-	time,
-	today,
-	onChangeMode,
-	onChangeDay,
-	onChangeTime,
-}: WhenFieldsProps) {
-	return (
-		<>
-			<AppText variant="label">{t("intake:log.when")}</AppText>
-			<View
-				style={styles.row}
-				accessibilityRole="radiogroup"
-				accessibilityLabel={t("intake:log.when")}
-			>
-				<Button
-					label={t("intake:log.now")}
-					accessibilityState={{ selected: whenMode === "now" }}
-					variant={whenMode === "now" ? "primary" : "secondary"}
-					style={styles.grow}
-					onPress={() => onChangeMode("now")}
-				/>
-				<Button
-					label={t("intake:log.earlier")}
-					accessibilityState={{ selected: whenMode === "earlier" }}
-					variant={whenMode === "earlier" ? "primary" : "secondary"}
-					style={styles.grow}
-					onPress={() => onChangeMode("earlier")}
-				/>
-			</View>
-			{whenMode === "earlier" ? (
-				<>
-					<View style={styles.row}>
-						<DateField
-							label={t("intake:log.date")}
-							value={localDay}
-							onChangeDate={onChangeDay}
-							containerStyle={styles.grow}
-						/>
-						<TimeField
-							label={t("intake:log.time")}
-							value={time}
-							onChangeTime={onChangeTime}
-							containerStyle={styles.grow}
-						/>
-					</View>
-					<Button
-						label={t("intake:log.yesterday")}
-						variant="text"
-						onPress={() => {
-							onChangeDay(previousLocalDay(today));
-							onChangeTime("20:00");
-						}}
-					/>
-				</>
-			) : null}
-		</>
-	);
-}
-
 const styles = StyleSheet.create((theme) => ({
 	section: { gap: theme.spacing.md },
 	footer: {
@@ -1255,9 +1241,58 @@ const styles = StyleSheet.create((theme) => ({
 		gap: theme.spacing.sm,
 		backgroundColor: theme.colors.background,
 	},
-	sheet: { gap: theme.spacing.xl },
+	sheet: { gap: theme.spacing.lg },
+	sourceBadge: {
+		alignSelf: "center",
+		textAlign: "center",
+		paddingHorizontal: theme.spacing.xl,
+		paddingVertical: theme.spacing.sm,
+		borderRadius: theme.radius.pill,
+		backgroundColor: theme.colors.surface,
+	},
+	typeOptions: {
+		flexDirection: "row",
+		flexWrap: "wrap",
+		gap: theme.spacing.xs,
+		backgroundColor: theme.colors.surface,
+		borderRadius: theme.radius.control,
+	},
+	typeOption: {
+		flexGrow: 1,
+		borderWidth: 0,
+		minWidth: "40%",
+		borderRadius: theme.radius.control,
+	},
+	nutritionSection: { gap: theme.spacing.sm },
+	nutritionField: {
+		flexDirection: "row",
+		alignItems: "center",
+		gap: theme.spacing.sm,
+		borderWidth: 1,
+		borderColor: theme.colors.line,
+		borderRadius: theme.radius.control,
+		padding: theme.spacing.sm,
+	},
+	nutritionInput: { flex: 1, minWidth: 0 },
+	nutritionUnit: { width: 32 },
+	moreDetails: {
+		flexDirection: "row",
+		alignItems: "center",
+		gap: theme.spacing.xs,
+		minHeight: theme.control.minHitArea,
+	},
+	detailRow: {
+		flexDirection: "row",
+		alignItems: "center",
+		gap: theme.spacing.sm,
+		minHeight: theme.control.buttonMinHeight,
+		paddingVertical: theme.spacing.md,
+		borderTopWidth: 1,
+		borderBottomWidth: 1,
+		borderColor: theme.colors.line,
+	},
 	centered: { textAlign: "center" },
-	actions: { flexDirection: "column-reverse", gap: theme.spacing.sm },
+	actions: { flexDirection: "column", gap: theme.spacing.sm },
 	filter: {
 		borderRadius: theme.radius.pill,
 		borderWidth: 0,

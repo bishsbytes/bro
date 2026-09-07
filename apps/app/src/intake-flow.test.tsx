@@ -172,10 +172,7 @@ describe("intake flow", () => {
 		expect(await events.listAll()).toHaveLength(3);
 		// Something else: a complete event with no library row behind it.
 		await fireEvent.press(view.getByLabelText("Add something else"));
-		await fireEvent.changeText(
-			await view.findByLabelText("What was it?"),
-			"Oat bar",
-		);
+		await fireEvent.changeText(await view.findByLabelText("Name"), "Oat bar");
 		await fireEvent.changeText(view.getByLabelText("Energy (kcal)"), "210");
 		await fireEvent.press(view.getByText("Add to intake"));
 		expect(await view.findByText("Oat bar added")).toBeTruthy();
@@ -209,15 +206,14 @@ describe("intake flow", () => {
 		);
 		await fireEvent.changeText(view.getByLabelText("Heading (kcal)"), "600");
 		await fireEvent.press(view.getByText("Save heading"));
-		await waitFor(async () =>
-			expect(
-				(await new databaseApp.GoalRepository(db).listAll())[0],
-			).toMatchObject({
-				metricSlug: "energy_intake",
-				direction: "decrease",
-				targetValue: 600,
-			}),
-		);
+		await settle(() => view.queryByText("Archive heading"), "saved heading");
+		expect(
+			(await new databaseApp.GoalRepository(db).listAll())[0],
+		).toMatchObject({
+			metricSlug: "energy_intake",
+			direction: "decrease",
+			targetValue: 600,
+		});
 		await act(async () => expoRouter.replace("/intake?view=logged"));
 		await settle(() => view.queryByLabelText(/^Oat bar,/), "logged entries");
 		expect(router.getPathname()).toBe("/intake");
@@ -255,6 +251,7 @@ describe("intake flow", () => {
 			false,
 		);
 		await act(async () => expoRouter.replace("/intake/log"));
+		await settle(() => view.queryByText("Browse"), "return to intake log");
 		expect(await view.findByText("Browse")).toBeTruthy();
 		expect(view.queryByLabelText("Show Smoke or vape")).toBeNull();
 		expect(view.queryByLabelText("Log Cigarette")).toBeNull();

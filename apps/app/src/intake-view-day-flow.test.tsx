@@ -99,8 +99,14 @@ describe("intake view-day flow", () => {
 		await act(async () => expoRouter.push("/intake/log"));
 		await settle(() => view.queryByText("Browse"));
 		await fireEvent.press(view.getByLabelText("Log Lager, 4.5%"));
-		await fireEvent.press(await view.findByText("Earlier"));
-		await fireEvent.press(await view.findByText("Yesterday"));
+		await fireEvent.press(view.getByLabelText("Date"));
+		await fireEvent(
+			view.getByTestId("date-picker"),
+			"valueChange",
+			{ type: "set" },
+			new Date(`${yesterday}T12:00:00`),
+		);
+		await fireEvent.press(view.getByLabelText("Done"));
 		await fireEvent.press(view.getByText("Add to intake"));
 		expect(await view.findByText("Lager, 4.5% added")).toBeTruthy();
 
