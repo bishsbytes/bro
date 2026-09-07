@@ -71,6 +71,10 @@ jest.mock("expo-splash-screen", () => ({
 }));
 
 const databaseApp: typeof DatabaseApp = jest.requireActual("@bro/database-app");
+const { BodyStore } = jest.requireActual(
+	"./body/body-store",
+) as typeof import("./body/body-store");
+
 const mockedUseSession = (authClient as unknown as { useSession: jest.Mock })
 	.useSession;
 
@@ -125,8 +129,8 @@ describe("body metrics flow", () => {
 			view.getByRole("radio", { name: "Week" }).props.accessibilityState
 				.checked,
 		).toBe(true);
-		const weekWindow = view.getByTestId("terrain-date-range-label").props
-			.children.props.children;
+		const weekWindow = view.getByTestId("editorial-trend-chart").props
+			.accessibilityLabel;
 		await fireEvent.press(view.getByLabelText("Show readings"));
 		await fireEvent.press(view.getByRole("radio", { name: "Month" }));
 		expect(
@@ -134,8 +138,7 @@ describe("body metrics flow", () => {
 				.checked,
 		).toBe(true);
 		expect(
-			view.getByTestId("terrain-date-range-label").props.children.props
-				.children,
+			view.getByTestId("editorial-trend-chart").props.accessibilityLabel,
 		).not.toEqual(weekWindow);
 		await fireEvent.press(view.getByLabelText("Add heading"));
 
@@ -150,12 +153,16 @@ describe("body metrics flow", () => {
 		);
 		await fireEvent.press(view.getByText("Done"));
 		await fireEvent.press(view.getByText("Save heading"));
-		expect(await view.findByText("Heading 12 st 0 lb")).toBeTruthy();
-		expect(view.getByTestId("terrain-heading-line")).toBeTruthy();
+		expect(await view.findByText("Reach 12 st 0 lb")).toBeTruthy();
+		expect(view.queryByTestId("terrain-heading-line")).toBeNull();
+		await fireEvent.press(view.getByLabelText("View heading"));
 		expect(
 			view.getByText("Started at 12 st 4 lb · Latest 12 st 4 lb"),
 		).toBeTruthy();
 
+		await fireEvent.press(
+			view.getByTestId("modal-sheet-backdrop", { includeHiddenElements: true }),
+		);
 		const goals = await new databaseApp.GoalRepository(db).listAll();
 		expect(goals[0]).toMatchObject({
 			metricSlug: "weight",
@@ -197,6 +204,7 @@ describe("body metrics flow", () => {
 				?.value,
 		).toBe(170 * KILOGRAMS_PER_POUND);
 
+		await fireEvent.press(view.getByLabelText("View heading"));
 		await fireEvent.press(view.getByText("Archive heading"));
 		expect(await view.findByText(/Archived: heading 12 st 0 lb/)).toBeTruthy();
 		expect(view.queryByTestId("terrain-heading-line")).toBeNull();
@@ -239,6 +247,18 @@ describe("body metrics flow", () => {
 				"Around the navel, standing normally, at the end of a normal breath out. Do not hold it in.",
 			),
 		).toBeTruthy();
+		// Opening and cancelling a reading must not enable tracking.
+		await act(async () => expoRouter.replace("/body/neck"));
+		await fireEvent.press(await view.findByLabelText("Add reading"));
+		await fireEvent.press(view.getByLabelText("Cancel"));
+		const body = new BodyStore(db);
+		expect((await body.loadMetric("neck"))?.tracked).toBe(false);
+		await fireEvent.press(view.getByLabelText("Add reading"));
+		await fireEvent.changeText(view.getByLabelText("Neck (in)"), "15.5");
+		await fireEvent.press(view.getByLabelText("Save reading"));
+		expect(await view.findByLabelText(/^Neck, 15.50 in\./)).toBeTruthy();
+		expect((await body.loadMetric("neck"))?.tracked).toBe(true);
+
 		expect(globalThis.fetch).not.toHaveBeenCalled();
 		expect(mockedUseSession).not.toHaveBeenCalled();
 	});

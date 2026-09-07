@@ -5,9 +5,9 @@ import { useTranslation } from "react-i18next";
 import { Pressable, View } from "react-native";
 import type { BodyMetricSummary } from "../../body/body-store";
 import { AppText } from "../../components/app-text";
-import { Icon } from "../../components/icon";
+import { ModalSheet } from "../../components/modal-sheet";
 import { SourceStamp } from "../../components/source-stamp";
-import { StyleSheet, useUnistyles } from "../../theme/unistyles";
+import { StyleSheet } from "../../theme/unistyles";
 import { changeSentence } from "./baseline-copy";
 
 function gaugeValueParts(metric: BodyMetricSummary): {
@@ -47,8 +47,6 @@ export function BodyBaselineGauge({
 	showLabel?: boolean;
 }) {
 	const { t } = useTranslation(["body", "common"]);
-	const { theme } = useUnistyles();
-	const [showMethod, setShowMethod] = useState(false);
 	const { baseline } = metric;
 	const displayed = gaugeValueParts(metric);
 	return (
@@ -56,6 +54,7 @@ export function BodyBaselineGauge({
 			{showLabel ? <AppText variant="label">{metric.label}</AppText> : null}
 			<AppText
 				variant={valueVariant}
+				style={styles.value}
 				accessibilityLabel={t("body:read.gaugeA11y", {
 					name: metric.label,
 					value:
@@ -70,7 +69,7 @@ export function BodyBaselineGauge({
 				{explored?.formatted ??
 					(baseline.current ? displayed.value : t("common:emDash"))}
 				{!explored && displayed.unit ? (
-					<AppText variant="monoReadout">{` ${displayed.unit}`}</AppText>
+					<AppText style={styles.unit}>{` ${displayed.unit}`}</AppText>
 				) : null}
 			</AppText>
 			{explored ? (
@@ -87,46 +86,69 @@ export function BodyBaselineGauge({
 			) : (
 				<AppText color="muted">{t("body:measurements.nothingLogged")}</AppText>
 			)}
-			{baseline.current ? (
-				<>
-					<Pressable
-						accessibilityRole="button"
-						accessibilityLabel={t("body:read.aboutRange")}
-						accessibilityState={{ expanded: showMethod }}
-						onPress={() => setShowMethod(!showMethod)}
-						style={styles.range}
-					>
-						{baseline.usualRange ? <View style={styles.swatch} /> : null}
-						<AppText variant="caption" color="muted" style={styles.rangeCopy}>
-							{baseline.usualRange
-								? t("body:read.range", {
-										min: baseline.usualRange.minFormatted,
-										max: baseline.usualRange.maxFormatted,
-									})
-								: t("body:read.noRange")}
-						</AppText>
-						<Icon name="chevron-down" size={16} color={theme.colors.ink2} />
-					</Pressable>
-					{showMethod ? (
-						<AppText variant="caption" color="muted">
-							{t("body:read.method", {
-								count: baseline.readingCount,
-								days: MEASUREMENT_BASELINE_WINDOW_DAYS,
-							})}
-						</AppText>
-					) : null}
-				</>
-			) : null}
-			{baseline.previous && !explored ? (
-				<AppText variant="caption" color="muted">
-					{changeSentence(t, metric, localDayOf(new Date()), locale)}
-				</AppText>
-			) : null}
 		</View>
 	);
 }
+
+export function BodyRecentRange({ metric }: { metric: BodyMetricSummary }) {
+	const { t } = useTranslation(["body", "common"]);
+	const [expanded, setExpanded] = useState(false);
+	const range = metric.baseline.usualRange;
+	return (
+		<>
+			<Pressable
+				accessibilityRole="button"
+				accessibilityLabel={t("body:read.aboutRange")}
+				onPress={() => setExpanded(true)}
+				style={styles.range}
+			>
+				{range ? <View style={styles.swatch} /> : null}
+				<View style={styles.rangeCopy}>
+					<AppText variant="micro" color="muted">
+						{range ? t("body:read.rangeTitle") : t("body:read.noRange")}
+					</AppText>
+					{range ? (
+						<AppText variant="micro" color="muted">
+							{t("body:read.rangeBasis")}
+						</AppText>
+					) : null}
+				</View>
+			</Pressable>
+			<ModalSheet
+				visible={expanded}
+				onClose={() => setExpanded(false)}
+				closeAccessibilityLabel={t("common:actions.close")}
+			>
+				<AppText variant="title">{t("body:read.rangeTitle")}</AppText>
+				{range ? (
+					<AppText>
+						{t("body:read.range", {
+							min: range.minFormatted,
+							max: range.maxFormatted,
+						})}
+					</AppText>
+				) : null}
+				<AppText color="muted">
+					{t("body:read.method", {
+						count: metric.baseline.readingCount,
+						days: MEASUREMENT_BASELINE_WINDOW_DAYS,
+					})}
+				</AppText>
+				<AppText color="muted">{t("body:overview.rangeNote")}</AppText>
+			</ModalSheet>
+		</>
+	);
+}
 const styles = StyleSheet.create((theme) => ({
-	summary: { gap: theme.spacing.sm },
+	summary: { gap: theme.spacing.xs, flexShrink: 0 },
+	value: {
+		fontSize: 44,
+		lineHeight: 50,
+		fontWeight: "400",
+		letterSpacing: -1,
+		flexShrink: 0,
+	},
+	unit: { fontSize: 24, lineHeight: 30, fontWeight: "400" },
 	range: {
 		minHeight: theme.control.minHitArea,
 		flexDirection: "row",

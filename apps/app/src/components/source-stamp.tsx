@@ -24,10 +24,10 @@ export function SourceStamp({
 					hour: "2-digit",
 					minute: "2-digit",
 				})
-			: localDay;
+			: formatReadingDay(localDay, locale);
 	return (
-		<AppText variant="caption" color="muted">
-			{t("latestWithSource", {
+		<AppText variant="micro" color="muted">
+			{t("reading.stamp", {
 				when,
 				source:
 					healthPlatformLabel(source) ??
@@ -35,4 +35,17 @@ export function SourceStamp({
 			})}
 		</AppText>
 	);
+}
+
+export function formatReadingDay(localDay: string, locale?: string): string {
+	const date = new Date(`${localDay}T12:00:00Z`);
+	if (!Number.isFinite(date.getTime())) return localDay;
+	return new Intl.DateTimeFormat(locale, {
+		day: "numeric",
+		month: "long",
+		...(date.getUTCFullYear() !== new Date().getFullYear()
+			? { year: "numeric" as const }
+			: {}),
+		timeZone: "UTC",
+	}).format(date);
 }

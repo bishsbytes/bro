@@ -85,6 +85,7 @@ export function QuickLogFab({
 	const selectedDay = useLogDate(activeTab);
 	const pastDay =
 		selectedDay === localDayOf(new Date()) ? undefined : selectedDay;
+	const [fabWidth, setFabWidth] = useState(100);
 	const [open, setOpen] = useState(false);
 	const [page, setPage] = useState<QuickLogPage>("options");
 	const [optionalKinds, setOptionalKinds] = useState<ConsumableKind[]>([]);
@@ -136,7 +137,16 @@ export function QuickLogFab({
 				accessibilityRole="button"
 				accessibilityLabel={t("quickLog.open")}
 				activeOpacity={0.72}
-				style={[styles.fab, { bottom }]}
+				onLayout={(event) => setFabWidth(event.nativeEvent.layout.width)}
+				style={[
+					styles.fab,
+					{ bottom },
+					bodyActive && {
+						right: undefined,
+						left: "50%",
+						transform: [{ translateX: -fabWidth / 2 }],
+					},
+				]}
 				onPress={openSheet}
 			>
 				<Icon

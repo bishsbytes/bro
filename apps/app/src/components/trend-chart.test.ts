@@ -8,6 +8,8 @@ import {
 	terrainYForValue,
 } from "./trend-chart";
 
+import { editorialChartScale } from "./trend-chart-plot";
+
 const series: TrendSeries = {
 	metricSlug: "weight",
 	points: [
@@ -144,5 +146,70 @@ describe("TrendChart", () => {
 		expect(marker.props.cy).toBe(85);
 		expect(marker.props.filter).toBeFalsy();
 		expect(view.queryByTestId("terrain-line-glow-0")).toBeNull();
+	});
+});
+
+describe("compact editorial chart", () => {
+	const dailySeries: TrendSeries = {
+		...series,
+		points: [
+			{ localDay: "2026-09-01", value: 84.6 },
+			{ localDay: "2026-09-02", value: 84.5 },
+			{ localDay: "2026-09-03", value: null },
+			{ localDay: "2026-09-04", value: 84.4 },
+		],
+		observedDayCount: 3,
+		// A distant Heading must not flatten this reading chart.
+		scale: { min: 40, max: 85 },
+	};
+
+	it("plots only actual readings and leaves missing days disconnected", async () => {
+		const view = await render(
+			createElement(TrendChart, {
+				series: dailySeries,
+				compact: true,
+				displayUnit: "kg",
+				usualRange: {
+					min: 84.4,
+					max: 84.6,
+					minFormatted: "84.4 kg",
+					maxFormatted: "84.6 kg",
+				},
+			}),
+		);
+		expect(view.getAllByTestId("trend-reading-dot")).toHaveLength(3);
+		expect(view.getAllByTestId("trend-observed-run")).toHaveLength(1);
+		expect(
+			view.getByTestId("terrain-usual-corridor").props.height,
+		).toBeGreaterThan(0);
+		expect(view.queryByTestId("terrain-heading-line")).toBeNull();
+	});
+
+	it("keeps a narrow personal range away from the chart edges", () => {
+		const scale = editorialChartScale(dailySeries.points, {
+			min: 84.4,
+			max: 84.6,
+		});
+		expect(scale.min).toBeLessThan(84.4);
+		expect(scale.max).toBeGreaterThan(84.6);
+		expect(scale.min).toBeGreaterThan(80);
+		expect(scale.max).toBeLessThan(90);
+	});
+
+	it("uses the rendered plot inset when selecting a day by touch", async () => {
+		const onSelect = jest.fn();
+		const view = await render(
+			createElement(TrendChart, {
+				series: dailySeries,
+				compact: true,
+				displayUnit: "kg",
+				onSelect,
+			}),
+		);
+		const dot = view.getAllByTestId("trend-reading-dot")[1];
+		await fireEvent(view.getByTestId("terrain-explorer"), "responderGrant", {
+			nativeEvent: { locationX: dot.props.cx },
+		});
+		expect(onSelect).toHaveBeenLastCalledWith(dailySeries.points[1], "84.5 kg");
 	});
 });

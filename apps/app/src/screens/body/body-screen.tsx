@@ -13,7 +13,7 @@ import { formatLocalDayLabelShort } from "@bro/logic";
 import { router } from "expo-router";
 import { useCallback, useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
-import { View } from "react-native";
+import { Pressable, View } from "react-native";
 import {
 	type BodyLogSurfaceControls,
 	useRegisterBodyLogSurface,
@@ -30,11 +30,13 @@ import { Button } from "../../components/button";
 import { Card } from "../../components/card";
 import { EmptyState } from "../../components/empty-state";
 import { EventWhenFields } from "../../components/event-when-fields";
+import { Icon } from "../../components/icon";
 import { ListRow } from "../../components/list-row";
 import { MeasurementField } from "../../components/measurement-field";
 import { ModalSheet, SheetTextInput } from "../../components/modal-sheet";
 import { LoadingScreen, Screen } from "../../components/screen";
 import { SectionHeader } from "../../components/section-header";
+import { TextAction } from "../../components/text-action";
 import { ThemedSwitch } from "../../components/themed-switch";
 import { TrendChart } from "../../components/trend-chart";
 import { healthPlatformLabel } from "../../health/platform-label";
@@ -45,11 +47,14 @@ import {
 	isBlankEntry,
 	parseMeasurementInput,
 } from "../../measurements/measurement-entry";
-import { StyleSheet } from "../../theme/unistyles";
+import { StyleSheet, useUnistyles } from "../../theme/unistyles";
 import { type BodyText, changeSentence } from "./baseline-copy";
-import { BodyBaselineGauge } from "./body-baseline-gauge";
+import { BodyBaselineGauge, BodyRecentRange } from "./body-baseline-gauge";
+import { BodyReadingSheet } from "./body-reading-sheet";
 
 type MeasurementRow = {
+	canAdd: boolean;
+	comparison: string;
 	slug: string;
 	label: string;
 	value: string;
@@ -368,32 +373,54 @@ function ChangeCard({
 	testID,
 	changes,
 	onOpen,
+	onAdd,
 }: {
 	testID: string;
 	changes: readonly MeasurementRow[];
 	onOpen: (slug: string) => void;
+	onAdd: (slug: string) => void;
 }) {
+	const { theme } = useUnistyles();
+	const { t } = useTranslation("body");
 	return (
 		<View testID={testID}>
 			{changes.map((change, index) => (
-				<ListRow
-					key={change.slug}
-					title={change.label}
-					value={change.value}
-					detail={
-						change.current === null
-							? undefined
-							: change.previous === null
-								? (change.since ?? undefined)
-								: `${change.change} · ${change.since}`
-					}
-					accessibilityLabel={change.accessibilityLabel}
-					onPress={() => onOpen(change.slug)}
-					style={[
-						styles.measurementRow,
-						index === changes.length - 1 && styles.lastRow,
-					]}
-				/>
+				<View key={change.slug} style={styles.rowWithAction}>
+					<ListRow
+						layout="inline"
+						title={change.label}
+						value={change.value}
+						detail={
+							change.current === null
+								? undefined
+								: change.previous === null
+									? change.comparison
+									: t("measurements.comparison", {
+											change: change.change,
+											when: change.comparison,
+										})
+						}
+						accessibilityLabel={change.accessibilityLabel}
+						onPress={() => onOpen(change.slug)}
+						showChevron={change.current !== null || !change.canAdd}
+						style={[
+							styles.measurementRow,
+							index === changes.length - 1 && styles.lastRow,
+						]}
+					/>
+					{change.current === null && change.canAdd ? (
+						<Pressable
+							accessibilityRole="button"
+							accessibilityLabel={t("measurements.addA11y", {
+								name: change.label,
+							})}
+							style={styles.addAction}
+							onPress={() => onAdd(change.slug)}
+						>
+							<Icon name="add" color={theme.colors.brand} size={20} />
+						</Pressable>
+					) : null}
+				</View>
 			))}
 		</View>
 	);
@@ -402,6 +429,7 @@ function ChangeCard({
 export function BodyScreen({ store }: BodyScreenProps) {
 	const { t } = useTranslation(["body", "common"]);
 	const body = useMemo(() => store ?? createBodyStore(), [store]);
+	const [addingSlug, setAddingSlug] = useState<string | null>(null);
 	const [busySlug, setBusySlug] = useState<string | null>(null);
 	const [editingGroup, setEditingGroup] = useState<BodyMetricGroup | null>(
 		null,
@@ -516,7 +544,13 @@ export function BodyScreen({ store }: BodyScreenProps) {
 							locale,
 						),
 					})
-				: t("body:change.first");
+				: t("body:measurements.recorded", {
+						when: formatLocalDayLabelShort(
+							current.localDay,
+							todayLocalDay,
+							locale,
+						),
+					});
 		// Only an imported reading names its source here. "You" is the default a
 		// man already assumes, and spending the row's second line on it pushed the
 		// comparison date — the part that differs per site — out of the column.
@@ -525,7 +559,9 @@ export function BodyScreen({ store }: BodyScreenProps) {
 				? healthPlatformLabel(metric.latest.source)
 				: null;
 		return {
-			value: current?.formatted ?? t("body:measurements.nothingLogged"),
+			canAdd: Boolean(metric.tracked && metric.editablePresentation),
+			comparison,
+			value: current?.formatted ?? t("body:measurements.noReadings"),
 			slug: metric.metricSlug,
 			label: metric.label,
 			since: platform
@@ -551,6 +587,9 @@ export function BodyScreen({ store }: BodyScreenProps) {
 		overview.metrics.find(
 			(metric) => metric.visible && metric.baseline.current,
 		);
+	const addingMetric = overview.metrics.find(
+		(metric) => metric.metricSlug === addingSlug,
+	);
 	const healthFitnessChanges = overview.metrics
 		.filter((metric) => metric.bodyGroup === "health_fitness" && metric.visible)
 		.map(changeOf);
@@ -559,8 +598,8 @@ export function BodyScreen({ store }: BodyScreenProps) {
 		<Screen
 			scroll
 			padded
-			gap="xl"
-			contentContainerStyle={{ paddingBottom: 96 }}
+			gap="lg"
+			contentContainerStyle={styles.overviewContent}
 		>
 			<BodyLogSurfaceRegistration
 				t={t}
@@ -572,7 +611,7 @@ export function BodyScreen({ store }: BodyScreenProps) {
 			/>
 
 			{heroMetric?.baseline.current ? (
-				<Card style={styles.section}>
+				<Card style={styles.heroCard}>
 					<BodyBaselineGauge
 						metric={heroMetric}
 						locale={locale}
@@ -581,12 +620,15 @@ export function BodyScreen({ store }: BodyScreenProps) {
 					{heroMetric.series.observedDayCount > 0 ? (
 						<TrendChart
 							compact
+							height={156}
+							showReadingsAction={false}
 							series={heroMetric.series}
 							label={heroMetric.label}
 							displayUnit={heroMetric.displayUnit}
 							usualRange={heroMetric.baseline.usualRange}
 						/>
 					) : null}
+					<BodyRecentRange metric={heroMetric} />
 				</Card>
 			) : null}
 
@@ -594,13 +636,14 @@ export function BodyScreen({ store }: BodyScreenProps) {
 
 			<View style={styles.section}>
 				<SectionHeader
+					compact
 					title={t("body:measurements.title")}
 					action={
 						measurementChanges.length > 0 ? (
-							<Button
+							<TextAction
+								chevron
 								label={t("body:management.manage")}
 								accessibilityLabel={t("body:management.measurementsAction")}
-								variant="text"
 								disabled={busySlug !== null}
 								onPress={openManageMeasurements}
 							/>
@@ -613,6 +656,14 @@ export function BodyScreen({ store }: BodyScreenProps) {
 						testID="body-measurements-card"
 						changes={measurementChanges}
 						onOpen={openMetric}
+						onAdd={(slug) => {
+							const metric = overview.metrics.find(
+								(item) => item.metricSlug === slug,
+							);
+							if (metric?.tracked && metric.editablePresentation)
+								setAddingSlug(slug);
+							else openMetric(slug);
+						}}
 					/>
 				) : (
 					<EmptyState
@@ -624,14 +675,19 @@ export function BodyScreen({ store }: BodyScreenProps) {
 				)}
 			</View>
 
+			<AppText variant="micro" color="muted">
+				{t("body:overview.rangeNote")}
+			</AppText>
+
 			<View style={styles.section}>
 				<SectionHeader
+					compact
 					title={t("body:healthFitness.title")}
 					action={
 						healthFitnessChanges.length > 0 ? (
-							<Button
+							<TextAction
+								chevron
 								label={t("body:management.healthAction")}
-								variant="text"
 								disabled={busySlug !== null}
 								onPress={() => setEditingGroup("health_fitness")}
 							/>
@@ -643,6 +699,14 @@ export function BodyScreen({ store }: BodyScreenProps) {
 						testID="body-health-fitness-card"
 						changes={healthFitnessChanges}
 						onOpen={openMetric}
+						onAdd={(slug) => {
+							const metric = overview.metrics.find(
+								(item) => item.metricSlug === slug,
+							);
+							if (metric?.tracked && metric.editablePresentation)
+								setAddingSlug(slug);
+							else openMetric(slug);
+						}}
 					/>
 				) : (
 					<EmptyState
@@ -654,9 +718,18 @@ export function BodyScreen({ store }: BodyScreenProps) {
 				)}
 			</View>
 
-			<AppText variant="caption" color="muted">
-				{t("body:overview.rangeNote")}
-			</AppText>
+			{addingMetric ? (
+				<BodyReadingSheet
+					metric={addingMetric}
+					locale={locale}
+					busy={busySlug !== null}
+					error={error}
+					onClose={() => setAddingSlug(null)}
+					onSave={(draft) =>
+						void saveMeasurements([draft], () => setAddingSlug(null))
+					}
+				/>
+			) : null}
 			{editingGroup ? (
 				<ModalSheet
 					visible
@@ -728,8 +801,24 @@ export function BodyScreen({ store }: BodyScreenProps) {
 }
 
 const styles = StyleSheet.create((theme) => ({
-	section: { gap: theme.spacing.md },
+	section: { gap: 0 },
+	overviewContent: { paddingTop: 0, paddingBottom: 96 },
+	heroCard: {
+		gap: theme.spacing.xs,
+		borderWidth: 1,
+		borderColor: theme.colors.line,
+		backgroundColor: theme.colors.background,
+		flexShrink: 0,
+	},
+	rowWithAction: { flexDirection: "row", alignItems: "center" },
+	addAction: {
+		width: theme.control.minHitArea,
+		minHeight: theme.control.minHitArea,
+		alignItems: "center",
+		justifyContent: "center",
+	},
 	measurementRow: {
+		flex: 1,
 		backgroundColor: "transparent",
 		borderRadius: 0,
 		paddingHorizontal: 0,

@@ -34,7 +34,7 @@ const MEANINGFUL_DAY_COUNT = 7;
 
 export function trendRange(
 	throughLocalDay: string,
-	period: TrendPeriod,
+	period: TrendPeriod | 365,
 ): { fromLocalDay: string; throughLocalDay: string } {
 	return {
 		fromLocalDay: shiftLocalDay(throughLocalDay, -(period - 1)),
@@ -148,7 +148,7 @@ export function buildTrendSeries(
 	rows: readonly Observation[],
 	metric: MetricDefinition,
 	throughLocalDay: string,
-	period: TrendPeriod,
+	period: TrendPeriod | 365,
 	references: TrendChartReferences = {},
 ): TrendSeries {
 	const { fromLocalDay } = trendRange(throughLocalDay, period);

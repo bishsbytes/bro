@@ -108,6 +108,7 @@ function TabShell() {
 		<View testID="tab-shell" style={styles.shell}>
 			{title ? (
 				<AppHeader
+					compact={header.isBody}
 					title={title}
 					stacked={header.isJournal || header.isIntake || header.isBody}
 					eyebrow={

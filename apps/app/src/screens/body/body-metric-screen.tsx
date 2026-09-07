@@ -8,7 +8,7 @@ import {
 } from "@bro/logic";
 import { router, Stack } from "expo-router";
 import type { TFunction } from "i18next";
-import { useCallback, useMemo, useState } from "react";
+import { useCallback, useMemo, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { ScrollView, View } from "react-native";
 import {
@@ -26,9 +26,12 @@ import { FormSheet } from "../../components/form-sheet";
 import { HeaderIconButton } from "../../components/header-icon-button";
 import { ListRow } from "../../components/list-row";
 import { MeasurementField } from "../../components/measurement-field";
+import { ModalSheet } from "../../components/modal-sheet";
 import { LoadingScreen, StackScreen as Screen } from "../../components/screen";
 import { SectionHeader } from "../../components/section-header";
 import { SegmentedControl } from "../../components/segmented-control";
+import { formatReadingDay, SourceStamp } from "../../components/source-stamp";
+import { TextAction } from "../../components/text-action";
 import { TrendChart } from "../../components/trend-chart";
 import { resolveMetric } from "../../content";
 import { healthPlatformLabel } from "../../health/platform-label";
@@ -39,8 +42,8 @@ import {
 	measurementInputOf,
 	parseMeasurementInput,
 } from "../../measurements/measurement-entry";
-import { StyleSheet } from "../../theme/unistyles";
-import { BodyBaselineGauge } from "./body-baseline-gauge";
+import { StyleSheet, useUnistyles } from "../../theme/unistyles";
+import { BodyBaselineGauge, BodyRecentRange } from "./body-baseline-gauge";
 import { BodyReadingSheet } from "./body-reading-sheet";
 
 type BodyMetricScreenProps = {
@@ -49,6 +52,7 @@ type BodyMetricScreenProps = {
 		BodyStore,
 		| "loadMetric"
 		| "recordMeasurements"
+		| "setTracked"
 		| "updateMeasurement"
 		| "deleteMeasurement"
 		| "createGoal"
@@ -158,10 +162,14 @@ function HistoryEditor({
 export function BodyMetricScreen({ metricSlug, store }: BodyMetricScreenProps) {
 	const { t } = useTranslation(["body", "common"]);
 	const body = useMemo(() => store ?? createBodyStore(), [store]);
+	const { theme } = useUnistyles();
+	const scrollRef = useRef<ScrollView>(null);
+	const [historyY, setHistoryY] = useState(0);
+	const [managingHeading, setManagingHeading] = useState(false);
 	const [adding, setAdding] = useState(false);
 	const [editingId, setEditingId] = useState<string | null>(null);
 	const [editingHeading, setEditingHeading] = useState(false);
-	const [period, setPeriod] = useState<TrendPeriod>(30);
+	const [period, setPeriod] = useState<TrendPeriod | 365>(30);
 	const [target, setTarget] = useState<MeasurementEntry>(EMPTY_ENTRY);
 	const [targetDate, setTargetDate] = useState("");
 	const [targetError, setTargetError] = useState<string | null>(null);
@@ -204,6 +212,7 @@ export function BodyMetricScreen({ metricSlug, store }: BodyMetricScreenProps) {
 				await body.abandonGoal(id);
 			}
 			setDetail(await body.loadMetric(metricSlug));
+			setManagingHeading(false);
 		} catch (caught) {
 			setError(toMessage(caught));
 		} finally {
@@ -272,23 +281,32 @@ export function BodyMetricScreen({ metricSlug, store }: BodyMetricScreenProps) {
 					period,
 					{
 						usualRange: detail.baseline.usualRange,
-						heading: activeGoal?.goal.targetValue,
 					},
 				)
 			: detail.series;
 	const editingEntry = detail.history.find(
-		(entry) => entry.observation.id === editingId && entry.editable,
+		(entry) => entry.observation.id === editingId,
 	);
 
 	return (
 		<Screen contentContainerStyle={{ flex: 1, minHeight: 0 }}>
 			<ScrollView
+				ref={scrollRef}
 				style={styles.scroll}
 				contentContainerStyle={styles.content}
 				keyboardShouldPersistTaps="handled"
 			>
 				<Stack.Screen
 					options={{
+						headerTitleAlign: "center",
+						headerTitleStyle: {
+							fontFamily: theme.fonts.sans,
+							fontSize: 12,
+							fontWeight: "500",
+						},
+						headerTitle: () => (
+							<AppText variant="eyebrow">{t("measurementTitle")}</AppText>
+						),
 						headerRight: isTapeSiteSlug(detail.metricSlug)
 							? () => (
 									<HeaderIconButton
@@ -307,7 +325,7 @@ export function BodyMetricScreen({ metricSlug, store }: BodyMetricScreenProps) {
 					}}
 				/>
 				<View style={styles.summaryCard}>
-					<AppText variant="largeTitle">{detail.label}</AppText>
+					<AppText variant="title">{detail.label}</AppText>
 					<BodyBaselineGauge
 						metric={detail}
 						showLabel={false}
@@ -321,90 +339,73 @@ export function BodyMetricScreen({ metricSlug, store }: BodyMetricScreenProps) {
 					options={[
 						{ value: 7, label: t("period.week") },
 						{ value: 30, label: t("period.month") },
+						{ value: 365, label: t("period.year") },
 					]}
 					value={period}
 					onChange={(value) => {
-						setPeriod(value as TrendPeriod);
+						setPeriod(value as TrendPeriod | 365);
 						setExplored(null);
 					}}
 				/>
 
-				{series.observedDayCount > 0 ? (
-					<TrendChart
-						compact
-						key={`${detail.metricSlug}:${period}`}
-						onSelect={(point, formatted) =>
-							setExplored(point ? { detail, point, formatted } : null)
-						}
-						series={series}
-						label={detail.label}
-						displayUnit={detail.displayUnit}
-						usualRange={detail.baseline.usualRange}
-						heading={
-							activeGoal
-								? {
-										value: activeGoal.goal.targetValue,
-										formatted: activeGoal.targetFormatted,
-									}
-								: null
+				<View>
+					{series.observedDayCount > 0 ? (
+						<TrendChart
+							compact
+							height={156}
+							showReadingsAction={false}
+							key={`${detail.metricSlug}:${period}`}
+							onSelect={(point, formatted) =>
+								setExplored(point ? { detail, point, formatted } : null)
+							}
+							series={series}
+							label={detail.label}
+							displayUnit={detail.displayUnit}
+							usualRange={detail.baseline.usualRange}
+						/>
+					) : (
+						<AppText variant="caption" color="muted">
+							{t("period.empty")}
+						</AppText>
+					)}
+
+					<BodyRecentRange metric={detail} />
+					<TextAction
+						label={t("common:terrain.showReadings")}
+						chevron
+						onPress={() =>
+							scrollRef.current?.scrollTo({ y: historyY, animated: false })
 						}
 					/>
-				) : (
-					<AppText variant="caption" color="muted">
-						{t("period.empty")}
-					</AppText>
-				)}
+				</View>
 
 				{error ? <AppText color="danger">{error}</AppText> : null}
 
 				{detail.editablePresentation ? (
 					<View style={styles.section}>
-						<SectionHeader title={t("goal.title")} />
+						<SectionHeader compact title={t("goal.title")} />
 						{activeGoal ? (
-							<Card style={styles.goalCard}>
-								<AppText variant="section">
-									{t("goal.target", { value: activeGoal.targetFormatted })}
-								</AppText>
-								<AppText color="muted">
-									{t("goal.summary", {
-										start: activeGoal.startFormatted
-											? t("goal.startValue", {
-													value: activeGoal.startFormatted,
+							<>
+								<ListRow
+									title={t("goal.reach", { value: activeGoal.targetFormatted })}
+									detail={
+										activeGoal.goal.targetDate
+											? t("goal.targetDate", {
+													date: formatReadingDay(
+														activeGoal.goal.targetDate,
+														detail.inputLocale,
+													),
 												})
-											: t("goal.startValueUnknown"),
-										current: activeGoal.currentFormatted
-											? t("goal.currentValue", {
-													value: activeGoal.currentFormatted,
-												})
-											: t("goal.currentValueUnknown"),
-									})}
-								</AppText>
-								{activeGoal.goal.targetDate ? (
-									<AppText variant="caption" color="subtle">
-										{t("goal.targetDate", { date: activeGoal.goal.targetDate })}
-									</AppText>
-								) : null}
-								<View style={styles.actions}>
-									<Button
-										label={t("goal.achieve")}
-										variant="secondary"
-										disabled={busy}
-										style={styles.actionButton}
-										onPress={() =>
-											void updateGoal(activeGoal.goal.id, "achieve")
-										}
-									/>
-									<Button
-										label={t("goal.abandon")}
-										variant="text"
-										disabled={busy}
-										style={styles.actionButton}
-										onPress={() =>
-											void updateGoal(activeGoal.goal.id, "abandon")
-										}
-									/>
-								</View>
-							</Card>
+											: undefined
+									}
+									onPress={() => setManagingHeading(true)}
+									style={styles.headingSummary}
+								/>
+								<TextAction
+									label={t("goal.view")}
+									onPress={() => setManagingHeading(true)}
+								/>
+							</>
 						) : detail.latest && !editingHeading ? (
 							<Button
 								label={t("goal.add")}
@@ -454,21 +455,25 @@ export function BodyMetricScreen({ metricSlug, store }: BodyMetricScreenProps) {
 					<AppText color="muted">{t("readOnly")}</AppText>
 				)}
 
-				<View style={styles.section}>
-					<SectionHeader title={t("history.title")} />
+				<View
+					style={styles.section}
+					onLayout={(event) => setHistoryY(event.nativeEvent.layout.y)}
+				>
+					<SectionHeader compact title={t("history.title")} />
 					{detail.history.length === 0 ? (
 						<AppText color="muted">{t("history.empty")}</AppText>
 					) : null}
 					{detail.history.map((entry) => (
 						<ListRow
 							key={`${entry.observation.id}:${entry.observation.updatedAt}`}
-							title={dateTimeLabel(entry.observation)}
+							layout="inline"
+							title={formatReadingDay(
+								entry.observation.localDay,
+								detail.inputLocale,
+							)}
 							value={entry.formattedValue}
-							showChevron={
-								entry.editable && Boolean(detail.editablePresentation)
-							}
-							disabled={busy || !entry.editable}
-							accessibilityRole={entry.editable ? "button" : "text"}
+							disabled={busy}
+							accessibilityRole="button"
 							accessibilityLabel={
 								entry.editable
 									? t("history.editA11y", {
@@ -479,20 +484,11 @@ export function BodyMetricScreen({ metricSlug, store }: BodyMetricScreenProps) {
 							}
 							onPress={() => setEditingId(entry.observation.id)}
 							style={styles.historyRow}
-						>
-							<AppText variant="caption" color="muted">
-								{sourceLabel(t, entry.observation.source)}
-							</AppText>
-							{entry.selected && entry.observation.source !== "user" ? (
-								<AppText variant="caption" color="muted">
-									{t("history.usedForDay")}
-								</AppText>
-							) : null}
-						</ListRow>
+						/>
 					))}
 				</View>
 			</ScrollView>
-			{detail.tracked && detail.editablePresentation ? (
+			{detail.editablePresentation ? (
 				<View style={styles.footer}>
 					<Button
 						label={t("log.addReading")}
@@ -503,6 +499,54 @@ export function BodyMetricScreen({ metricSlug, store }: BodyMetricScreenProps) {
 						}}
 					/>
 				</View>
+			) : null}
+			{activeGoal ? (
+				<ModalSheet
+					visible={managingHeading}
+					onClose={() => setManagingHeading(false)}
+					closeAccessibilityLabel={t("common:actions.close")}
+				>
+					<Card style={styles.goalCard}>
+						<AppText variant="section">
+							{t("goal.target", { value: activeGoal.targetFormatted })}
+						</AppText>
+						<AppText color="muted">
+							{t("goal.summary", {
+								start: activeGoal.startFormatted
+									? t("goal.startValue", {
+											value: activeGoal.startFormatted,
+										})
+									: t("goal.startValueUnknown"),
+								current: activeGoal.currentFormatted
+									? t("goal.currentValue", {
+											value: activeGoal.currentFormatted,
+										})
+									: t("goal.currentValueUnknown"),
+							})}
+						</AppText>
+						{activeGoal.goal.targetDate ? (
+							<AppText variant="caption" color="subtle">
+								{t("goal.targetDate", { date: activeGoal.goal.targetDate })}
+							</AppText>
+						) : null}
+						<View style={styles.actions}>
+							<Button
+								label={t("goal.achieve")}
+								variant="secondary"
+								disabled={busy}
+								style={styles.actionButton}
+								onPress={() => void updateGoal(activeGoal.goal.id, "achieve")}
+							/>
+							<Button
+								label={t("goal.abandon")}
+								variant="text"
+								disabled={busy}
+								style={styles.actionButton}
+								onPress={() => void updateGoal(activeGoal.goal.id, "abandon")}
+							/>
+						</View>
+					</Card>
+				</ModalSheet>
 			) : null}
 			{adding ? (
 				<BodyReadingSheet
@@ -515,8 +559,10 @@ export function BodyMetricScreen({ metricSlug, store }: BodyMetricScreenProps) {
 						if (busy) return;
 						setBusy(true);
 						setError(null);
-						void body
-							.recordMeasurements([draft])
+						void (async () => {
+							if (!detail.tracked) await body.setTracked(metricSlug, true);
+							await body.recordMeasurements([draft]);
+						})()
 							.then(async () => {
 								setAdding(false);
 								setDetail(await body.loadMetric(metricSlug));
@@ -526,7 +572,7 @@ export function BodyMetricScreen({ metricSlug, store }: BodyMetricScreenProps) {
 					}}
 				/>
 			) : null}
-			{editingEntry && detail.editablePresentation ? (
+			{editingEntry ? (
 				<FormSheet
 					visible
 					title={t("history.valueField")}
@@ -541,23 +587,39 @@ export function BodyMetricScreen({ metricSlug, store }: BodyMetricScreenProps) {
 						/>
 					}
 				>
-					<HistoryEditor
-						key={`${editingEntry.observation.id}:${editingEntry.observation.updatedAt}`}
-						entry={editingEntry}
-						presentation={detail.editablePresentation}
-						inputLocale={detail.inputLocale}
-						busy={busy}
-						onSave={(value) =>
-							void mutate(() =>
-								body.updateMeasurement(editingEntry.observation.id, value),
-							)
-						}
-						onDelete={() =>
-							void mutate(() =>
-								body.deleteMeasurement(editingEntry.observation.id),
-							)
-						}
-					/>
+					{editingEntry.editable && detail.editablePresentation ? (
+						<HistoryEditor
+							key={`${editingEntry.observation.id}:${editingEntry.observation.updatedAt}`}
+							entry={editingEntry}
+							presentation={detail.editablePresentation}
+							inputLocale={detail.inputLocale}
+							busy={busy}
+							onSave={(value) =>
+								void mutate(() =>
+									body.updateMeasurement(editingEntry.observation.id, value),
+								)
+							}
+							onDelete={() =>
+								void mutate(() =>
+									body.deleteMeasurement(editingEntry.observation.id),
+								)
+							}
+						/>
+					) : (
+						<View style={styles.section}>
+							<AppText variant="title">{detail.label}</AppText>
+							<AppText variant="monoReadout">
+								{editingEntry.formattedValue}
+							</AppText>
+							<SourceStamp
+								source={editingEntry.observation.source}
+								observedAt={editingEntry.observation.observedAt}
+								localDay={editingEntry.observation.localDay}
+								locale={detail.inputLocale}
+							/>
+							<AppText color="muted">{t("readOnly")}</AppText>
+						</View>
+					)}
 					{error ? <AppText color="danger">{error}</AppText> : null}
 				</FormSheet>
 			) : null}
@@ -567,10 +629,16 @@ export function BodyMetricScreen({ metricSlug, store }: BodyMetricScreenProps) {
 
 const styles = StyleSheet.create((theme) => ({
 	scroll: { flex: 1 },
-	content: { padding: theme.spacing.gutter, gap: theme.spacing.lg },
+	content: {
+		paddingHorizontal: theme.spacing.gutter,
+		paddingTop: theme.spacing.sm,
+		paddingBottom: theme.spacing.lg,
+		gap: theme.spacing.md,
+	},
 	footer: {
 		paddingHorizontal: theme.spacing.gutter,
-		paddingVertical: theme.spacing.md,
+		paddingVertical: theme.spacing.sm,
+		flexShrink: 0,
 	},
 	historyRow: {
 		backgroundColor: "transparent",
@@ -579,8 +647,14 @@ const styles = StyleSheet.create((theme) => ({
 		borderBottomWidth: 1,
 		borderBottomColor: theme.colors.line,
 	},
-	summaryCard: { gap: theme.spacing.md },
-	section: { gap: theme.spacing.md },
+	summaryCard: { gap: theme.spacing.xs },
+	section: { gap: theme.spacing.sm },
+	headingSummary: {
+		paddingVertical: theme.spacing.sm,
+		borderWidth: 1,
+		borderColor: theme.colors.line,
+		backgroundColor: "transparent",
+	},
 	goalCard: { gap: theme.spacing.md },
 	historyCard: { gap: theme.spacing.sm },
 	actions: { flexDirection: "row", gap: theme.spacing.sm },

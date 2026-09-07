@@ -1,4 +1,5 @@
 export const body = {
+	measurementTitle: "Measurement",
 	notFound: "Measurement not found",
 	notFoundBody: "This measurement is not available.",
 	backToBody: "Back to Body",
@@ -10,6 +11,10 @@ export const body = {
 		loadFailedBody: "Try again.",
 	},
 	measurements: {
+		comparison: "{{change}}\n{{when}}",
+		noReadings: "No readings yet",
+		recorded: "Recorded {{when}}",
+		addA11y: "Add {{name}} reading",
 		title: "Measurements",
 		emptyTitle: "No measurements tracked",
 		emptyBody: "Choose the measurements you want to keep here.",
@@ -94,6 +99,7 @@ export const body = {
 		},
 	},
 	reading: {
+		stamp: "{{source}} · {{when}}",
 		manual: "Manual entry",
 		/** {{when}} is a day: "Today", "Yesterday", or "3 Aug". */
 		taped: "Taped {{when}}",
@@ -101,6 +107,8 @@ export const body = {
 		imported: "{{source}}, {{when}}",
 	},
 	read: {
+		rangeTitle: "Your recent range",
+		rangeBasis: "Based on your own readings.",
 		range: "Your recent range: {{min}}–{{max}}",
 		method:
 			"The middle half of {{count}} readings in the last {{days}} days. Based on your own readings.",
@@ -143,9 +151,12 @@ export const body = {
 		title: "Chart period",
 		week: "Week",
 		month: "Month",
+		year: "Year",
 		empty: "No readings in this period.",
 	},
 	goal: {
+		view: "View heading",
+		reach: "Reach {{value}}",
 		add: "Add heading",
 		title: "Heading",
 		target: "Heading {{value}}",

@@ -22,6 +22,11 @@ import { useUnistyles } from "../theme/unistyles";
 import { unitWords } from "../units/unit-words";
 import { AppText } from "./app-text";
 import { Button } from "./button";
+import {
+	editorialChartScale,
+	editorialPlotInset,
+	TrendChartPlot,
+} from "./trend-chart-plot";
 
 export type DataDomain = "mind" | "body" | "sleep" | "load";
 
@@ -120,10 +125,12 @@ export function TrendChart({
 	label,
 	onSelect,
 	compact = false,
+	showReadingsAction = true,
 }: {
 	series: TrendSeries;
 	/** Show detailed exploration controls only after a reading is selected. */
 	compact?: boolean;
+	showReadingsAction?: boolean;
 	height?: number;
 	domain?: DataDomain;
 	usualRange?: TrendChartUsualRange | null;
@@ -174,6 +181,23 @@ export function TrendChart({
 		onSelect?.(point, format(point.value));
 	}
 	function selectAt(x: number) {
+		if (compact) {
+			const inset = Math.min(
+				width.current * 0.4,
+				editorialPlotInset(
+					plotFormat,
+					editorialChartScale(series.points, usualRange),
+					fontScale,
+				),
+			);
+			select(
+				Math.round(
+					((x - inset) / Math.max(1, width.current - 8 - inset)) *
+						(series.points.length - 1),
+				),
+			);
+			return;
+		}
 		select(
 			Math.round(
 				(((x / Math.max(1, width.current)) * 308 - 4) / 300) *
@@ -201,6 +225,14 @@ export function TrendChart({
 		? terrainYForValue(heading.value, series.scale)
 		: null;
 	const dateRange = terrainDateRangeLabel(series, systemLocale());
+	const plotFormat = (value: number | null) => {
+		const formatted = format(value);
+		return displayUnit && displayUnit !== "st" && displayUnit !== "ft"
+			? formatted.endsWith(displayUnit)
+				? formatted.slice(0, -displayUnit.length).trimEnd()
+				: formatted
+			: formatted;
+	};
 	return (
 		<View>
 			<View
@@ -234,182 +266,200 @@ export function TrendChart({
 				onResponderGrant={(event) => selectAt(event.nativeEvent.locationX)}
 				onResponderMove={(event) => selectAt(event.nativeEvent.locationX)}
 			>
-				<Svg
-					accessibilityLabel={[
-						t("a11y.trendChart", { metric: series.metricSlug }),
-						usualRange
-							? t("a11y.trendChartUsualRange", {
-									min: usualRange.minFormatted,
-									max: usualRange.maxFormatted,
-								})
-							: null,
-						heading
-							? t("a11y.trendChartHeading", { value: heading.formatted })
-							: null,
-					]
-						.filter((part) => part !== null)
-						.join(" ")}
-					viewBox="-4 0 308 140"
-					height={height}
-					width="100%"
-				>
-					{corridor ? (
-						<Rect
-							testID="terrain-usual-corridor"
-							x="0"
-							y={corridor.top}
-							width="300"
-							height={Math.max(corridor.bottom - corridor.top, 1)}
-							fill={theme.colors.historyFill}
-						/>
-					) : null}
-					{!corridor ? (
-						<>
-							<SvgText
+				{compact ? (
+					<TrendChartPlot
+						series={series}
+						range={usualRange}
+						width={chartWidth}
+						height={height}
+						fontScale={fontScale}
+						format={plotFormat}
+						label={`${metricLabel}. ${dateRange}`}
+						selectedDay={selectedDay}
+						locale={systemLocale()}
+					/>
+				) : (
+					<Svg
+						accessibilityLabel={[
+							t("a11y.trendChart", { metric: series.metricSlug }),
+							usualRange
+								? t("a11y.trendChartUsualRange", {
+										min: usualRange.minFormatted,
+										max: usualRange.maxFormatted,
+									})
+								: null,
+							heading
+								? t("a11y.trendChartHeading", { value: heading.formatted })
+								: null,
+						]
+							.filter((part) => part !== null)
+							.join(" ")}
+						viewBox="-4 0 308 140"
+						height={height}
+						width="100%"
+					>
+						{corridor ? (
+							<Rect
+								testID="terrain-usual-corridor"
 								x="0"
-								y="20"
-								fill={theme.colors.ink2}
-								fontSize={chartLabelSize}
-								fontFamily={theme.typography.monoInline.fontFamily}
-							>
-								{format(series.scale.max)}
-							</SvgText>
-							{format(series.scale.min) !== format(series.scale.max) ? (
+								y={corridor.top}
+								width="300"
+								height={Math.max(corridor.bottom - corridor.top, 1)}
+								fill={theme.colors.historyFill}
+							/>
+						) : null}
+						{!corridor ? (
+							<>
 								<SvgText
 									x="0"
-									y="110"
+									y="20"
 									fill={theme.colors.ink2}
 									fontSize={chartLabelSize}
 									fontFamily={theme.typography.monoInline.fontFamily}
 								>
-									{format(series.scale.min)}
+									{format(series.scale.max)}
 								</SvgText>
-							) : null}
-						</>
-					) : null}
-					{series.segments.map((points) => (
-						<Polyline
-							key={points}
-							points={points}
-							fill="none"
-							stroke={dataColor}
-							strokeWidth="2"
-							strokeLinecap="round"
-							strokeLinejoin="round"
-						/>
-					))}
-					{series.segments
-						.filter((points) => points.trim().split(/\s+/).length === 1)
-						.map((points) => {
-							const [x, y] = points.split(",").map(Number);
-							return (
-								<Line
-									key={points}
-									testID="terrain-isolated-reading"
-									x1={x - 2}
-									x2={x + 2}
-									y1={y}
-									y2={y}
-									stroke={dataColor}
-									strokeWidth="2"
-								/>
-							);
-						})}
-					{selected && selected.value !== null ? (
-						<Line
-							testID="terrain-selected-reading"
-							x1={(selectedIndex / Math.max(series.points.length - 1, 1)) * 300}
-							x2={(selectedIndex / Math.max(series.points.length - 1, 1)) * 300}
-							y1="10"
-							y2="110"
-							stroke={theme.colors.ink}
-							strokeDasharray="3 3"
-						/>
-					) : null}
-					{headingY !== null ? (
-						<Line
-							testID="terrain-heading-line"
-							x1="0"
-							y1={headingY}
-							x2="300"
-							y2={headingY}
-							stroke={theme.colors.ink}
-							strokeOpacity="0.8"
-							strokeWidth="1"
-							strokeDasharray="4 4"
-						/>
-					) : null}
-					{finalMarker ? (
-						<Circle
-							testID="terrain-current-marker"
-							cx={finalMarker.x}
-							cy={finalMarker.y}
-							r={theme.terrain.currentDot}
-							fill={dataColor}
-						/>
-					) : null}
-					{corridor && usualRange ? (
-						<>
-							<SvgText
-								testID="terrain-usual-max-label"
-								x="0"
-								y={Math.max(TERRAIN_TOP_Y + 8, corridor.top - 3)}
-								fill={theme.colors.ink2}
-								fontFamily={theme.typography.monoInline.fontFamily}
-								fontSize={chartLabelSize}
-							>
-								{usualRange.maxFormatted}
-							</SvgText>
-							{usualRange.minFormatted !== usualRange.maxFormatted ? (
+								{format(series.scale.min) !== format(series.scale.max) ? (
+									<SvgText
+										x="0"
+										y="110"
+										fill={theme.colors.ink2}
+										fontSize={chartLabelSize}
+										fontFamily={theme.typography.monoInline.fontFamily}
+									>
+										{format(series.scale.min)}
+									</SvgText>
+								) : null}
+							</>
+						) : null}
+						{series.segments.map((points) => (
+							<Polyline
+								key={points}
+								points={points}
+								fill="none"
+								stroke={dataColor}
+								strokeWidth="2"
+								strokeLinecap="round"
+								strokeLinejoin="round"
+							/>
+						))}
+						{series.segments
+							.filter((points) => points.trim().split(/\s+/).length === 1)
+							.map((points) => {
+								const [x, y] = points.split(",").map(Number);
+								return (
+									<Line
+										key={points}
+										testID="terrain-isolated-reading"
+										x1={x - 2}
+										x2={x + 2}
+										y1={y}
+										y2={y}
+										stroke={dataColor}
+										strokeWidth="2"
+									/>
+								);
+							})}
+						{selected && selected.value !== null ? (
+							<Line
+								testID="terrain-selected-reading"
+								x1={
+									(selectedIndex / Math.max(series.points.length - 1, 1)) * 300
+								}
+								x2={
+									(selectedIndex / Math.max(series.points.length - 1, 1)) * 300
+								}
+								y1="10"
+								y2="110"
+								stroke={theme.colors.ink}
+								strokeDasharray="3 3"
+							/>
+						) : null}
+						{headingY !== null ? (
+							<Line
+								testID="terrain-heading-line"
+								x1="0"
+								y1={headingY}
+								x2="300"
+								y2={headingY}
+								stroke={theme.colors.ink}
+								strokeOpacity="0.8"
+								strokeWidth="1"
+								strokeDasharray="4 4"
+							/>
+						) : null}
+						{finalMarker ? (
+							<Circle
+								testID="terrain-current-marker"
+								cx={finalMarker.x}
+								cy={finalMarker.y}
+								r={theme.terrain.currentDot}
+								fill={dataColor}
+							/>
+						) : null}
+						{corridor && usualRange ? (
+							<>
 								<SvgText
-									testID="terrain-usual-min-label"
+									testID="terrain-usual-max-label"
 									x="0"
-									y={Math.min(TERRAIN_BASELINE_Y, corridor.bottom + 10)}
+									y={Math.max(TERRAIN_TOP_Y + 8, corridor.top - 3)}
 									fill={theme.colors.ink2}
 									fontFamily={theme.typography.monoInline.fontFamily}
 									fontSize={chartLabelSize}
 								>
-									{usualRange.minFormatted}
+									{usualRange.maxFormatted}
 								</SvgText>
-							) : null}
+								{usualRange.minFormatted !== usualRange.maxFormatted ? (
+									<SvgText
+										testID="terrain-usual-min-label"
+										x="0"
+										y={Math.min(TERRAIN_BASELINE_Y, corridor.bottom + 10)}
+										fill={theme.colors.ink2}
+										fontFamily={theme.typography.monoInline.fontFamily}
+										fontSize={chartLabelSize}
+									>
+										{usualRange.minFormatted}
+									</SvgText>
+								) : null}
+								<SvgText
+									testID="terrain-usual-range-label"
+									x="0"
+									y="136"
+									fill={theme.colors.ink2}
+									fontFamily={theme.typography.caption.fontFamily}
+									fontSize={chartLabelSize}
+								>
+									{t("terrain.usualRange")}
+								</SvgText>
+							</>
+						) : null}
+						{headingY !== null && heading ? (
 							<SvgText
-								testID="terrain-usual-range-label"
+								testID="terrain-heading-label"
 								x="0"
+								y={Math.max(TERRAIN_TOP_Y + 8, headingY - 3)}
+								fill={theme.colors.ink2}
+								fontFamily={theme.typography.monoInline.fontFamily}
+								fontSize={chartLabelSize}
+							>
+								{t("terrain.heading", { value: heading.formatted })}
+							</SvgText>
+						) : null}
+						{dateRange ? (
+							<SvgText
+								testID="terrain-date-range-label"
+								x="300"
 								y="136"
+								textAnchor="end"
 								fill={theme.colors.ink2}
-								fontFamily={theme.typography.caption.fontFamily}
+								fontFamily={theme.typography.monoInline.fontFamily}
 								fontSize={chartLabelSize}
 							>
-								{t("terrain.usualRange")}
+								{dateRange}
 							</SvgText>
-						</>
-					) : null}
-					{headingY !== null && heading ? (
-						<SvgText
-							testID="terrain-heading-label"
-							x="0"
-							y={Math.max(TERRAIN_TOP_Y + 8, headingY - 3)}
-							fill={theme.colors.ink2}
-							fontFamily={theme.typography.monoInline.fontFamily}
-							fontSize={chartLabelSize}
-						>
-							{t("terrain.heading", { value: heading.formatted })}
-						</SvgText>
-					) : null}
-					{dateRange ? (
-						<SvgText
-							testID="terrain-date-range-label"
-							x="300"
-							y="136"
-							textAnchor="end"
-							fill={theme.colors.ink2}
-							fontFamily={theme.typography.monoInline.fontFamily}
-							fontSize={chartLabelSize}
-						>
-							{dateRange}
-						</SvgText>
-					) : null}
-				</Svg>
+						) : null}
+					</Svg>
+				)}
 			</View>
 			{selected ? (
 				<View>
@@ -446,13 +496,15 @@ export function TrendChart({
 					/>
 				</View>
 			) : null}
-			<Button
-				label={t(
-					showReadings ? "terrain.hideReadings" : "terrain.showReadings",
-				)}
-				variant="text"
-				onPress={() => setShowReadings(!showReadings)}
-			/>
+			{showReadingsAction ? (
+				<Button
+					label={t(
+						showReadings ? "terrain.hideReadings" : "terrain.showReadings",
+					)}
+					variant="text"
+					onPress={() => setShowReadings(!showReadings)}
+				/>
+			) : null}
 			{showReadings
 				? series.points.map((point) => (
 						<AppText

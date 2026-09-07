@@ -36,7 +36,7 @@ export function SegmentedControl<T extends string | number>({
 					]}
 				>
 					<AppText
-						variant="label"
+						variant="caption"
 						color={value === option.value ? "onBrand" : "muted"}
 						style={styles.label}
 					>
@@ -53,14 +53,15 @@ const styles = StyleSheet.create((theme) => ({
 		flexDirection: "row",
 		backgroundColor: theme.colors.surface1,
 		borderRadius: theme.radius.control,
-		padding: theme.spacing.xs,
+		padding: 0,
 	},
 	option: {
 		flex: 1,
 		minHeight: theme.control.minHitArea,
 		justifyContent: "center",
 		alignItems: "center",
-		padding: theme.spacing.sm,
+		paddingHorizontal: theme.spacing.sm,
+		paddingVertical: theme.spacing.xs,
 		borderRadius: theme.radius.control,
 	},
 	selected: { backgroundColor: theme.colors.brand },

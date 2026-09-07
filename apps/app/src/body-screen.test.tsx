@@ -1,5 +1,5 @@
 import { KILOGRAMS_PER_POUND } from "@bro/domain";
-import { fireEvent, render } from "@testing-library/react-native";
+import { fireEvent, render, within } from "@testing-library/react-native";
 import { StyleSheet as NativeStyleSheet } from "react-native";
 import { BodyLogSurfaceProvider } from "./body/body-log-surface-context";
 import type {
@@ -370,6 +370,7 @@ describe("Body screen", () => {
 		expect(await screen.findByTestId("measurement-readout")).toHaveTextContent(
 			/15 st 1 lb/,
 		);
+		await fireEvent.press(screen.getByLabelText("About your recent range"));
 		expect(
 			screen.getByText("Your recent range: 15 st 0 lb–15 st 2 lb"),
 		).toBeTruthy();
@@ -517,8 +518,10 @@ describe("Body screen", () => {
 		expect(
 			await screen.findByLabelText("Waist. 1.5 cm down since 3 Aug."),
 		).toBeTruthy();
-		expect(screen.getByText(/−1.5 cm · since 3 Aug/)).toBeTruthy();
-		expect(screen.getByText("−1.5 cm · since 3 Aug")).toBeTruthy();
+		expect(screen.getByText(/−1.5 cm\s+since 3 Aug/)).toBeTruthy();
+		expect(screen.getAllByText(/−1.5 cm\s+since 3 Aug/).length).toBeGreaterThan(
+			0,
+		);
 		expect(screen.getByTestId("body-measurements-card")).toBeTruthy();
 		expect(screen.queryByText("How to measure")).toBeNull();
 	});
@@ -538,7 +541,7 @@ describe("Body screen", () => {
 		expect(
 			await screen.findByLabelText("Waist. 1.5 cm down since 3 Aug."),
 		).toBeTruthy();
-		expect(screen.getByText(/−1.5 cm · since 3 Aug/)).toBeTruthy();
+		expect(screen.getByText(/−1.5 cm\s+since 3 Aug/)).toBeTruthy();
 		expect(screen.queryByTestId("change-current-waist")).toBeNull();
 		expect(screen.queryByTestId("change-previous-waist")).toBeNull();
 		expect(screen.queryByTestId("change-band-waist")).toBeNull();
@@ -550,10 +553,10 @@ describe("Body screen", () => {
 		const screen = await mountedWith(
 			overviewOf([metric({ baseline: TAPED_WAIST })]),
 		);
-		expect(
-			await screen.findByText("Your recent range: 85.0 cm–88.0 cm"),
-		).toBeTruthy();
-		await fireEvent.press(screen.getByLabelText("About your recent range"));
+		await fireEvent.press(
+			await screen.findByLabelText("About your recent range"),
+		);
+		expect(screen.getByText("Your recent range: 85.0 cm–88.0 cm")).toBeTruthy();
 		expect(
 			screen.getByText(
 				"The middle half of 6 readings in the last 180 days. Based on your own readings.",
@@ -580,11 +583,16 @@ describe("Body screen", () => {
 			]),
 		);
 
+		expect(await screen.findByText(/Apple Health/)).toBeTruthy();
 		expect(
-			await screen.findByText("−1.5 cm · Apple Health · since 3 Aug"),
-		).toBeTruthy();
+			within(screen.getByTestId("body-measurements-card")).queryByText(
+				/Apple Health/,
+			),
+		).toBeNull();
 		// A reading the man took himself does not spend the row on saying so.
-		expect(screen.getByText("−1.5 cm · since 3 Aug")).toBeTruthy();
+		expect(screen.getAllByText(/−1.5 cm\s+since 3 Aug/).length).toBeGreaterThan(
+			0,
+		);
 		expect(screen.queryByText("You · since 3 Aug")).toBeNull();
 	});
 

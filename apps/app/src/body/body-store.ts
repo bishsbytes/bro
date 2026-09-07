@@ -306,7 +306,7 @@ export class BodyStore {
 	}
 
 	async loadOverview(): Promise<BodyOverview> {
-		return { metrics: await this.loadSummaries(), inputLocale: this.locale() };
+		return { metrics: await this.loadSummaries(7), inputLocale: this.locale() };
 	}
 
 	async loadMetric(metricSlug: string): Promise<BodyMetricDetail | null> {
@@ -541,7 +541,9 @@ export class BodyStore {
 		return await this.goals.abandon(id);
 	}
 
-	private async loadSummaries(): Promise<BodyMetricSummary[]> {
+	private async loadSummaries(
+		period: 7 | 30 = BODY_TREND_PERIOD,
+	): Promise<BodyMetricSummary[]> {
 		const inputLocale = this.locale();
 		const [overlays, preferences, observations, dailyMetrics, goals] =
 			await Promise.all([
@@ -633,7 +635,7 @@ export class BodyStore {
 						resolvedRows,
 						metric,
 						throughLocalDay,
-						BODY_TREND_PERIOD,
+						period,
 						{
 							usualRange: resolvedBaseline.usualRange,
 							heading: activeGoal?.goal.targetValue,

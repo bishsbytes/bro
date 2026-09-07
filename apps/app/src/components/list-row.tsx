@@ -13,6 +13,7 @@ type ListRowProps = Omit<
 	value?: string;
 	children?: ReactNode;
 	showChevron?: boolean;
+	layout?: "stacked" | "inline";
 };
 
 export function ListRow({
@@ -21,6 +22,7 @@ export function ListRow({
 	value,
 	children,
 	showChevron = true,
+	layout = "stacked",
 	style,
 	...props
 }: ListRowProps) {
@@ -30,21 +32,40 @@ export function ListRow({
 		<TouchableOpacity
 			accessibilityRole="button"
 			activeOpacity={0.72}
-			style={[styles.row, showChevron && styles.chevronRow, style]}
+			style={[
+				styles.row,
+				showChevron && styles.chevronRow,
+				layout === "inline" && styles.inlineRow,
+				style,
+			]}
 			{...props}
 		>
 			<View style={styles.content}>
-				<View style={styles.heading}>
-					<AppText variant="label" style={styles.title}>
+				<View
+					style={[styles.heading, layout === "inline" && styles.inlineHeading]}
+				>
+					<AppText
+						variant={layout === "inline" ? "caption" : "label"}
+						style={[styles.title, layout === "inline" && styles.inlineTitle]}
+					>
 						{title}
 					</AppText>
 					{value ? (
-						<AppText variant="monoInline" color="muted" style={styles.value}>
+						<AppText
+							variant="monoInline"
+							color={layout === "inline" ? "default" : "muted"}
+							style={[styles.value, layout === "inline" && styles.inlineValue]}
+						>
 							{value}
 						</AppText>
 					) : null}
+					{detail && layout === "inline" ? (
+						<AppText variant="micro" color="muted" style={styles.inlineDetail}>
+							{detail}
+						</AppText>
+					) : null}
 				</View>
-				{detail ? (
+				{detail && layout !== "inline" ? (
 					<AppText variant="caption" color="muted">
 						{detail}
 					</AppText>
@@ -59,6 +80,16 @@ export function ListRow({
 }
 
 const styles = StyleSheet.create((theme) => ({
+	inlineRow: {
+		paddingVertical: 8,
+		paddingHorizontal: 0,
+		gap: 8,
+		backgroundColor: "transparent",
+	},
+	inlineHeading: { gap: 8, flexWrap: "wrap" },
+	inlineTitle: { flex: 1, minWidth: 60 },
+	inlineValue: { textAlign: "left", flex: 1, minWidth: 68, maxWidth: "60%" },
+	inlineDetail: { flexShrink: 1, textAlign: "right", maxWidth: "38%" },
 	row: {
 		minHeight: theme.control.minHitArea,
 		flexDirection: "row",

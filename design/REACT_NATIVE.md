@@ -29,7 +29,7 @@ Paths below are relative to `apps/app/src`.
 | C07 IconButton | `components/header-icon-button.tsx` and existing named row actions |
 | C08 SelectableRow | `components/score-row.tsx`; five equally sized options |
 | C09 FactorChip | `screens/home/home-screen.tsx` |
-| C10 SegmentedControl | Existing Intake filters, quantity choices and `components/option-row.tsx` |
+| C10 SegmentedControl | `components/segmented-control.tsx`; existing Intake filters and quantity choices |
 | C11 FormField | `components/form-field.tsx`, date/time and markdown fields |
 | C12 QuantityField | `components/measurement-field.tsx`, `screens/intake/intake-quantity-field.tsx` |
 | C13 DetailRow | `components/list-row.tsx`, `screens/intake/intake-rows.tsx` |
@@ -69,4 +69,6 @@ Food artwork lives in `apps/app/assets/intake/`, with the generation prompts and
 
 Intake places the day switcher at the top, with no week strip. The “Add to your day” invitation card appears only on Today, below the switcher.
 
-Body uses the shared `FormSheet`, `EventWhenFields`, `MeasurementField`, `SourceStamp`, `SegmentedControl` and `ListRow`. The overview leads with an available reading, complete units and source; measurement details use the supported Week / Month windows and a pinned Add reading action. History rows open manual records for editing; imported daily values remain read-only and show their day rather than an invented sensor time. The recent-range explanation retains the middle-half calculation over 180 days and reports the valid reading count. Management switches preserve the existing tracking/import visibility policy and link to the existing unit preferences. Notes, custom metric creation, yearly charts and reordering are not added by this visual pass.
+Body uses the shared `FormSheet`, `EventWhenFields`, `MeasurementField`, `SourceStamp`, `SegmentedControl` and `ListRow`. The overview leads with an available reading, complete units and source; the overview previews the last seven days, and measurement details offer Week / Month / Year windows and a pinned Add reading action. Compact history rows open manual records for editing and imported records for source details; imported daily values remain read-only and show their day rather than an invented sensor time. The recent-range explanation retains the middle-half calculation over 180 days and reports the valid reading count. Management switches preserve the existing tracking/import visibility policy and link to the existing unit preferences. Notes, custom metric creation and reordering are not added by this visual pass.
+
+Body uses `ListRow`’s inline layout, compact section headers and `TextAction` for quiet navigation links. The outlined overview card places the reading and source above the chart, with the recent-range legend below. `TrendChartPlot` draws readable axes and actual reading dots, breaks lines at missing days, and gives narrow ranges some headroom. Heading management opens from the compact summary so History stays within reach. The Body Log action is centred above the native tabs.

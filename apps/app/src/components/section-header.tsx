@@ -5,6 +5,7 @@ import { AppText } from "./app-text";
 
 type SectionHeaderProps = {
 	title: string;
+	compact?: boolean;
 	eyebrow?: string;
 	action?: ReactNode;
 	tone?: "default" | "danger";
@@ -12,6 +13,7 @@ type SectionHeaderProps = {
 
 export function SectionHeader({
 	title,
+	compact = false,
 	eyebrow,
 	action,
 	tone = "default",
@@ -27,7 +29,7 @@ export function SectionHeader({
 				<AppText
 					variant="section"
 					color={tone === "danger" ? "danger" : "default"}
-					style={styles.title}
+					style={[styles.title, compact && styles.compactTitle]}
 				>
 					{title}
 				</AppText>
@@ -50,4 +52,5 @@ const styles = StyleSheet.create((theme) => ({
 		marginBottom: theme.spacing.xs,
 	},
 	title: {},
+	compactTitle: { fontSize: 16, lineHeight: 22 },
 }));

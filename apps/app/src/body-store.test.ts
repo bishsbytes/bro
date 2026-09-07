@@ -50,6 +50,8 @@ describe("body store", () => {
 		);
 
 		const fresh = await store.loadOverview();
+		expect(fresh.metrics[0].series.points).toHaveLength(7);
+		expect((await store.loadMetric("weight"))?.series.points).toHaveLength(30);
 		expect(fresh.metrics.map(({ metricSlug }) => metricSlug)).toEqual([
 			"weight",
 			"waist",

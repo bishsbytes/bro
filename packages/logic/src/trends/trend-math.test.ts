@@ -62,6 +62,28 @@ describe("trend math", () => {
 		expect(series.daysUntilMeaningful).toBe(5);
 	});
 
+	it("includes a full year of dated readings without filling missing days", () => {
+		const rows = [
+			observation("outside", "2025-09-07", 80, { metricSlug: "weight" }),
+			observation("first", "2025-09-08", 82, { metricSlug: "weight" }),
+			observation("last", "2026-09-07", 84, { metricSlug: "weight" }),
+		];
+		const series = buildTrendSeries(
+			rows,
+			knownMetric("weight"),
+			"2026-09-07",
+			365,
+		);
+		expect(series.points).toHaveLength(365);
+		expect(series.points[0]).toEqual({ localDay: "2025-09-08", value: 82 });
+		expect(series.points.at(-1)).toEqual({ localDay: "2026-09-07", value: 84 });
+		expect(series.observedDayCount).toBe(2);
+		expect(series.points.filter((point) => point.value === null)).toHaveLength(
+			363,
+		);
+		expect(series.segments).toHaveLength(2);
+	});
+
 	it("normalises stored scale snapshots before aggregating", () => {
 		const series = buildTrendSeries(
 			[
