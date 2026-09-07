@@ -20,7 +20,7 @@ Paths below are relative to `apps/app/src`.
 | --- | --- |
 | C01 AppScaffold | `components/screen.tsx`, `app/(tabs)/_layout.tsx` |
 | C02 ScreenHeader | `components/app-header.tsx`, `components/section-header.tsx`, native stack options |
-| C03 DateStrip | `components/week-strip.tsx`; Intake also retains its daily navigation |
+| C03 DateStrip | `components/week-strip.tsx`; Intake uses `screens/intake/intake-date-strip.tsx` with seven trailing days, recorded-entry dots and its existing day arrows |
 | C04 BottomNavigation | `app/(tabs)/_layout.tsx`, Expo native tabs |
 | C05 LogAction | `components/quick-log-fab.tsx`, `components/log-date-context.tsx` |
 | C06 Button | `components/button.tsx` |
@@ -29,7 +29,7 @@ Paths below are relative to `apps/app/src`.
 | C09 FactorChip | `screens/home/home-screen.tsx` |
 | C10 SegmentedControl | Existing Intake filters, quantity choices and `components/option-row.tsx` |
 | C11 FormField | `components/form-field.tsx`, date/time and markdown fields |
-| C12 QuantityField | `components/measurement-field.tsx`, Intake amount editor |
+| C12 QuantityField | `components/measurement-field.tsx`, `screens/intake/intake-quantity-field.tsx` |
 | C13 DetailRow | `components/list-row.tsx`, `screens/intake/intake-rows.tsx` |
 | C14 FeedbackBanner | `components/log-confirmation-toast.tsx` and inline errors |
 | C15 CheckInCard | Journal sitting cards in `screens/home/home-screen.tsx` |
@@ -60,3 +60,7 @@ The ten supporting screen studies are mapped onto existing destinations and form
 ## Verification
 
 Run the app and database-app Nx tests, relevant typecheck/lint targets, and repo-wide `pnpm biome check .`. Check a narrow viewport and both appearances; validate large text, keyboard exposure, VoiceOver/TalkBack and native picker/sheet behaviour on devices before release.
+
+Intake opens on the daily entries, with totals available under Summary. Search keeps its custom-entry action above the bottom safe area. Amount and custom-entry sheets reuse decimal quantity fields; supported portion/mass/volume changes use the existing composition metadata. Custom nutrition remains explicitly per portion and requires at least one known value under the current store contract; reusable items remain managed through Your library.
+
+Food artwork lives in `apps/app/assets/intake/`, with the generation prompts and mapping policy in its README. Transparent illustrations are bundled for offline use, matched to stable system keys or exact unbranded local dish names, and never supply nutrition. Other items keep a neutral icon.

@@ -36,19 +36,27 @@ function TabShell() {
 	const pathname = usePathname();
 	const segments = useSegments() as string[];
 	const journalDay = useLogDate("journal");
+	const intakeDay = useLogDate("intake");
 	const journalDate = new Intl.DateTimeFormat(i18n.language, {
 		weekday: "long",
 		day: "numeric",
 		month: "long",
 		timeZone: "UTC",
-	}).format(new Date(`${journalDay}T00:00:00.000Z`));
+	}).format(
+		new Date(
+			`${pathname === "/intake" ? intakeDay : journalDay}T00:00:00.000Z`,
+		),
+	);
 	const activeTabKey = TAB_TITLE_KEYS[pathname as keyof typeof TAB_TITLE_KEYS];
 	const isJournalTab = pathname === "/";
-	const activeHeaderTitle = isJournalTab
-		? t("tabs.journalTitle")
-		: activeTabKey
-			? t(activeTabKey)
-			: undefined;
+	const isIntakeTab = pathname === "/intake";
+	const activeHeaderTitle = isIntakeTab
+		? t("tabs.intakeTitle")
+		: isJournalTab
+			? t("tabs.journalTitle")
+			: activeTabKey
+				? t(activeTabKey)
+				: undefined;
 	const canQuickLog =
 		pathname === "/" ||
 		pathname === "/intake" ||
@@ -59,10 +67,12 @@ function TabShell() {
 			? {
 					title: activeHeaderTitle,
 					isJournal: isJournalTab,
+					isIntake: isIntakeTab,
 				}
 			: {
 					title: t("tabs.journalTitle"),
 					isJournal: true,
+					isIntake: false,
 				},
 	);
 
@@ -71,15 +81,17 @@ function TabShell() {
 			lastTabHeader.current = {
 				title: activeHeaderTitle,
 				isJournal: isJournalTab,
+				isIntake: isIntakeTab,
 			};
 		}
-	}, [activeHeaderTitle, isJournalTab]);
+	}, [activeHeaderTitle, isJournalTab, isIntakeTab]);
 
 	const isNestedTabRoute = segments[0] === "(tabs)" && segments.length > 2;
 	const header = activeHeaderTitle
 		? {
 				title: activeHeaderTitle,
 				isJournal: isJournalTab,
+				isIntake: isIntakeTab,
 			}
 		: lastTabHeader.current;
 	const title = isNestedTabRoute ? undefined : header.title;
@@ -90,8 +102,10 @@ function TabShell() {
 			{title ? (
 				<AppHeader
 					title={title}
-					stacked={header.isJournal}
-					eyebrow={header.isJournal ? journalDate : undefined}
+					stacked={header.isJournal || header.isIntake}
+					eyebrow={
+						header.isJournal || header.isIntake ? journalDate : undefined
+					}
 					eyebrowAccessibilityLabel={
 						header.isJournal ? t("tabs.openHistory") : undefined
 					}

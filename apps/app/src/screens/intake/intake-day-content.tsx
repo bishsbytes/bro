@@ -6,6 +6,7 @@ import { useTranslation } from "react-i18next";
 import { AccessibilityInfo, Animated, Pressable, View } from "react-native";
 import { AppText } from "../../components/app-text";
 import { BaselineGauge } from "../../components/baseline-gauge";
+import { Button } from "../../components/button";
 import { Card } from "../../components/card";
 import { Icon } from "../../components/icon";
 import { SectionHeader } from "../../components/section-header";
@@ -15,6 +16,8 @@ import type {
 	PresentedIntakeEntry,
 } from "../../intake/intake-store";
 import { StyleSheet, useUnistyles } from "../../theme/unistyles";
+import { IntakeArtwork } from "./intake-artwork";
+import { IntakeDateStrip } from "./intake-date-strip";
 import { IntakeEntrySheet } from "./intake-entry-sheet";
 import { IntakeRow, RowPanel } from "./intake-rows";
 
@@ -84,11 +87,11 @@ function Segments({
 }
 
 /**
- * A day of intake as the design draws it, in one card that navigates itself:
+ * Daily entries and totals share the same selected date:
  * arrows walk back through the days, and a segmented control switches between
  * one compact baseline gauge per tracked total against the user's own usual
- * and the day's entries as hairline rows on a timeline. Logging is the shared
- * FAB's job. Nothing here is a budget, a remaining amount, or a meal slot.
+ * and the day's entries as illustrated rows. The invitation and shared Log
+ * action preserve that date. Nothing here is a budget or a meal slot.
  */
 export function IntakeDayContent({
 	snapshot,
@@ -166,10 +169,37 @@ export function IntakeDayContent({
 
 	return (
 		<>
-			<Card style={styles.hero}>
+			<IntakeDateStrip
+				selectedDay={snapshot.localDay}
+				loggedDays={
+					snapshot.loggedDays ??
+					(snapshot.events.length ? [snapshot.localDay] : [])
+				}
+				disabled={busy}
+				onSelectDay={onSelectDay}
+			/>
+			<Card style={styles.invitation}>
+				<AppText variant="title" style={styles.invitationText}>
+					{t("intake:tab.addTitle")}
+				</AppText>
+				<AppText style={styles.invitationText}>
+					{t("intake:tab.addBody")}
+				</AppText>
+				<Button
+					label={t("intake:tab.addAction")}
+					variant="secondary"
+					onPress={() =>
+						router.push({
+							pathname: "/intake/log",
+							params: { day: snapshot.localDay },
+						})
+					}
+				/>
+			</Card>
+			<View style={styles.hero}>
 				<View style={styles.dayHeading}>
 					<View style={styles.dayCopy}>
-						<AppText variant="section">{snapshot.dayLabel}</AppText>
+						<AppText variant="title">{snapshot.dayLabel}</AppText>
 						{snapshot.dayDate ? (
 							<AppText variant="caption" color="muted">
 								{snapshot.dayDate}
@@ -286,9 +316,17 @@ export function IntakeDayContent({
 							{snapshot.entries.map((entry, index) => (
 								<IntakeRow
 									key={entry.key}
-									leading={entry.time}
+									thumbnail={
+										<IntakeArtwork
+											name={entry.name}
+											brand={entry.events[0]?.event.brand}
+											kind={entry.events[0]?.event.kind}
+											sourceRef={entry.events[0]?.event.sourceRef}
+										/>
+									}
+									chevron
 									title={entry.name}
-									meta={entry.meta}
+									meta={[entry.meta, entry.time].filter(Boolean).join(" · ")}
 									value={entry.value || null}
 									last={index === snapshot.entries.length - 1}
 									disabled={busy}
@@ -300,7 +338,7 @@ export function IntakeDayContent({
 						</View>
 					)}
 				</Animated.View>
-			</Card>
+			</View>
 
 			{error ? <AppText color="danger">{error}</AppText> : null}
 
@@ -350,6 +388,8 @@ export function IntakeDayContent({
 
 const styles = StyleSheet.create((theme) => ({
 	hero: { gap: theme.spacing.lg },
+	invitation: { gap: theme.spacing.md, backgroundColor: theme.colors.brand },
+	invitationText: { color: theme.colors.onBrand },
 	dayHeading: {
 		flexDirection: "row",
 		alignItems: "center",
@@ -362,8 +402,7 @@ const styles = StyleSheet.create((theme) => ({
 		height: theme.control.buttonMinHeight,
 		alignItems: "center",
 		justifyContent: "center",
-		borderWidth: 1,
-		borderColor: theme.colors.lineStrong,
+		backgroundColor: theme.colors.surface,
 		borderRadius: theme.radius.md,
 	},
 	navButtonPressed: { backgroundColor: theme.colors.surfaceSunk },
@@ -376,8 +415,7 @@ const styles = StyleSheet.create((theme) => ({
 		flex: 1,
 		alignItems: "center",
 		justifyContent: "center",
-		borderWidth: 1,
-		borderColor: theme.colors.border,
+		minHeight: theme.control.minHitArea,
 		backgroundColor: theme.colors.surface,
 		paddingVertical: theme.spacing.sm,
 		paddingHorizontal: theme.spacing.md,
@@ -394,9 +432,9 @@ const styles = StyleSheet.create((theme) => ({
 	segmentSelected: {
 		zIndex: 1,
 		borderColor: theme.colors.brand,
-		backgroundColor: theme.colors.selected,
+		backgroundColor: theme.colors.brand,
 	},
-	segmentSelectedText: { color: theme.colors.onSelected },
+	segmentSelectedText: { color: theme.colors.onBrand },
 	segmentPressed: { opacity: theme.opacity.disabled },
 	segmentContent: { gap: theme.spacing.lg },
 	empty: { gap: theme.spacing.xs, paddingVertical: theme.spacing.sm },

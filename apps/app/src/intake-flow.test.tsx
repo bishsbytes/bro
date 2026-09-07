@@ -143,8 +143,8 @@ describe("intake flow", () => {
 		await waitFor(() => expect(router.getPathname()).toBe("/intake/log"));
 		expect(await view.findByText("Browse")).toBeTruthy();
 		await fireEvent.press(view.getByLabelText("Log Lager, 4.5%"));
-		expect(await view.findByText("Log Lager, 4.5%")).toBeTruthy();
-		await fireEvent.press(view.getByText("Log it"));
+		expect(await view.findByLabelText("Add to intake")).toBeTruthy();
+		await fireEvent.press(view.getByText("Add to intake"));
 		expect(await view.findByText("Lager, 4.5% added")).toBeTruthy();
 		const [lager] = await events.listAll();
 		expect(lager).toMatchObject({
@@ -159,7 +159,7 @@ describe("intake flow", () => {
 		// stayed for the next item.
 		await fireEvent.press(view.getByLabelText("Show Smoke or vape"));
 		await fireEvent.press(await view.findByLabelText("Log Cigarette"));
-		await fireEvent.press(await view.findByText("Log it"));
+		await fireEvent.press(await view.findByText("Add to intake"));
 		expect(await view.findByText("Cigarette added")).toBeTruthy();
 		expect(
 			(await events.listRecent(["nicotine"]))[0]?.constituents.nicotine,
@@ -171,26 +171,27 @@ describe("intake flow", () => {
 		expect(await view.findByText("Lager, 4.5% added")).toBeTruthy();
 		expect(await events.listAll()).toHaveLength(3);
 		// Something else: a complete event with no library row behind it.
-		await fireEvent.press(view.getByLabelText("Something else"));
+		await fireEvent.press(view.getByLabelText("Add something else"));
 		await fireEvent.changeText(
 			await view.findByLabelText("What was it?"),
 			"Oat bar",
 		);
 		await fireEvent.changeText(view.getByLabelText("Energy (kcal)"), "210");
-		await fireEvent.press(view.getByText("Log it"));
+		await fireEvent.press(view.getByText("Add to intake"));
 		expect(await view.findByText("Oat bar added")).toBeTruthy();
 		expect(await events.listAll()).toHaveLength(4);
 
 		// The tab: one stream, one energy total against nothing but itself, the
 		// two pints as one row, everything else in order.
 		await act(async () => expoRouter.replace("/intake"));
+		await fireEvent.press(await view.findByLabelText("Summary"));
 		expect(await view.findByLabelText("Energy intake, 699 kcal.")).toBeTruthy();
 		expect(view.queryByText(/remaining|left today|budget/i)).toBeNull();
 		// The shared FAB is the way in; the card carries no log button.
 		expect(view.getByLabelText("Log")).toBeTruthy();
 		expect(view.queryByText("Log something")).toBeNull();
 		await fireEvent.press(view.getByLabelText("Logged"));
-		expect(await view.findByText("2 × pint")).toBeTruthy();
+		expect(await view.findByText(/2 × pint ·/)).toBeTruthy();
 		expect(view.getAllByText("Lager, 4.5%")).toHaveLength(1);
 		expect(view.getByText("Cigarette")).toBeTruthy();
 		expect(view.getByText("Oat bar")).toBeTruthy();

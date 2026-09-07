@@ -14,6 +14,7 @@ import type {
 	PresentedIntakeEvent,
 } from "../../intake/intake-store";
 import { StyleSheet } from "../../theme/unistyles";
+import { IntakeArtwork } from "./intake-artwork";
 import { IntakeRow } from "./intake-rows";
 
 type EventEditorProps = {
@@ -36,7 +37,7 @@ function EventEditor({
 	onDelete,
 	onBack,
 }: EventEditorProps) {
-	const { t } = useTranslation("intake");
+	const { t, i18n } = useTranslation("intake");
 	const { event } = presented;
 	const [name, setName] = useState(event.name);
 	const [portionLabel, setPortionLabel] = useState(event.portionLabel ?? "");
@@ -47,7 +48,38 @@ function EventEditor({
 	return (
 		<View style={styles.sheet}>
 			<View>
-				<AppText variant="section">{t("event.editTitle")}</AppText>
+				<AppText variant="eyebrow">{t("event.editTitle")}</AppText>
+				<AppText variant="display">{event.name}</AppText>
+				<IntakeArtwork
+					hero
+					name={event.name}
+					kind={event.kind}
+					sourceRef={event.sourceRef}
+					brand={event.brand}
+				/>
+				<IntakeRow
+					title={t("event.source")}
+					value={t(
+						event.sourceRef?.startsWith("system:")
+							? "event.sourceBro"
+							: event.sourceRef?.startsWith("library:") ||
+									(event.consumableId && !event.sourceRef)
+								? "event.sourceLibrary"
+								: event.sourceRef
+									? "event.sourceProvider"
+									: "event.sourceManual",
+					)}
+				/>
+				{Number.isFinite(event.createdAt) ? (
+					<AppText variant="caption" color="muted">
+						{t("event.recordedAt", {
+							date: new Intl.DateTimeFormat(i18n.language, {
+								dateStyle: "medium",
+								timeStyle: "short",
+							}).format(event.createdAt),
+						})}
+					</AppText>
+				) : null}
 				{presented.contributions ? (
 					<AppText variant="caption" color="muted">
 						{t("event.storedSnapshot", { value: presented.contributions })}
@@ -83,6 +115,11 @@ function EventEditor({
 			<Button
 				label={t("event.save")}
 				loading={busy}
+				disabled={
+					!name.trim() ||
+					!Number.isFinite(Number(quantity)) ||
+					Number(quantity) <= 0
+				}
 				onPress={() =>
 					onSave({
 						name,

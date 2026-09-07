@@ -1,3 +1,4 @@
+import { DRINK_CATALOGUE } from "@bro/domain/drink-catalogue";
 import { fireEvent, render, waitFor } from "@testing-library/react-native";
 import type {
 	IntakeLogSnapshot,
@@ -67,13 +68,87 @@ function stores() {
 }
 
 describe("recent intake actions", () => {
+	it("keeps a decimal portion when stepping and saves the edited amount", async () => {
+		const props = stores();
+		const view = await render(<IntakeLogScreen {...props} />);
+		await fireEvent.press(await view.findByLabelText("Edit amount for Water"));
+		await fireEvent.changeText(view.getByLabelText("How many"), "1.25");
+		await fireEvent.press(view.getByLabelText("Increase amount"));
+		expect(view.getByLabelText("How many").props.value).toBe("1.75");
+		await fireEvent.press(view.getByLabelText("Add to intake"));
+		expect(props.store.repeatEvent).toHaveBeenCalledWith(
+			"earlier-water",
+			expect.anything(),
+			1.75,
+		);
+	});
+
+	it("converts volume into a portion without changing the amount consumed", async () => {
+		const props = stores();
+		props.store.loadLog.mockResolvedValue({
+			...snapshot,
+			system: DRINK_CATALOGUE.filter((item) => item.key === "drink:water"),
+		});
+		const view = await render(<IntakeLogScreen {...props} />);
+		await fireEvent.press(await view.findByLabelText("Log Water"));
+		await fireEvent.press(view.getByLabelText("Use ml"));
+		expect(view.getByLabelText("How many").props.value).toBe("250");
+		await fireEvent.changeText(view.getByLabelText("How many"), "375");
+		await fireEvent.press(view.getByLabelText("250 ml glass"));
+		expect(view.getByLabelText("How many").props.value).toBe("1.5");
+		await fireEvent.press(view.getByLabelText("Add to intake"));
+		expect(props.store.log).toHaveBeenCalledWith(
+			{ type: "system", key: "drink:water" },
+			{ type: "portion", portionId: "glass-250ml", quantity: 1.5 },
+			expect.anything(),
+			null,
+		);
+	});
+
+	it("requires a new valid amount after clearing a volume and keeps cancellation unsaved", async () => {
+		const props = stores();
+		props.store.loadLog.mockResolvedValue({
+			...snapshot,
+			system: DRINK_CATALOGUE.filter((item) => item.key === "drink:water"),
+		});
+		const view = await render(<IntakeLogScreen {...props} />);
+		await fireEvent.press(await view.findByLabelText("Log Water"));
+		await fireEvent.press(view.getByLabelText("Use ml"));
+		await fireEvent.changeText(view.getByLabelText("How many"), "");
+		expect(view.getByLabelText("Add to intake")).toBeDisabled();
+		expect(view.getByText("Enter an amount greater than zero.")).toBeTruthy();
+		await fireEvent.press(view.getByLabelText("Cancel"));
+		expect(props.store.log).not.toHaveBeenCalled();
+	});
+
+	it("logs a custom drink with known volume and leaves unknown nutrition absent", async () => {
+		const props = stores();
+		const view = await render(<IntakeLogScreen {...props} />);
+		await fireEvent.press(await view.findByLabelText("Add something else"));
+		await fireEvent.press(view.getByLabelText("Drink"));
+		await fireEvent.changeText(
+			view.getByLabelText("What was it?"),
+			"Homemade drink",
+		);
+		await fireEvent.changeText(view.getByLabelText("Volume (ml)"), "300");
+		await fireEvent.press(view.getByLabelText("Add to intake"));
+		expect(props.store.logFree).toHaveBeenCalledWith(
+			expect.objectContaining({
+				kind: "drink",
+				name: "Homemade drink",
+				volumeL: 0.3,
+				constituents: { fluid: 0.3 },
+			}),
+		);
+	});
+
 	it("edits before saving when the row is tapped", async () => {
 		const props = stores();
 		const view = await render(<IntakeLogScreen {...props} />);
 		await fireEvent.press(await view.findByLabelText("Edit amount for Water"));
 		expect(props.store.repeatEvent).not.toHaveBeenCalled();
-		expect(view.getByLabelText("Log it")).toBeTruthy();
-		await fireEvent.press(view.getByLabelText("Log it"));
+		expect(view.getByLabelText("Add to intake")).toBeTruthy();
+		await fireEvent.press(view.getByLabelText("Add to intake"));
 		await waitFor(() =>
 			expect(props.store.repeatEvent).toHaveBeenCalledWith(
 				"earlier-water",
@@ -100,7 +175,7 @@ describe("recent intake actions", () => {
 		await waitFor(() =>
 			expect(props.store.deleteEvent).toHaveBeenCalledWith("new-water"),
 		);
-		await fireEvent.press(view.getByLabelText("Something else"));
+		await fireEvent.press(view.getByLabelText("Add something else"));
 		expect(await view.findByLabelText("What was it?")).toBeTruthy();
 	});
 

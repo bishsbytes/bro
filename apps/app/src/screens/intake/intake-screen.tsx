@@ -40,7 +40,7 @@ export function IntakeScreen({ store }: IntakeScreenProps) {
 			: null;
 	const segment: IntakeDaySegment = isIntakeDaySegment(params.view)
 		? params.view
-		: "summary";
+		: "logged";
 	useSetLogDate("intake", selectedDay ?? localDayOf(new Date()));
 	const selectedDayRef = useRef(selectedDay);
 	selectedDayRef.current = selectedDay;

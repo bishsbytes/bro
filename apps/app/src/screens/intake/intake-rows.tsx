@@ -8,6 +8,7 @@ import { StyleSheet, useUnistyles } from "../../theme/unistyles";
 export type IntakeRowProps = {
 	/** A time column in tabular figures, e.g. "07:40". */
 	leading?: string | null;
+	thumbnail?: ReactNode;
 	title: string;
 	meta?: string | null;
 	/** Right-aligned tabular figure: what the row added, or its portion. */
@@ -31,6 +32,7 @@ export type IntakeRowProps = {
  */
 export function IntakeRow({
 	leading,
+	thumbnail,
 	title,
 	meta,
 	value,
@@ -47,6 +49,7 @@ export function IntakeRow({
 	const { theme } = useUnistyles();
 	const content = (
 		<>
+			{thumbnail}
 			{leading ? (
 				<AppText variant="micro" color="subtle" style={styles.leading}>
 					{leading}

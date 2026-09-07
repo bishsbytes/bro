@@ -5,8 +5,12 @@ import type {
 	ConsumableKind,
 } from "@bro/domain/consumable";
 import type { ExternalConsumable } from "@bro/domain/food-search";
-import type { PortionSelection } from "@bro/logic";
-import { Stack } from "expo-router";
+import {
+	type PortionSelection,
+	scaleComposition,
+	scaleConstituents,
+} from "@bro/logic";
+import { router, Stack } from "expo-router";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import {
@@ -14,12 +18,11 @@ import {
 	Pressable,
 	TextInput,
 	TouchableOpacity,
-	useWindowDimensions,
 	View,
 } from "react-native";
+import { SafeAreaView } from "react-native-safe-area-context";
 import { AppText } from "../../components/app-text";
 import { Button } from "../../components/button";
-import { Card } from "../../components/card";
 import { DateField } from "../../components/date-field";
 import { EmptyState } from "../../components/empty-state";
 import { FormField } from "../../components/form-field";
@@ -27,12 +30,13 @@ import { Icon } from "../../components/icon";
 import { LoadingIndicator } from "../../components/loading-indicator";
 import { LogConfirmationToast } from "../../components/log-confirmation-toast";
 import { ModalSheet } from "../../components/modal-sheet";
-import { LoadingScreen, StackScreen as Screen } from "../../components/screen";
+import { LoadingScreen, Screen } from "../../components/screen";
 import { SectionHeader } from "../../components/section-header";
 import { TimeField } from "../../components/time-field";
 import {
 	compositionFromLabelInputs,
 	type LabelInputs,
+	labelInputsFromComposition,
 	labelInputsHaveValue,
 	labelInputsValid,
 } from "../../intake/free-entry";
@@ -51,6 +55,8 @@ import { toMessage } from "../../lib/errors";
 import { useFocusStoreLoad } from "../../lib/use-store-load";
 import { showLoggedIntakeDay } from "../../navigation/intake-flow";
 import { StyleSheet, useUnistyles } from "../../theme/unistyles";
+import { IntakeArtwork } from "./intake-artwork";
+import { IntakeQuantityField } from "./intake-quantity-field";
 import { IntakeRow, RowPanel } from "./intake-rows";
 
 type IntakeLogScreenProps = {
@@ -71,6 +77,7 @@ type Pick_ =
 			name: string;
 			brand: string | null;
 			composition: ConsumableComposition;
+			artworkRef?: string | null;
 			provenance: string | null;
 	  }
 	| { type: "recent"; presented: PresentedIntakeEvent };
@@ -78,15 +85,20 @@ type Pick_ =
 type WhenMode = "now" | "earlier";
 
 const SEARCH_DEBOUNCE_MS = 300;
-const QUICK_QUANTITIES = [0.5, 1, 2] as const;
+const NUTRITION_LABELS = {
+	energyKcal: "energy",
+	proteinG: "protein",
+	carbohydrateG: "carbohydrate",
+	fatG: "fat",
+	fluidMl: "fluid",
+	abvPercent: "abv",
+	caffeineMg: "caffeine",
+	nicotineMg: "nicotine",
+} as const;
 
 function isPositiveNumber(value: string): boolean {
 	const number = Number(value);
 	return value.trim() !== "" && Number.isFinite(number) && number > 0;
-}
-
-function formatQuantity(quantity: number): string {
-	return quantity === 0.5 ? "½" : String(quantity);
 }
 
 /** Tap the row to edit the next amount, or plus to repeat the displayed portion. */
@@ -115,13 +127,21 @@ function RecentIntakeRow({
 				onPress={onEdit}
 				style={styles.recentCopy}
 			>
-				<AppText variant="body">{event.name}</AppText>
-				<AppText variant="caption" color="muted">
-					{t("entry.portion", {
-						quantity: event.quantity,
-						portion: event.portionLabel ?? t("event.defaultPortion"),
-					})}
-				</AppText>
+				<IntakeArtwork
+					name={event.name}
+					brand={event.brand}
+					kind={event.kind}
+					sourceRef={event.sourceRef}
+				/>
+				<View style={styles.grow}>
+					<AppText variant="label">{event.name}</AppText>
+					<AppText variant="caption" color="muted">
+						{t("entry.portion", {
+							quantity: event.quantity,
+							portion: event.portionLabel ?? t("event.defaultPortion"),
+						})}
+					</AppText>
+				</View>
 			</Pressable>
 			<Pressable
 				accessibilityRole="button"
@@ -147,8 +167,6 @@ export function IntakeLogScreen({
 }: IntakeLogScreenProps) {
 	const { t } = useTranslation(["intake", "common"]);
 	const { theme } = useUnistyles();
-	const { width: windowWidth } = useWindowDimensions();
-	const headerSearchWidth = Math.max(180, Math.min(520, windowWidth - 96));
 	const intake = useMemo(() => store ?? createIntakeStore(), [store]);
 	const search = useMemo(
 		() => searchStore ?? createIntakeSearchStore(),
@@ -165,12 +183,18 @@ export function IntakeLogScreen({
 	const [pick, setPick] = useState<Pick_ | null>(null);
 	const [portionId, setPortionId] = useState<string | null>(null);
 	const [amount, setAmount] = useState("");
+	const [amountMode, setAmountMode] = useState(false);
 	const [quantity, setQuantity] = useState(1);
 	const [customQuantity, setCustomQuantity] = useState<string | null>(null);
 	const [whenMode, setWhenMode] = useState<WhenMode>("now");
 	const [localDay, setLocalDay] = useState("");
 	const [time, setTime] = useState("");
 	const [freeOpen, setFreeOpen] = useState(false);
+	const [freeKind, setFreeKind] = useState<ConsumableKind>(
+		initialKind ?? "food",
+	);
+	const [freeMore, setFreeMore] = useState(false);
+	const [nutritionOpen, setNutritionOpen] = useState(false);
 	const [freeName, setFreeName] = useState("");
 	const [freePortion, setFreePortion] = useState("");
 	const [freeQuantity, setFreeQuantity] = useState("1");
@@ -207,6 +231,8 @@ export function IntakeLogScreen({
 	useEffect(() => {
 		const trimmed = query.trim();
 		if (trimmed.length < 2) {
+			searchRequestId.current += 1;
+			setSearchBusy(false);
 			return;
 		}
 		const requestId = ++searchRequestId.current;
@@ -226,7 +252,10 @@ export function IntakeLogScreen({
 					if (searchRequestId.current === requestId) setSearchBusy(false);
 				});
 		}, SEARCH_DEBOUNCE_MS);
-		return () => clearTimeout(timeout);
+		return () => {
+			clearTimeout(timeout);
+			searchRequestId.current += 1;
+		};
 	}, [query, search, setError]);
 
 	/** The moment being logged: this minute, or the day and time chosen. */
@@ -266,10 +295,13 @@ export function IntakeLogScreen({
 	function open(next: Pick_) {
 		Keyboard.dismiss();
 		setPick(next);
+		setNutritionOpen(false);
+		setError(null);
 		setPortionId(
 			next.type === "composition" ? next.composition.defaultPortionId : null,
 		);
 		setAmount("");
+		setAmountMode(false);
 		setQuantity(next.type === "recent" ? next.presented.event.quantity : 1);
 		setCustomQuantity(null);
 	}
@@ -282,6 +314,12 @@ export function IntakeLogScreen({
 			name: consumable.name,
 			brand: consumable.brand,
 			composition: consumable,
+			artworkRef:
+				consumable.source.type === "system"
+					? consumable.source.key
+					: consumable.source.type === "user"
+						? null
+						: consumable.id,
 			provenance: null,
 		});
 	}
@@ -313,19 +351,6 @@ export function IntakeLogScreen({
 		});
 	}
 
-	function stepQuantity(direction: -1 | 1) {
-		setCustomQuantity(null);
-		setQuantity((current) =>
-			direction < 0
-				? current <= 1
-					? 0.5
-					: Math.max(1, Math.round(current) - 1)
-				: current < 1
-					? 1
-					: Math.round(current) + 1,
-		);
-	}
-
 	const effectiveQuantity =
 		customQuantity === null ? quantity : Number(customQuantity);
 	const quantityValid =
@@ -342,9 +367,9 @@ export function IntakeLogScreen({
 		}
 		const { basis } = picked.composition;
 		const selection: PortionSelection =
-			amount.trim() && basis.type === "mass"
+			amountMode && basis.type === "mass"
 				? { type: "mass", massKg: Number(amount) / 1_000 }
-				: amount.trim() && basis.type === "volume"
+				: amountMode && basis.type === "volume"
 					? { type: "volume", volumeL: Number(amount) / 1_000 }
 					: {
 							type: "portion",
@@ -359,7 +384,6 @@ export function IntakeLogScreen({
 	}
 
 	async function saveFree() {
-		const freeKind = kind ?? "food";
 		const when = occurrence();
 		const saved = await mutate(async () => {
 			const { constituents, volumeL } = compositionFromLabelInputs(freeInputs);
@@ -421,10 +445,27 @@ export function IntakeLogScreen({
 		(consumable) => ofKind(consumable.kind) && matches(consumable.name),
 	);
 	const results =
-		normalizedQuery.length >= 2
+		normalizedQuery.length >= 2 &&
+		searchSnapshot?.query.toLocaleLowerCase() === normalizedQuery
 			? (searchSnapshot?.results ?? []).filter((result) => ofKind(result.kind))
 			: [];
-	const freeKind = kind ?? "food";
+	const freeFields =
+		freeKind === "nicotine"
+			? (["nicotineMg"] as const)
+			: freeMore
+				? ([
+						"energyKcal",
+						"proteinG",
+						"carbohydrateG",
+						"fatG",
+						"fluidMl",
+						"abvPercent",
+						"caffeineMg",
+					] as const)
+				: freeKind === "drink"
+					? (["energyKcal", "fluidMl"] as const)
+					: (["energyKcal"] as const);
+
 	const freeValid =
 		freeName.trim() !== "" &&
 		isPositiveNumber(freeQuantity) &&
@@ -439,7 +480,7 @@ export function IntakeLogScreen({
 			: pickBasis?.type === "volume"
 				? "ml"
 				: null;
-	const byAmount = amountUnit !== null && amount.trim() !== "";
+	const byAmount = amountUnit !== null && amountMode;
 	const pickName =
 		pick?.type === "recent" ? pick.presented.event.name : (pick?.name ?? "");
 	const pickBrand =
@@ -461,36 +502,49 @@ export function IntakeLogScreen({
 				? isPositiveNumber(amount)
 				: portionId !== null && quantityValid);
 
+	let pickNutrition: LabelInputs = {};
+	let compositionError: string | null = null;
+	try {
+		if (pick && pickValid) {
+			if (pick.type === "recent") {
+				pickNutrition = labelInputsFromComposition(
+					scaleConstituents(
+						pick.presented.event.constituents,
+						effectiveQuantity / pick.presented.event.quantity,
+					),
+				);
+			} else {
+				const selection: PortionSelection =
+					byAmount && pickBasis?.type === "mass"
+						? { type: "mass", massKg: Number(amount) / 1000 }
+						: byAmount && pickBasis?.type === "volume"
+							? { type: "volume", volumeL: Number(amount) / 1000 }
+							: {
+									type: "portion",
+									portionId: portionId ?? "",
+									quantity: effectiveQuantity,
+								};
+				pickNutrition = labelInputsFromComposition(
+					scaleComposition(pick.composition, selection).constituents,
+				);
+			}
+		}
+	} catch (caught) {
+		compositionError = toMessage(caught);
+	}
+
 	return (
 		<>
 			<Stack.Screen
 				options={{
-					headerTitleAlign: "left",
-					headerTitle: () => (
-						<View style={[styles.headerSearch, { width: headerSearchWidth }]}>
-							<Icon name="search" color={theme.colors.ink2} size={24} />
-							<TextInput
-								accessibilityLabel={t("intake:log.searchA11y")}
-								autoCapitalize="none"
-								autoCorrect={false}
-								placeholder={t("intake:log.searchPlaceholder")}
-								placeholderTextColor={theme.colors.ink3}
-								returnKeyType="search"
-								style={styles.headerSearchInput}
-								value={query}
-								onChangeText={setQuery}
-							/>
-							{query ? (
-								<TouchableOpacity
-									accessibilityRole="button"
-									accessibilityLabel={t("intake:log.clearA11y")}
-									hitSlop={8}
-									onPress={() => setQuery("")}
-								>
-									<Icon name="close" color={theme.colors.ink2} size={24} />
-								</TouchableOpacity>
-							) : null}
-						</View>
+					title: "",
+					headerBackVisible: false,
+					headerLeft: () => (
+						<Button
+							label={t("intake:log.close")}
+							variant="text"
+							onPress={() => router.back()}
+						/>
 					),
 				}}
 			/>
@@ -501,10 +555,49 @@ export function IntakeLogScreen({
 				keyboardShouldPersistTaps="handled"
 				contentInsetAdjustmentBehavior="automatic"
 			>
+				<AppText variant="display">{t("intake:log.heading")}</AppText>
+				<View style={styles.headerSearch}>
+					<Icon name="search" color={theme.colors.ink2} size={24} />
+					<TextInput
+						accessibilityLabel={t("intake:log.searchA11y")}
+						autoCapitalize="none"
+						autoCorrect={false}
+						placeholder={t("intake:log.searchPlaceholder")}
+						placeholderTextColor={theme.colors.ink3}
+						returnKeyType="search"
+						style={styles.headerSearchInput}
+						value={query}
+						onChangeText={setQuery}
+					/>
+					{query ? (
+						<TouchableOpacity
+							accessibilityRole="button"
+							accessibilityLabel={t("intake:log.clearA11y")}
+							style={styles.clearSearch}
+							onPress={() => setQuery("")}
+						>
+							<Icon name="close" color={theme.colors.ink2} size={24} />
+						</TouchableOpacity>
+					) : null}
+				</View>
+				{whenMode === "earlier" ? (
+					<AppText variant="caption" color="muted">
+						{localDay} · {time}
+					</AppText>
+				) : null}
+
 				<View style={styles.wrap}>
+					<Button
+						label={t("intake:log.all")}
+						accessibilityState={{ selected: kind === null }}
+						variant={kind === null ? "primary" : "secondary"}
+						style={styles.filter}
+						onPress={() => setKind(null)}
+					/>
 					{snapshot.enabledKinds.map((candidate) => (
 						<Button
 							key={candidate}
+							style={styles.filter}
 							label={t(`intake:kinds.${candidate}`)}
 							accessibilityLabel={t("intake:log.kindA11y", {
 								name: t(`intake:kinds.${candidate}`),
@@ -521,10 +614,8 @@ export function IntakeLogScreen({
 				{error ? <AppText color="danger">{error}</AppText> : null}
 
 				<View style={styles.section}>
-					<AppText variant="caption" color="muted">
-						{t("intake:log.recentsTitle")}
-					</AppText>
-					{recents.length === 0 ? (
+					<AppText variant="title">{t("intake:log.recentsTitle")}</AppText>
+					{recents.length === 0 && !normalizedQuery ? (
 						<AppText variant="caption" color="subtle">
 							{t("intake:log.recentsEmpty")}
 						</AppText>
@@ -545,11 +636,25 @@ export function IntakeLogScreen({
 
 				{library.length > 0 ? (
 					<View style={styles.section}>
-						<SectionHeader title={t("intake:log.libraryTitle")} />
+						<AppText variant="title">{t("intake:log.libraryTitle")}</AppText>
 						<RowPanel>
 							{library.map((consumable, index) => (
 								<IntakeRow
 									key={consumable.id}
+									thumbnail={
+										<IntakeArtwork
+											name={consumable.name}
+											kind={consumable.kind}
+											sourceRef={
+												consumable.source.type === "system"
+													? consumable.source.key
+													: consumable.source.type === "user" &&
+															!consumable.brand
+														? null
+														: consumable.id
+											}
+										/>
+									}
 									title={consumable.name}
 									meta={
 										consumable.brand ?? t(`intake:kinds.${consumable.kind}`)
@@ -568,13 +673,24 @@ export function IntakeLogScreen({
 
 				{catalogue.length > 0 ? (
 					<View style={styles.section}>
-						<SectionHeader title={t("intake:log.catalogueTitle")} />
+						<AppText variant="title">{t("intake:log.catalogueTitle")}</AppText>
 						<RowPanel>
 							{catalogue.map((consumable, index) => (
 								<IntakeRow
 									key={consumable.key}
 									title={consumable.name}
-									meta={t(`intake:kinds.${consumable.kind}`)}
+									meta={
+										consumable.portions.find(
+											(portion) => portion.id === consumable.defaultPortionId,
+										)?.label ?? t(`intake:kinds.${consumable.kind}`)
+									}
+									thumbnail={
+										<IntakeArtwork
+											name={consumable.name}
+											kind={consumable.kind}
+											sourceRef={consumable.key}
+										/>
+									}
 									chevron
 									last={index === catalogue.length - 1}
 									accessibilityLabel={t("intake:log.logA11y", {
@@ -618,6 +734,13 @@ export function IntakeLogScreen({
 								{results.map((result, index) => (
 									<IntakeRow
 										key={result.ref}
+										thumbnail={
+											<IntakeArtwork
+												name={result.name}
+												kind={result.kind}
+												sourceRef={result.ref}
+											/>
+										}
 										title={result.name}
 										meta={t("intake:log.provenance", {
 											source: result.brand ?? result.source,
@@ -633,183 +756,159 @@ export function IntakeLogScreen({
 								))}
 							</RowPanel>
 						) : null}
-						{!searchBusy && results.length === 0 && !searchSnapshot?.message ? (
+						{!searchBusy &&
+						results.length === 0 &&
+						recents.length === 0 &&
+						library.length === 0 &&
+						catalogue.length === 0 &&
+						!searchSnapshot?.message ? (
 							<AppText variant="caption" color="muted">
 								{t("intake:log.noResults")}
 							</AppText>
 						) : null}
 					</View>
 				) : null}
-
-				{freeOpen ? (
-					<Card style={styles.section}>
-						<SectionHeader title={t("intake:log.freeTitle")} />
-						<FormField
-							label={t("intake:free.name")}
-							placeholder={t("intake:free.namePlaceholder")}
-							value={freeName}
-							onChangeText={setFreeName}
-						/>
-						<FormField
-							label={t("intake:free.portionLabel")}
-							placeholder={t("intake:free.portionPlaceholder")}
-							value={freePortion}
-							onChangeText={setFreePortion}
-						/>
-						<AppText variant="label">{t("intake:free.nutritionTitle")}</AppText>
-						{freeKind === "nicotine" ? (
-							<FormField
-								label={t("intake:free.nicotine")}
-								value={freeInputs.nicotineMg ?? ""}
-								onChangeText={(nicotineMg) =>
-									setFreeInputs((current) => ({ ...current, nicotineMg }))
-								}
-								keyboardType="decimal-pad"
-							/>
-						) : (
-							<>
-								<View style={styles.row}>
-									<FormField
-										label={t("intake:free.energy")}
-										value={freeInputs.energyKcal ?? ""}
-										onChangeText={(energyKcal) =>
-											setFreeInputs((current) => ({ ...current, energyKcal }))
-										}
-										keyboardType="decimal-pad"
-										containerStyle={styles.grow}
-									/>
-									<FormField
-										label={t("intake:free.protein")}
-										value={freeInputs.proteinG ?? ""}
-										onChangeText={(proteinG) =>
-											setFreeInputs((current) => ({ ...current, proteinG }))
-										}
-										keyboardType="decimal-pad"
-										containerStyle={styles.grow}
-									/>
-								</View>
-								<View style={styles.row}>
-									<FormField
-										label={t("intake:free.carbohydrate")}
-										value={freeInputs.carbohydrateG ?? ""}
-										onChangeText={(carbohydrateG) =>
-											setFreeInputs((current) => ({
-												...current,
-												carbohydrateG,
-											}))
-										}
-										keyboardType="decimal-pad"
-										containerStyle={styles.grow}
-									/>
-									<FormField
-										label={t("intake:free.fat")}
-										value={freeInputs.fatG ?? ""}
-										onChangeText={(fatG) =>
-											setFreeInputs((current) => ({ ...current, fatG }))
-										}
-										keyboardType="decimal-pad"
-										containerStyle={styles.grow}
-									/>
-								</View>
-								{freeKind === "drink" ? (
-									<View style={styles.row}>
-										<FormField
-											label={t("intake:free.fluid")}
-											value={freeInputs.fluidMl ?? ""}
-											onChangeText={(fluidMl) =>
-												setFreeInputs((current) => ({ ...current, fluidMl }))
-											}
-											keyboardType="decimal-pad"
-											containerStyle={styles.grow}
-										/>
-										<FormField
-											label={t("intake:free.abv")}
-											value={freeInputs.abvPercent ?? ""}
-											onChangeText={(abvPercent) =>
-												setFreeInputs((current) => ({
-													...current,
-													abvPercent,
-												}))
-											}
-											keyboardType="decimal-pad"
-											containerStyle={styles.grow}
-										/>
-									</View>
-								) : null}
-								<FormField
-									label={t("intake:free.caffeine")}
-									value={freeInputs.caffeineMg ?? ""}
-									onChangeText={(caffeineMg) =>
-										setFreeInputs((current) => ({ ...current, caffeineMg }))
-									}
-									keyboardType="decimal-pad"
-								/>
-							</>
-						)}
-						<FormField
-							label={t("intake:log.quantity")}
-							value={freeQuantity}
-							onChangeText={setFreeQuantity}
-							keyboardType="decimal-pad"
-						/>
-						<WhenFields
-							t={t}
-							isToday={snapshot.localDay === snapshot.today}
-							whenMode={whenMode}
-							localDay={localDay}
-							time={time}
-							today={snapshot.today}
-							onChangeMode={setWhenMode}
-							onChangeDay={setLocalDay}
-							onChangeTime={setTime}
-						/>
-						<AppText variant="caption" color="muted">
-							{t("intake:free.hint")}
-						</AppText>
-						<View style={styles.row}>
-							<Button
-								label={t("intake:log.cancel")}
-								variant="text"
-								disabled={busy}
-								style={styles.grow}
-								onPress={() => setFreeOpen(false)}
-							/>
-							<Button
-								label={t("intake:free.save")}
-								loading={busy}
-								disabled={!freeValid || !whenValid}
-								style={styles.grow}
-								onPress={() => void saveFree()}
-							/>
-						</View>
-					</Card>
-				) : (
-					<RowPanel>
-						<IntakeRow
-							title={t("intake:log.freeTitle")}
-							meta={t("intake:log.freeDetail")}
-							chevron
-							last
-							onPress={() => {
-								Keyboard.dismiss();
-								setFreeOpen(true);
-							}}
-						/>
-					</RowPanel>
-				)}
 			</Screen>
+			<SafeAreaView
+				edges={["bottom"]}
+				style={{ backgroundColor: theme.colors.background }}
+			>
+				<View style={styles.footer}>
+					<Button
+						label={t("intake:log.freeTitle")}
+						onPress={() => {
+							Keyboard.dismiss();
+							if (!freeName.trim()) setFreeKind(kind ?? "food");
+							setError(null);
+							setFreeOpen(true);
+						}}
+					/>
+					<AppText variant="caption" color="muted" style={styles.centered}>
+						{t("intake:log.rowHint")}
+					</AppText>
+				</View>
+			</SafeAreaView>
+
+			<ModalSheet
+				visible={freeOpen}
+				onClose={() => {
+					if (!busy) setFreeOpen(false);
+				}}
+				closeAccessibilityLabel={t("intake:log.dismissA11y")}
+			>
+				<View style={styles.sheet}>
+					<AppText variant="display">{t("intake:free.title")}</AppText>
+					<AppText variant="label">{t("intake:free.type")}</AppText>
+					<View style={styles.wrap}>
+						{snapshot.enabledKinds.map((candidate) => (
+							<Button
+								key={candidate}
+								label={t(`intake:kinds.${candidate}`)}
+								accessibilityState={{ selected: freeKind === candidate }}
+								variant={freeKind === candidate ? "primary" : "secondary"}
+								disabled={busy}
+								onPress={() => setFreeKind(candidate)}
+							/>
+						))}
+					</View>
+					<FormField
+						label={t("intake:free.name")}
+						placeholder={t("intake:free.namePlaceholder")}
+						value={freeName}
+						onChangeText={setFreeName}
+					/>
+					<FormField
+						label={t("intake:free.portionLabel")}
+						placeholder={t("intake:free.portionPlaceholder")}
+						value={freePortion}
+						onChangeText={setFreePortion}
+					/>
+					<IntakeQuantityField
+						label={t("intake:log.quantity")}
+						value={freeQuantity}
+						onChange={setFreeQuantity}
+						unit={freePortion || t("intake:event.defaultPortion")}
+						step={0.5}
+						disabled={busy}
+					/>
+					<AppText variant="section">{t("intake:free.nutritionTitle")}</AppText>
+					<AppText variant="caption" color="muted">
+						{t("intake:free.detailsHint")}
+					</AppText>
+					{freeFields.map((field) => (
+						<FormField
+							key={field}
+							label={t(`intake:free.${NUTRITION_LABELS[field]}`)}
+							value={freeInputs[field] ?? ""}
+							onChangeText={(value) =>
+								setFreeInputs((current) => ({ ...current, [field]: value }))
+							}
+							keyboardType="decimal-pad"
+							editable={!busy}
+						/>
+					))}
+					{freeKind !== "nicotine" ? (
+						<Button
+							label={t(
+								freeMore
+									? "intake:free.fewerDetails"
+									: "intake:free.moreDetails",
+							)}
+							variant="text"
+							accessibilityState={{ expanded: freeMore }}
+							onPress={() => setFreeMore((current) => !current)}
+						/>
+					) : null}
+					<WhenFields
+						t={t}
+						isToday={snapshot.localDay === snapshot.today}
+						whenMode={whenMode}
+						localDay={localDay}
+						time={time}
+						today={snapshot.today}
+						onChangeMode={setWhenMode}
+						onChangeDay={setLocalDay}
+						onChangeTime={setTime}
+					/>
+					<AppText variant="caption" color="muted">
+						{t("intake:free.hint")}
+					</AppText>
+					<View style={styles.actions}>
+						<Button
+							label={t("intake:log.cancel")}
+							variant="text"
+							disabled={busy}
+							style={styles.grow}
+							onPress={() => setFreeOpen(false)}
+						/>
+						<Button
+							label={t("intake:free.save")}
+							loading={busy}
+							disabled={!freeValid || !whenValid}
+							style={styles.grow}
+							onPress={() => void saveFree()}
+						/>
+					</View>
+
+					{error ? (
+						<AppText accessibilityRole="alert" color="danger">
+							{error}
+						</AppText>
+					) : null}
+				</View>
+			</ModalSheet>
 
 			<ModalSheet
 				visible={pick !== null}
-				onClose={() => setPick(null)}
+				onClose={() => {
+					if (!busy) setPick(null);
+				}}
 				closeAccessibilityLabel={t("intake:log.dismissA11y")}
 			>
 				{pick ? (
-					<View style={styles.section}>
+					<View style={styles.sheet}>
 						<View>
-							<AppText variant="section">
-								{t("intake:log.portionTitle", { name: pickName })}
-							</AppText>
+							<AppText variant="display">{pickName}</AppText>
 							{pickBrand ? (
 								<AppText variant="caption" color="muted">
 									{pickBrand}
@@ -821,6 +920,32 @@ export function IntakeLogScreen({
 								</AppText>
 							) : null}
 						</View>
+						<IntakeArtwork
+							hero
+							name={pickName}
+							brand={pickBrand}
+							kind={
+								pick.type === "recent" ? pick.presented.event.kind : pick.kind
+							}
+							sourceRef={
+								pick.type === "recent"
+									? pick.presented.event.sourceRef
+									: pick.source.type === "system"
+										? pick.source.key
+										: pick.source.type === "external"
+											? pick.source.consumable.ref
+											: pick.artworkRef
+							}
+						/>
+						<AppText variant="caption" color="muted" style={styles.centered}>
+							{t(
+								pick.type === "recent"
+									? "intake:log.recordedItem"
+									: pick.source.type === "system"
+										? "intake:log.broItem"
+										: "intake:log.savedItem",
+							)}
+						</AppText>
 						{pickComposition && pickComposition.portions.length > 0 ? (
 							<>
 								<AppText variant="label">{t("intake:log.portion")}</AppText>
@@ -828,6 +953,7 @@ export function IntakeLogScreen({
 									{pickComposition.portions.map((portion) => (
 										<Button
 											key={portion.id}
+											disabled={busy}
 											label={portion.label}
 											accessibilityState={{
 												selected: portionId === portion.id && !byAmount,
@@ -838,8 +964,47 @@ export function IntakeLogScreen({
 													: "secondary"
 											}
 											onPress={() => {
+												const current = pickComposition.portions.find(
+													(candidate) => candidate.id === portionId,
+												);
+												const size =
+													pickBasis?.type === "mass"
+														? portion.massKg
+														: pickBasis?.type === "volume"
+															? portion.volumeL
+															: portion.basisUnits;
+												const oldSize =
+													pickBasis?.type === "mass"
+														? current?.massKg
+														: pickBasis?.type === "volume"
+															? current?.volumeL
+															: current?.basisUnits;
+												if (byAmount)
+													setCustomQuantity(
+														size && isPositiveNumber(amount)
+															? String(
+																	Number(
+																		(Number(amount) / 1000 / size).toFixed(6),
+																	),
+																)
+															: "",
+													);
+												else if (portion.id !== portionId)
+													setCustomQuantity(
+														size && oldSize && quantityValid
+															? String(
+																	Number(
+																		(
+																			(effectiveQuantity * oldSize) /
+																			size
+																		).toFixed(6),
+																	),
+																)
+															: "",
+													);
 												setPortionId(portion.id);
 												setAmount("");
+												setAmountMode(false);
 											}}
 										/>
 									))}
@@ -847,91 +1012,55 @@ export function IntakeLogScreen({
 							</>
 						) : null}
 						{amountUnit ? (
-							<FormField
-								label={
-									amountUnit === "g"
-										? t("intake:log.byWeight", { unit: amountUnit })
-										: t("intake:log.byVolume", { unit: amountUnit })
-								}
-								value={amount}
-								onChangeText={setAmount}
-								keyboardType="decimal-pad"
+							<Button
+								label={amountUnit}
+								accessibilityLabel={t("intake:log.useUnit", {
+									unit: amountUnit,
+								})}
+								accessibilityState={{ selected: byAmount }}
+								variant={byAmount ? "primary" : "secondary"}
+								disabled={busy}
+								onPress={() => {
+									if (byAmount || !pickComposition) return;
+									const portion = pickComposition.portions.find(
+										(candidate) => candidate.id === portionId,
+									);
+									const base =
+										amountUnit === "g" ? portion?.massKg : portion?.volumeL;
+									setAmount(
+										base != null && quantityValid
+											? String(
+													Number((base * effectiveQuantity * 1000).toFixed(6)),
+												)
+											: "",
+									);
+									setAmountMode(true);
+								}}
 							/>
 						) : null}
-						{!byAmount ? (
-							<>
-								<AppText variant="label">{t("intake:log.quantity")}</AppText>
-								<View style={styles.stepper}>
-									<Button
-										label="−"
-										accessibilityLabel={t("intake:log.fewer")}
-										variant="secondary"
-										disabled={customQuantity === null && quantity <= 0.5}
-										style={styles.stepButton}
-										onPress={() => stepQuantity(-1)}
-									/>
-									<AppText
-										variant="score"
-										style={styles.stepValue}
-										accessibilityLiveRegion="polite"
-									>
-										{t("intake:log.quantityValue", {
-											quantity:
-												customQuantity === null
-													? formatQuantity(quantity)
-													: customQuantity || "…",
-											portion: portionWord,
-										})}
-									</AppText>
-									<Button
-										label="+"
-										accessibilityLabel={t("intake:log.more")}
-										variant="secondary"
-										style={styles.stepButton}
-										onPress={() => stepQuantity(1)}
-									/>
-								</View>
-								<View style={styles.wrap}>
-									{QUICK_QUANTITIES.map((quick) => (
-										<Button
-											key={quick}
-											label={formatQuantity(quick)}
-											accessibilityState={{
-												selected: customQuantity === null && quantity === quick,
-											}}
-											variant={
-												customQuantity === null && quantity === quick
-													? "primary"
-													: "secondary"
-											}
-											onPress={() => {
-												setCustomQuantity(null);
-												setQuantity(quick);
-											}}
-										/>
-									))}
-									<Button
-										label={t("intake:log.custom")}
-										accessibilityState={{ selected: customQuantity !== null }}
-										variant={customQuantity !== null ? "primary" : "secondary"}
-										onPress={() =>
-											setCustomQuantity((current) =>
-												current === null ? String(quantity) : current,
-											)
-										}
-									/>
-								</View>
-								{customQuantity !== null ? (
-									<FormField
-										label={t("intake:log.customQuantity")}
-										value={customQuantity}
-										onChangeText={setCustomQuantity}
-										keyboardType="decimal-pad"
-										autoFocus
-									/>
-								) : null}
-							</>
-						) : null}
+						<IntakeQuantityField
+							label={t("intake:log.quantity")}
+							value={byAmount ? amount : (customQuantity ?? String(quantity))}
+							onChange={byAmount ? setAmount : setCustomQuantity}
+							unit={byAmount ? (amountUnit ?? "") : portionWord}
+							step={
+								byAmount
+									? amountUnit === "ml"
+										? 25
+										: 10
+									: (pick.type === "recent"
+												? pick.presented.event.kind
+												: pick.kind) === "nicotine"
+										? 1
+										: 0.5
+							}
+							disabled={busy}
+						/>
+
+						<AppText variant="caption" color="muted">
+							{t("intake:log.amountHint")}
+						</AppText>
+
 						<WhenFields
 							t={t}
 							isToday={snapshot.localDay === snapshot.today}
@@ -943,7 +1072,46 @@ export function IntakeLogScreen({
 							onChangeDay={setLocalDay}
 							onChangeTime={setTime}
 						/>
-						<View style={styles.row}>
+						<Button
+							label={t("intake:log.nutritionDetails")}
+							variant="text"
+							accessibilityState={{ expanded: nutritionOpen }}
+							onPress={() => setNutritionOpen((current) => !current)}
+						/>
+						{compositionError ? (
+							<AppText color="danger" accessibilityRole="alert">
+								{compositionError}
+							</AppText>
+						) : null}
+						{nutritionOpen && pickValid ? (
+							<View style={styles.section}>
+								<AppText variant="caption" color="muted">
+									{t("intake:log.forAmount")}
+								</AppText>
+								{Object.keys(pickNutrition).length ? (
+									Object.entries(pickNutrition).map(([field, value]) => (
+										<IntakeRow
+											key={field}
+											title={t(
+												`intake:free.${NUTRITION_LABELS[field as keyof LabelInputs]}`,
+											)}
+											value={value}
+										/>
+									))
+								) : (
+									<AppText color="muted">
+										{t("intake:log.nutritionUnknown")}
+									</AppText>
+								)}
+							</View>
+						) : null}
+						{error ? (
+							<AppText accessibilityRole="alert" color="danger">
+								{error}
+							</AppText>
+						) : null}
+
+						<View style={styles.actions}>
 							<Button
 								label={t("intake:log.cancel")}
 								variant="text"
@@ -954,7 +1122,7 @@ export function IntakeLogScreen({
 							<Button
 								label={t("intake:log.save")}
 								loading={busy}
-								disabled={!pickValid}
+								disabled={!pickValid || compositionError !== null}
 								style={styles.grow}
 								onPress={() => void savePick()}
 							/>
@@ -1080,6 +1248,27 @@ function WhenFields({
 
 const styles = StyleSheet.create((theme) => ({
 	section: { gap: theme.spacing.md },
+	footer: {
+		paddingHorizontal: theme.spacing.gutter,
+		paddingTop: theme.spacing.md,
+		paddingBottom: theme.spacing.md,
+		gap: theme.spacing.sm,
+		backgroundColor: theme.colors.background,
+	},
+	sheet: { gap: theme.spacing.xl },
+	centered: { textAlign: "center" },
+	actions: { flexDirection: "column-reverse", gap: theme.spacing.sm },
+	filter: {
+		borderRadius: theme.radius.pill,
+		borderWidth: 0,
+		minHeight: theme.control.minHitArea,
+	},
+	clearSearch: {
+		minWidth: theme.control.minHitArea,
+		minHeight: theme.control.minHitArea,
+		alignItems: "center",
+		justifyContent: "center",
+	},
 	recentRow: {
 		flexDirection: "row",
 		alignItems: "center",
@@ -1089,8 +1278,10 @@ const styles = StyleSheet.create((theme) => ({
 	},
 	recentCopy: {
 		flex: 1,
-		padding: theme.spacing.lg,
-		gap: theme.spacing.xs,
+		flexDirection: "row",
+		alignItems: "center",
+		padding: theme.spacing.sm,
+		gap: theme.spacing.md,
 		minHeight: theme.control.minHitArea,
 	},
 	repeatButton: {
@@ -1099,24 +1290,19 @@ const styles = StyleSheet.create((theme) => ({
 		alignItems: "center",
 		justifyContent: "center",
 		marginRight: theme.spacing.sm,
+		borderRadius: theme.radius.pill,
+		backgroundColor: theme.colors.surface3,
 	},
 	row: { flexDirection: "row", gap: theme.spacing.md },
 	wrap: { flexDirection: "row", flexWrap: "wrap", gap: theme.spacing.sm },
 	grow: { flex: 1 },
-	stepper: {
-		flexDirection: "row",
-		alignItems: "center",
-		gap: theme.spacing.md,
-	},
-	stepButton: { minWidth: theme.control.buttonMinHeight, paddingHorizontal: 0 },
-	stepValue: { flex: 1, textAlign: "center" },
 	headerSearch: {
 		flexDirection: "row",
 		alignItems: "center",
 		gap: theme.spacing.sm,
 		paddingHorizontal: theme.spacing.md,
 		minHeight: theme.control.minHitArea,
-		borderRadius: theme.radius.pill,
+		borderRadius: theme.radius.control,
 		backgroundColor: theme.colors.surface,
 	},
 	headerSearchInput: {

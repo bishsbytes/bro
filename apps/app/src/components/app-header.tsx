@@ -35,18 +35,24 @@ export function AppHeader({
 			<SafeAreaView style={styles.safeArea} edges={["top"]}>
 				<View style={[styles.headerInsets, styles.stackedHeader]}>
 					<View style={styles.dateRow}>
-						<Pressable
-							accessibilityRole="button"
-							accessibilityLabel={eyebrowAccessibilityLabel}
-							onPress={onEyebrowPress}
-							style={styles.dateAction}
-						>
-							<Text style={styles.eyebrow}>{eyebrow}</Text>
-						</Pressable>
+						{onEyebrowPress ? (
+							<Pressable
+								accessibilityRole="button"
+								accessibilityLabel={eyebrowAccessibilityLabel}
+								onPress={onEyebrowPress}
+								style={styles.dateAction}
+							>
+								<Text style={styles.eyebrow}>{eyebrow}</Text>
+							</Pressable>
+						) : (
+							<View style={styles.dateAction}>
+								<Text style={styles.eyebrow}>{eyebrow}</Text>
+							</View>
+						)}
 						<View style={styles.actions}>
 							{actions}
 							{showSettings ? (
-								<SettingsButton onPress={onSettingsPress} />
+								<SettingsButton onPress={onSettingsPress} surface />
 							) : null}
 						</View>
 					</View>

@@ -259,6 +259,7 @@ describe("Intake screen", () => {
 
 		expect(await screen.findByText("Today")).toBeTruthy();
 		expect(screen.getByText("Wednesday 2 September")).toBeTruthy();
+		await fireEvent.press(screen.getByLabelText("Summary"));
 		expect(
 			screen.getByLabelText(
 				"Energy intake, 1,850 kcal. Your days usually land between 2,100 and 2,600.",
@@ -322,12 +323,12 @@ describe("Intake screen", () => {
 		const intake = store(day);
 		const screen = await render(<IntakeScreen store={intake} />);
 
-		// The summary comes first; the entries sit behind the card's other tab.
+		// The daily log comes first; totals remain available under Summary.
 		expect(await screen.findByText("Today")).toBeTruthy();
-		expect(screen.queryByText("2 × pint")).toBeNull();
+		expect(screen.getByText("2 × pint · 18:17")).toBeTruthy();
 		await fireEvent.press(screen.getByLabelText("Logged"));
 		expect(await screen.findByText("3 entries")).toBeTruthy();
-		expect(screen.getByText("2 × pint")).toBeTruthy();
+		expect(screen.getByText("2 × pint · 18:17")).toBeTruthy();
 		expect(screen.getByText("5.1 units · 489 kcal")).toBeTruthy();
 		// The same lager twice is one row, not two.
 		expect(screen.getAllByText("Lager, 4.5%")).toHaveLength(1);
@@ -361,6 +362,7 @@ describe("Intake screen", () => {
 	it("says how to get totals when nothing is tracked and stays empty when nothing is logged", async () => {
 		const screen = await render(<IntakeScreen store={store(snapshot())} />);
 
+		await fireEvent.press(await screen.findByLabelText("Summary"));
 		expect(
 			await screen.findByText(
 				"Choose what to track in intake settings and the day's totals will appear here.",

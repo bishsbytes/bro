@@ -101,7 +101,7 @@ describe("intake view-day flow", () => {
 		await fireEvent.press(view.getByLabelText("Log Lager, 4.5%"));
 		await fireEvent.press(await view.findByText("Earlier"));
 		await fireEvent.press(await view.findByText("Yesterday"));
-		await fireEvent.press(view.getByText("Log it"));
+		await fireEvent.press(view.getByText("Add to intake"));
 		expect(await view.findByText("Lager, 4.5% added")).toBeTruthy();
 
 		await fireEvent.press(view.getByText("View day"));

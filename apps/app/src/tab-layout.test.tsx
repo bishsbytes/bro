@@ -144,8 +144,9 @@ describe("TabLayout", () => {
 		mockPathname = "/intake";
 		await screen.rerender(<TabLayout />);
 
-		expect(screen.getAllByText("Intake")).toHaveLength(2);
-		expect(screen.queryByText(currentDate)).toBeNull();
+		expect(screen.getAllByText("Intake")).toHaveLength(1);
+		expect(screen.getByText("What you’ve had.")).toBeTruthy();
+		expect(screen.getByText(currentDate)).toBeTruthy();
 		expect(
 			NativeStyleSheet.flatten(screen.getByLabelText("Log").props.style),
 		).toMatchObject({ minHeight: 52 });

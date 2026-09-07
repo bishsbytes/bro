@@ -158,6 +158,8 @@ export type IntakeMetricSummary = {
 };
 
 export type IntakeDaySnapshot = {
+	/** Visible logged days in the loaded history window, for date indicators. */
+	loggedDays?: string[];
 	localDay: string;
 	/** "Today", "Yesterday", or the weekday and date. */
 	dayLabel: string;
@@ -472,6 +474,9 @@ export class IntakeStore {
 				this.presentEvent(event, metrics),
 			),
 			entries: this.presentEntries(visibleDayEvents, metrics),
+			loggedDays: [
+				...new Set(windowEvents.filter(visible).map((event) => event.localDay)),
+			],
 		};
 	}
 

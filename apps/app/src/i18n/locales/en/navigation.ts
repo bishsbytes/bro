@@ -4,6 +4,7 @@ export const navigation = {
 		journal: "Journal",
 		journalTitle: "A moment for yourself.",
 		intake: "Intake",
+		intakeTitle: "What you’ve had.",
 		body: "Body",
 		life: "Life",
 		openHistory: "Open history",

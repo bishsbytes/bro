@@ -35,6 +35,7 @@ import {
 import { toMessage } from "../../lib/errors";
 import { useFocusStoreLoad } from "../../lib/use-store-load";
 import { StyleSheet } from "../../theme/unistyles";
+import { IntakeArtwork } from "./intake-artwork";
 import { IntakeRow, RowPanel } from "./intake-rows";
 
 type IntakeLibraryScreenProps = {
@@ -564,6 +565,20 @@ export function IntakeLibraryScreen({
 									<IntakeRow
 										key={consumable.id}
 										title={consumable.name}
+										thumbnail={
+											<IntakeArtwork
+												name={consumable.name}
+												kind={consumable.kind}
+												sourceRef={
+													consumable.source.type === "system"
+														? consumable.source.key
+														: consumable.source.type === "user" &&
+																!consumable.brand
+															? null
+															: consumable.id
+												}
+											/>
+										}
 										meta={meta}
 										chevron
 										last={index === data.items.length - 1}
@@ -577,6 +592,20 @@ export function IntakeLibraryScreen({
 									<IntakeRow
 										key={consumable.id}
 										title={consumable.name}
+										thumbnail={
+											<IntakeArtwork
+												name={consumable.name}
+												kind={consumable.kind}
+												sourceRef={
+													consumable.source.type === "system"
+														? consumable.source.key
+														: consumable.source.type === "user" &&
+																!consumable.brand
+															? null
+															: consumable.id
+												}
+											/>
+										}
 										meta={meta}
 										last={index === data.items.length - 1}
 										action={
