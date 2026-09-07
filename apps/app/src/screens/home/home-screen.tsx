@@ -14,6 +14,7 @@ import { useTranslation } from "react-i18next";
 import { TouchableOpacity, View } from "react-native";
 import {
 	checkInScoreSummary,
+	checkInSourceStamp,
 	metricLabel,
 } from "../../check-in/check-in-presentation";
 import {
@@ -217,7 +218,7 @@ function PastDaySection({
 	onAddNote,
 	onOpenNotes,
 }: PastDaySectionProps) {
-	const { t } = useTranslation("home");
+	const { t } = useTranslation(["home", "checkIn"]);
 
 	return (
 		<>
@@ -236,15 +237,15 @@ function PastDaySection({
 							</Card>
 						) : (
 							day.checkIns.map((checkIn) => (
-								<Card key={checkIn.id}>
+								<Card key={checkIn.id} style={styles.savedSitting}>
+									<AppText variant="caption" color="muted">
+										{t(`checkIn:slots.${checkIn.slot}.name`)}
+									</AppText>
 									<AppText variant="label">
 										{checkInScoreSummary(checkIn)}
 									</AppText>
 									<AppText variant="caption" color="subtle">
-										{new Date(checkIn.observedAt).toLocaleTimeString([], {
-											hour: "2-digit",
-											minute: "2-digit",
-										})}
+										{checkInSourceStamp(checkIn)}
 									</AppText>
 								</Card>
 							))
@@ -832,19 +833,30 @@ export function HomeScreen({
 			tags: today.availableTags.filter((tag) => tag.category === category),
 		}),
 	);
+	const primaryFactorGroups: readonly TagCategory[] = [
+		"body",
+		"lifestyle",
+		"mind",
+	];
+	const hasMoreFactors = groupedTags.some((group) =>
+		group.tags.some(
+			(tag, index) =>
+				!selectedTags.includes(tag.slug) &&
+				(index >= 3 || !primaryFactorGroups.includes(group.category)),
+		),
+	);
 	const checkInsSection = (
 		<View style={styles.section}>
 			<SectionHeader title={t("checkIn:sittings.title")} />
 
-			{/* Two sittings, each either open or done. Neither card changes height
-			    when tapped: the scores are answered in the check-in flow. */}
+			{/* One invitation leads; the other sitting stays compact. Saved cards
+			    show the actual answers, missing dimensions and event metadata. */}
 			<View style={styles.sittings}>
 				{CHECK_IN_SLOTS.map((slot) => {
 					const sitting = today.sittings[slot];
 					const name = t(`checkIn:slots.${slot}.name`);
 					const summary = sitting ? checkInScoreSummary(sitting) : null;
-					const featured =
-						!sitting && slot === suggestedCheckInSlot(new Date());
+					const featured = !sitting && slot === suggestedCheckInSlot(clock());
 					const missing = sitting
 						? today.availableOptionalScores[slot]
 								.filter(
@@ -865,56 +877,95 @@ export function HomeScreen({
 									? t("checkIn:sittings.editA11y", { sitting: name, summary })
 									: t("checkIn:sittings.startA11y", { sitting: name })
 							}
+							accessibilityHint={
+								sitting
+									? [
+											checkInSourceStamp(sitting),
+											missing.length > 0
+												? t("checkIn:sittings.partial", {
+														labels: missing.join(", "),
+													})
+												: t("checkIn:sittings.complete"),
+										].join(". ")
+									: undefined
+							}
 							onPress={() => openSitting(slot)}
 						>
 							<Card
-								style={[styles.sittingCard, featured && styles.featuredSitting]}
+								style={[
+									styles.sittingCard,
+									featured && styles.featuredSitting,
+									!featured && !sitting && styles.compactSitting,
+								]}
 							>
-								<View style={styles.sittingHeading}>
-									<Icon
-										name={slot === "morning" ? "theme-light" : "theme-dark"}
-										size={24}
-										color={featured ? theme.colors.onBrand : theme.colors.brand}
-									/>
+								<View style={styles.sittingCopy}>
+									<View style={styles.sittingHeading}>
+										<AppText
+											variant="label"
+											color={featured ? "onBrand" : "muted"}
+											style={styles.sittingName}
+										>
+											{name}
+										</AppText>
+										{sitting ? (
+											<AppText variant="micro" color="muted">
+												{t(
+													missing.length > 0
+														? "checkIn:sittings.partialStatus"
+														: "checkIn:sittings.complete",
+												)}
+											</AppText>
+										) : null}
+									</View>
 									<AppText
-										variant="label"
+										variant={featured ? "title" : "body"}
 										color={featured ? "onBrand" : "default"}
 									>
-										{name}
+										{summary ?? t(`checkIn:slots.${slot}.tagline`)}
 									</AppText>
+									{featured ? (
+										<>
+											<AppText variant="caption" color="onBrand">
+												{t("checkIn:sittings.dimensions", {
+													labels: [
+														t("checkIn:steps.moodLabel"),
+														...today.availableOptionalScores[slot].map(
+															(metric) => metric.label,
+														),
+													].join(", "),
+												})}
+											</AppText>
+											<View style={styles.sittingAction}>
+												<AppText variant="label" color="brand">
+													{t("checkIn:sittings.start")}
+												</AppText>
+												<Icon
+													name="chevron-right"
+													size={20}
+													color={theme.colors.brand}
+												/>
+											</View>
+										</>
+									) : null}
+									{missing.length > 0 ? (
+										<AppText variant="caption" color="muted">
+											{t("checkIn:sittings.partial", {
+												labels: missing.join(", "),
+											})}
+										</AppText>
+									) : null}
+									{sitting ? (
+										<AppText variant="micro" color="muted">
+											{checkInSourceStamp(sitting)}
+										</AppText>
+									) : null}
+								</View>
+								{!featured ? (
 									<Icon
 										name="chevron-right"
 										size={20}
-										color={featured ? theme.colors.onBrand : theme.colors.ink2}
+										color={theme.colors.ink2}
 									/>
-								</View>
-								<AppText
-									variant="title"
-									color={featured ? "onBrand" : "default"}
-								>
-									{t(`checkIn:slots.${slot}.tagline`)}
-								</AppText>
-								<AppText
-									variant="caption"
-									color={featured ? "onBrand" : "muted"}
-									style={styles.sittingStatus}
-								>
-									{summary ?? t("checkIn:sittings.start")}
-								</AppText>
-								{missing.length > 0 ? (
-									<AppText variant="caption" color="muted">
-										{t("checkIn:sittings.partial", {
-											labels: missing.join(", "),
-										})}
-									</AppText>
-								) : null}
-								{sitting ? (
-									<AppText variant="micro" color="muted">
-										{new Date(sitting.observedAt).toLocaleTimeString([], {
-											hour: "2-digit",
-											minute: "2-digit",
-										})}
-									</AppText>
 								) : null}
 							</Card>
 						</TouchableOpacity>
@@ -928,12 +979,17 @@ export function HomeScreen({
 	const tagsSection =
 		today.availableTags.length > 0 ? (
 			<View style={styles.section}>
-				<SectionHeader title={t("tags.title")} />
-				<AppText variant="caption" color="subtle">
-					{t("tags.hint")}
-				</AppText>
+				<View style={styles.factorHeading}>
+					<SectionHeader title={t("tags.title")} />
+					<AppText variant="caption" color="muted">
+						{t("tags.hint")}
+					</AppText>
+				</View>
 				{groupedTags.map(({ category, label, tags }) =>
-					tags.length > 0 ? (
+					tags.length > 0 &&
+					(allFactors ||
+						primaryFactorGroups.includes(category) ||
+						tags.some((tag) => selectedTags.includes(tag.slug))) ? (
 						<View key={category} style={styles.tagGroup}>
 							<AppText
 								variant="caption"
@@ -947,7 +1003,7 @@ export function HomeScreen({
 									.filter(
 										(tag, index) =>
 											allFactors ||
-											index < 3 ||
+											(index < 3 && primaryFactorGroups.includes(category)) ||
 											selectedTags.includes(tag.slug),
 									)
 									.map((tag) => {
@@ -957,6 +1013,8 @@ export function HomeScreen({
 												key={tag.slug}
 												accessibilityRole="button"
 												accessibilityLabel={tag.label}
+												aria-pressed={selected}
+												aria-disabled={reviewingTags}
 												accessibilityState={{
 													selected,
 													disabled: reviewingTags,
@@ -968,13 +1026,6 @@ export function HomeScreen({
 												disabled={reviewingTags}
 												onPress={() => void toggleTag(tag.slug)}
 											>
-												{selected ? (
-													<Icon
-														name="check"
-														size={16}
-														color={theme.colors.brand}
-													/>
-												) : null}
 												<AppText
 													variant="caption"
 													color="muted"
@@ -982,6 +1033,13 @@ export function HomeScreen({
 												>
 													{tag.label}
 												</AppText>
+												{selected ? (
+													<Icon
+														name="check"
+														size={16}
+														color={theme.colors.brand}
+													/>
+												) : null}
 											</TouchableOpacity>
 										);
 									})}
@@ -989,14 +1047,26 @@ export function HomeScreen({
 						</View>
 					) : null,
 				)}
-				{groupedTags.some((group) => group.tags.length > 3) ? (
-					<Button
-						label={t(allFactors ? "tags.fewer" : "tags.more")}
-						variant="text"
+				{hasMoreFactors ? (
+					<TouchableOpacity
+						accessibilityRole="button"
+						accessibilityLabel={t(allFactors ? "tags.fewer" : "tags.more")}
+						accessibilityState={{ expanded: allFactors }}
+						aria-expanded={allFactors}
+						style={styles.moreFactors}
 						onPress={() => setAllFactors(!allFactors)}
-					/>
+					>
+						<AppText variant="label" color="brand">
+							{t(allFactors ? "tags.fewer" : "tags.more")}
+						</AppText>
+						<Icon
+							name={allFactors ? "chevron-down" : "chevron-right"}
+							size={16}
+							color={theme.colors.brand}
+						/>
+					</TouchableOpacity>
 				) : null}
-				{allFactors || !groupedTags.some((group) => group.tags.length > 3) ? (
+				{allFactors || !hasMoreFactors ? (
 					<>
 						<AppText variant="caption" color="muted">
 							{t("tags.reviewHint")}
@@ -1057,10 +1127,9 @@ export function HomeScreen({
 					/>
 				) : (
 					<>
-						<AppText variant="section" style={styles.pageTitle}>
-							{formatLocalDayLabel(localDay, todayLocalDay)}
-						</AppText>
 						{checkInsSection}
+						{tagsSection}
+						{journalNotesSection}
 						{finishedChallenge ? (
 							<Card style={styles.routineCard}>
 								<AppText variant="section">
@@ -1187,8 +1256,6 @@ export function HomeScreen({
 								{t("wheel.statusFailed", { error: wheelError })}
 							</AppText>
 						) : null}
-						{tagsSection}
-						{journalNotesSection}
 					</>
 				)}
 			</Screen>
@@ -1259,9 +1326,28 @@ const styles = StyleSheet.create((theme) => ({
 		alignItems: "center",
 	},
 	/** Sittings stack and grow with their summaries and any unanswered dimensions. */
-	sittings: { gap: theme.spacing.md },
+	sittings: { gap: theme.spacing.sm },
 	sittingCardWrapper: { flexShrink: 0 },
-	sittingCard: { gap: theme.spacing.md },
+	sittingCard: {
+		flexDirection: "row",
+		alignItems: "center",
+		gap: theme.spacing.md,
+	},
+	compactSitting: { borderRadius: theme.radius.control },
+	sittingCopy: { flex: 1, gap: theme.spacing.sm },
+	savedSitting: { gap: theme.spacing.sm },
+	sittingName: { flex: 1 },
+	sittingAction: {
+		alignSelf: "flex-start",
+		flexDirection: "row",
+		alignItems: "center",
+		gap: theme.spacing.xl,
+		minHeight: theme.control.minHitArea,
+		paddingHorizontal: theme.spacing.lg,
+		marginTop: theme.spacing.xs,
+		borderRadius: theme.radius.pill,
+		backgroundColor: theme.colors.surface,
+	},
 	featuredSitting: { backgroundColor: theme.colors.brand },
 	sittingHeading: {
 		flexDirection: "row",
@@ -1278,8 +1364,16 @@ const styles = StyleSheet.create((theme) => ({
 		backgroundColor: theme.colors.selected,
 	},
 	choiceSelectedText: { color: theme.colors.onSelected },
-	tagGroup: { marginBottom: theme.spacing.md },
-	categoryLabel: { marginBottom: theme.spacing.xs },
+	factorHeading: { gap: theme.spacing.xs },
+	moreFactors: {
+		flexDirection: "row",
+		alignItems: "center",
+		alignSelf: "flex-start",
+		gap: theme.spacing.xs,
+		minHeight: theme.control.minHitArea,
+	},
+	tagGroup: { gap: theme.spacing.xs },
+	categoryLabel: {},
 	tagRow: { flexDirection: "row", flexWrap: "wrap", gap: theme.spacing.sm },
 	tagButton: {
 		minHeight: theme.control.minHitArea,
@@ -1287,7 +1381,7 @@ const styles = StyleSheet.create((theme) => ({
 		alignItems: "center",
 		gap: theme.spacing.sm,
 		borderWidth: 1,
-		borderColor: theme.colors.interactiveBorder,
+		borderColor: theme.colors.hairline,
 		borderRadius: theme.radius.pill,
 		backgroundColor: theme.colors.surface,
 		paddingVertical: theme.spacing.sm,

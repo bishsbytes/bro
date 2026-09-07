@@ -248,11 +248,13 @@ export function WeekStrip({
 									presentation?.accessibilityLabel,
 								)}
 								accessibilityState={{ selected, disabled: future }}
+								aria-pressed={selected}
+								aria-disabled={future}
 								disabled={future}
 								onPress={() => onSelectDay(localDay)}
 								style={[
 									styles.day,
-									pageWidth < 368 && styles.compactDay,
+									pageWidth < 384 && styles.compactDay,
 									localDay === todayLocalDay && styles.today,
 									selected && styles.selectedDay,
 									future && styles.futureDay,
@@ -320,18 +322,26 @@ const styles = StyleSheet.create((theme) => ({
 		flexDirection: "row",
 		flexWrap: "wrap",
 		gap: 0,
-		paddingHorizontal: theme.spacing.lg,
+		paddingHorizontal: theme.spacing.gutter,
 		paddingVertical: theme.spacing.xs,
 	},
 	day: {
 		flex: 1,
+		backgroundColor: theme.colors.surface,
+		borderWidth: 2,
+		borderColor: theme.colors.background,
 		minHeight: 64,
 		alignItems: "center",
 		justifyContent: "center",
 		gap: 2,
 		borderRadius: theme.radius.control,
 	},
-	compactDay: { flexBasis: "25%", flexGrow: 0, flexShrink: 0 },
+	compactDay: {
+		flexBasis: "25%",
+		flexGrow: 0,
+		flexShrink: 0,
+		marginBottom: theme.spacing.xs,
+	},
 	today: {
 		borderWidth: 1,
 		borderColor: theme.colors.hairlineStrong,

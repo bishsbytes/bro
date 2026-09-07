@@ -38,6 +38,7 @@ export const common = {
 	},
 	/** Text formatting controls on a note composer. */
 	format: {
+		markdownHint: "Markdown supported: **bold**, *italic*, and - lists.",
 		bold: "Bold",
 		italic: "Italic",
 		list: "Bullet list",

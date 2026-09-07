@@ -3,7 +3,7 @@
 The current visual authority is [the Grounded Editorial guide](mens-health-design-guide.md), including its dark appearance extension, and [its exact tokens](mens-health-design-tokens.json). The September 2026 handoff supersedes the Helm visual rules below. The PDF is visual reference; its fictional values and proposed fields are not product defaults.
 
 - Keep Journal / Intake / Body / Life, Headings, existing routes, scale versions and record identity.
-- Warm stone and off-white in light appearance; warm charcoal and sage in dark. System is the default for fresh installs. Persist explicit appearance choices.
+- Off-white canvas with darker warm stone surfaces in light appearance; warm charcoal and sage in dark. System is the default for fresh installs. Persist explicit appearance choices.
 - Brand is teal/sage for selection and primary actions. Clay is reserved for + Log. Personal-history bands are neutral, with no clinical meaning. No glow or chart hatching.
 - Serif display and title styles; sans-serif UI, notes, measurements, units and chart labels. Tabular numerals. Page inset 24; cards 16; controls 12; sheets 24; buttons 52; touch targets at least 48.
 - Five equal check-in choices. Selection updates a draft; Continue advances; Save for now commits the answered dimensions. Never turn an unanswered score into zero. Preserve the existing Energy and Motivation scale meanings.

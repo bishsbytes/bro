@@ -333,9 +333,9 @@ const shared = {
 // Grounded Editorial, design/mens-health-design-tokens.json.
 const palettes = {
 	light: {
-		base: "#F4F1EB",
-		surface1: "#FFFDFA",
-		surface2: "#FFFDFA",
+		base: "#FFFDFA",
+		surface1: "#F4F1EB",
+		surface2: "#F4F1EB",
 		surface3: "#E0ECE7",
 		hairline: "#D8DDD6",
 		hairlineStrong: "#78847D",

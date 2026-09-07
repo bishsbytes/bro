@@ -82,21 +82,32 @@ describe("design tokens", () => {
 		}
 	});
 
-	it("uses a distinct canvas and raised surface in each colour scheme", () => {
-		expect(lightTheme.colors.background).not.toBe(lightTheme.colors.surface);
-		expect(darkTheme.colors.background).not.toBe(darkTheme.colors.surface);
+	it("uses darker surfaces on the light canvas and lighter surfaces on the dark canvas", () => {
+		for (const surface of ["surface", "surface2"] as const) {
+			expect(relativeLuminance(lightTheme.colors[surface])).toBeLessThan(
+				relativeLuminance(lightTheme.colors.background),
+			);
+			expect(relativeLuminance(darkTheme.colors[surface])).toBeGreaterThan(
+				relativeLuminance(darkTheme.colors.background),
+			);
+		}
 	});
 
-	it("meets Helm text contrast in both schemes and every accent", () => {
+	it("meets text and control contrast in both schemes and every accent", () => {
 		for (const scheme of ["light", "dark"] as const) {
 			for (const option of ACCENT_OPTIONS) {
 				const theme = createTheme(scheme, option.hue, option.chroma);
-				expect(
-					contrast(theme.colors.ink, theme.colors.canvas),
-				).toBeGreaterThanOrEqual(7);
-				expect(
-					contrast(theme.colors.ink2, theme.colors.canvas),
-				).toBeGreaterThanOrEqual(4.5);
+				for (const background of ["canvas", "surface", "surface2"] as const) {
+					expect(
+						contrast(theme.colors.ink, theme.colors[background]),
+					).toBeGreaterThanOrEqual(7);
+					expect(
+						contrast(theme.colors.ink2, theme.colors[background]),
+					).toBeGreaterThanOrEqual(4.5);
+					expect(
+						contrast(theme.colors.interactiveBorder, theme.colors[background]),
+					).toBeGreaterThanOrEqual(3);
+				}
 				expect(
 					contrast(theme.colors.onAccent, theme.colors.accent),
 				).toBeGreaterThanOrEqual(4.5);

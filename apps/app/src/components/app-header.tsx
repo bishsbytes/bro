@@ -14,6 +14,8 @@ type AppHeaderProps = {
 	centerTitle?: boolean;
 	showSettings?: boolean;
 	onSettingsPress?: () => void;
+	/** Places the title below the date and actions, giving editorial titles full width. */
+	stacked?: boolean;
 };
 
 export function AppHeader({
@@ -26,10 +28,38 @@ export function AppHeader({
 	centerTitle = false,
 	showSettings = true,
 	onSettingsPress,
+	stacked = false,
 }: AppHeaderProps) {
+	if (stacked) {
+		return (
+			<SafeAreaView style={styles.safeArea} edges={["top"]}>
+				<View style={[styles.headerInsets, styles.stackedHeader]}>
+					<View style={styles.dateRow}>
+						<Pressable
+							accessibilityRole="button"
+							accessibilityLabel={eyebrowAccessibilityLabel}
+							onPress={onEyebrowPress}
+							style={styles.dateAction}
+						>
+							<Text style={styles.eyebrow}>{eyebrow}</Text>
+						</Pressable>
+						<View style={styles.actions}>
+							{actions}
+							{showSettings ? (
+								<SettingsButton onPress={onSettingsPress} />
+							) : null}
+						</View>
+					</View>
+					<Text accessibilityRole="header" style={styles.title}>
+						{title}
+					</Text>
+				</View>
+			</SafeAreaView>
+		);
+	}
 	return (
 		<SafeAreaView style={styles.safeArea} edges={["top"]}>
-			<View style={styles.header}>
+			<View style={[styles.headerInsets, styles.header]}>
 				{leading ? <View style={styles.leading}>{leading}</View> : null}
 				{onEyebrowPress ? (
 					<Pressable
@@ -66,13 +96,28 @@ export function AppHeader({
 
 const styles = StyleSheet.create((theme) => ({
 	safeArea: { backgroundColor: theme.colors.background },
+	headerInsets: {
+		paddingHorizontal: theme.spacing.gutter,
+		paddingTop: theme.spacing.lg,
+		paddingBottom: theme.spacing.md,
+	},
+	stackedHeader: {
+		gap: theme.spacing.xs,
+	},
+	dateRow: {
+		flexDirection: "row",
+		alignItems: "center",
+		gap: theme.spacing.sm,
+	},
+	dateAction: {
+		flex: 1,
+		minHeight: theme.control.minHitArea,
+		justifyContent: "center",
+	},
 	header: {
 		flexDirection: "row",
-		alignItems: "flex-end",
+		alignItems: "center",
 		gap: theme.spacing.sm,
-		paddingHorizontal: theme.spacing.gutter,
-		paddingTop: theme.spacing.md,
-		paddingBottom: theme.spacing.lg,
 	},
 	leading: { flexDirection: "row", alignItems: "center" },
 	copy: { flex: 1 },

@@ -8,7 +8,7 @@ export const home = {
 		more: "More factors",
 		fewer: "Fewer factors",
 		title: "What happened",
-		hint: "Tap anything that applied today.",
+		hint: "Anything that affected your day?",
 		reviewHint:
 			"When you have reviewed every tag shown, confirm the selection to record the others as absent. Otherwise they stay unknown.",
 		confirm: "Confirm today’s tags",

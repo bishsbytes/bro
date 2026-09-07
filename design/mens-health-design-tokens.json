@@ -1,11 +1,11 @@
 {
 	"name": "Grounded Editorial - proposed tokens",
-	"version": "0.3",
+	"version": "0.4",
 	"status": "Light and dark Grounded Editorial specified; native implementation validation pending",
 	"colour": {
 		"light": {
-			"canvas": "#F4F1EB",
-			"surface": "#FFFDFA",
+			"canvas": "#FFFDFA",
+			"surface": "#F4F1EB",
 			"ink": "#202725",
 			"textSecondary": "#626B65",
 			"brand": "#174F4A",
@@ -35,6 +35,7 @@
 			"textSecondary": "#B3BDB5"
 		},
 		"semanticNotes": [
+			"Light appearance uses an off-white canvas with darker warm stone surfaces, matching the screen studies.",
 			"Brand/accent colours do not encode mood quality.",
 			"History fill is not a clinical safe range.",
 			"Select, warning and error require text/icon indicators and independent contrast verification.",
@@ -114,13 +115,13 @@
 		"returningAfterGap"
 	],
 	"verifiedContrastRatios": {
-		"inkOnCanvas": 13.52,
-		"secondaryOnCanvas": 4.89,
+		"inkOnCanvas": 15.01,
+		"secondaryOnCanvas": 5.43,
 		"whiteOnBrand": 9.32,
 		"whiteOnAccent": 5.7,
 		"darkInkOnCanvas": 15.01,
-		"interactiveBorderOnSurface": 3.83,
-		"errorOnSurface": 6.49,
+		"interactiveBorderOnSurface": 3.45,
+		"errorOnSurface": 5.84,
 		"brandOnSelectedSoft": 7.69
 	},
 	"terminology": {

@@ -14,6 +14,12 @@ describe("ScoreRow", () => {
 		expect(view.getByLabelText("Energy 1")).toBeTruthy();
 		expect(view.getByLabelText("Energy 5")).toBeTruthy();
 		expect(
+			view.getByLabelText("Energy 3").props.accessibilityState.checked,
+		).toBe(true);
+		expect(
+			view.getByLabelText("Energy 4").props.accessibilityState.checked,
+		).toBe(false);
+		expect(
 			view.getByLabelText("Energy 3").props.accessibilityState.selected,
 		).toBe(true);
 		expect(

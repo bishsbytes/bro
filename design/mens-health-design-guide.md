@@ -26,7 +26,7 @@ Six views redesign screens you supplied. Ten supporting views are proposals deri
 
 ### The consistent visual rules
 
-Warm stone canvas, off-white surfaces, strong ink, deep teal selection and primary actions, restrained clay for + Log. Serif titles establish character; sans-serif controls, supporting text and measurements establish clarity. Use space and dividers to group content.
+Off-white canvas, darker warm stone surfaces, strong ink, deep teal selection and primary actions, restrained clay for + Log. Serif titles establish character; sans-serif controls, supporting text and measurements establish clarity. Use space and dividers to group content.
 
 ### What the evidence covers
 
@@ -304,14 +304,14 @@ Let titles wrap, cards grow and long unit/value pairs reflow. Horizontal control
 
 | Token group | Value / decision | Use |
 | --- | --- | --- |
-| Light colour | Canvas #F4F1EB; surface #FFFDFA; ink #202725; secondary #626B65. | The base of all four primary areas. |
+| Light colour | Canvas #FFFDFA; surface #F4F1EB; ink #202725; secondary #626B65. | The base of all four primary areas; surfaces are darker than the canvas. |
 | Brand / action | Deep teal #174F4A; on-brand #FFFFFF; clay #A14F36. | Teal primary/selection; clay reserved for the labelled add action. |
 | Control boundary | Interactive border #78847D; selected-soft #E0ECE7; error #A33932. | Distinguishable controls. Pale dividers remain decorative only. |
 | Typography | Display 32/38; title 28/34; section 20/26; body 16/24; label 14/20. | Serif headlines only; sans-serif metrics, units, forms and chart labels. |
 | Layout | Page inset 24; spacing 4 / 8 / 12 / 16 / 24 / 32 / 48. | Repeated rhythm, generous separation between tasks. |
 | Components | Card radius 16; input radius 12; primary button 52 high; hit area at least 48. | Rows and cards grow with content; dimensions are starting points. |
 | Feedback | State feedback 120-180 ms; sheet transitions 220-280 ms. | Optional subtle haptics; honour reduced motion. |
-| Contrast | Ink/canvas 13.52:1; secondary/canvas 4.89:1; white/teal 9.32:1. | Previously verified pairs; interactive border/surface 3.83:1. |
+| Contrast | Ink/canvas 15.01:1; secondary/canvas 5.43:1; white/teal 9.32:1. | Calculated sRGB pairs; interactive border/surface 3.45:1. |
 | Dark option | Use the warm charcoal and sage mappings in the dark appearance extension. | System / Light / Dark. See the dark appearance extension at the end. |
 
 Imagegen corrections: standardise date selection and icons, use flat brand fills, use sans-serif measurements and rebuild charts from records. Images communicate art direction; these tokens govern implementation.
@@ -592,8 +592,8 @@ Semantic roles preserve hierarchy. A component resolves its colours from the cho
 
 | Role | Light | Dark | Application |
 | --- | --- | --- | --- |
-| Canvas | #F4F1EB | #171D1A | The main page background. |
-| Surface | #FFFDFA | #202923 | Cards, list groups and navigation. |
+| Canvas | #FFFDFA | #171D1A | The main page background. |
+| Surface | #F4F1EB | #202923 | Cards and list groups; darker than the canvas in light appearance. |
 | Raised surface | Surface + elevation | #29352D | Sheets and raised content. Use tonal separation. |
 | Primary text | #202725 | #F2F0E9 | Warm off-white body copy, headings and values. |
 | Secondary text | #626B65 | #B3BDB5 | Dates, units, sources and supporting copy. |

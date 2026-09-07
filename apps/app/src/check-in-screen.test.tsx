@@ -5,7 +5,7 @@ import type { CheckInEntry, TodayCheckIn } from "./check-in/check-in-store";
 import { CheckInScreen } from "./screens/check-in/check-in-screen";
 
 jest.mock("expo-router", () => ({
-	router: { back: jest.fn() },
+	router: { back: jest.fn(), push: jest.fn() },
 }));
 
 const mockDrafts = new Map<string, string>();
@@ -192,6 +192,48 @@ describe("check-in screen", () => {
 		expect(router.back).toHaveBeenCalled();
 	});
 
+	it("returns from the final summary to the previous answer without saving", async () => {
+		const store = checkInStore(morningAsking("energy", "motivation"));
+		const screen = await render(<CheckInScreen store={store} slot="morning" />);
+		await fireEvent.press(await screen.findByLabelText("Mood 3"));
+		await advance(screen);
+		expect(screen.getByText("How is your energy?")).toBeTruthy();
+		await fireEvent.press(screen.getByLabelText("Energy 4"));
+		await advance(screen);
+		expect(screen.getByText("How motivated do you feel?")).toBeTruthy();
+		await fireEvent.press(screen.getByLabelText("Motivation 2"));
+		expect(
+			screen.getByText("Mood Okay · Energy 4 · Motivation 2"),
+		).toBeTruthy();
+		await fireEvent.press(screen.getByLabelText("Back to energy"));
+		expect(
+			screen.getByLabelText("Energy 4").props.accessibilityState.checked,
+		).toBe(true);
+		await advance(screen);
+		expect(
+			screen.getByLabelText("Motivation 2").props.accessibilityState.checked,
+		).toBe(true);
+		expect(store.saveCheckIn).not.toHaveBeenCalled();
+	});
+
+	it("opens a separate dated journal note while keeping the check-in draft", async () => {
+		const store = checkInStore(morningAsking("energy", "motivation"));
+		const screen = await render(<CheckInScreen store={store} slot="morning" />);
+		await fireEvent.press(await screen.findByLabelText("Mood 3"));
+		await fireEvent.press(screen.getByLabelText("Add a note (optional)"));
+		expect(router.push).toHaveBeenCalledWith({
+			pathname: "/notes/new",
+			params: { localDay: today.localDay },
+		});
+		expect(JSON.parse(mockDrafts.get("morning") ?? "{}").values).toEqual({
+			mood: 3,
+		});
+		expect(
+			screen.getByLabelText("Mood 3").props.accessibilityState.checked,
+		).toBe(true);
+		expect(store.saveCheckIn).not.toHaveBeenCalled();
+	});
+
 	it("starts on Mood when the flow is opened without one", async () => {
 		const store = checkInStore(morningAsking("energy"));
 		const screen = await render(<CheckInScreen store={store} slot="morning" />);
@@ -221,6 +263,10 @@ describe("check-in screen", () => {
 
 		await fireEvent.press(await screen.findByText("Skip"));
 		await fireEvent.press(await screen.findByLabelText("Motivation 2"));
+		expect(screen.getByText("Your answers")).toBeTruthy();
+		expect(screen.getByText("Mood Okay · Motivation 2")).toBeTruthy();
+		expect(screen.getByText("Not answered: Energy")).toBeTruthy();
+		expect(store.saveCheckIn).not.toHaveBeenCalled();
 		await advance(screen);
 
 		await waitFor(() =>

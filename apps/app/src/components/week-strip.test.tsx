@@ -126,7 +126,9 @@ describe("WeekStrip", () => {
 			borderColor: themeModule.lightTheme.colors.hairlineStrong,
 			borderWidth: 1,
 		});
-		expect(todayStyle.backgroundColor).toBeUndefined();
+		expect(todayStyle.backgroundColor).toBe(
+			themeModule.lightTheme.colors.surface,
+		);
 		expect(
 			NativeStyleSheet.flatten(within(today).getByText("20").props.style).color,
 		).toBe("accent-colour");

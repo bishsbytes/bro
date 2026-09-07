@@ -10,7 +10,7 @@ import { StyleSheet, useUnistyles } from "../theme/unistyles";
 import { AppText } from "./app-text";
 import { Icon, type IconName } from "./icon";
 
-type MarkdownFieldProps = {
+export type MarkdownFieldProps = {
 	label: string;
 	showLabel?: boolean;
 	accessibilityLabel?: string;

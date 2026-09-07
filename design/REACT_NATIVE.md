@@ -4,6 +4,8 @@ Use the September 2026 guide and JSON tokens. Runtime styles come from `apps/app
 
 System / Light / Dark resolves through `DeviceSettingsProvider`, before the splash hides. Native tab and stack navigation remains in place. Picker and sheet styles resolve from the same theme. Do not remount screens to change appearance.
 
+Light appearance uses an off-white canvas (`#FFFDFA`) and darker warm stone cards and controls (`#F4F1EB`), matching the screen studies. Custom app and check-in headers use 24-point horizontal insets, 16 points above and 12 below, inside the top safe area. Keep header actions at least 48 points and allow editorial titles the full width below the date/action row.
+
 ## Component contracts
 
 Paths below are relative to `apps/app/src`.

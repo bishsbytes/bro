@@ -1,9 +1,10 @@
+import { useId } from "react";
 import { useTranslation } from "react-i18next";
 import { TouchableOpacity, View } from "react-native";
 import { StyleSheet, useUnistyles } from "../theme/unistyles";
 import { AppText } from "./app-text";
 import { Icon } from "./icon";
-import { type EndLabels, ScaleEndLabels } from "./scale-end-labels";
+import type { EndLabels } from "./scale-end-labels";
 
 /** The daily five-point scale. Longer ones belong on a DiscreteScale, which
  *  stays thumb-sized past five stops where a row of buttons does not. */
@@ -33,6 +34,7 @@ export function ScoreRow({
 }: ScoreRowProps) {
 	const { t } = useTranslation("common");
 	const { theme } = useUnistyles();
+	const labelId = useId();
 	return (
 		<View style={styles.container}>
 			<View
@@ -43,6 +45,14 @@ export function ScoreRow({
 				{SCORES.map((score, index) => {
 					const isSelected = selected === score;
 					const label = labels?.[index];
+					const endpoint =
+						!label && endLabels
+							? score === 1
+								? endLabels.minimum
+								: score === 5
+									? endLabels.maximum
+									: undefined
+							: undefined;
 					return (
 						<TouchableOpacity
 							key={score}
@@ -51,7 +61,12 @@ export function ScoreRow({
 								prefix: accessibilityPrefix,
 								score,
 							})}
-							accessibilityHint={label}
+							accessibilityHint={label ?? endpoint}
+							aria-checked={isSelected}
+							aria-disabled={disabled}
+							aria-describedby={
+								label || endpoint ? `${labelId}-${score}` : undefined
+							}
 							accessibilityState={{
 								selected: isSelected,
 								checked: isSelected,
@@ -66,11 +81,27 @@ export function ScoreRow({
 							onPress={() => onSelect(score)}
 						>
 							<AppText
+								nativeID={label ? `${labelId}-${score}` : undefined}
 								variant="body"
-								style={[styles.buttonLabel, isSelected && styles.selectedText]}
+								style={[
+									label ? styles.buttonLabel : styles.numericLabel,
+									isSelected && styles.selectedText,
+								]}
 							>
 								{label ?? score}
 							</AppText>
+							{!label ? (
+								<AppText
+									nativeID={endpoint ? `${labelId}-${score}` : undefined}
+									variant="body"
+									style={[
+										styles.buttonLabel,
+										isSelected && styles.selectedText,
+									]}
+								>
+									{endpoint}
+								</AppText>
+							) : null}
 							{isSelected ? (
 								<View
 									accessible={false}
@@ -83,7 +114,6 @@ export function ScoreRow({
 					);
 				})}
 			</View>
-			{endLabels ? <ScaleEndLabels {...endLabels} /> : null}
 		</View>
 	);
 }
@@ -104,6 +134,7 @@ const styles = StyleSheet.create((theme) => ({
 		backgroundColor: theme.colors.surface2,
 	},
 	buttonLabel: { flex: 1 },
+	numericLabel: { minWidth: 20, fontVariant: ["tabular-nums"] },
 	selected: {
 		backgroundColor: theme.colors.brand,
 		borderColor: theme.colors.brand,

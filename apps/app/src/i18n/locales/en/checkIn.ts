@@ -12,7 +12,7 @@ export const checkIn = {
 		morning: {
 			title: "Morning check-in",
 			name: "Morning",
-			tagline: "Start your day",
+			tagline: "Start with how you feel.",
 			moodHint: "How you feel as the day starts.",
 		},
 		evening: {
@@ -37,23 +37,27 @@ export const checkIn = {
 		ratings: {
 			fallbackDescription: "How this feels for you right now.",
 			energy: {
+				question: "How is your energy?",
 				description:
 					"How physically and mentally energised you feel right now.",
 				minimum: "Drained",
 				maximum: "Full of energy",
 			},
 			motivation: {
+				question: "How motivated do you feel?",
 				description:
 					"How much drive you feel to start or keep going with what matters.",
 				minimum: "No motivation",
 				maximum: "Highly motivated",
 			},
 			productivity: {
+				question: "How productive have you felt?",
 				description: "How effectively you have been getting things done today.",
 				minimum: "Not productive",
 				maximum: "Very productive",
 			},
 			libido: {
+				question: "How is your sexual desire?",
 				description: "Your level of sexual desire right now.",
 				minimum: "No desire",
 				maximum: "Strong desire",
@@ -63,12 +67,22 @@ export const checkIn = {
 	/** Today's two sitting cards. */
 	sittings: {
 		partial: "Not answered: {{labels}}",
-		title: "Check-ins",
+		title: "Your check-ins",
+		dimensions: "{{labels}}.",
+		complete: "Complete",
+		partialStatus: "Partial",
+		recorded: "{{date}} · {{time}} · {{source}}",
+		manualSource: "Manual entry",
 		done: "Done",
 		start: "Check in",
 		editA11y: "Edit {{sitting}} check-in: {{summary}}",
 		startA11y: "Start {{sitting}} check-in",
 	},
+	note: {
+		add: "Add a note (optional)",
+		hint: "Opens a journal note for this day. Your check-in answers stay in place.",
+	},
+	answers: "Your answers",
 	draft: {
 		title: "Keep this check-in?",
 		body: "Your answers can stay on this device until you are ready to save.",
@@ -81,6 +95,7 @@ export const checkIn = {
 		saveForNow: "Save for now",
 		saveCheckIn: "Save check-in",
 		back: "Back",
+		backTo: "Back to {{step}}",
 		close: "Close",
 		closeA11y: "Close check-in",
 		previousA11y: "Previous score",

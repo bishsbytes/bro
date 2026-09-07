@@ -1,10 +1,8 @@
-import { localDayOf } from "@bro/domain";
 import { fireEvent, render } from "@testing-library/react-native";
 import * as Haptics from "expo-haptics";
 import type { ReactNode } from "react";
 import { StyleSheet as NativeStyleSheet, Platform } from "react-native";
 import TabLayout from "./app/(tabs)/_layout";
-import { monthHeaderLabel } from "./components/today-header-month-context";
 import * as themeModule from "./theme/unistyles";
 
 let mockThemeOverride: unknown;
@@ -99,10 +97,14 @@ describe("TabLayout", () => {
 
 	it("owns one stable header above native glass tabs", async () => {
 		const screen = await render(<TabLayout />);
-		const currentMonth = monthHeaderLabel(localDayOf(new Date()));
+		const currentDate = new Intl.DateTimeFormat("en", {
+			weekday: "long",
+			day: "numeric",
+			month: "long",
+		}).format(new Date());
 
-		expect(screen.getByText(currentMonth)).toBeTruthy();
-		// The month owns the page title; Journal remains only as the tab label.
+		expect(screen.getByText(currentDate)).toBeTruthy();
+		expect(screen.getByText("A moment for yourself.")).toBeTruthy();
 		expect(screen.getAllByText("Journal")).toHaveLength(1);
 		expect(screen.queryByLabelText("Settings")).toBeNull();
 		const insightsSurface = NativeStyleSheet.flatten(
@@ -142,7 +144,7 @@ describe("TabLayout", () => {
 		await screen.rerender(<TabLayout />);
 
 		expect(screen.getAllByText("Intake")).toHaveLength(2);
-		expect(screen.queryByText(currentMonth)).toBeNull();
+		expect(screen.queryByText(currentDate)).toBeNull();
 		expect(
 			NativeStyleSheet.flatten(screen.getByLabelText("Log").props.style),
 		).toMatchObject({ minHeight: 52 });
@@ -205,21 +207,25 @@ describe("TabLayout", () => {
 
 	it("keeps the complete last tab header mounted behind root-stack transitions", async () => {
 		const screen = await render(<TabLayout />);
-		const currentMonth = monthHeaderLabel(localDayOf(new Date()));
+		const currentDate = new Intl.DateTimeFormat("en", {
+			weekday: "long",
+			day: "numeric",
+			month: "long",
+		}).format(new Date());
 
 		mockPathname = "/settings";
 		mockSegments = ["settings"];
 		await screen.rerender(<TabLayout />);
 
-		const retainedMonth = screen.getByText(currentMonth);
-		expect(retainedMonth).toBeTruthy();
+		const retainedDate = screen.getByText(currentDate);
+		expect(retainedDate).toBeTruthy();
 		expect(screen.getByLabelText("Open history")).toBeTruthy();
 
 		mockPathname = "/body/weight";
 		mockSegments = ["(tabs)", "body", "[slug]"];
 		await screen.rerender(<TabLayout />);
 
-		expect(screen.queryByText(currentMonth)).toBeNull();
+		expect(screen.queryByText(currentDate)).toBeNull();
 	});
 
 	it("keeps chrome quiet and reserves accent for the selected tab", async () => {

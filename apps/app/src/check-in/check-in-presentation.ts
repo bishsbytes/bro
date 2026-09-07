@@ -11,6 +11,28 @@ export function metricLabel(metricSlug: string): string {
 	return resolved.kind === "known" ? resolved.metric.label : metricSlug;
 }
 
+/** The event time and origin, shared by today's cards and past journal days. */
+export function checkInSourceStamp(checkIn: {
+	observedAt: number;
+	mood: { source: string };
+}): string {
+	const date = new Date(checkIn.observedAt);
+	return i18n.t("checkIn:sittings.recorded", {
+		date: date.toLocaleDateString(i18n.language, {
+			day: "numeric",
+			month: "short",
+		}),
+		time: date.toLocaleTimeString(i18n.language, {
+			hour: "2-digit",
+			minute: "2-digit",
+		}),
+		source:
+			checkIn.mood.source === "user"
+				? i18n.t("checkIn:sittings.manualSource")
+				: checkIn.mood.source,
+	});
+}
+
 type ScoredCheckIn = {
 	readonly mood: { readonly value: number };
 	readonly optionalScores: readonly {

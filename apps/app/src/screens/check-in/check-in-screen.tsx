@@ -15,12 +15,13 @@ import {
 import { AppText } from "../../components/app-text";
 import { Button } from "../../components/button";
 import { EmptyState } from "../../components/empty-state";
+import { Icon } from "../../components/icon";
 import { ModalSheet } from "../../components/modal-sheet";
 import { ScoreRow } from "../../components/score-row";
 import { LoadingScreen, FullScreen as Screen } from "../../components/screen";
 import { playSelectionHaptic } from "../../feedback/selection-haptic";
 import { toMessage } from "../../lib/errors";
-import { StyleSheet } from "../../theme/unistyles";
+import { StyleSheet, useUnistyles } from "../../theme/unistyles";
 
 type CheckInScreenProps = {
 	store?: Pick<CheckInStore, "loadToday" | "saveCheckIn">;
@@ -35,12 +36,15 @@ type CheckInScreenProps = {
 type CheckInStep = {
 	slug: string;
 	label: string;
+	question: string;
 	labels?: readonly string[];
 	description: string;
 	endLabels: Readonly<{ minimum: string; maximum: string }>;
 };
 
-type OptionalRatingCopy = Pick<CheckInStep, "description" | "endLabels">;
+type OptionalRatingCopy = Pick<CheckInStep, "description" | "endLabels"> & {
+	question?: string;
+};
 
 const MOOD_SLUG = "mood";
 
@@ -51,6 +55,7 @@ export function CheckInScreen({
 	entryId,
 }: CheckInScreenProps) {
 	const { t } = useTranslation(["checkIn", "common"]);
+	const { theme } = useUnistyles();
 	const checkIns = useMemo(() => store ?? createCheckInStore(), [store]);
 	const [today, setToday] = useState<TodayCheckIn | null>(null);
 	const [loadError, setLoadError] = useState<string | null>(null);
@@ -90,6 +95,7 @@ export function CheckInScreen({
 		};
 		const optionalCopy: Record<string, OptionalRatingCopy> = {
 			energy: {
+				question: t("steps.ratings.energy.question"),
 				description: t("steps.ratings.energy.description"),
 				endLabels: {
 					minimum: t("steps.ratings.energy.minimum"),
@@ -97,6 +103,7 @@ export function CheckInScreen({
 				},
 			},
 			motivation: {
+				question: t("steps.ratings.motivation.question"),
 				description: t("steps.ratings.motivation.description"),
 				endLabels: {
 					minimum: t("steps.ratings.motivation.minimum"),
@@ -104,6 +111,7 @@ export function CheckInScreen({
 				},
 			},
 			productivity: {
+				question: t("steps.ratings.productivity.question"),
 				description: t("steps.ratings.productivity.description"),
 				endLabels: {
 					minimum: t("steps.ratings.productivity.minimum"),
@@ -111,6 +119,7 @@ export function CheckInScreen({
 				},
 			},
 			libido: {
+				question: t("steps.ratings.libido.question"),
 				description: t("steps.ratings.libido.description"),
 				endLabels: {
 					minimum: t("steps.ratings.libido.minimum"),
@@ -123,6 +132,7 @@ export function CheckInScreen({
 			{
 				slug: MOOD_SLUG,
 				label: t("steps.moodLabel"),
+				question: t("steps.moodQuestion"),
 				labels: [
 					t("mood.low"),
 					t("mood.flat"),
@@ -140,6 +150,7 @@ export function CheckInScreen({
 				slug: metric.slug,
 				label: metric.label,
 				...(optionalCopy[metric.slug] ?? fallback),
+				question: optionalCopy[metric.slug]?.question ?? metric.label,
 			})),
 		];
 	}, [today, t, slot]);
@@ -353,32 +364,35 @@ export function CheckInScreen({
 		);
 	}
 
-	const summary = checkInScoreSummary({
-		mood: { value: values.mood ?? 0 },
-		optionalScores: steps.flatMap((step) =>
-			step.slug === MOOD_SLUG || values[step.slug] === undefined
-				? []
-				: [{ metricSlug: step.slug, value: values[step.slug] }],
-		),
-	});
+	const summary =
+		values.mood === undefined
+			? ""
+			: checkInScoreSummary({
+					mood: { value: values.mood },
+					optionalScores: steps.flatMap((step) =>
+						step.slug === MOOD_SLUG || values[step.slug] === undefined
+							? []
+							: [{ metricSlug: step.slug, value: values[step.slug] }],
+					),
+				});
 
 	if (done) {
 		return (
 			<Screen padded centered gap="lg">
 				<View style={styles.prompt}>
-					<AppText variant="display" style={styles.centredText}>
+					<AppText variant="display" style={styles.leftText}>
 						{partial
 							? t("confirmation.partial")
 							: openedOnEntry
 								? t("confirmation.updated")
 								: t("confirmation.saved")}
 					</AppText>
-					<AppText variant="lead" color="muted" style={styles.centredText}>
+					<AppText variant="lead" color="muted" style={styles.leftText}>
 						{summary}
 					</AppText>
 				</View>
 				{saveError ? (
-					<AppText color="danger" style={styles.centredText}>
+					<AppText color="danger" style={styles.leftText}>
 						{saveError}
 					</AppText>
 				) : null}
@@ -411,9 +425,10 @@ export function CheckInScreen({
 
 	const step = steps[index];
 	const isLast = index === steps.length - 1;
+	const allAnswered = steps.every((each) => values[each.slug] !== undefined);
 
 	return (
-		<Screen gap="lg">
+		<Screen contentContainerStyle={{ flex: 1, minHeight: 0 }}>
 			<View style={styles.topBar}>
 				<TouchableOpacity
 					accessibilityRole="button"
@@ -424,50 +439,58 @@ export function CheckInScreen({
 					disabled={saving}
 					onPress={goBack}
 				>
-					<AppText variant="label" color="brand">
+					{index > 0 ? (
+						<Icon name="chevron-left" size={20} color={theme.colors.ink2} />
+					) : null}
+					<AppText variant="label" color="muted">
 						{index === 0 ? t("nav.close") : t("nav.back")}
 					</AppText>
 				</TouchableOpacity>
-				<AppText variant="caption" color="subtle">
-					{t("nav.position", { current: index + 1, total: steps.length })}
-				</AppText>
+				<View style={styles.progressHeader} accessibilityLiveRegion="polite">
+					<AppText variant="caption" color="muted">
+						{t("nav.position", { current: index + 1, total: steps.length })}
+					</AppText>
+					<View
+						style={styles.progress}
+						accessible={false}
+						importantForAccessibility="no-hide-descendants"
+					>
+						{steps.map((each, position) => (
+							<View
+								key={each.slug}
+								style={[styles.pip, position === index && styles.pipReached]}
+							/>
+						))}
+					</View>
+				</View>
 				{index > 0 ? (
 					<TouchableOpacity
 						accessibilityRole="button"
 						accessibilityLabel={t("nav.closeA11y")}
-						style={styles.navButton}
+						style={[styles.navButton, styles.closeButton]}
 						disabled={saving}
 						onPress={close}
 					>
-						<AppText variant="label" color="brand">
-							{t("nav.close")}
-						</AppText>
+						<Icon name="close" size={20} color={theme.colors.ink2} />
 					</TouchableOpacity>
 				) : (
 					<View style={styles.navButton} />
 				)}
 			</View>
 
-			<View style={styles.progress}>
-				{steps.map((each, position) => (
-					<View
-						key={each.slug}
-						style={[styles.pip, position <= index && styles.pipReached]}
-					/>
-				))}
-			</View>
-
-			<ScrollView style={styles.scroll} contentContainerStyle={styles.body}>
+			<ScrollView
+				style={styles.scroll}
+				contentContainerStyle={styles.body}
+				keyboardShouldPersistTaps="handled"
+			>
 				<View style={styles.prompt}>
-					{/* Which sitting is being answered, so the prompts are never
-					    ambiguous about the half of the day they are asking about. */}
-					<AppText variant="caption" color="subtle" style={styles.centredText}>
-						{t(`slots.${slot}.name`)}
+					<AppText variant="caption" color="subtle" style={styles.leftText}>
+						{t(`slots.${slot}.title`)}
 					</AppText>
-					<AppText variant="display">
-						{step.slug === MOOD_SLUG ? t("steps.moodQuestion") : step.label}
+					<AppText variant="display" accessibilityRole="header">
+						{step.question}
 					</AppText>
-					<AppText color="muted" style={styles.centredText}>
+					<AppText color="muted" style={styles.leftText}>
 						{step.description}
 					</AppText>
 				</View>
@@ -479,6 +502,44 @@ export function CheckInScreen({
 					disabled={saving}
 					endLabels={step.slug === MOOD_SLUG ? undefined : step.endLabels}
 				/>
+				{isLast && summary ? (
+					<View style={styles.answerSummary}>
+						<AppText variant="label" color="muted">
+							{t("answers")}
+						</AppText>
+						<AppText variant="caption">{summary}</AppText>
+						{!allAnswered ? (
+							<AppText variant="caption" color="muted">
+								{t("sittings.partial", {
+									labels: steps
+										.filter((each) => values[each.slug] === undefined)
+										.map((each) => each.label)
+										.join(", "),
+								})}
+							</AppText>
+						) : null}
+					</View>
+				) : null}
+				<TouchableOpacity
+					accessibilityRole="button"
+					accessibilityLabel={t("note.add")}
+					accessibilityHint={t("note.hint")}
+					accessibilityState={{ disabled: saving }}
+					disabled={saving}
+					style={styles.noteRow}
+					onPress={() =>
+						router.push({
+							pathname: "/notes/new",
+							params: { localDay: today.localDay },
+						})
+					}
+				>
+					<Icon name="note" size={20} color={theme.colors.ink2} />
+					<AppText variant="caption" style={styles.noteLabel}>
+						{t("note.add")}
+					</AppText>
+					<Icon name="chevron-right" size={20} color={theme.colors.ink2} />
+				</TouchableOpacity>
 			</ScrollView>
 			<View style={styles.footer}>
 				{saveError ? (
@@ -495,10 +556,18 @@ export function CheckInScreen({
 					}
 				/>
 				<Button
-					label={t("nav.saveForNow")}
+					label={
+						isLast && allAnswered && index > 0
+							? t("nav.backTo", {
+									step: steps[index - 1].label.toLocaleLowerCase(),
+								})
+							: t("nav.saveForNow")
+					}
 					variant="secondary"
 					disabled={saving || values.mood === undefined}
-					onPress={() => void save()}
+					onPress={() =>
+						isLast && allAnswered && index > 0 ? goBack() : void save()
+					}
 				/>
 				{step.slug !== MOOD_SLUG && !isLast ? (
 					<Button
@@ -536,12 +605,14 @@ export function CheckInScreen({
 const styles = StyleSheet.create((theme) => ({
 	topBar: {
 		paddingHorizontal: theme.spacing.gutter,
-		paddingTop: theme.spacing.sm,
+		paddingTop: theme.spacing.lg,
 		flexDirection: "row",
 		alignItems: "center",
 		justifyContent: "space-between",
 		gap: theme.spacing.md,
+		paddingBottom: theme.spacing.md,
 	},
+	progressHeader: { alignItems: "center", gap: theme.spacing.sm, flex: 1 },
 	progress: {
 		flexDirection: "row",
 		justifyContent: "center",
@@ -554,23 +625,45 @@ const styles = StyleSheet.create((theme) => ({
 		backgroundColor: theme.colors.border,
 	},
 	pipReached: { backgroundColor: theme.colors.brand },
-	/** The prompt sits centred in the space the feed used to push around. */
-	scroll: { flex: 1 },
+	/** Questions and answers scroll independently of the save actions. */
+	scroll: { flex: 1, minHeight: 0 },
 	body: {
 		paddingHorizontal: theme.spacing.gutter,
-		paddingVertical: theme.spacing.lg,
+		paddingTop: theme.spacing.xl,
+		paddingBottom: theme.spacing.lg,
 		gap: theme.spacing.xl,
 	},
 	footer: {
 		paddingHorizontal: theme.spacing.gutter,
+		paddingTop: theme.spacing.md,
 		paddingBottom: theme.spacing.lg,
 		gap: theme.spacing.sm,
+		backgroundColor: theme.colors.background,
 	},
 	navButton: {
 		minHeight: theme.control.minHitArea,
-		minWidth: theme.control.minHitArea,
-		justifyContent: "center",
+		minWidth: theme.control.minHitArea + theme.spacing.lg,
+		flexDirection: "row",
+		alignItems: "center",
+		gap: theme.spacing.xs,
 	},
-	prompt: { gap: theme.spacing.sm },
-	centredText: { textAlign: "left" },
+	closeButton: { justifyContent: "flex-end" },
+	prompt: { gap: theme.spacing.md },
+	answerSummary: {
+		borderTopWidth: 1,
+		borderTopColor: theme.colors.hairline,
+		paddingTop: theme.spacing.lg,
+		gap: theme.spacing.sm,
+	},
+	noteRow: {
+		flexDirection: "row",
+		alignItems: "center",
+		gap: theme.spacing.md,
+		minHeight: theme.control.scoreMinHeight,
+		padding: theme.spacing.lg,
+		borderRadius: theme.radius.control,
+		backgroundColor: theme.colors.surface,
+	},
+	noteLabel: { flex: 1 },
+	leftText: { textAlign: "left" },
 }));

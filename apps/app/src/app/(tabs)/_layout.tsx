@@ -7,13 +7,10 @@ import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { BodyLogSurfaceProvider } from "../../body/body-log-surface-context";
 import { AppHeader } from "../../components/app-header";
 import { HeaderIconButton } from "../../components/header-icon-button";
-import { LogDateProvider } from "../../components/log-date-context";
+import { LogDateProvider, useLogDate } from "../../components/log-date-context";
 import { QuickLogFab } from "../../components/quick-log-fab";
 import "../../components/tab-bar-layout";
-import {
-	TodayHeaderMonthProvider,
-	useTodayHeaderMonth,
-} from "../../components/today-header-month-context";
+import { TodayHeaderMonthProvider } from "../../components/today-header-month-context";
 import { playSelectionHaptic } from "../../feedback/selection-haptic";
 import { StyleSheet, useUnistyles } from "../../theme/unistyles";
 
@@ -33,16 +30,22 @@ const NATIVE_TAB_BAR_CONTENT_HEIGHT = Platform.select({
 });
 
 function TabShell() {
-	const { t } = useTranslation("navigation");
+	const { t, i18n } = useTranslation("navigation");
 	const { theme } = useUnistyles();
 	const insets = useSafeAreaInsets();
 	const pathname = usePathname();
 	const segments = useSegments() as string[];
-	const todayHeaderMonth = useTodayHeaderMonth();
+	const journalDay = useLogDate("journal");
+	const journalDate = new Intl.DateTimeFormat(i18n.language, {
+		weekday: "long",
+		day: "numeric",
+		month: "long",
+		timeZone: "UTC",
+	}).format(new Date(`${journalDay}T00:00:00.000Z`));
 	const activeTabKey = TAB_TITLE_KEYS[pathname as keyof typeof TAB_TITLE_KEYS];
 	const isJournalTab = pathname === "/";
 	const activeHeaderTitle = isJournalTab
-		? todayHeaderMonth
+		? t("tabs.journalTitle")
 		: activeTabKey
 			? t(activeTabKey)
 			: undefined;
@@ -58,7 +61,7 @@ function TabShell() {
 					isJournal: isJournalTab,
 				}
 			: {
-					title: todayHeaderMonth,
+					title: t("tabs.journalTitle"),
 					isJournal: true,
 				},
 	);
@@ -87,6 +90,8 @@ function TabShell() {
 			{title ? (
 				<AppHeader
 					title={title}
+					stacked={header.isJournal}
+					eyebrow={header.isJournal ? journalDate : undefined}
 					eyebrowAccessibilityLabel={
 						header.isJournal ? t("tabs.openHistory") : undefined
 					}
@@ -155,8 +160,8 @@ function TabShell() {
 				 */}
 				<NativeTabs.Trigger name="index">
 					<NativeTabs.Trigger.Icon
-						sf={{ default: "sun.max", selected: "sun.max.fill" }}
-						md="sunny"
+						sf={{ default: "book.closed", selected: "book.closed.fill" }}
+						md="book"
 					/>
 					<NativeTabs.Trigger.Label>
 						{t("tabs.journal")}

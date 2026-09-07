@@ -2,6 +2,7 @@
 export const navigation = {
 	tabs: {
 		journal: "Journal",
+		journalTitle: "A moment for yourself.",
 		intake: "Intake",
 		body: "Body",
 		life: "Life",

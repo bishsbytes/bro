@@ -521,7 +521,9 @@ describe("home screen", () => {
 		expect(screen.getByText("55 bpm")).toBeTruthy();
 		expect(screen.queryByText("↑ 10%")).toBeNull();
 		expect(screen.getByText("5 bpm higher than previous day")).toBeTruthy();
-		expect(screen.queryByText("Morning")).toBeNull();
+		expect(screen.getByText("Morning")).toBeTruthy();
+		expect(screen.getByText(/Manual entry/)).toBeTruthy();
+		expect(screen.queryByLabelText("Start Morning check-in")).toBeNull();
 		expect(screen.getByText("Edit this day")).toBeTruthy();
 		expect(historyStore.loadDay).toHaveBeenCalledWith("2026-08-13");
 	});
