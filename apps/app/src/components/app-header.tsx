@@ -128,9 +128,8 @@ const styles = StyleSheet.create((theme) => ({
 		alignItems: "center",
 	},
 	eyebrow: {
-		...theme.typography.caption,
+		...theme.typography.eyebrow,
 		color: theme.colors.ink3,
-		fontWeight: "500",
 	},
 	title: { ...theme.typography.largeTitle, color: theme.colors.text },
 	actions: {

@@ -10,6 +10,8 @@ Day tiles have subtle borders inside their spacing; the full tile area remains t
 
 Check-in choices are borderless surfaces with a brand fill and checkmark for selection. The mood question leads directly into the choices without a supporting caption.
 
+The header date, check-in card sitting names and check-in screen sitting label use the shared uppercase eyebrow style: 12-point type, 16-point line height and light letter spacing. Apply casing through typography so the translated source text retains its natural casing.
+
 ## Component contracts
 
 Paths below are relative to `apps/app/src`.

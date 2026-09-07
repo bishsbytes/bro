@@ -18,6 +18,7 @@ type TextVariant =
 	| "body"
 	| "label"
 	| "caption"
+	| "eyebrow"
 	| "micro";
 
 type TextColor =

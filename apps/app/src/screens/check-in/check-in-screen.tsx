@@ -483,7 +483,7 @@ export function CheckInScreen({
 				keyboardShouldPersistTaps="handled"
 			>
 				<View style={styles.prompt}>
-					<AppText variant="caption" color="subtle" style={styles.leftText}>
+					<AppText variant="eyebrow" color="subtle" style={styles.leftText}>
 						{t(`slots.${slot}.title`)}
 					</AppText>
 					<AppText variant="display" accessibilityRole="header">

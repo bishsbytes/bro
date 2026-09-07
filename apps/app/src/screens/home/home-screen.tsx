@@ -238,7 +238,7 @@ function PastDaySection({
 						) : (
 							day.checkIns.map((checkIn) => (
 								<Card key={checkIn.id} style={styles.savedSitting}>
-									<AppText variant="caption" color="muted">
+									<AppText variant="eyebrow" color="muted">
 										{t(`checkIn:slots.${checkIn.slot}.name`)}
 									</AppText>
 									<AppText variant="label">
@@ -901,7 +901,7 @@ export function HomeScreen({
 								<View style={styles.sittingCopy}>
 									<View style={styles.sittingHeading}>
 										<AppText
-											variant="label"
+											variant="eyebrow"
 											color={featured ? "onBrand" : "muted"}
 											style={styles.sittingName}
 										>

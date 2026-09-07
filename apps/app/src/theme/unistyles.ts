@@ -261,7 +261,12 @@ const typography = {
 	label: { ...bodyMedium, fontSize: 14, lineHeight: 20 },
 	micro: footnote,
 	face: { fontSize: 22, lineHeight: 28 },
-	eyebrow: { letterSpacing: 0 },
+	eyebrow: {
+		...footnote,
+		fontWeight: "500",
+		letterSpacing: 0.6,
+		textTransform: "uppercase",
+	},
 } as const;
 
 const shared = {
