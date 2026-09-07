@@ -20,7 +20,7 @@ Paths below are relative to `apps/app/src`.
 | --- | --- |
 | C01 AppScaffold | `components/screen.tsx`, `app/(tabs)/_layout.tsx` |
 | C02 ScreenHeader | `components/app-header.tsx`, `components/section-header.tsx`, native stack options |
-| C03 DateStrip | `components/week-strip.tsx`; Intake uses `screens/intake/intake-date-strip.tsx` with seven trailing days, recorded-entry dots and its existing day arrows |
+| C03 DateStrip | `components/week-strip.tsx` for Journal; Intake uses its day switcher |
 | C04 BottomNavigation | `app/(tabs)/_layout.tsx`, Expo native tabs |
 | C05 LogAction | `components/quick-log-fab.tsx`, `components/log-date-context.tsx` |
 | C06 Button | `components/button.tsx` |
@@ -64,3 +64,5 @@ Run the app and database-app Nx tests, relevant typecheck/lint targets, and repo
 Intake opens on the daily entries, with totals available under Summary. Search keeps its custom-entry action above the bottom safe area. Amount and custom-entry sheets reuse decimal quantity fields; supported portion/mass/volume changes use the existing composition metadata. Custom nutrition remains explicitly per portion and requires at least one known value under the current store contract; reusable items remain managed through Your library.
 
 Food artwork lives in `apps/app/assets/intake/`, with the generation prompts and mapping policy in its README. Transparent illustrations are bundled for offline use, matched to stable system keys or exact unbranded local dish names, and never supply nutrition. Other items keep a neutral icon.
+
+Intake places the day switcher at the top, with no week strip. The “Add to your day” invitation card appears only on Today, below the switcher.

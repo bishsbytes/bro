@@ -40,7 +40,6 @@ import {
 import type { ExternalConsumable } from "@bro/domain/food-search";
 import type { ConsumptionDerivedMeasurementMetricDefinition } from "@bro/domain/metric-registry";
 import {
-	formatLocalDayDate,
 	formatLocalDayLabel,
 	formatMetricValue,
 	goalStatus,
@@ -158,13 +157,9 @@ export type IntakeMetricSummary = {
 };
 
 export type IntakeDaySnapshot = {
-	/** Visible logged days in the loaded history window, for date indicators. */
-	loggedDays?: string[];
 	localDay: string;
-	/** "Today", "Yesterday", or the weekday and date. */
+	/** "Today", "Yesterday", or the weekday name. */
 	dayLabel: string;
-	/** The weekday and date when the label above is relative, else null. */
-	dayDate: string | null;
 	isToday: boolean;
 	defaultTime: string;
 	enabledKinds: ConsumableKind[];
@@ -414,6 +409,7 @@ export class IntakeStore {
 			this.streams.listEnabledKinds(),
 			this.goals.listAll(),
 		]);
+		const today = this.today();
 		// Goal progress is a rolling mean from the goal's start, so the window
 		// stretches back to cover the earliest active goal where it must.
 		const earliestGoalDay = goals
@@ -456,15 +452,18 @@ export class IntakeStore {
 		// surface shows what a user who never opted in would see.
 		const visible = (event: IntakeEvent) => enabled.has(event.kind);
 		const visibleDayEvents = dayEvents.filter(visible);
-		const today = this.today();
 		const locale = this.locale();
-		const dayLabel = formatLocalDayLabel(localDay, today, locale);
-		const dayDate = formatLocalDayDate(localDay, today, locale);
+		const dayLabel =
+			localDay === today || localDay === shiftLocalDay(today, -1)
+				? formatLocalDayLabel(localDay, today, locale)
+				: new Intl.DateTimeFormat(locale, {
+						weekday: "long",
+						timeZone: "UTC",
+					}).format(new Date(`${localDay}T00:00:00.000Z`));
 
 		return {
 			localDay,
 			dayLabel,
-			dayDate: dayLabel === dayDate ? null : dayDate,
 			isToday: localDay === today,
 			defaultTime: this.defaultTime(localDay),
 			enabledKinds,
@@ -474,9 +473,6 @@ export class IntakeStore {
 				this.presentEvent(event, metrics),
 			),
 			entries: this.presentEntries(visibleDayEvents, metrics),
-			loggedDays: [
-				...new Set(windowEvents.filter(visible).map((event) => event.localDay)),
-			],
 		};
 	}
 

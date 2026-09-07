@@ -74,7 +74,6 @@ jest.mock("./intake/intake-store", () => ({
 		loadDay: async (localDay: string) => ({
 			localDay,
 			dayLabel: "Today",
-			dayDate: "Friday 14 August",
 			isToday: true,
 			defaultTime: "12:00",
 			enabledKinds: ["food", "drink"],

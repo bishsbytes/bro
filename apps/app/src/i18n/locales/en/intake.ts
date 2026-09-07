@@ -14,7 +14,6 @@ export const intake = {
 		addTitle: "Add to your day.",
 		addBody: "Log food or drink to keep track of what you have.",
 		addAction: "Log food or drink",
-		loggedDay: "{{date}}, intake logged",
 		totalsEmpty:
 			"Choose what to track in intake settings and the day's totals will appear here.",
 		/** Meta beside a total's name while the day is still going. */

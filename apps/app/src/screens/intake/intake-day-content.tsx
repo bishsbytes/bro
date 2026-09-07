@@ -17,7 +17,6 @@ import type {
 } from "../../intake/intake-store";
 import { StyleSheet, useUnistyles } from "../../theme/unistyles";
 import { IntakeArtwork } from "./intake-artwork";
-import { IntakeDateStrip } from "./intake-date-strip";
 import { IntakeEntrySheet } from "./intake-entry-sheet";
 import { IntakeRow, RowPanel } from "./intake-rows";
 
@@ -169,74 +168,61 @@ export function IntakeDayContent({
 
 	return (
 		<>
-			<IntakeDateStrip
-				selectedDay={snapshot.localDay}
-				loggedDays={
-					snapshot.loggedDays ??
-					(snapshot.events.length ? [snapshot.localDay] : [])
-				}
-				disabled={busy}
-				onSelectDay={onSelectDay}
-			/>
-			<Card style={styles.invitation}>
-				<AppText variant="title" style={styles.invitationText}>
-					{t("intake:tab.addTitle")}
-				</AppText>
-				<AppText style={styles.invitationText}>
-					{t("intake:tab.addBody")}
-				</AppText>
-				<Button
-					label={t("intake:tab.addAction")}
-					variant="secondary"
-					onPress={() =>
-						router.push({
-							pathname: "/intake/log",
-							params: { day: snapshot.localDay },
-						})
-					}
-				/>
-			</Card>
-			<View style={styles.hero}>
-				<View style={styles.dayHeading}>
-					<View style={styles.dayCopy}>
-						<AppText variant="title">{snapshot.dayLabel}</AppText>
-						{snapshot.dayDate ? (
-							<AppText variant="caption" color="muted">
-								{snapshot.dayDate}
-							</AppText>
-						) : null}
-					</View>
-					<View style={styles.dayNav}>
-						<Pressable
-							accessibilityRole="button"
-							accessibilityLabel={t("intake:tab.previousDay")}
-							disabled={busy}
-							onPress={() => onSelectDay(previousLocalDay(snapshot.localDay))}
-							style={({ pressed }) => [
-								styles.navButton,
-								pressed && styles.navButtonPressed,
-							]}
-						>
-							<Icon name="chevron-left" size={24} color={theme.colors.ink} />
-						</Pressable>
-						{/* The future is not loggable, so the arrow stops at today. */}
-						<Pressable
-							accessibilityRole="button"
-							accessibilityLabel={t("intake:tab.nextDay")}
-							accessibilityState={{ disabled: snapshot.isToday }}
-							disabled={busy || snapshot.isToday}
-							onPress={() => onSelectDay(shiftLocalDay(snapshot.localDay, 1))}
-							style={({ pressed }) => [
-								styles.navButton,
-								pressed && styles.navButtonPressed,
-								snapshot.isToday && styles.navButtonDisabled,
-							]}
-						>
-							<Icon name="chevron-right" size={24} color={theme.colors.ink} />
-						</Pressable>
-					</View>
+			<View style={styles.dayHeading}>
+				<View style={styles.dayCopy}>
+					<AppText variant="title">{snapshot.dayLabel}</AppText>
 				</View>
-
+				<View style={styles.dayNav}>
+					<Pressable
+						accessibilityRole="button"
+						accessibilityLabel={t("intake:tab.previousDay")}
+						disabled={busy}
+						onPress={() => onSelectDay(previousLocalDay(snapshot.localDay))}
+						style={({ pressed }) => [
+							styles.navButton,
+							pressed && styles.navButtonPressed,
+						]}
+					>
+						<Icon name="chevron-left" size={24} color={theme.colors.ink} />
+					</Pressable>
+					{/* The future is not loggable, so the arrow stops at today. */}
+					<Pressable
+						accessibilityRole="button"
+						accessibilityLabel={t("intake:tab.nextDay")}
+						accessibilityState={{ disabled: snapshot.isToday }}
+						disabled={busy || snapshot.isToday}
+						onPress={() => onSelectDay(shiftLocalDay(snapshot.localDay, 1))}
+						style={({ pressed }) => [
+							styles.navButton,
+							pressed && styles.navButtonPressed,
+							snapshot.isToday && styles.navButtonDisabled,
+						]}
+					>
+						<Icon name="chevron-right" size={24} color={theme.colors.ink} />
+					</Pressable>
+				</View>
+			</View>
+			{snapshot.isToday ? (
+				<Card style={styles.invitation}>
+					<AppText variant="title" style={styles.invitationText}>
+						{t("intake:tab.addTitle")}
+					</AppText>
+					<AppText style={styles.invitationText}>
+						{t("intake:tab.addBody")}
+					</AppText>
+					<Button
+						label={t("intake:tab.addAction")}
+						variant="secondary"
+						onPress={() =>
+							router.push({
+								pathname: "/intake/log",
+								params: { day: snapshot.localDay },
+							})
+						}
+					/>
+				</Card>
+			) : null}
+			<View style={styles.hero}>
 				<Segments value={segment} onChange={onSelectSegment} />
 
 				<Animated.View

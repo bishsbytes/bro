@@ -231,7 +231,6 @@ describe("intake store", () => {
 
 		const day = await store.loadDay("2026-09-02");
 		expect(day.dayLabel).toBe("Today");
-		expect(day.dayDate).toBe("Wednesday 2 September");
 		expect((await store.loadLog()).recents).toHaveLength(2);
 
 		// A recent logged again at another quantity is the same thing, scaled.

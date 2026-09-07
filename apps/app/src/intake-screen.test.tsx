@@ -140,7 +140,6 @@ function snapshot(
 	return {
 		localDay: "2026-09-02",
 		dayLabel: "Today",
-		dayDate: "Wednesday 2 September",
 		isToday: true,
 		defaultTime: "12:00",
 		enabledKinds: ["food", "drink"],
@@ -165,7 +164,6 @@ function store(day: IntakeDaySnapshot): Store {
 						...day,
 						localDay,
 						dayLabel: "Yesterday",
-						dayDate: "Tuesday 1 September",
 						isToday: false,
 						events: [],
 						entries: [],
@@ -191,10 +189,6 @@ describe("Intake screen", () => {
 			snapshot({
 				localDay,
 				dayLabel: localDay === "2026-09-02" ? "Today" : "New day",
-				dayDate:
-					localDay === "2026-09-02"
-						? "Wednesday 2 September"
-						: "Thursday 3 September",
 			}),
 		);
 
@@ -208,7 +202,7 @@ describe("Intake screen", () => {
 					}}
 				/>,
 			);
-			expect(await screen.findByText("Wednesday 2 September")).toBeTruthy();
+			expect(await screen.findByText("Today")).toBeTruthy();
 
 			jest.setSystemTime(new Date(2026, 8, 3, 0, 1));
 			await act(async () => {
@@ -217,7 +211,7 @@ describe("Intake screen", () => {
 			});
 
 			expect(loadDay).toHaveBeenLastCalledWith("2026-09-03");
-			expect(await screen.findByText("Thursday 3 September")).toBeTruthy();
+			expect(await screen.findByText("New day")).toBeTruthy();
 		} finally {
 			jest.useRealTimers();
 		}
@@ -258,7 +252,7 @@ describe("Intake screen", () => {
 		);
 
 		expect(await screen.findByText("Today")).toBeTruthy();
-		expect(screen.getByText("Wednesday 2 September")).toBeTruthy();
+		expect(screen.queryByText("Wednesday 2 September")).toBeNull();
 		await fireEvent.press(screen.getByLabelText("Summary"));
 		expect(
 			screen.getByLabelText(
@@ -386,7 +380,7 @@ describe("Intake screen", () => {
 		await fireEvent.press(screen.getByLabelText("Previous day"));
 		expect(intake.loadDay).toHaveBeenLastCalledWith("2026-09-01");
 		expect(await screen.findByText("Yesterday")).toBeTruthy();
-		expect(screen.getByText("Tuesday 1 September")).toBeTruthy();
+		expect(screen.queryByText("Tuesday 1 September")).toBeNull();
 		expect(screen.queryByText(/\d{4}-\d{2}-\d{2}/)).toBeNull();
 
 		await fireEvent.press(screen.getByLabelText("Next day"));
