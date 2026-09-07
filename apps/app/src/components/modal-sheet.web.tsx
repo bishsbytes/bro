@@ -20,10 +20,14 @@ import {
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { StyleSheet, useUnistyles } from "../theme/unistyles";
 
+export { TextInput as SheetTextInput } from "react-native";
+
 type ModalSheetProps = PropsWithChildren<{
 	visible: boolean;
 	onClose: () => void;
 	closeAccessibilityLabel: string;
+	/** Keep searchable content at a stable height as results change. */
+	sizing?: "content" | "expanded";
 }>;
 
 function usePrefersReducedMotion() {
@@ -52,6 +56,7 @@ export function ModalSheet({
 	visible,
 	onClose,
 	closeAccessibilityLabel,
+	sizing = "content",
 	children,
 }: ModalSheetProps) {
 	const { theme } = useUnistyles();
@@ -90,6 +95,7 @@ export function ModalSheet({
 	const maxHeight = Math.floor(windowHeight * 0.9);
 	const sheetPosition: StyleProp<ViewStyle> = {
 		maxHeight,
+		height: sizing === "expanded" ? maxHeight : undefined,
 		paddingBottom: insets.bottom,
 		transform: [
 			{

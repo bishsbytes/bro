@@ -117,7 +117,7 @@ jest.mock("expo-router/unstable-native-tabs", () => {
 // close behavior and backdrop configuration exercised by ModalSheet tests.
 jest.mock("@gorhom/bottom-sheet", () => {
 	const React = jest.requireActual<typeof import("react")>("react");
-	const { Pressable, ScrollView, View } =
+	const { Pressable, ScrollView, TextInput, View } =
 		jest.requireActual<typeof import("react-native")>("react-native");
 	type MockSheetProps = {
 		children?: React.ReactNode;
@@ -199,6 +199,7 @@ jest.mock("@gorhom/bottom-sheet", () => {
 		default: MockBottomSheet,
 		BottomSheetBackdrop: MockBackdrop,
 		BottomSheetScrollView: ScrollView,
+		BottomSheetTextInput: TextInput,
 	};
 });
 

@@ -1,4 +1,4 @@
-import { type ComponentProps, useState } from "react";
+import { type ComponentProps, type ComponentType, useState } from "react";
 import { TextInput, View, type ViewStyle } from "react-native";
 import { StyleSheet, useUnistyles } from "../theme/unistyles";
 import { AppText } from "./app-text";
@@ -8,6 +8,8 @@ type FormFieldProps = ComponentProps<typeof TextInput> & {
 	error?: string | null;
 	showLabel?: boolean;
 	containerStyle?: ViewStyle;
+	/** Supply a sheet-aware input when this field lives in a native bottom sheet. */
+	inputComponent?: ComponentType<ComponentProps<typeof TextInput>>;
 };
 
 export function FormField({
@@ -20,6 +22,7 @@ export function FormField({
 	placeholderTextColor,
 	onFocus,
 	onBlur,
+	inputComponent: Input = TextInput,
 	...props
 }: FormFieldProps) {
 	const { theme } = useUnistyles();
@@ -32,7 +35,7 @@ export function FormField({
 					{label}
 				</AppText>
 			) : null}
-			<TextInput
+			<Input
 				accessibilityLabel={accessibilityLabel}
 				accessibilityHint={error ?? undefined}
 				keyboardAppearance={theme.isDark ? "dark" : "light"}

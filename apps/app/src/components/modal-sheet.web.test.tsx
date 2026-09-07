@@ -8,6 +8,36 @@ jest.mock("react-native-safe-area-context", () => ({
 }));
 
 describe("ModalSheet on web", () => {
+	it("keeps an expanded sheet at the same height when its results shrink", async () => {
+		const props = {
+			visible: true,
+			sizing: "expanded" as const,
+			onClose: jest.fn(),
+			closeAccessibilityLabel: "Close sheet",
+		};
+		const view = await render(
+			<ModalSheet {...props}>
+				{Array.from({ length: 12 }, (_, index) => (
+					<AppText key={index}>Portion {index}</AppText>
+				))}
+			</ModalSheet>,
+		);
+		const initialStyle = NativeStyleSheet.flatten(
+			view.getByTestId("modal-sheet-web").props.style,
+		);
+		expect(initialStyle.height).toBeGreaterThan(0);
+		expect(initialStyle.height).toBe(initialStyle.maxHeight);
+		await view.rerender(
+			<ModalSheet {...props}>
+				<AppText>Add custom portion</AppText>
+			</ModalSheet>,
+		);
+		expect(
+			NativeStyleSheet.flatten(view.getByTestId("modal-sheet-web").props.style)
+				.height,
+		).toBe(initialStyle.height);
+	});
+
 	it("renders a capped dialog and closes from its backdrop", async () => {
 		const onClose = jest.fn();
 		const view = await render(

@@ -84,6 +84,37 @@ type Pick_ =
 type WhenMode = "now" | "earlier";
 
 const SEARCH_DEBOUNCE_MS = 300;
+const PORTION_SUGGESTIONS = {
+	food: [
+		"portion",
+		"serving",
+		"piece",
+		"slice",
+		"bowl",
+		"plate",
+		"cup",
+		"tablespoon",
+		"teaspoon",
+		"handful",
+		"bar",
+		"pot",
+	],
+	drink: [
+		"portion",
+		"glass",
+		"mug",
+		"cup",
+		"bottle",
+		"can",
+		"carton",
+		"pint",
+		"shot",
+	],
+	supplement: ["portion", "tablet", "capsule", "scoop", "drop"],
+	medication: ["portion", "tablet", "capsule", "drop"],
+	nicotine: ["portion", "cigarette", "puff"],
+	other: ["portion", "serving", "piece"],
+} as const satisfies Record<ConsumableKind, readonly string[]>;
 const NUTRITION_UNITS = {
 	energyKcal: "kcal",
 	proteinG: "g",
@@ -445,6 +476,26 @@ export function IntakeLogScreen({
 	}
 
 	const normalizedQuery = query.trim().toLocaleLowerCase();
+	const freePortionSuggestions = [
+		...PORTION_SUGGESTIONS[freeKind].map((portion) =>
+			t(`intake:free.portions.${portion}`),
+		),
+		...snapshot.recents
+			.filter(({ event }) => event.kind === freeKind)
+			.map(({ event }) => event.portionLabel ?? ""),
+		...snapshot.library
+			.filter((item) => item.kind === freeKind)
+			.flatMap((item) => item.portions.map((portion) => portion.label)),
+	]
+		.map((portion) => portion.trim())
+		.filter(
+			(portion, index, all) =>
+				portion !== "" &&
+				all.findIndex(
+					(candidate) =>
+						candidate.toLocaleLowerCase() === portion.toLocaleLowerCase(),
+				) === index,
+		);
 	const matches = (...values: (string | null | undefined)[]) =>
 		normalizedQuery === "" ||
 		values.some((value) =>
@@ -913,18 +964,16 @@ export function IntakeLogScreen({
 						</View>
 					</View>
 
-					<FormField
-						label={t("intake:free.portionLabel")}
-						placeholder={t("intake:free.portionPlaceholder")}
-						value={freePortion}
-						editable={!busy}
-						onChangeText={setFreePortion}
-					/>
 					<IntakeQuantityField
 						label={t("intake:log.amount")}
 						value={freeQuantity}
 						onChange={setFreeQuantity}
-						unit={freePortion || t("intake:event.defaultPortion")}
+						unit={t("intake:event.defaultPortion")}
+						unitInput={{
+							value: freePortion,
+							onChange: setFreePortion,
+							suggestions: freePortionSuggestions,
+						}}
 						step={0.5}
 						disabled={busy}
 					/>

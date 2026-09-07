@@ -1,10 +1,12 @@
 import { useState } from "react";
 import { useTranslation } from "react-i18next";
-import { Pressable, View } from "react-native";
+import { Keyboard, Pressable, View } from "react-native";
 import { AppText } from "../../components/app-text";
 import { Button } from "../../components/button";
 import { FormField } from "../../components/form-field";
 import { Icon } from "../../components/icon";
+import { ModalSheet, SheetTextInput } from "../../components/modal-sheet";
+import { OptionRow } from "../../components/option-row";
 import { StyleSheet, useUnistyles } from "../../theme/unistyles";
 
 export function IntakeQuantityField({
@@ -15,6 +17,7 @@ export function IntakeQuantityField({
 	disabled = false,
 	onChange,
 	options,
+	unitInput,
 }: {
 	label: string;
 	value: string;
@@ -22,6 +25,11 @@ export function IntakeQuantityField({
 	step: number;
 	disabled?: boolean;
 	onChange: (value: string) => void;
+	unitInput?: {
+		value: string;
+		onChange: (value: string) => void;
+		suggestions: string[];
+	};
 	options?: {
 		id: string;
 		label: string;
@@ -33,6 +41,34 @@ export function IntakeQuantityField({
 	const { t } = useTranslation("intake");
 	const { theme } = useUnistyles();
 	const [expanded, setExpanded] = useState(false);
+	const [portionSearch, setPortionSearch] = useState("");
+	const query = portionSearch.trim();
+	const displayedUnit = unitInput?.value || unit;
+	const closePortions = () => {
+		setExpanded(false);
+		Keyboard.dismiss();
+	};
+	const portionOptions = unitInput?.suggestions ?? [];
+	const availablePortions = portionOptions.some(
+		(portion) =>
+			portion.toLocaleLowerCase() === displayedUnit.toLocaleLowerCase(),
+	)
+		? portionOptions
+		: [...portionOptions, displayedUnit];
+	const suggestions = availablePortions.filter((suggestion) =>
+		suggestion.toLocaleLowerCase().includes(query.toLocaleLowerCase()),
+	);
+	const canAdd =
+		query !== "" &&
+		!availablePortions.some(
+			(suggestion) =>
+				suggestion.toLocaleLowerCase() === query.toLocaleLowerCase(),
+		);
+	const selectUnit = (selection: string) => {
+		if (disabled) return;
+		unitInput?.onChange(selection);
+		closePortions();
+	};
 	const number = Number(value);
 	const valid = value.trim() !== "" && Number.isFinite(number) && number > 0;
 	const change = (direction: number) => {
@@ -57,6 +93,7 @@ export function IntakeQuantityField({
 						showLabel={false}
 						value={value}
 						onChangeText={onChange}
+						onFocus={() => setExpanded(false)}
 						keyboardType="decimal-pad"
 						editable={!disabled}
 						containerStyle={styles.grow}
@@ -71,55 +108,122 @@ export function IntakeQuantityField({
 						onPress={() => change(1)}
 					/>
 				</View>
-				{options ? (
+				{unitInput || options ? (
 					<Pressable
 						accessibilityRole="button"
-						accessibilityLabel={t("log.chooseUnit")}
-						accessibilityValue={{ text: unit }}
+						accessibilityLabel={t(
+							unitInput ? "free.choosePortion" : "log.chooseUnit",
+						)}
+						accessibilityValue={{ text: displayedUnit }}
 						accessibilityState={{ expanded, disabled }}
 						disabled={disabled}
-						onPress={() => setExpanded((current) => !current)}
+						onPress={() => {
+							Keyboard.dismiss();
+							setPortionSearch("");
+							setExpanded((current) => !current);
+						}}
 						style={styles.unit}
 					>
 						<AppText variant="caption" style={styles.unitText}>
-							{unit}
+							{displayedUnit}
 						</AppText>
 						<Icon name="chevron-down" size={16} color={theme.colors.ink2} />
 					</Pressable>
 				) : (
 					<View style={styles.unit}>
 						<AppText variant="caption" style={styles.unitText}>
-							{unit}
+							{displayedUnit}
 						</AppText>
 					</View>
 				)}
 			</View>
-			{expanded ? (
-				<View
-					style={styles.options}
-					accessibilityRole="radiogroup"
-					accessibilityLabel={t("log.chooseUnit")}
+			{unitInput || options ? (
+				<ModalSheet
+					sizing={unitInput ? "expanded" : "content"}
+					visible={expanded && !disabled}
+					onClose={closePortions}
+					closeAccessibilityLabel={t("free.closePortions")}
 				>
-					{options?.map((option) => (
+					<View style={styles.sheetHeader}>
+						<AppText variant="section" style={styles.grow}>
+							{t(unitInput ? "free.choosePortion" : "log.chooseUnit")}
+						</AppText>
 						<Button
-							key={option.id}
-							label={option.label}
-							accessibilityLabel={option.accessibilityLabel}
-							accessibilityRole="radio"
-							accessibilityState={{
-								selected: option.selected,
-								checked: option.selected,
-								disabled,
-							}}
-							disabled={disabled}
-							variant={option.selected ? "primary" : "secondary"}
-							onPress={() => {
-								option.onSelect();
-								setExpanded(false);
-							}}
+							label={t("log.close")}
+							accessibilityLabel={t("free.closePortions")}
+							variant="text"
+							onPress={closePortions}
 						/>
-					))}
-				</View>
+					</View>
+					{unitInput ? (
+						<>
+							<FormField
+								inputComponent={SheetTextInput}
+								label={t("free.searchPortions")}
+								showLabel={false}
+								placeholder={t("free.searchPortions")}
+								accessibilityHint={t("free.portionHint")}
+								value={portionSearch}
+								onChangeText={setPortionSearch}
+								autoCapitalize="none"
+								autoCorrect={false}
+								returnKeyType="done"
+								onSubmitEditing={() => {
+									if (query)
+										selectUnit(
+											suggestions.find(
+												(suggestion) =>
+													suggestion.toLocaleLowerCase() ===
+													query.toLocaleLowerCase(),
+											) ?? query,
+										);
+								}}
+							/>
+							{canAdd ? (
+								<Button
+									label={t("free.addPortion", { portion: query })}
+									onPress={() => selectUnit(query)}
+								/>
+							) : null}
+						</>
+					) : null}
+					<View
+						accessibilityRole="radiogroup"
+						accessibilityLabel={t(
+							unitInput ? "free.choosePortion" : "log.chooseUnit",
+						)}
+						style={styles.options}
+					>
+						{unitInput
+							? suggestions.map((suggestion) => (
+									<OptionRow
+										key={suggestion}
+										label={suggestion}
+										accessibilityLabel={suggestion}
+										selected={
+											suggestion.toLocaleLowerCase() ===
+											displayedUnit.toLocaleLowerCase()
+										}
+										onPress={() => selectUnit(suggestion)}
+									/>
+								))
+							: options?.map((option) => (
+									<OptionRow
+										key={option.id}
+										label={option.label}
+										accessibilityLabel={
+											option.accessibilityLabel ?? option.label
+										}
+										selected={option.selected}
+										disabled={disabled}
+										onPress={() => {
+											option.onSelect();
+											closePortions();
+										}}
+									/>
+								))}
+					</View>
+				</ModalSheet>
 			) : null}
 			{!valid ? (
 				<AppText accessibilityRole="alert" variant="caption" color="danger">
@@ -160,8 +264,13 @@ const styles = StyleSheet.create((theme) => ({
 		paddingVertical: theme.spacing.sm,
 		borderWidth: 1,
 		borderColor: theme.colors.line,
-		borderRadius: theme.radius.pill,
+		borderRadius: theme.radius.control,
 	},
 	unitText: { flexShrink: 1, textAlign: "center" },
+	sheetHeader: {
+		flexDirection: "row",
+		alignItems: "center",
+		gap: theme.spacing.sm,
+	},
 	options: { gap: theme.spacing.sm },
 }));

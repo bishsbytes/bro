@@ -9,18 +9,23 @@ import { GestureHandlerRootView } from "react-native-gesture-handler";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { StyleSheet, useUnistyles } from "../theme/unistyles";
 
+export { BottomSheetTextInput as SheetTextInput } from "@gorhom/bottom-sheet";
+
 const EXPANDED_SNAP_POINT = ["90%"];
 
 type ModalSheetProps = PropsWithChildren<{
 	visible: boolean;
 	onClose: () => void;
 	closeAccessibilityLabel: string;
+	/** Keep searchable content at a stable height as results change. */
+	sizing?: "content" | "expanded";
 }>;
 
 export function ModalSheet({
 	visible,
 	onClose,
 	closeAccessibilityLabel,
+	sizing = "content",
 	children,
 }: ModalSheetProps) {
 	const { theme } = useUnistyles();
@@ -69,7 +74,7 @@ export function ModalSheet({
 					backdropComponent={renderBackdrop}
 					backgroundStyle={styles.sheetBackground}
 					enableBlurKeyboardOnGesture
-					enableDynamicSizing
+					enableDynamicSizing={sizing === "content"}
 					enablePanDownToClose
 					handleIndicatorStyle={styles.handle}
 					index={0}
