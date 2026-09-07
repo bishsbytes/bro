@@ -1,0 +1,18 @@
+diff --git a/android/src/main/java/com/swmansion/rnscreens/ScreenStackHeaderConfig.kt b/android/src/main/java/com/swmansion/rnscreens/ScreenStackHeaderConfig.kt
+index f9648bc29b24554299bd52d951c2bafa2ccbea6b..acd99e88d0b7e0d6d26d8eefdc97b2156eac8cd4 100644
+--- a/android/src/main/java/com/swmansion/rnscreens/ScreenStackHeaderConfig.kt
++++ b/android/src/main/java/com/swmansion/rnscreens/ScreenStackHeaderConfig.kt
+@@ -229,8 +229,11 @@ class ScreenStackHeaderConfig(
+         }
+ 
+     fun onUpdate() {
+-        val stack = screenStack
+-        val isTop = stack == null || stack.topScreen == parent
++        // Fabric can deliver a header update after removeScreenAt clears the
++        // container, while the outgoing screen is still attached for animation.
++        // There is no header to configure then; canNavigateBack requires a stack.
++        val stack = screenStack ?: return
++        val isTop = stack.topScreen == parent
+ 
+         if (!isAttachedToWindow || !isTop || isDestroyed) {
+             return
