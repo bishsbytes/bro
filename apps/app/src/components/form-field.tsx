@@ -73,14 +73,16 @@ const styles = StyleSheet.create((theme) => ({
 	input: {
 		minHeight: theme.control.buttonMinHeight,
 		borderWidth: 1,
-		borderColor: theme.colors.lineStrong,
+		borderColor: theme.colors.line,
 		borderRadius: theme.radius.control,
 		paddingHorizontal: theme.spacing.lg,
 		paddingVertical: theme.spacing.md,
 		fontSize: theme.typography.body.fontSize,
 		fontFamily: theme.typography.body.fontFamily,
 		color: theme.colors.ink,
-		backgroundColor: theme.colors.surface2,
+		backgroundColor: theme.isDark
+			? theme.colors.surface2
+			: theme.colors.background,
 	},
 	focused: { borderWidth: 2, borderColor: theme.colors.brand },
 	invalid: { borderColor: theme.colors.alert },
