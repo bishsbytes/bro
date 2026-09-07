@@ -13,9 +13,9 @@ describe("DateField on web", () => {
 		expect(input.props.style).toMatchObject({
 			boxSizing: "border-box",
 			width: "100%",
-			height: 44,
+			height: 52,
 			padding: "12px 16px",
-			fontSize: 15,
+			fontSize: 14,
 		});
 		await fireEvent(input, "change", { target: { value: "2026-12-01" } });
 		expect(onChangeDate).toHaveBeenCalledWith("2026-12-01");

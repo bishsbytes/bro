@@ -1,3 +1,4 @@
+import { useState } from "react";
 import { useTranslation } from "react-i18next";
 import { View } from "react-native";
 import Svg, { Circle, G, Line, Polygon } from "react-native-svg";
@@ -5,6 +6,7 @@ import { lifeAreaIconName } from "../review/life-area-icons";
 import type { WheelScore } from "../review/review-store";
 import { StyleSheet, useUnistyles } from "../theme/unistyles";
 import { AppText } from "./app-text";
+import { Button } from "./button";
 import { Icon } from "./icon";
 
 const SIZE = 320;
@@ -42,6 +44,7 @@ type WheelChartProps = {
 export function WheelChart({ scores, previousScores = [] }: WheelChartProps) {
 	const { t } = useTranslation("common");
 	const { theme } = useUnistyles();
+	const [showValues, setShowValues] = useState(false);
 	const previousBySlug = new Map(
 		previousScores.map((score) => [score.slug, score.value]),
 	);
@@ -147,12 +150,47 @@ export function WheelChart({ scores, previousScores = [] }: WheelChartProps) {
 					</View>
 				) : null}
 			</View>
+			<Button
+				label={t(showValues ? "wheel.hideValues" : "wheel.showValues")}
+				variant="text"
+				onPress={() => setShowValues(!showValues)}
+			/>
+			{showValues ? (
+				<View style={styles.values}>
+					{scores.map((score) => (
+						<View key={score.slug} style={styles.valueRow}>
+							<AppText style={styles.valueLabel}>{score.label}</AppText>
+							<AppText variant="monoList">
+								{t("wheel.value", { value: score.value })}
+							</AppText>
+							{previousBySlug.has(score.slug) ? (
+								<AppText variant="caption" color="muted">
+									{t("wheel.previous", {
+										value: previousBySlug.get(score.slug) ?? "—",
+									})}
+								</AppText>
+							) : null}
+						</View>
+					))}
+				</View>
+			) : null}
 		</View>
 	);
 }
 
 const styles = StyleSheet.create((theme) => ({
 	container: { alignItems: "center" },
+	values: { alignSelf: "stretch" },
+	valueRow: {
+		flexDirection: "row",
+		flexWrap: "wrap",
+		alignItems: "center",
+		gap: theme.spacing.sm,
+		paddingVertical: theme.spacing.md,
+		borderBottomWidth: 1,
+		borderBottomColor: theme.colors.line,
+	},
+	valueLabel: { flexGrow: 1, flexShrink: 1 },
 	legend: {
 		flexDirection: "row",
 		flexWrap: "wrap",

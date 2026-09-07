@@ -185,7 +185,7 @@ export function createDeviceSettings(
 			themeMode: readChoice(
 				DEVICE_SETTINGS_KEYS.themeMode,
 				THEME_MODES,
-				"dark",
+				"system",
 			),
 			accentHue,
 			accentChroma,

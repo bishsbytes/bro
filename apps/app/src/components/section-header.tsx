@@ -40,11 +40,12 @@ export function SectionHeader({
 const styles = StyleSheet.create((theme) => ({
 	container: {
 		flexDirection: "row",
+		flexWrap: "wrap",
 		alignItems: "center",
 		justifyContent: "space-between",
 		gap: theme.spacing.md,
 	},
-	copy: { flex: 1 },
+	copy: { flexGrow: 1, flexShrink: 1, flexBasis: 160 },
 	eyebrow: {
 		marginBottom: theme.spacing.xs,
 	},

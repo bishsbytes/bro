@@ -49,6 +49,9 @@ export const navigation = {
 		library: "Your library",
 	},
 	quickLog: {
+		practice: "Practice",
+		practiceDetail: "Record an action from your practices.",
+		label: "Log",
 		open: "Log",
 		title: "What would you like to log?",
 		note: "Note",

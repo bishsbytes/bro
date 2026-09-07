@@ -7,21 +7,14 @@ import {
 	type TrendRange,
 	type TrendSeries,
 } from "@bro/logic";
-import { Fragment, useId, useRef, useState } from "react";
+import { useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
-import { View } from "react-native";
+import { useWindowDimensions, View } from "react-native";
 import Svg, {
 	Circle,
-	Defs,
-	FeGaussianBlur,
-	Filter,
 	Line,
-	LinearGradient,
-	Pattern,
-	Polygon,
 	Polyline,
 	Rect,
-	Stop,
 	Text as SvgText,
 } from "react-native-svg";
 import { resolveMetric } from "../content";
@@ -140,6 +133,11 @@ export function TrendChart({
 	const { t } = useTranslation("common");
 	const [selectedDay, setSelectedDay] = useState<string | null>(null);
 	const [showReadings, setShowReadings] = useState(false);
+	const [chartWidth, setChartWidth] = useState(300);
+	const { fontScale = 1 } = useWindowDimensions();
+	// Counter the SVG viewBox scaling so labels remain at least 12 device points.
+	const chartLabelSize =
+		(12 * fontScale) / Math.max(Math.min(chartWidth / 300, height / 140), 0.1);
 	const width = useRef(300);
 	const touchStart = useRef({ x: 0, y: 0 });
 	const resolved = resolveMetric(series.metricSlug);
@@ -187,11 +185,6 @@ export function TrendChart({
 	const dataColor =
 		theme.colors[domain ?? dataDomainForMetric(series.metricSlug)];
 	const finalMarker = series.markers.at(-1);
-	const definitionId = useId().replaceAll(":", "");
-	const fadeId = `terrain-fade-${definitionId}`;
-	const hatchId = `terrain-hatch-${definitionId}`;
-	const lineGlowId = `terrain-line-glow-${definitionId}`;
-	const markerGlowId = `terrain-marker-glow-${definitionId}`;
 	const corridor = usualRange
 		? {
 				top: terrainYForValue(usualRange.max, series.scale),
@@ -219,6 +212,7 @@ export function TrendChart({
 				}
 				onLayout={(event) => {
 					width.current = event.nativeEvent.layout.width;
+					setChartWidth(event.nativeEvent.layout.width);
 				}}
 				onTouchStart={(event) => {
 					touchStart.current = {
@@ -253,49 +247,6 @@ export function TrendChart({
 					height={height}
 					width="100%"
 				>
-					<Defs>
-						<LinearGradient id={fadeId} x1="0" y1="0" x2="0" y2="1">
-							<Stop offset="0" stopColor={dataColor} stopOpacity="0.35" />
-							<Stop offset="1" stopColor={dataColor} stopOpacity="0" />
-						</LinearGradient>
-						<Pattern
-							id={hatchId}
-							width="6"
-							height="6"
-							patternUnits="userSpaceOnUse"
-							patternTransform="rotate(-20)"
-						>
-							<Line
-								x1="0"
-								y1="0"
-								x2="0"
-								y2="6"
-								stroke={dataColor}
-								strokeOpacity="0.22"
-								strokeWidth="1"
-							/>
-						</Pattern>
-						<Filter
-							id={lineGlowId}
-							x="-12"
-							y="-12"
-							width="324"
-							height="164"
-							filterUnits="userSpaceOnUse"
-						>
-							<FeGaussianBlur stdDeviation={theme.terrain.lineGlow} />
-						</Filter>
-						<Filter
-							id={markerGlowId}
-							x="-12"
-							y="-12"
-							width="324"
-							height="164"
-							filterUnits="userSpaceOnUse"
-						>
-							<FeGaussianBlur stdDeviation={theme.terrain.currentDotGlow} />
-						</Filter>
-					</Defs>
 					{corridor ? (
 						<Rect
 							testID="terrain-usual-corridor"
@@ -303,51 +254,19 @@ export function TrendChart({
 							y={corridor.top}
 							width="300"
 							height={Math.max(corridor.bottom - corridor.top, 1)}
-							fill={theme.colors.surface3}
-							fillOpacity="0.8"
+							fill={theme.colors.historyFill}
 						/>
 					) : null}
-					{series.segments.map((points, index) => (
-						<Fragment key={points}>
-							<Polygon
-								points={terrainPolygonPoints(points)}
-								fill={`url(#${fadeId})`}
-							/>
-							<Polygon
-								points={terrainPolygonPoints(points)}
-								fill={`url(#${hatchId})`}
-							/>
-							<Polyline
-								testID={`terrain-line-glow-${index}`}
-								points={points}
-								fill="none"
-								stroke={dataColor}
-								strokeOpacity="0.7"
-								strokeWidth={theme.terrain.line}
-								strokeLinecap="round"
-								strokeLinejoin="round"
-								filter={`url(#${lineGlowId})`}
-							/>
-							{index === series.segments.length - 1 && finalMarker ? (
-								<Circle
-									testID="terrain-line-end-glow"
-									cx={finalMarker.x}
-									cy={finalMarker.y}
-									r={theme.terrain.currentDot}
-									fill={dataColor}
-									fillOpacity="0.7"
-									filter={`url(#${lineGlowId})`}
-								/>
-							) : null}
-							<Polyline
-								points={points}
-								fill="none"
-								stroke={dataColor}
-								strokeWidth="2"
-								strokeLinecap="round"
-								strokeLinejoin="round"
-							/>
-						</Fragment>
+					{series.segments.map((points) => (
+						<Polyline
+							key={points}
+							points={points}
+							fill="none"
+							stroke={dataColor}
+							strokeWidth="2"
+							strokeLinecap="round"
+							strokeLinejoin="round"
+						/>
 					))}
 					{series.segments
 						.filter((points) => points.trim().split(/\s+/).length === 1)
@@ -391,24 +310,13 @@ export function TrendChart({
 						/>
 					) : null}
 					{finalMarker ? (
-						<Fragment key={finalMarker.localDay}>
-							<Circle
-								testID="terrain-current-glow"
-								cx={finalMarker.x}
-								cy={finalMarker.y}
-								r={theme.terrain.currentDot}
-								fill={dataColor}
-								fillOpacity="0.75"
-								filter={`url(#${markerGlowId})`}
-							/>
-							<Circle
-								testID="terrain-current-marker"
-								cx={finalMarker.x}
-								cy={finalMarker.y}
-								r={theme.terrain.currentDot}
-								fill={dataColor}
-							/>
-						</Fragment>
+						<Circle
+							testID="terrain-current-marker"
+							cx={finalMarker.x}
+							cy={finalMarker.y}
+							r={theme.terrain.currentDot}
+							fill={dataColor}
+						/>
 					) : null}
 					{corridor && usualRange ? (
 						<>
@@ -418,7 +326,7 @@ export function TrendChart({
 								y={Math.max(TERRAIN_TOP_Y + 8, corridor.top - 3)}
 								fill={theme.colors.ink2}
 								fontFamily={theme.typography.monoInline.fontFamily}
-								fontSize="12"
+								fontSize={chartLabelSize}
 							>
 								{usualRange.maxFormatted}
 							</SvgText>
@@ -429,7 +337,7 @@ export function TrendChart({
 									y={Math.min(TERRAIN_BASELINE_Y, corridor.bottom + 10)}
 									fill={theme.colors.ink2}
 									fontFamily={theme.typography.monoInline.fontFamily}
-									fontSize="12"
+									fontSize={chartLabelSize}
 								>
 									{usualRange.minFormatted}
 								</SvgText>
@@ -440,7 +348,7 @@ export function TrendChart({
 								y="136"
 								fill={theme.colors.ink2}
 								fontFamily={theme.typography.caption.fontFamily}
-								fontSize="12"
+								fontSize={chartLabelSize}
 							>
 								{t("terrain.usualRange")}
 							</SvgText>
@@ -453,7 +361,7 @@ export function TrendChart({
 							y={Math.max(TERRAIN_TOP_Y + 8, headingY - 3)}
 							fill={theme.colors.ink2}
 							fontFamily={theme.typography.monoInline.fontFamily}
-							fontSize="12"
+							fontSize={chartLabelSize}
 						>
 							{t("terrain.heading", { value: heading.formatted })}
 						</SvgText>
@@ -466,7 +374,7 @@ export function TrendChart({
 							textAnchor="end"
 							fill={theme.colors.ink2}
 							fontFamily={theme.typography.monoInline.fontFamily}
-							fontSize="12"
+							fontSize={chartLabelSize}
 						>
 							{dateRange}
 						</SvgText>
@@ -486,7 +394,13 @@ export function TrendChart({
 					/>
 				</View>
 			) : null}
-			<View style={{ flexDirection: "row", gap: theme.spacing.sm }}>
+			<View
+				style={{
+					flexDirection: "row",
+					flexWrap: "wrap",
+					gap: theme.spacing.sm,
+				}}
+			>
 				<Button
 					label={t("terrain.previous")}
 					variant="text"

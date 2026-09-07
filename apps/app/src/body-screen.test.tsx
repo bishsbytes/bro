@@ -323,10 +323,10 @@ describe("Body screen", () => {
 			await screen.findByLabelText("Resting heart rate. First reading."),
 		).toBeTruthy();
 		expect(screen.getByTestId("body-health-fitness-card")).toBeTruthy();
-		expect(screen.queryByTestId("baseline-gauge")).toBeNull();
+		expect(screen.getByTestId("baseline-gauge")).toBeTruthy();
 	});
 
-	it("formats the hero dial in the reading's display unit", async () => {
+	it("formats the hero reading in the reading's display unit", async () => {
 		const weight = weightMetric(true);
 		weight.baseline = {
 			current: {
@@ -354,10 +354,12 @@ describe("Body screen", () => {
 		};
 		const screen = await mountedWith(overviewOf([weight]));
 
-		expect(await screen.findByTestId("dial-value")).toHaveTextContent("15");
-		expect(screen.getByTestId("dial-unit")).toHaveTextContent("st 1 lb");
-		expect(screen.getByTestId("dial-minimum")).toHaveTextContent("14 st 13 lb");
-		expect(screen.getByTestId("dial-maximum")).toHaveTextContent("15 st 4 lb");
+		expect(await screen.findByTestId("baseline-gauge")).toHaveTextContent(
+			/15 st 1 lb/,
+		);
+		expect(screen.getByTestId("gauge-unit")).toHaveTextContent(/st 1 lb/);
+		expect(screen.getByText("14 st 13 lb")).toBeTruthy();
+		expect(screen.getByText("15 st 4 lb")).toBeTruthy();
 		expect(screen.queryByText("94.82215")).toBeNull();
 		expect(screen.queryByText("97.03085")).toBeNull();
 	});
@@ -630,7 +632,7 @@ describe("Body screen", () => {
 			]),
 		);
 
-		expect(screen.queryByTestId("baseline-gauge")).toBeNull();
+		expect(screen.getByTestId("baseline-gauge")).toBeTruthy();
 		const waistRow = await screen.findByLabelText(
 			"Waist. 1.5 cm down since 3 Aug.",
 		);

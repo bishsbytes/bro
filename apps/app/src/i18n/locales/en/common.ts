@@ -3,6 +3,12 @@
  * here; anything one screen owns stays in that feature's catalogue.
  */
 export const common = {
+	wheel: {
+		showValues: "Show area values",
+		hideValues: "Hide area values",
+		value: "{{value}}/10",
+		previous: "Previous: {{value}}/10",
+	},
 	support: {
 		title: "Mental health support (UK)",
 		detail:
@@ -11,6 +17,7 @@ export const common = {
 			"The NHS page could not be opened. Visit nhs.uk and search for urgent mental health help.",
 	},
 	actions: {
+		undo: "Undo",
 		tryAgain: "Try again",
 		viewLog: "View log",
 	},

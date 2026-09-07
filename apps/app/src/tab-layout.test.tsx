@@ -109,31 +109,30 @@ describe("TabLayout", () => {
 			screen.getByTestId("insights-header-icon").parent?.props.style,
 		);
 		expect(insightsSurface).toMatchObject({
-			width: 34,
-			height: 34,
-			borderRadius: 11,
+			width: 48,
+			height: 48,
+			borderRadius: 12,
 			backgroundColor: themeModule.lightTheme.colors.surface2,
 		});
 		expect(
 			NativeStyleSheet.flatten(
 				screen.getByLabelText("Open insights").props.style,
 			),
-		).toMatchObject({ width: 34, height: 34 });
+		).toMatchObject({ width: 48, height: 48 });
 		expect(
 			NativeStyleSheet.flatten(screen.getByLabelText("Log").props.style),
 		).toMatchObject({
 			position: "absolute",
 			bottom: nativeTabBarContentHeight + mockSafeAreaInsets.bottom + 16,
-			width: 56,
-			height: 56,
-			borderRadius: 14,
+			minHeight: 52,
+			borderRadius: 999,
 			backgroundColor: themeModule.lightTheme.colors.accent,
 		});
 		expect(mockNativeTabsProps).toHaveBeenCalledWith(
 			expect.objectContaining({
 				backgroundColor: themeModule.lightTheme.colors.glass,
 				blurEffect: "systemUltraThinMaterialLight",
-				minimizeBehavior: "onScrollDown",
+				minimizeBehavior: "never",
 				// Android's `auto` labels only the selected tab once there are four.
 				labelVisibilityMode: "labeled",
 			}),
@@ -146,18 +145,18 @@ describe("TabLayout", () => {
 		expect(screen.queryByText(currentMonth)).toBeNull();
 		expect(
 			NativeStyleSheet.flatten(screen.getByLabelText("Log").props.style),
-		).toMatchObject({ width: 56, height: 56 });
+		).toMatchObject({ minHeight: 52 });
 		expect(
 			NativeStyleSheet.flatten(screen.getByLabelText("Settings").props.style),
-		).toMatchObject({ width: 34, height: 34 });
+		).toMatchObject({ width: 48, height: 48 });
 		expect(
 			NativeStyleSheet.flatten(
 				screen.getByTestId("settings-header-icon").parent?.props.style,
 			),
 		).toMatchObject({
-			width: 34,
-			height: 34,
-			borderRadius: 11,
+			width: 48,
+			height: 48,
+			borderRadius: 12,
 			backgroundColor: themeModule.lightTheme.colors.surface2,
 		});
 	});
@@ -176,7 +175,7 @@ describe("TabLayout", () => {
 		expect(router.push).toHaveBeenCalledWith("/intake/log?kind=food");
 	});
 
-	it("keeps quick log in the Body and Intake title bars", async () => {
+	it("keeps quick log available across the four tabs", async () => {
 		mockPathname = "/body";
 		const screen = await render(<TabLayout />);
 
@@ -188,7 +187,7 @@ describe("TabLayout", () => {
 
 		mockPathname = "/life";
 		await screen.rerender(<TabLayout />);
-		expect(screen.queryByLabelText("Log")).toBeNull();
+		expect(screen.getByLabelText("Log")).toBeTruthy();
 	});
 
 	it("ticks only when the selected bottom tab changes", async () => {
@@ -229,8 +228,8 @@ describe("TabLayout", () => {
 			colors: {
 				...themeModule.lightTheme.colors,
 				ink2: "#345678",
-				accent: "#12ABCD",
-				accentDeep: "#004466",
+				brand: "#12ABCD",
+				selectedSoft: "#004466",
 				tabRipple: "#00446638",
 			},
 		} as unknown as typeof themeModule.lightTheme;

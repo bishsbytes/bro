@@ -112,14 +112,14 @@ describe("WeekStrip", () => {
 		expect(
 			NativeStyleSheet.flatten(within(yesterday).getByText("19").props.style)
 				.color,
-		).toBe("accent-colour");
+		).toBe(themeModule.lightTheme.colors.onBrand);
 		expect(
 			NativeStyleSheet.flatten(within(yesterday).getByText("We").props.style)
 				.color,
-		).toBe(themeModule.lightTheme.colors.ink3);
+		).toBe(themeModule.lightTheme.colors.onBrand);
 		expect(
 			NativeStyleSheet.flatten(yesterday.props.style).backgroundColor,
-		).toBe(themeModule.lightTheme.colors.surface2);
+		).toBe(themeModule.lightTheme.colors.brand);
 		const today = view.getByTestId("week-strip-day-2026-08-20");
 		const todayStyle = NativeStyleSheet.flatten(today.props.style);
 		expect(todayStyle).toMatchObject({
@@ -134,9 +134,7 @@ describe("WeekStrip", () => {
 			NativeStyleSheet.flatten(within(today).getByText("20").props.style)
 				.fontWeight,
 		).not.toBe("700");
-		expect(NativeStyleSheet.flatten(yesterday.parent?.props.style).gap).toBe(
-			themeModule.lightTheme.spacing.xs,
-		);
+		expect(NativeStyleSheet.flatten(yesterday.parent?.props.style).gap).toBe(0);
 		await fireEvent.press(view.getByTestId("week-strip-day-2026-08-18"));
 		expect(onSelectDay).toHaveBeenCalledWith("2026-08-18");
 	});
@@ -188,7 +186,7 @@ describe("WeekStrip", () => {
 		).toMatchObject({
 			width: 5,
 			height: 5,
-			backgroundColor: themeModule.lightTheme.colors.body,
+			backgroundColor: themeModule.lightTheme.colors.onBrand,
 		});
 	});
 

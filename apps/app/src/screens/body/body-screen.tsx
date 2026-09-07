@@ -23,14 +23,13 @@ import {
 import { AppText } from "../../components/app-text";
 import { Button } from "../../components/button";
 import { Card } from "../../components/card";
-import { Dial } from "../../components/dial";
 import { EmptyState } from "../../components/empty-state";
 import { ListRow } from "../../components/list-row";
 import { MeasurementField } from "../../components/measurement-field";
 import { OptionSheet } from "../../components/option-sheet";
 import { LoadingScreen, Screen } from "../../components/screen";
 import { SectionHeader } from "../../components/section-header";
-import { dataDomainForMetric } from "../../components/trend-chart";
+import { dataDomainForMetric, TrendChart } from "../../components/trend-chart";
 import { healthPlatformLabel } from "../../health/platform-label";
 import { toMessage } from "../../lib/errors";
 import { useFocusStoreLoad } from "../../lib/use-store-load";
@@ -41,6 +40,7 @@ import {
 } from "../../measurements/measurement-entry";
 import { StyleSheet } from "../../theme/unistyles";
 import { type BodyText, changeSentence } from "./baseline-copy";
+import { BodyBaselineGauge } from "./body-baseline-gauge";
 import {
 	hasPlottableRange,
 	type MeasurementChange,
@@ -503,7 +503,10 @@ export function BodyScreen({ store }: BodyScreenProps) {
 	const measurementChanges = measurementRows.map(changeOf);
 	const heroMetric =
 		overview.metrics.find(
-			(metric) => metric.metricSlug === WEIGHT_SLUG && metric.baseline.current,
+			(metric) =>
+				metric.metricSlug === WEIGHT_SLUG &&
+				metric.visible &&
+				metric.baseline.current,
 		) ??
 		overview.metrics.find(
 			(metric) => metric.visible && metric.baseline.current,
@@ -514,25 +517,14 @@ export function BodyScreen({ store }: BodyScreenProps) {
 	// The legend describes marks, so it goes on the first card that draws any.
 	const measurementsDrawMarks = measurementChanges.some(hasPlottableRange);
 	const healthFitnessDrawsMarks = healthFitnessChanges.some(hasPlottableRange);
-	const heroFormatted = heroMetric?.baseline.current?.formatted;
-	const heroUnit =
-		heroMetric?.displayUnit ??
-		(heroMetric?.dimension === "rate_bpm" ? "bpm" : null);
-	const heroUnitStart =
-		heroFormatted && heroUnit
-			? heroFormatted.indexOf(heroUnit === "%" ? heroUnit : ` ${heroUnit}`)
-			: -1;
-	const heroValue =
-		heroFormatted && heroUnitStart >= 0
-			? heroFormatted.slice(0, heroUnitStart)
-			: heroFormatted;
-	const heroValueUnit =
-		heroFormatted && heroUnitStart >= 0
-			? heroFormatted.slice(heroUnitStart + (heroUnit === "%" ? 0 : 1))
-			: undefined;
 
 	return (
-		<Screen scroll padded gap="xl">
+		<Screen
+			scroll
+			padded
+			gap="xl"
+			contentContainerStyle={{ paddingBottom: 96 }}
+		>
 			<BodyLogSurfaceRegistration
 				t={t}
 				overview={overview}
@@ -542,21 +534,22 @@ export function BodyScreen({ store }: BodyScreenProps) {
 				onManageMeasurements={openManageMeasurements}
 			/>
 			<AppText color="muted">{t("body:overview.intro")}</AppText>
-			{heroMetric?.baseline.current && heroMetric.baseline.rail ? (
-				<Dial
-					label={heroMetric.label}
-					value={heroValue ?? heroMetric.baseline.current.formatted}
-					unit={heroValueUnit}
-					current={heroMetric.baseline.current.value}
-					range={heroMetric.baseline.rail}
-					rangeLabels={{
-						min: heroMetric.baseline.rail.minFormatted,
-						max: heroMetric.baseline.rail.maxFormatted,
-					}}
-					usualRange={heroMetric.baseline.usualRange}
-					domain={dataDomainForMetric(heroMetric.metricSlug)}
-					accessibilityLabel={`${heroMetric.label}, ${heroMetric.baseline.current.formatted}`}
-				/>
+			{heroMetric?.baseline.current ? (
+				<Card style={styles.section}>
+					<BodyBaselineGauge
+						metric={heroMetric}
+						locale={locale}
+						valueVariant="metric"
+					/>
+					{heroMetric.series.observedDayCount > 0 ? (
+						<TrendChart
+							series={heroMetric.series}
+							label={heroMetric.label}
+							displayUnit={heroMetric.displayUnit}
+							usualRange={heroMetric.baseline.usualRange}
+						/>
+					) : null}
+				</Card>
 			) : null}
 
 			{error ? <AppText color="danger">{error}</AppText> : null}

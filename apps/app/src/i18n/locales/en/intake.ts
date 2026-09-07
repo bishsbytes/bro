@@ -88,17 +88,17 @@ export const intake = {
 		other: "Other",
 	},
 	log: {
+		editAmountA11y: "Edit amount for {{name}}",
 		title: "Log",
 		searchPlaceholder: "What did you have?",
 		searchA11y: "Search food and drink",
 		clearA11y: "Clear search",
 		kindA11y: "Show {{name}}",
 		/** Recents are ranked by how close their time of day is to now. */
-		recentsTitle: "Usually around now",
+		recentsTitle: "Recent",
 		recentsEmpty:
 			"What you log will appear here, ranked by the time of day you have it.",
-		recentHint:
-			"Logs it again at the same portion. Press and hold to change the amount or the time.",
+		recentHint: "Adds the displayed amount to intake.",
 		libraryTitle: "Your library",
 		libraryEmpty: "Foods and drinks you save will appear here.",
 		catalogueTitle: "Browse",

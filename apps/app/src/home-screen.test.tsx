@@ -365,11 +365,11 @@ describe("home screen", () => {
 		);
 
 		// A done sitting says what it holds; the other still invites a check-in.
-		expect(await screen.findByText("Mood 2 · Energy 3")).toBeTruthy();
+		expect(await screen.findByText("Mood Flat · Energy 3")).toBeTruthy();
 		expect(screen.getByLabelText("Start Evening check-in")).toBeTruthy();
 
 		await fireEvent.press(
-			screen.getByLabelText("Edit Morning check-in: Mood 2 · Energy 3"),
+			screen.getByLabelText("Edit Morning check-in: Mood Flat · Energy 3"),
 		);
 		expect(router.push).toHaveBeenCalledWith("/check-in?slot=morning");
 		expect(store.saveCheckIn).not.toHaveBeenCalled();
@@ -392,6 +392,24 @@ describe("home screen", () => {
 			expect(store.saveDayTags).toHaveBeenCalledWith(["training"]),
 		);
 		expect(store.saveCheckIn).not.toHaveBeenCalled();
+	});
+
+	it("requires showing all factors before confirming unselected factors as absent", async () => {
+		const store = checkInStore();
+		const screen = await render(
+			<HomeScreen
+				{...supportingProps()}
+				habitsStore={habitsStore()}
+				store={store}
+			/>,
+		);
+		await screen.findByText("Morning");
+		expect(screen.queryByLabelText("Confirm today’s tags")).toBeNull();
+		await fireEvent.press(screen.getByLabelText("More factors"));
+		await fireEvent.press(screen.getByLabelText("Confirm today’s tags"));
+		await waitFor(() =>
+			expect(store.saveDayTags).toHaveBeenCalledWith([], true),
+		);
 	});
 
 	it("prompts for a note when the journal day has none", async () => {
@@ -498,7 +516,7 @@ describe("home screen", () => {
 		);
 
 		expect(await screen.findByText("Yesterday")).toBeTruthy();
-		expect(await screen.findByText("Mood 2 · Energy 3")).toBeTruthy();
+		expect(await screen.findByText("Mood Flat · Energy 3")).toBeTruthy();
 		expect(screen.getByText("Resting heart rate")).toBeTruthy();
 		expect(screen.getByText("55 bpm")).toBeTruthy();
 		expect(screen.queryByText("↑ 10%")).toBeNull();

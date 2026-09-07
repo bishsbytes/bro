@@ -254,7 +254,7 @@ const styles = StyleSheet.create((theme) => ({
 	},
 	focused: {
 		outlineWidth: 2,
-		outlineColor: theme.colors.accent,
+		outlineColor: theme.colors.brand,
 		outlineOffset: 2,
 		outlineStyle: "solid",
 	},
@@ -280,10 +280,7 @@ const styles = StyleSheet.create((theme) => ({
 	selectedTick: {
 		width: 3,
 		height: theme.spacing.lg,
-		backgroundColor: theme.colors.accent,
-		shadowColor: theme.colors.accent,
-		shadowOpacity: 0.7,
-		shadowRadius: 6,
+		backgroundColor: theme.colors.brand,
 	},
 	value: {
 		minWidth: theme.spacing.xl,

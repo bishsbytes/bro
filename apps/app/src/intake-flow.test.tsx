@@ -165,16 +165,17 @@ describe("intake flow", () => {
 			(await events.listRecent(["nicotine"]))[0]?.constituents.nicotine,
 		).toBeCloseTo(1.2e-6, 12);
 
-		// The lager just logged is a recent chip: one tap logs it again at the
-		// remembered portion, with no sheet.
+		// The separate plus repeats the displayed portion.
 		await fireEvent.press(view.getByLabelText("Show Smoke or vape"));
 		await fireEvent.press(await view.findByLabelText("Log Lager, 4.5% again"));
 		expect(await view.findByText("Lager, 4.5% added")).toBeTruthy();
 		expect(await events.listAll()).toHaveLength(3);
-
 		// Something else: a complete event with no library row behind it.
 		await fireEvent.press(view.getByLabelText("Something else"));
-		await fireEvent.changeText(view.getByLabelText("What was it?"), "Oat bar");
+		await fireEvent.changeText(
+			await view.findByLabelText("What was it?"),
+			"Oat bar",
+		);
 		await fireEvent.changeText(view.getByLabelText("Energy (kcal)"), "210");
 		await fireEvent.press(view.getByText("Log it"));
 		expect(await view.findByText("Oat bar added")).toBeTruthy();

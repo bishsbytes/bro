@@ -252,12 +252,17 @@ export function WeekStrip({
 								onPress={() => onSelectDay(localDay)}
 								style={[
 									styles.day,
+									pageWidth < 368 && styles.compactDay,
 									localDay === todayLocalDay && styles.today,
 									selected && styles.selectedDay,
 									future && styles.futureDay,
 								]}
 							>
-								<AppText variant="micro" color="subtle" style={styles.weekday}>
+								<AppText
+									variant="micro"
+									color="subtle"
+									style={[styles.weekday, selected && styles.selectedText]}
+								>
 									{presentation?.weekday ?? weekdayLabel(localDay)}
 								</AppText>
 								<AppText
@@ -265,7 +270,7 @@ export function WeekStrip({
 									color={
 										localDay === todayLocalDay || selected ? "brand" : "subtle"
 									}
-									style={styles.dayNumber}
+									style={[styles.dayNumber, selected && styles.selectedText]}
 								>
 									{presentation?.number ?? dayNumber(localDay)}
 								</AppText>
@@ -275,7 +280,11 @@ export function WeekStrip({
 											testID={`week-strip-check-in-${localDay}`}
 											style={[
 												styles.indicator,
-												{ backgroundColor: theme.colors.mind },
+												{
+													backgroundColor: selected
+														? theme.colors.onBrand
+														: theme.colors.brand,
+												},
 											]}
 										/>
 									) : null}
@@ -284,7 +293,11 @@ export function WeekStrip({
 											testID={`week-strip-adherence-${localDay}`}
 											style={[
 												styles.indicator,
-												{ backgroundColor: theme.colors.body },
+												{
+													backgroundColor: selected
+														? theme.colors.onBrand
+														: theme.colors.brand,
+												},
 											]}
 										/>
 									) : null}
@@ -305,23 +318,26 @@ const styles = StyleSheet.create((theme) => ({
 	},
 	week: {
 		flexDirection: "row",
-		gap: theme.spacing.xs,
-		paddingHorizontal: theme.spacing.sm,
+		flexWrap: "wrap",
+		gap: 0,
+		paddingHorizontal: theme.spacing.lg,
 		paddingVertical: theme.spacing.xs,
 	},
 	day: {
 		flex: 1,
-		minHeight: 54,
+		minHeight: 64,
 		alignItems: "center",
 		justifyContent: "center",
 		gap: 2,
 		borderRadius: theme.radius.control,
 	},
+	compactDay: { flexBasis: "25%", flexGrow: 0, flexShrink: 0 },
 	today: {
 		borderWidth: 1,
 		borderColor: theme.colors.hairlineStrong,
 	},
-	selectedDay: { backgroundColor: theme.colors.surface2 },
+	selectedDay: { backgroundColor: theme.colors.brand },
+	selectedText: { color: theme.colors.onBrand },
 	futureDay: { opacity: theme.opacity.disabled },
 	weekday: { fontWeight: "500" },
 	dayNumber: { fontSize: 15, lineHeight: 18 },

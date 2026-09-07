@@ -28,7 +28,7 @@ describe("appearance screen", () => {
 		jest.clearAllMocks();
 	});
 
-	it("previews and persists theme and accent choices immediately", async () => {
+	it("persists explicit appearance and can return to System", async () => {
 		const view = await render(
 			<DeviceSettingsProvider initialSettings={settings}>
 				<AppearanceScreen />
@@ -38,9 +38,7 @@ describe("appearance screen", () => {
 		expect(view.getByLabelText("Dark theme").props.accessibilityState).toEqual(
 			expect.objectContaining({ selected: true }),
 		);
-		expect(view.getByLabelText("Ice accent").props.accessibilityState).toEqual(
-			expect.objectContaining({ selected: true }),
-		);
+		expect(view.queryByLabelText("Ice accent")).toBeNull();
 
 		await fireEvent.press(view.getByLabelText("Light theme"));
 		await waitFor(() =>
@@ -50,12 +48,12 @@ describe("appearance screen", () => {
 			expect.objectContaining({ selected: true }),
 		);
 
-		await fireEvent.press(view.getByLabelText("Lichen accent"));
+		await fireEvent.press(view.getByLabelText("System theme"));
 		await waitFor(() =>
-			expect(mockSetAppearance).toHaveBeenLastCalledWith("light", 140, 0.12),
+			expect(mockSetAppearance).toHaveBeenLastCalledWith("system", 212, 0.12),
 		);
 		expect(
-			view.getByLabelText("Lichen accent").props.accessibilityState,
+			view.getByLabelText("System theme").props.accessibilityState,
 		).toEqual(expect.objectContaining({ selected: true }));
 		expect(globalThis.fetch).not.toHaveBeenCalled();
 	});

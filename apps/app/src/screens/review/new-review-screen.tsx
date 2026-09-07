@@ -287,18 +287,21 @@ export function NewReviewScreen({ store }: NewReviewScreenProps) {
 					{wheelScores.map((item, position) => {
 						const selected = focusItemSlugs.includes(item.slug);
 						return (
-							<TouchableOpacity
+							<Card
 								key={item.slug}
-								accessibilityRole="button"
-								accessibilityLabel={t("sitting.focusOn", { area: item.label })}
-								accessibilityState={{ selected }}
-								onPress={() => toggleFocus(item.slug)}
+								style={[styles.focusCard, selected && styles.focusSelected]}
 							>
-								<Card
-									style={[styles.focusCard, selected && styles.focusSelected]}
+								<TouchableOpacity
+									accessibilityRole="checkbox"
+									accessibilityLabel={t("sitting.focusOn", {
+										area: item.label,
+									})}
+									accessibilityState={{ selected, checked: selected }}
+									style={styles.focusAction}
+									onPress={() => toggleFocus(item.slug)}
 								>
 									<Icon
-										name={lifeAreaIconName(item.slug)}
+										name={selected ? "check" : lifeAreaIconName(item.slug)}
 										size={theme.control.focusIconSize}
 										color={
 											selected ? theme.colors.brand : theme.colors.textMuted
@@ -307,26 +310,20 @@ export function NewReviewScreen({ store }: NewReviewScreenProps) {
 									<AppText variant="label" style={styles.focusLabel}>
 										{item.label}
 									</AppText>
-									{/* The score doubles as the way back to the area that set
-									    it, so a correction is one tap rather than a walk back
-									    through every area in between. */}
-									<TouchableOpacity
-										accessibilityRole="button"
-										accessibilityLabel={t("sitting.changeAreaScore", {
-											area: item.label,
-										})}
-										hitSlop={styles.scoreHitSlop}
-										onPress={() => goTo(position)}
-									>
-										<AppText
-											variant="score"
-											color={selected ? "brand" : "muted"}
-										>
-											{t("scoreOutOf", { value: formatScore(item.value) })}
-										</AppText>
-									</TouchableOpacity>
-								</Card>
-							</TouchableOpacity>
+								</TouchableOpacity>
+								<TouchableOpacity
+									accessibilityRole="button"
+									accessibilityLabel={t("sitting.changeAreaScore", {
+										area: item.label,
+									})}
+									style={styles.scoreAction}
+									onPress={() => goTo(position)}
+								>
+									<AppText variant="score" color={selected ? "brand" : "muted"}>
+										{t("scoreOutOf", { value: formatScore(item.value) })}
+									</AppText>
+								</TouchableOpacity>
+							</Card>
 						);
 					})}
 				</ScrollView>
@@ -498,19 +495,27 @@ const styles = StyleSheet.create((theme) => ({
 		justifyContent: "space-between",
 		gap: theme.spacing.md,
 		borderWidth: 1,
-		borderColor: theme.colors.border,
+		borderColor: theme.colors.interactiveBorder,
+		paddingVertical: theme.spacing.xs,
 	},
 	focusLabel: { flex: 1 },
+	focusAction: {
+		flex: 1,
+		flexDirection: "row",
+		alignItems: "center",
+		gap: theme.spacing.md,
+		minHeight: theme.control.minHitArea,
+	},
+	scoreAction: {
+		minWidth: theme.control.minHitArea,
+		minHeight: theme.control.minHitArea,
+		justifyContent: "center",
+		alignItems: "center",
+	},
 	promptIcon: { alignItems: "center" },
 	focusSelected: {
 		borderColor: theme.colors.brand,
 		backgroundColor: theme.colors.selected,
-	},
-	scoreHitSlop: {
-		top: theme.spacing.md,
-		bottom: theme.spacing.md,
-		left: theme.spacing.lg,
-		right: theme.spacing.md,
 	},
 	centredText: { textAlign: "center" },
 }));

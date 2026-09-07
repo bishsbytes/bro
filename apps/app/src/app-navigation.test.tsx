@@ -336,7 +336,7 @@ describe("app entry", () => {
 		await waitFor(() =>
 			expect(router.getPathname()).toBe("/settings/appearance"),
 		);
-		expect(view.getByText("Accent colour")).toBeTruthy();
+		expect(view.getByLabelText("System theme")).toBeTruthy();
 		await act(async () => expoRouter.back());
 		await waitFor(() => expect(router.getPathname()).toBe("/settings"));
 		await press(view, "Data");

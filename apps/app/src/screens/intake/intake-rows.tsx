@@ -53,11 +53,9 @@ export function IntakeRow({
 				</AppText>
 			) : null}
 			<View style={styles.copy}>
-				<AppText variant="label" numberOfLines={1}>
-					{title}
-				</AppText>
+				<AppText variant="label">{title}</AppText>
 				{meta ? (
-					<AppText variant="caption" color="muted" numberOfLines={1}>
+					<AppText variant="caption" color="muted">
 						{meta}
 					</AppText>
 				) : null}
@@ -151,7 +149,7 @@ const styles = StyleSheet.create((theme) => ({
 	},
 	copy: { flex: 1, gap: theme.spacing.xs },
 	value: {
-		flexShrink: 0,
+		flexShrink: 1,
 		textAlign: "right",
 		fontVariant: ["tabular-nums"],
 	},

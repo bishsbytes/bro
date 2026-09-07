@@ -8,6 +8,29 @@ jest.mock("expo-router", () => ({
 	router: { back: jest.fn() },
 }));
 
+const mockDrafts = new Map<string, string>();
+const mockPreventRemove = jest.fn();
+jest.mock("expo-router/react-navigation", () => ({
+	usePreventRemove: (...args: unknown[]) => mockPreventRemove(...args),
+}));
+jest.mock("@bro/database-app", () => ({
+	...jest.requireActual("@bro/database-app"),
+	readCheckInDraft: (slot: string) => mockDrafts.get(slot) ?? null,
+	writeCheckInDraft: (slot: string, value: string | null) =>
+		value === null ? mockDrafts.delete(slot) : mockDrafts.set(slot, value),
+}));
+
+async function advance(screen: Awaited<ReturnType<typeof render>>) {
+	await fireEvent.press(
+		screen.queryByText("Continue") ?? screen.getByText("Save check-in"),
+	);
+}
+
+jest.mock("react-native-safe-area-context", () => ({
+	...jest.requireActual("react-native-safe-area-context"),
+	useSafeAreaInsets: () => ({ top: 0, right: 0, bottom: 0, left: 0 }),
+}));
+
 const OPTIONAL_SLUGS = ["energy", "motivation", "productivity", "libido"];
 
 function scoresFor(slugs: readonly string[]) {
@@ -84,6 +107,7 @@ function checkInStore(snapshot: TodayCheckIn = today) {
 describe("check-in screen", () => {
 	beforeEach(() => {
 		jest.clearAllMocks();
+		mockDrafts.clear();
 	});
 
 	it("asks one score at a time and writes them in a single save", async () => {
@@ -106,6 +130,12 @@ describe("check-in screen", () => {
 		expect(screen.getByText("Full of energy")).toBeTruthy();
 
 		await fireEvent.press(screen.getByLabelText("Energy 3"));
+		expect(
+			screen.getByLabelText("Energy 3").props.accessibilityState.selected,
+		).toBe(true);
+		expect(screen.queryByLabelText("Motivation 5")).toBeNull();
+		expect(store.saveCheckIn).not.toHaveBeenCalled();
+		await advance(screen);
 		expect(screen.queryByLabelText("Energy 3")).toBeNull();
 		expect(
 			screen.getByText(
@@ -115,6 +145,7 @@ describe("check-in screen", () => {
 		expect(screen.getByText("No motivation")).toBeTruthy();
 		expect(screen.getByText("Highly motivated")).toBeTruthy();
 		await fireEvent.press(await screen.findByLabelText("Motivation 5"));
+		await advance(screen);
 		expect(
 			screen.getByText(
 				"How effectively you have been getting things done today.",
@@ -123,6 +154,7 @@ describe("check-in screen", () => {
 		expect(screen.getByText("Not productive")).toBeTruthy();
 		expect(screen.getByText("Very productive")).toBeTruthy();
 		await fireEvent.press(await screen.findByLabelText("Productivity 4"));
+		await advance(screen);
 		expect(store.saveCheckIn).not.toHaveBeenCalled();
 		expect(
 			screen.getByText("Your level of sexual desire right now."),
@@ -130,8 +162,9 @@ describe("check-in screen", () => {
 		expect(screen.getByText("No desire")).toBeTruthy();
 		expect(screen.getByText("Strong desire")).toBeTruthy();
 		await fireEvent.press(await screen.findByLabelText("Libido 2"));
+		await advance(screen);
 
-		// Answering the last prompt is the save; there is no save button.
+		// Explicit Save commits all answered dimensions in one transaction.
 		await waitFor(() =>
 			expect(store.saveCheckIn).toHaveBeenCalledWith(
 				"morning",
@@ -151,7 +184,7 @@ describe("check-in screen", () => {
 		expect(await screen.findByText("Checked in")).toBeTruthy();
 		expect(
 			screen.getByText(
-				"Mood 4 · Energy 3 · Motivation 5 · Productivity 4 · Libido 2",
+				"Mood Good · Energy 3 · Motivation 5 · Productivity 4 · Libido 2",
 			),
 		).toBeTruthy();
 
@@ -164,10 +197,12 @@ describe("check-in screen", () => {
 		const screen = await render(<CheckInScreen store={store} slot="morning" />);
 
 		expect(await screen.findByText("1 of 2")).toBeTruthy();
-		expect(screen.getByText("Very bad")).toBeTruthy();
+		expect(screen.getByText("Low")).toBeTruthy();
 		expect(screen.getAllByText("Very good")[0]).toBeTruthy();
 		await fireEvent.press(screen.getByLabelText("Mood 5"));
+		await advance(screen);
 		await fireEvent.press(await screen.findByLabelText("Energy 4"));
+		await advance(screen);
 
 		await waitFor(() =>
 			expect(store.saveCheckIn).toHaveBeenCalledWith(
@@ -186,6 +221,7 @@ describe("check-in screen", () => {
 
 		await fireEvent.press(await screen.findByText("Skip"));
 		await fireEvent.press(await screen.findByLabelText("Motivation 2"));
+		await advance(screen);
 
 		await waitFor(() =>
 			expect(store.saveCheckIn).toHaveBeenCalledWith(
@@ -203,7 +239,8 @@ describe("check-in screen", () => {
 		);
 
 		await fireEvent.press(await screen.findByLabelText("Energy 1"));
-		await fireEvent.press(await screen.findByLabelText("Finish check-in"));
+		await advance(screen);
+		await fireEvent.press(await screen.findByText("Save for now"));
 
 		await waitFor(() =>
 			expect(store.saveCheckIn).toHaveBeenCalledWith(
@@ -234,7 +271,9 @@ describe("check-in screen", () => {
 			).toBe(true),
 		);
 		await fireEvent.press(screen.getByLabelText("Mood 5"));
+		await advance(screen);
 		await fireEvent.press(await screen.findByLabelText("Energy 4"));
+		await advance(screen);
 
 		await waitFor(() =>
 			expect(store.saveCheckIn).toHaveBeenCalledWith(
@@ -258,8 +297,10 @@ describe("check-in screen", () => {
 		);
 
 		await fireEvent.press(await screen.findByLabelText("Energy 3"));
+		await advance(screen);
 		await fireEvent.press(await screen.findByText("Change an answer"));
 		await fireEvent.press(await screen.findByLabelText("Energy 5"));
+		await advance(screen);
 
 		await waitFor(() => expect(store.saveCheckIn).toHaveBeenCalledTimes(2));
 		// The second save edits the entry the first one created.
@@ -278,12 +319,61 @@ describe("check-in screen", () => {
 		);
 
 		await fireEvent.press(await screen.findByLabelText("Energy 3"));
+		await advance(screen);
 
 		expect(await screen.findByText("Disk is full")).toBeTruthy();
 		expect(router.back).not.toHaveBeenCalled();
 
-		await fireEvent.press(screen.getByText("Try again"));
+		await fireEvent.press(screen.getByText("Save check-in"));
 		await waitFor(() => expect(store.saveCheckIn).toHaveBeenCalledTimes(2));
 		expect(await screen.findByText("Checked in")).toBeTruthy();
+	});
+	it("starts unanswered and resumes a kept device-local draft without creating observations", async () => {
+		const store = checkInStore(morningAsking("energy", "motivation"));
+		let screen = await render(<CheckInScreen store={store} slot="morning" />);
+		expect(
+			(await screen.findByLabelText("Mood 3")).props.accessibilityState
+				.selected,
+		).toBe(false);
+		expect(
+			screen.getByText("Continue").parent?.props.accessibilityState.disabled,
+		).toBe(true);
+		await fireEvent.press(screen.getByLabelText("Mood 3"));
+		await advance(screen);
+		await fireEvent.press(screen.getByLabelText("Energy 2"));
+		await fireEvent.press(screen.getByLabelText("Close check-in"));
+		await fireEvent.press(screen.getByText("Keep draft"));
+		expect(store.saveCheckIn).not.toHaveBeenCalled();
+		await screen.unmount();
+		screen = await render(<CheckInScreen store={store} slot="morning" />);
+		await waitFor(() =>
+			expect(
+				screen.getByLabelText("Energy 2").props.accessibilityState.selected,
+			).toBe(true),
+		);
+		await fireEvent.press(screen.getByText("Save for now"));
+		await waitFor(() =>
+			expect(store.saveCheckIn).toHaveBeenCalledWith(
+				"morning",
+				{ mood: 3, optional: { energy: 2 } },
+				null,
+			),
+		);
+		expect(mockDrafts.has("morning")).toBe(false);
+	});
+
+	it("discards only the draft and keeps back navigation answers", async () => {
+		const store = checkInStore(morningAsking("energy"));
+		const screen = await render(<CheckInScreen store={store} slot="morning" />);
+		await fireEvent.press(await screen.findByLabelText("Mood 4"));
+		await advance(screen);
+		await fireEvent.press(screen.getByLabelText("Previous score"));
+		expect(
+			screen.getByLabelText("Mood 4").props.accessibilityState.selected,
+		).toBe(true);
+		await fireEvent.press(screen.getByLabelText("Close check-in"));
+		await fireEvent.press(screen.getByText("Discard"));
+		expect(mockDrafts.has("morning")).toBe(false);
+		expect(store.saveCheckIn).not.toHaveBeenCalled();
 	});
 });

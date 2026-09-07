@@ -6,6 +6,7 @@ import {
 	BodyLogSurfaceProvider,
 	useRegisterBodyLogSurface,
 } from "./body/body-log-surface-context";
+import { LogDateProvider, useSetLogDate } from "./components/log-date-context";
 import { QuickLogFab } from "./components/quick-log-fab";
 import { lightTheme } from "./theme/unistyles";
 
@@ -35,6 +36,17 @@ function RegisteredBodyLog() {
 	return null;
 }
 
+function SelectedIntakeDay() {
+	useSetLogDate("intake", "2026-08-14");
+	return (
+		<QuickLogFab
+			bottom={24}
+			activeTab="intake"
+			enabledKinds={async () => ["food", "drink"]}
+		/>
+	);
+}
+
 describe("quick log fab", () => {
 	beforeEach(() => {
 		jest.clearAllMocks();
@@ -59,7 +71,7 @@ describe("quick log fab", () => {
 		expect(router.push).toHaveBeenCalledWith("/notes/new");
 	});
 
-	it("uses the Helm primary-action treatment while floating", async () => {
+	it("uses the labelled clay action while floating", async () => {
 		const view = await render(
 			<QuickLogFab bottom={96} enabledKinds={async () => ["food", "drink"]} />,
 		);
@@ -68,11 +80,10 @@ describe("quick log fab", () => {
 			NativeStyleSheet.flatten(view.getByLabelText("Log").props.style),
 		).toMatchObject({
 			position: "absolute",
-			right: 16,
+			right: 24,
 			bottom: 96,
-			width: 56,
-			height: 56,
-			borderRadius: 14,
+			minHeight: 52,
+			borderRadius: 999,
 			backgroundColor: lightTheme.colors.accent,
 		});
 		expect(
@@ -81,6 +92,24 @@ describe("quick log fab", () => {
 			color: lightTheme.colors.onAccent,
 			size: 24,
 		});
+	});
+
+	it("keeps the active intake date and offers food first", async () => {
+		const view = await render(
+			<LogDateProvider>
+				<SelectedIntakeDay />
+			</LogDateProvider>,
+		);
+		await fireEvent.press(view.getByLabelText("Log"));
+		expect(view.getByText("2026-08-14")).toBeTruthy();
+		const actions = view
+			.getAllByRole("button")
+			.map((button) => button.props.accessibilityLabel);
+		expect(actions.indexOf("Food")).toBeLessThan(actions.indexOf("Note"));
+		await fireEvent.press(view.getByLabelText("Food"));
+		expect(router.push).toHaveBeenCalledWith(
+			"/intake/log?kind=food&day=2026-08-14",
+		);
 	});
 
 	it("presets the one log screen to the kind chosen", async () => {

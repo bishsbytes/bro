@@ -92,7 +92,7 @@ describe("Screen safe areas", () => {
 		const content = view.getByText("Page content").parent;
 
 		expect(StyleSheet.flatten(content?.props.style)).toMatchObject({
-			paddingHorizontal: 16,
+			paddingHorizontal: 24,
 			paddingTop: 16,
 			paddingBottom: 32,
 		});

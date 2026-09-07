@@ -77,3 +77,15 @@ export function writeNoteDraft(value: string | null): void {
 	if (value === null) getStore().removeItemSync("noteDraft");
 	else getStore().setItemSync("noteDraft", value);
 }
+
+/** A check-in draft is install-local and never part of an account or shared export. */
+export function readCheckInDraft(slot: "morning" | "evening"): string | null {
+	return getStore().getItemSync(`checkInDraft:${slot}`);
+}
+export function writeCheckInDraft(
+	slot: "morning" | "evening",
+	value: string | null,
+): void {
+	if (value === null) getStore().removeItemSync(`checkInDraft:${slot}`);
+	else getStore().setItemSync(`checkInDraft:${slot}`, value);
+}

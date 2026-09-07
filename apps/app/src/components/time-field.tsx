@@ -82,9 +82,9 @@ const styles = StyleSheet.create((theme) => ({
 		paddingVertical: theme.spacing.md,
 		backgroundColor: theme.colors.surface,
 	},
-	focused: { borderWidth: 2, borderColor: theme.colors.accent },
+	focused: { borderWidth: 2, borderColor: theme.colors.brand },
 	invalid: { borderColor: theme.colors.alert },
-	pressed: { backgroundColor: theme.colors.accentTint },
+	pressed: { backgroundColor: theme.colors.selectedSoft },
 	value: { flex: 1, fontVariant: ["tabular-nums"] },
 	error: { marginTop: theme.spacing.xs },
 }));

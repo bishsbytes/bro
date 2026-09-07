@@ -57,7 +57,8 @@ type IntakeLogScreenProps = {
 	initialKind?: ConsumableKind;
 	/** Log against this day rather than today; the sheet opens on Earlier. */
 	initialLocalDay?: string;
-	store?: Pick<IntakeStore, "loadLog" | "log" | "logFree" | "repeatEvent">;
+	store?: Pick<IntakeStore, "loadLog" | "log" | "logFree" | "repeatEvent"> &
+		Partial<Pick<IntakeStore, "deleteEvent">>;
 	searchStore?: Pick<IntakeSearchStore, "loadCached" | "search">;
 };
 
@@ -88,55 +89,56 @@ function formatQuantity(quantity: number): string {
 	return quantity === 0.5 ? "½" : String(quantity);
 }
 
-/** A recent chip: one tap logs it at its remembered portion. */
-function RecentChip({
+/** Tap the row to edit the next amount, or plus to repeat the displayed portion. */
+function RecentIntakeRow({
 	presented,
 	disabled,
-	onPress,
-	onLongPress,
+	onRepeat,
+	onEdit,
 }: {
 	presented: PresentedIntakeEvent;
 	disabled: boolean;
-	onPress: () => void;
-	onLongPress: () => void;
+	onRepeat: () => void;
+	onEdit: () => void;
 }) {
 	const { t } = useTranslation("intake");
 	const { event } = presented;
+
+	const { theme } = useUnistyles();
 	return (
-		<Pressable
-			accessibilityRole="button"
-			accessibilityLabel={t("log.repeatA11y", { name: event.name })}
-			accessibilityHint={t("log.recentHint")}
-			accessibilityState={{ disabled }}
-			disabled={disabled}
-			onPress={onPress}
-			onLongPress={onLongPress}
-			style={({ pressed }) => [
-				styles.chip,
-				pressed && styles.chipPressed,
-				disabled && styles.chipDisabled,
-			]}
-		>
-			<AppText variant="label" numberOfLines={1}>
-				{event.name}
-			</AppText>
-			<AppText variant="caption" color="muted" numberOfLines={1}>
-				{t("log.option", {
-					item: "",
-					portion: event.portionLabel ?? t("event.defaultPortion"),
-				}).trimStart()}
-			</AppText>
-		</Pressable>
+		<View style={styles.recentRow}>
+			<Pressable
+				accessibilityRole="button"
+				accessibilityLabel={t("log.editAmountA11y", { name: event.name })}
+				accessibilityState={{ disabled }}
+				disabled={disabled}
+				onPress={onEdit}
+				style={styles.recentCopy}
+			>
+				<AppText variant="body">{event.name}</AppText>
+				<AppText variant="caption" color="muted">
+					{t("entry.portion", {
+						quantity: event.quantity,
+						portion: event.portionLabel ?? t("event.defaultPortion"),
+					})}
+				</AppText>
+			</Pressable>
+			<Pressable
+				accessibilityRole="button"
+				accessibilityLabel={t("log.repeatA11y", { name: event.name })}
+				accessibilityHint={t("log.recentHint")}
+				accessibilityState={{ disabled }}
+				disabled={disabled}
+				onPress={onRepeat}
+				style={styles.repeatButton}
+			>
+				<Icon name="add" size={24} color={theme.colors.brand} />
+			</Pressable>
+		</View>
 	);
 }
 
-/**
- * One screen for everything, recents first. A recent chip logs in one tap at
- * the remembered portion, ranked by time of day so the evening things come
- * first at half six; the detail sheet — portion, stepper, now or earlier —
- * opens only on request. Then the library, the catalogue, search as the
- * fallback, and "something else". Entries carry a time, never a meal slot.
- */
+/** Recent rows edit an amount; their separate plus repeats the displayed portion. */
 export function IntakeLogScreen({
 	initialKind,
 	initialLocalDay,
@@ -159,6 +161,7 @@ export function IntakeLogScreen({
 	const [searchBusy, setSearchBusy] = useState(false);
 	const searchRequestId = useRef(0);
 	const [busy, setBusy] = useState(false);
+	const submitting = useRef(false);
 	const [pick, setPick] = useState<Pick_ | null>(null);
 	const [portionId, setPortionId] = useState<string | null>(null);
 	const [amount, setAmount] = useState("");
@@ -175,6 +178,7 @@ export function IntakeLogScreen({
 	const [confirmation, setConfirmation] = useState<{
 		name: string;
 		localDay: string;
+		id?: string;
 	} | null>(null);
 	const dismissConfirmation = useCallback(() => setConfirmation(null), []);
 
@@ -234,20 +238,27 @@ export function IntakeLogScreen({
 	}
 
 	async function mutate(
-		work: () => Promise<{ name: string; localDay: string }>,
+		work: () => Promise<{ name: string; localDay: string; id?: string }>,
 	) {
-		if (busy) return false;
+		if (submitting.current) return false;
+		submitting.current = true;
 		setBusy(true);
 		setError(null);
 		try {
 			const logged = await work();
-			setSnapshot(await intake.loadLog(initialLocalDay));
 			setConfirmation(logged);
+			// The local write is complete even if refreshing the list fails.
+			try {
+				setSnapshot(await intake.loadLog(initialLocalDay));
+			} catch (caught) {
+				setError(toMessage(caught));
+			}
 			return true;
 		} catch (caught) {
 			setError(toMessage(caught));
 			return false;
 		} finally {
+			submitting.current = false;
 			setBusy(false);
 		}
 	}
@@ -298,7 +309,7 @@ export function IntakeLogScreen({
 				occurrence(),
 				chosenQuantity,
 			);
-			return { name: event.name, localDay: repeated.localDay };
+			return { name: event.name, localDay: repeated.localDay, id: repeated.id };
 		});
 	}
 
@@ -341,8 +352,8 @@ export function IntakeLogScreen({
 							quantity: effectiveQuantity,
 						};
 		const saved = await mutate(async () => {
-			await intake.log(picked.source, selection, when, null);
-			return { name: picked.name, localDay: when.localDay };
+			const logged = await intake.log(picked.source, selection, when, null);
+			return { name: picked.name, localDay: when.localDay, id: logged?.id };
 		});
 		if (saved) setPick(null);
 	}
@@ -352,7 +363,7 @@ export function IntakeLogScreen({
 		const when = occurrence();
 		const saved = await mutate(async () => {
 			const { constituents, volumeL } = compositionFromLabelInputs(freeInputs);
-			await intake.logFree({
+			const logged = await intake.logFree({
 				kind: freeKind,
 				name: freeName,
 				portionLabel: freePortion.trim() || null,
@@ -362,7 +373,7 @@ export function IntakeLogScreen({
 				context: null,
 				...when,
 			});
-			return { name: freeName, localDay: when.localDay };
+			return { name: freeName, localDay: when.localDay, id: logged?.id };
 		});
 		if (saved) {
 			setFreeOpen(false);
@@ -520,12 +531,12 @@ export function IntakeLogScreen({
 					) : (
 						<View style={styles.wrap}>
 							{recents.map((presented) => (
-								<RecentChip
+								<RecentIntakeRow
 									key={presented.event.id}
 									presented={presented}
 									disabled={busy}
-									onPress={() => void repeat(presented)}
-									onLongPress={() => open({ type: "recent", presented })}
+									onRepeat={() => void repeat(presented)}
+									onEdit={() => open({ type: "recent", presented })}
 								/>
 							))}
 						</View>
@@ -958,6 +969,27 @@ export function IntakeLogScreen({
 						? t("intake:log.added", { name: confirmation.name })
 						: null
 				}
+				secondaryActionLabel={
+					confirmation?.id && intake.deleteEvent
+						? t("common:actions.undo")
+						: undefined
+				}
+				onSecondaryAction={async () => {
+					if (!confirmation?.id || !intake.deleteEvent || submitting.current)
+						return;
+					submitting.current = true;
+					setBusy(true);
+					try {
+						await intake.deleteEvent(confirmation.id);
+						setConfirmation(null);
+						setSnapshot(await intake.loadLog(initialLocalDay));
+					} catch (caught) {
+						setError(toMessage(caught));
+					} finally {
+						submitting.current = false;
+						setBusy(false);
+					}
+				}}
 				actionLabel={t("intake:log.viewDay")}
 				onDismiss={dismissConfirmation}
 				onAction={() => {
@@ -1048,25 +1080,29 @@ function WhenFields({
 
 const styles = StyleSheet.create((theme) => ({
 	section: { gap: theme.spacing.md },
+	recentRow: {
+		flexDirection: "row",
+		alignItems: "center",
+		backgroundColor: theme.colors.surface,
+		borderRadius: theme.radius.card,
+		width: "100%",
+	},
+	recentCopy: {
+		flex: 1,
+		padding: theme.spacing.lg,
+		gap: theme.spacing.xs,
+		minHeight: theme.control.minHitArea,
+	},
+	repeatButton: {
+		minWidth: theme.control.minHitArea,
+		minHeight: theme.control.minHitArea,
+		alignItems: "center",
+		justifyContent: "center",
+		marginRight: theme.spacing.sm,
+	},
 	row: { flexDirection: "row", gap: theme.spacing.md },
 	wrap: { flexDirection: "row", flexWrap: "wrap", gap: theme.spacing.sm },
 	grow: { flex: 1 },
-	chip: {
-		flexDirection: "row",
-		alignItems: "baseline",
-		gap: theme.spacing.xs,
-		minHeight: theme.control.buttonMinHeight,
-		paddingHorizontal: theme.spacing.md,
-		paddingVertical: theme.spacing.sm,
-		borderWidth: 1,
-		borderColor: theme.colors.lineStrong,
-		// Chips take the smallest radius; the pill is reserved for switch-like
-		// toggles, and a chip that logs on tap is not one.
-		borderRadius: theme.radius.sm,
-		backgroundColor: theme.colors.surface,
-	},
-	chipPressed: { backgroundColor: theme.colors.surfaceSunk },
-	chipDisabled: { opacity: theme.opacity.disabled },
 	stepper: {
 		flexDirection: "row",
 		alignItems: "center",
@@ -1079,7 +1115,7 @@ const styles = StyleSheet.create((theme) => ({
 		alignItems: "center",
 		gap: theme.spacing.sm,
 		paddingHorizontal: theme.spacing.md,
-		minHeight: 44,
+		minHeight: theme.control.minHitArea,
 		borderRadius: theme.radius.pill,
 		backgroundColor: theme.colors.surface,
 	},

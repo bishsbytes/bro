@@ -41,7 +41,7 @@ describe("device-local settings", () => {
 			onboardingComplete: false,
 			appLockEnabled: false,
 			appLockTimeoutSeconds: null,
-			themeMode: "dark",
+			themeMode: "system",
 			accentHue: 212,
 			accentChroma: 0.12,
 			hasStoredRemoteSession: false,
@@ -156,9 +156,22 @@ describe("device-local settings", () => {
 		const deviceSettings = relaunch();
 
 		expect(deviceSettings.readDeviceSettings()).toMatchObject({
-			themeMode: "dark",
+			themeMode: "system",
 			accentHue: 212,
 			accentChroma: 0.12,
 		});
+	});
+	it("retains separate check-in drafts across restart and can discard one sitting", () => {
+		let deviceSettings = relaunch();
+		deviceSettings.writeCheckInDraft("morning", "morning draft");
+		deviceSettings.writeCheckInDraft("evening", "evening draft");
+		deviceSettings.closeDeviceSettings();
+		deviceSettings = relaunch();
+		expect(deviceSettings.readCheckInDraft("morning")).toBe("morning draft");
+		expect(deviceSettings.readCheckInDraft("evening")).toBe("evening draft");
+		deviceSettings.writeCheckInDraft("morning", null);
+		expect(deviceSettings.readCheckInDraft("morning")).toBeNull();
+		expect(deviceSettings.readCheckInDraft("evening")).toBe("evening draft");
+		deviceSettings.closeDeviceSettings();
 	});
 });

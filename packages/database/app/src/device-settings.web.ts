@@ -83,3 +83,16 @@ export function writeNoteDraft(value: string | null): void {
 	if (value === null) getStorage().removeItem(`${STORAGE_PREFIX}noteDraft`);
 	else getStorage().setItem(`${STORAGE_PREFIX}noteDraft`, value);
 }
+
+/** A check-in draft is install-local and never part of an account or shared export. */
+export function readCheckInDraft(slot: "morning" | "evening"): string | null {
+	return getStorage().getItem(`${STORAGE_PREFIX}checkInDraft:${slot}`);
+}
+export function writeCheckInDraft(
+	slot: "morning" | "evening",
+	value: string | null,
+): void {
+	if (value === null)
+		getStorage().removeItem(`${STORAGE_PREFIX}checkInDraft:${slot}`);
+	else getStorage().setItem(`${STORAGE_PREFIX}checkInDraft:${slot}`, value);
+}

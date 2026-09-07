@@ -108,7 +108,7 @@ export function MarkdownField({
 			: {
 					minHeight: theme.control.noteMinHeight,
 					borderWidth: focused ? 2 : 1,
-					borderColor: focused ? theme.colors.accent : theme.colors.lineStrong,
+					borderColor: focused ? theme.colors.brand : theme.colors.lineStrong,
 					borderRadius: theme.radius.md,
 					paddingHorizontal: theme.spacing.lg,
 					paddingVertical: theme.spacing.md,
@@ -135,7 +135,7 @@ export function MarkdownField({
 				markdownStyle={{
 					strong: { color: theme.colors.ink },
 					em: { color: theme.colors.ink },
-					link: { color: theme.colors.accent },
+					link: { color: theme.colors.brand },
 					h1: { color: theme.colors.ink },
 					h2: { color: theme.colors.ink },
 					h3: { color: theme.colors.ink },
@@ -144,8 +144,8 @@ export function MarkdownField({
 					h6: { color: theme.colors.ink },
 					list: { itemSpacing: theme.spacing.xs },
 				}}
-				cursorColor={theme.colors.accent}
-				selectionColor={theme.colors.accentTint}
+				cursorColor={theme.colors.brand}
+				selectionColor={theme.colors.selectedSoft}
 				onFocus={() => setFocused(true)}
 				onBlur={() => setFocused(false)}
 				style={inputStyle}
@@ -168,7 +168,7 @@ export function MarkdownField({
 							<Icon
 								name={action.icon}
 								size={theme.control.focusIconSize}
-								color={active ? theme.colors.accent : theme.colors.ink2}
+								color={active ? theme.colors.brand : theme.colors.ink2}
 							/>
 						</Pressable>
 					);
@@ -192,5 +192,5 @@ const styles = StyleSheet.create((theme) => ({
 		justifyContent: "center",
 		borderRadius: theme.radius.md,
 	},
-	toolbarActive: { backgroundColor: theme.colors.accentTint },
+	toolbarActive: { backgroundColor: theme.colors.selectedSoft },
 }));

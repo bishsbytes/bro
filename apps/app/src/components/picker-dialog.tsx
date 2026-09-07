@@ -134,7 +134,7 @@ export function usePickerDialog({
 							display={mode === "date" ? "inline" : "spinner"}
 							minimumDate={minimumDate}
 							maximumDate={maximumDate}
-							accentColor={theme.colors.accent}
+							accentColor={theme.colors.brand}
 							themeVariant={rt.themeName === "dark" ? "dark" : "light"}
 							onValueChange={preview}
 						/>

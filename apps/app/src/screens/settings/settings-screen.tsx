@@ -11,7 +11,7 @@ import type { HealthGatewayAvailability } from "../../health/gateway";
 import { healthImportEngine } from "../../health/import-service";
 import { healthPlatformLabel } from "../../health/platform-label";
 import { useDeviceSettings } from "../../providers/device-settings-provider";
-import { matchingAccentOption, StyleSheet } from "../../theme/unistyles";
+import { StyleSheet } from "../../theme/unistyles";
 import { AccountSection } from "./account-screen";
 
 function themeSuffix(themeMode: ThemeMode): "System" | "Light" | "Dark" {
@@ -20,11 +20,6 @@ function themeSuffix(themeMode: ThemeMode): "System" | "Light" | "Dark" {
 		: themeMode === "light"
 			? "Light"
 			: "Dark";
-}
-
-function accentLabelKey(hue: number, chroma: number) {
-	const option = matchingAccentOption(hue, chroma);
-	return option?.labelKey ?? "appearance.accentIce";
 }
 
 type SettingsScreenProps = {
@@ -82,7 +77,6 @@ export function SettingsScreen({
 				detail={t("index.appearanceDetail")}
 				value={t("index.appearanceValue", {
 					theme: t(`appearance.theme${themeSuffix(settings.themeMode)}`),
-					accent: t(accentLabelKey(settings.accentHue, settings.accentChroma)),
 				})}
 				accessibilityLabel={t("index.appearanceA11y")}
 				onPress={() => router.push("/settings/appearance" as Href)}

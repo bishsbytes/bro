@@ -1,0 +1,54 @@
+# Grounded Editorial in the Expo app
+
+Use the September 2026 guide and JSON tokens. Runtime styles come from `apps/app/src/theme/unistyles.ts`. Components import that module so Unistyles is configured before route evaluation. Reuse the bundled Instrument Serif for headings and platform sans for interface text and tabular readings. Existing legacy `mono*` roles now resolve to tabular sans; stored accent preferences are retained for compatibility, while current UI uses the fixed brand and Log colours.
+
+System / Light / Dark resolves through `DeviceSettingsProvider`, before the splash hides. Native tab and stack navigation remains in place. Picker and sheet styles resolve from the same theme. Do not remount screens to change appearance.
+
+## Component contracts
+
+Paths below are relative to `apps/app/src`.
+
+| Contract | Implementation |
+| --- | --- |
+| C01 AppScaffold | `components/screen.tsx`, `app/(tabs)/_layout.tsx` |
+| C02 ScreenHeader | `components/app-header.tsx`, `components/section-header.tsx`, native stack options |
+| C03 DateStrip | `components/week-strip.tsx`; Intake also retains its daily navigation |
+| C04 BottomNavigation | `app/(tabs)/_layout.tsx`, Expo native tabs |
+| C05 LogAction | `components/quick-log-fab.tsx`, `components/log-date-context.tsx` |
+| C06 Button | `components/button.tsx` |
+| C07 IconButton | `components/header-icon-button.tsx` and existing named row actions |
+| C08 SelectableRow | `components/score-row.tsx`; five equally sized options |
+| C09 FactorChip | `screens/home/home-screen.tsx` |
+| C10 SegmentedControl | Existing Intake filters, quantity choices and `components/option-row.tsx` |
+| C11 FormField | `components/form-field.tsx`, date/time and markdown fields |
+| C12 QuantityField | `components/measurement-field.tsx`, Intake amount editor |
+| C13 DetailRow | `components/list-row.tsx`, `screens/intake/intake-rows.tsx` |
+| C14 FeedbackBanner | `components/log-confirmation-toast.tsx` and inline errors |
+| C15 CheckInCard | Journal sitting cards in `screens/home/home-screen.tsx` |
+| C16 CheckInStepper | `screens/check-in/check-in-screen.tsx`; device-local drafts are separate from observations |
+| C17 IntakeRow | `screens/intake/intake-rows.tsx`, recent rows in `intake-log-screen.tsx` |
+| C18 SourceStamp | Body reading metadata and exact history rows; Intake entry details |
+| C19 MeasurementCard | `screens/body/body-baseline-gauge.tsx` and Body overview/detail cards |
+| C20 RecentRange | `components/baseline-gauge.tsx`; existing middle-half calculation retained |
+| C21 TrendChart | `components/trend-chart.tsx`; SVG from actual series, missing-day gaps and readings list |
+| C22 LifeWheel | `components/wheel-chart.tsx`; actual snapshot order/labels, current solid and previous dashed |
+| C23 LifeAreaRow | Wheel's named-value alternative and `screens/review/review-result-screen.tsx` |
+| C24 HeadingCard | Existing Body, Life and review Heading cards |
+| C25 PracticeRow | Existing habit rows and `screens/habits/` |
+| C26 ReadingsList | Body history and TrendChart's text alternative |
+| C27 ManagementRow | Existing Body management and `screens/life/life-areas-screen.tsx` |
+| C28 ActionSheet | `components/modal-sheet.tsx`, quick log and existing option sheets |
+
+## Data and interaction boundaries
+
+The current five-point mood labels remain Low / Flat / Okay / Good / Very good. Energy and Motivation retain their numeric points and existing endpoint descriptions; the image board's intermediate words are not used to relabel historical answers. Optional metrics remain configurable rather than forcing exactly three steps.
+
+A check-in draft is stored per sitting on this device, with its date and existing record ID. Continue never commits it. Explicit save writes the existing atomic check-in transaction. Discard removes only the draft; deletion of local product data removes drafts as well. Partial status derives from unanswered configured dimensions, without introducing a new record schema.
+
+Recent intake rows edit on tap and repeat via a separate named plus action. The displayed quantity and portion are the repeat amount. Local write success is retained if refreshing the list fails. Undo removes the event just created, without deleting its reusable item. Existing mass/volume/portion conversion and unknown-nutrition rules remain authoritative.
+
+The ten supporting screen studies are mapped onto existing destinations and forms. Illustrative custom-metric schemas, qualitative Heading fields, reusable-item switches and new archive models are not inferred from the boards. The existing storage and supported actions remain authoritative.
+
+## Verification
+
+Run the app and database-app Nx tests, relevant typecheck/lint targets, and repo-wide `pnpm biome check .`. Check a narrow viewport and both appearances; validate large text, keyboard exposure, VoiceOver/TalkBack and native picker/sheet behaviour on devices before release.

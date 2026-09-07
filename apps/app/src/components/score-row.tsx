@@ -1,7 +1,8 @@
 import { useTranslation } from "react-i18next";
 import { TouchableOpacity, View } from "react-native";
-import { StyleSheet } from "../theme/unistyles";
+import { StyleSheet, useUnistyles } from "../theme/unistyles";
 import { AppText } from "./app-text";
+import { Icon } from "./icon";
 import { type EndLabels, ScaleEndLabels } from "./scale-end-labels";
 
 /** The daily five-point scale. Longer ones belong on a DiscreteScale, which
@@ -13,9 +14,9 @@ type ScoreRowProps = {
 	accessibilityPrefix: string;
 	selected: number | null;
 	onSelect: (score: number) => void;
-	/** Visible meanings for each point on Helm's rising mood scale. */
+	/** Existing meanings for each point; numeric values remain unchanged. */
 	labels?: readonly string[];
-	/** Encodes the scale by shape as well as copy, from 52 through 108px. */
+	/** Retained for older callers; all selection rows now have equal height. */
 	varyHeight?: boolean;
 	endLabels?: EndLabels;
 	disabled?: boolean;
@@ -26,43 +27,58 @@ export function ScoreRow({
 	selected,
 	onSelect,
 	labels,
-	varyHeight = false,
+	varyHeight: _varyHeight = false,
 	endLabels,
 	disabled = false,
 }: ScoreRowProps) {
 	const { t } = useTranslation("common");
+	const { theme } = useUnistyles();
 	return (
 		<View style={styles.container}>
-			<View style={styles.row}>
+			<View
+				style={styles.row}
+				accessibilityRole="radiogroup"
+				accessibilityLabel={accessibilityPrefix}
+			>
 				{SCORES.map((score, index) => {
 					const isSelected = selected === score;
 					const label = labels?.[index];
 					return (
 						<TouchableOpacity
 							key={score}
-							accessibilityRole="button"
+							accessibilityRole="radio"
 							accessibilityLabel={t("a11y.score", {
 								prefix: accessibilityPrefix,
 								score,
 							})}
-							accessibilityState={{ selected: isSelected, disabled }}
+							accessibilityHint={label}
+							accessibilityState={{
+								selected: isSelected,
+								checked: isSelected,
+								disabled,
+							}}
 							disabled={disabled}
 							style={[
 								styles.button,
-								varyHeight && {
-									height: [56, 70, 84, 98, 112][index] ?? 56,
-								},
 								isSelected && styles.selected,
 								disabled && styles.disabled,
 							]}
 							onPress={() => onSelect(score)}
 						>
 							<AppText
-								variant={label ? "caption" : "score"}
+								variant="body"
 								style={[styles.buttonLabel, isSelected && styles.selectedText]}
 							>
 								{label ?? score}
 							</AppText>
+							{isSelected ? (
+								<View
+									accessible={false}
+									importantForAccessibility="no-hide-descendants"
+								>
+									<Icon name="check" size={24} color={theme.colors.onBrand} />
+								</View>
+							) : null}
 						</TouchableOpacity>
 					);
 				})}
@@ -74,22 +90,24 @@ export function ScoreRow({
 
 const styles = StyleSheet.create((theme) => ({
 	container: { gap: theme.spacing.xs },
-	row: { flexDirection: "row", alignItems: "flex-end", gap: theme.spacing.sm },
+	row: { gap: theme.spacing.sm },
 	button: {
-		flex: 1,
+		flexDirection: "row",
+		gap: theme.spacing.md,
+		padding: theme.spacing.lg,
+		borderWidth: 1,
+		borderColor: theme.colors.interactiveBorder,
 		minHeight: theme.control.scoreMinHeight,
 		alignItems: "center",
 		justifyContent: "center",
 		borderRadius: theme.radius.control,
 		backgroundColor: theme.colors.surface2,
 	},
-	buttonLabel: { textAlign: "center" },
+	buttonLabel: { flex: 1 },
 	selected: {
-		backgroundColor: theme.colors.accent,
-		shadowColor: theme.colors.accent,
-		shadowOpacity: 0.45,
-		shadowRadius: 18,
+		backgroundColor: theme.colors.brand,
+		borderColor: theme.colors.brand,
 	},
-	selectedText: { color: theme.colors.onAccent },
+	selectedText: { color: theme.colors.onBrand },
 	disabled: { opacity: theme.opacity.disabled },
 }));

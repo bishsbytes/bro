@@ -48,13 +48,13 @@ export function AppText({
 		default: theme.colors.ink,
 		muted: theme.colors.ink2,
 		subtle: theme.colors.ink3,
-		brand: theme.colors.accent,
+		brand: theme.colors.brand,
 		danger: theme.colors.alert,
 		mind: theme.colors.mind,
 		body: theme.colors.body,
 		sleep: theme.colors.sleep,
 		load: theme.colors.load,
-		onBrand: theme.colors.onAccent,
+		onBrand: theme.colors.onBrand,
 	};
 
 	return (

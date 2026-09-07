@@ -3,6 +3,7 @@ import { router, useLocalSearchParams } from "expo-router";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { EmptyState } from "../../components/empty-state";
+import { useSetLogDate } from "../../components/log-date-context";
 import { LoadingScreen, Screen } from "../../components/screen";
 import { playSelectionHaptic } from "../../feedback/selection-haptic";
 import { createIntakeStore, type IntakeStore } from "../../intake/intake-store";
@@ -40,6 +41,7 @@ export function IntakeScreen({ store }: IntakeScreenProps) {
 	const segment: IntakeDaySegment = isIntakeDaySegment(params.view)
 		? params.view
 		: "summary";
+	useSetLogDate("intake", selectedDay ?? localDayOf(new Date()));
 	const selectedDayRef = useRef(selectedDay);
 	selectedDayRef.current = selectedDay;
 	const loadingDay = useRef(selectedDay ?? localDayOf(new Date()));
@@ -109,7 +111,12 @@ export function IntakeScreen({ store }: IntakeScreenProps) {
 	}
 
 	return (
-		<Screen scroll padded gap="xl">
+		<Screen
+			scroll
+			padded
+			gap="xl"
+			contentContainerStyle={{ paddingBottom: 96 }}
+		>
 			<IntakeDayContent
 				snapshot={snapshot}
 				error={error}

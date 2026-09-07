@@ -1,0 +1,119 @@
+import { fireEvent, render, waitFor } from "@testing-library/react-native";
+import type {
+	IntakeLogSnapshot,
+	PresentedIntakeEvent,
+} from "./intake/intake-store";
+import { IntakeLogScreen } from "./screens/intake/intake-log-screen";
+
+jest.mock("expo-router", () => ({
+	Stack: { Screen: () => null },
+	router: { push: jest.fn(), replace: jest.fn() },
+	useFocusEffect: (effect: () => void) => {
+		const React = jest.requireActual<typeof import("react")>("react");
+		React.useEffect(effect, [effect]);
+	},
+}));
+
+jest.mock("react-native-safe-area-context", () => ({
+	...jest.requireActual("react-native-safe-area-context"),
+	useSafeAreaInsets: () => ({ top: 0, right: 0, bottom: 0, left: 0 }),
+}));
+
+const recent = {
+	event: {
+		id: "earlier-water",
+		name: "Water",
+		kind: "drink",
+		brand: null,
+		quantity: 2,
+		portionLabel: "250 ml glass",
+		localDay: "2026-09-07",
+		constituents: {},
+	},
+	detail: "",
+	contributions: "",
+} as PresentedIntakeEvent;
+
+const snapshot: IntakeLogSnapshot = {
+	localDay: "2026-09-07",
+	today: "2026-09-07",
+	defaultTime: "12:00",
+	enabledKinds: ["food", "drink"],
+	recents: [recent],
+	library: [],
+	system: [],
+};
+
+function stores() {
+	return {
+		store: {
+			loadLog: jest.fn(async () => snapshot),
+			repeatEvent: jest.fn(async () => ({ ...recent.event, id: "new-water" })),
+			deleteEvent: jest.fn(async () => undefined),
+			log: jest.fn(),
+			logFree: jest.fn(),
+		},
+		searchStore: {
+			loadCached: jest.fn(async () => ({
+				query: "",
+				results: [],
+				fromCache: true,
+				offline: true,
+				message: null,
+			})),
+			search: jest.fn(),
+		},
+	};
+}
+
+describe("recent intake actions", () => {
+	it("edits before saving when the row is tapped", async () => {
+		const props = stores();
+		const view = await render(<IntakeLogScreen {...props} />);
+		await fireEvent.press(await view.findByLabelText("Edit amount for Water"));
+		expect(props.store.repeatEvent).not.toHaveBeenCalled();
+		expect(view.getByLabelText("Log it")).toBeTruthy();
+		await fireEvent.press(view.getByLabelText("Log it"));
+		await waitFor(() =>
+			expect(props.store.repeatEvent).toHaveBeenCalledWith(
+				"earlier-water",
+				expect.objectContaining({ localDay: "2026-09-07" }),
+				2,
+			),
+		);
+	});
+
+	it("repeats the displayed portion and Undo removes only the new event", async () => {
+		const props = stores();
+		const view = await render(<IntakeLogScreen {...props} />);
+		expect(await view.findByText("2 × 250 ml glass")).toBeTruthy();
+		await fireEvent.press(view.getByLabelText("Log Water again"));
+		await waitFor(() =>
+			expect(view.getByLabelText("Log Water again")).toBeEnabled(),
+		);
+		expect(props.store.repeatEvent).toHaveBeenCalledWith(
+			"earlier-water",
+			expect.objectContaining({ localDay: "2026-09-07" }),
+			undefined,
+		);
+		await fireEvent.press(await view.findByLabelText("Undo"));
+		await waitFor(() =>
+			expect(props.store.deleteEvent).toHaveBeenCalledWith("new-water"),
+		);
+		await fireEvent.press(view.getByLabelText("Something else"));
+		expect(await view.findByLabelText("What was it?")).toBeTruthy();
+	});
+
+	it("keeps a successful save and Undo when refreshing the list fails", async () => {
+		const props = stores();
+		props.store.loadLog
+			.mockResolvedValueOnce(snapshot)
+			.mockRejectedValueOnce(new Error("Could not refresh"));
+		const view = await render(<IntakeLogScreen {...props} />);
+		await fireEvent.press(await view.findByLabelText("Log Water again"));
+		expect(await view.findByText("Water added")).toBeTruthy();
+		expect(await view.findByText("Could not refresh")).toBeTruthy();
+		expect(view.getByLabelText("Undo")).toBeTruthy();
+		expect(props.store.repeatEvent).toHaveBeenCalledTimes(1);
+	});
+});

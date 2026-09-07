@@ -1,6 +1,5 @@
 import type { TapeSiteSlug } from "@bro/domain/metric-registry";
 import {
-	BlurMask,
 	Canvas,
 	Circle,
 	DashPathEffect,
@@ -110,9 +109,7 @@ export function TapeFigure({ sites, selectedSlug, onSelect }: TapeFigureProps) {
 									color={theme.colors.body}
 									strokeWidth={6}
 									opacity={0.65}
-								>
-									<BlurMask blur={6} style="solid" />
-								</Line>
+								></Line>
 							) : null}
 							<Line
 								p1={vec(geometry.tape[0], geometry.y)}

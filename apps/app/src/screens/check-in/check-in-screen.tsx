@@ -1,8 +1,10 @@
+import { readCheckInDraft, writeCheckInDraft } from "@bro/database-app";
 import type { CheckInSlot } from "@bro/domain/metric-registry";
 import { router } from "expo-router";
+import { usePreventRemove } from "expo-router/react-navigation";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
-import { TouchableOpacity, View } from "react-native";
+import { ScrollView, TouchableOpacity, View } from "react-native";
 import { checkInScoreSummary } from "../../check-in/check-in-presentation";
 import {
 	type CheckInEntry,
@@ -13,7 +15,7 @@ import {
 import { AppText } from "../../components/app-text";
 import { Button } from "../../components/button";
 import { EmptyState } from "../../components/empty-state";
-import { LoadingIndicator } from "../../components/loading-indicator";
+import { ModalSheet } from "../../components/modal-sheet";
 import { ScoreRow } from "../../components/score-row";
 import { LoadingScreen, FullScreen as Screen } from "../../components/screen";
 import { playSelectionHaptic } from "../../feedback/selection-haptic";
@@ -61,6 +63,15 @@ export function CheckInScreen({
 	const [index, setIndex] = useState(initialMood === undefined ? 0 : 1);
 	const [saving, setSaving] = useState(false);
 	const [saveError, setSaveError] = useState<string | null>(null);
+	const [done, setDone] = useState(false);
+	const [partial, setPartial] = useState(false);
+	const [dirty, setDirty] = useState(initialMood !== undefined);
+	const [leaving, setLeaving] = useState(false);
+	const [confirmClose, setConfirmClose] = useState(false);
+	usePreventRemove(!leaving && dirty, () => setConfirmClose(true));
+	useEffect(() => {
+		if (leaving) router.back();
+	}, [leaving]);
 
 	// `editing` is set once the first save lands so a revisit rewrites that
 	// entry, which is not the same question as whether the flow opened onto one
@@ -133,9 +144,7 @@ export function CheckInScreen({
 		];
 	}, [today, t, slot]);
 
-	// The commit runs from an effect and from unmount, both of which see the
-	// values as they were when they were captured — a ref keeps them current
-	// without making the commit itself depend on every keystroke of state.
+	// Explicit saves read the latest draft, with a ref preventing repeated submissions.
 	const draft = useRef({
 		values,
 		editing,
@@ -158,6 +167,44 @@ export function CheckInScreen({
 				// A specific id is only valid inside the sitting named by the route.
 				const sitting = loaded.sittings[slot];
 				const entry = entryId && sitting?.id !== entryId ? null : sitting;
+				try {
+					const raw = readCheckInDraft(slot);
+					const pending = raw ? JSON.parse(raw) : null;
+					if (
+						pending?.localDay === loaded.localDay &&
+						pending.entryId === (entry?.id ?? null) &&
+						pending.values &&
+						typeof pending.values === "object"
+					) {
+						const restored = Object.fromEntries(
+							Object.entries(pending.values).filter(
+								(pair): pair is [string, number] =>
+									typeof pair[1] === "number" &&
+									Number.isInteger(pair[1]) &&
+									pair[1] >= 1 &&
+									pair[1] <= 5,
+							),
+						);
+						setValues(restored);
+						setIndex(
+							Number.isInteger(pending.index)
+								? Math.max(
+										0,
+										Math.min(
+											pending.index,
+											loaded.availableOptionalScores[slot].length,
+										),
+									)
+								: 0,
+						);
+						setEditing(entry ?? null);
+						setOpenedOnEntry(Boolean(entry));
+						setDirty(Object.keys(restored).length > 0);
+						return;
+					}
+				} catch {
+					/* An unreadable draft does not prevent a new check-in. */
+				}
 				if (!entry) return;
 				setEditing(entry);
 				setOpenedOnEntry(true);
@@ -191,7 +238,7 @@ export function CheckInScreen({
 		if (committed.current) return true;
 		const { values: answered, editing: entry, activeSlugs } = draft.current;
 		const mood = answered.mood;
-		if (mood === undefined) return true;
+		if (mood === undefined) return false;
 		committed.current = true;
 		setSaving(true);
 		setSaveError(null);
@@ -217,6 +264,13 @@ export function CheckInScreen({
 			if (!entry) {
 				setEditing(saved.sittings[slot]);
 			}
+			setDirty(false);
+			setDone(true);
+			try {
+				writeCheckInDraft(slot, null);
+			} catch {
+				/* The record is already saved. */
+			}
 			return true;
 		} catch (caught) {
 			committed.current = false;
@@ -227,31 +281,59 @@ export function CheckInScreen({
 		}
 	}, [checkIns, slot]);
 
-	const done = index >= steps.length && steps.length > 0;
-
-	// Reaching the end of the prompts is the save; there is no save button to
-	// forget to press.
+	// A draft is device-local, separate from observations and exports.
 	useEffect(() => {
-		if (done) void commit();
-	}, [done, commit]);
+		if (!today || !dirty || done) return;
+		try {
+			writeCheckInDraft(
+				slot,
+				JSON.stringify({
+					localDay: today.localDay,
+					entryId: editing?.id ?? null,
+					values,
+					index,
+				}),
+			);
+		} catch (caught) {
+			setSaveError(toMessage(caught));
+		}
+	}, [today, dirty, done, slot, editing, values, index]);
 
 	function answer(slug: string, value: number) {
 		playSelectionHaptic();
+		committed.current = false;
+		setDirty(true);
 		setValues((current) => ({ ...current, [slug]: value }));
-		setIndex((current) => current + 1);
 	}
-
+	function close() {
+		if (dirty) setConfirmClose(true);
+		else setLeaving(true);
+	}
 	function goBack() {
-		if (index === 0) {
-			void close();
-			return;
-		}
-		playSelectionHaptic();
-		setIndex((current) => current - 1);
+		if (index === 0) close();
+		else setIndex((current) => current - 1);
 	}
-
-	async function close() {
-		if (await commit()) router.back();
+	function leaveDraft(discard: boolean) {
+		try {
+			writeCheckInDraft(
+				slot,
+				discard
+					? null
+					: JSON.stringify({
+							localDay: today?.localDay,
+							entryId: editing?.id ?? null,
+							values,
+							index,
+						}),
+			);
+			setLeaving(true);
+		} catch (caught) {
+			setSaveError(toMessage(caught));
+		}
+	}
+	async function save() {
+		setPartial(steps.some((step) => values[step.slug] === undefined));
+		await commit();
 	}
 
 	if (!today && !loadError) {
@@ -265,7 +347,7 @@ export function CheckInScreen({
 				<Button
 					label={t("nav.back")}
 					variant="secondary"
-					onPress={() => router.back()}
+					onPress={() => setLeaving(true)}
 				/>
 			</Screen>
 		);
@@ -285,15 +367,16 @@ export function CheckInScreen({
 			<Screen padded centered gap="lg">
 				<View style={styles.prompt}>
 					<AppText variant="display" style={styles.centredText}>
-						{openedOnEntry
-							? t("confirmation.updated")
-							: t("confirmation.saved")}
+						{partial
+							? t("confirmation.partial")
+							: openedOnEntry
+								? t("confirmation.updated")
+								: t("confirmation.saved")}
 					</AppText>
 					<AppText variant="lead" color="muted" style={styles.centredText}>
 						{summary}
 					</AppText>
 				</View>
-				{saving ? <LoadingIndicator /> : null}
 				{saveError ? (
 					<AppText color="danger" style={styles.centredText}>
 						{saveError}
@@ -309,7 +392,7 @@ export function CheckInScreen({
 					<Button
 						label={t("confirmation.done")}
 						loading={saving}
-						onPress={() => router.back()}
+						onPress={() => setLeaving(true)}
 					/>
 				)}
 				<Button
@@ -318,6 +401,7 @@ export function CheckInScreen({
 					disabled={saving}
 					onPress={() => {
 						committed.current = false;
+						setDone(false);
 						setIndex(steps.length - 1);
 					}}
 				/>
@@ -329,13 +413,15 @@ export function CheckInScreen({
 	const isLast = index === steps.length - 1;
 
 	return (
-		<Screen padded gap="lg">
+		<Screen gap="lg">
 			<View style={styles.topBar}>
 				<TouchableOpacity
 					accessibilityRole="button"
 					accessibilityLabel={
 						index === 0 ? t("nav.closeA11y") : t("nav.previousA11y")
 					}
+					style={styles.navButton}
+					disabled={saving}
 					onPress={goBack}
 				>
 					<AppText variant="label" color="brand">
@@ -345,15 +431,21 @@ export function CheckInScreen({
 				<AppText variant="caption" color="subtle">
 					{t("nav.position", { current: index + 1, total: steps.length })}
 				</AppText>
-				<TouchableOpacity
-					accessibilityRole="button"
-					accessibilityLabel={t("nav.finishA11y")}
-					onPress={() => setIndex(steps.length)}
-				>
-					<AppText variant="label" color="brand">
-						{openedOnEntry ? t("nav.save") : t("nav.finish")}
-					</AppText>
-				</TouchableOpacity>
+				{index > 0 ? (
+					<TouchableOpacity
+						accessibilityRole="button"
+						accessibilityLabel={t("nav.closeA11y")}
+						style={styles.navButton}
+						disabled={saving}
+						onPress={close}
+					>
+						<AppText variant="label" color="brand">
+							{t("nav.close")}
+						</AppText>
+					</TouchableOpacity>
+				) : (
+					<View style={styles.navButton} />
+				)}
 			</View>
 
 			<View style={styles.progress}>
@@ -365,15 +457,15 @@ export function CheckInScreen({
 				))}
 			</View>
 
-			<View style={styles.body}>
+			<ScrollView style={styles.scroll} contentContainerStyle={styles.body}>
 				<View style={styles.prompt}>
 					{/* Which sitting is being answered, so the prompts are never
 					    ambiguous about the half of the day they are asking about. */}
 					<AppText variant="caption" color="subtle" style={styles.centredText}>
 						{t(`slots.${slot}.name`)}
 					</AppText>
-					<AppText variant="display" style={styles.centredText}>
-						{step.label}
+					<AppText variant="display">
+						{step.slug === MOOD_SLUG ? t("steps.moodQuestion") : step.label}
 					</AppText>
 					<AppText color="muted" style={styles.centredText}>
 						{step.description}
@@ -384,25 +476,67 @@ export function CheckInScreen({
 					selected={values[step.slug] ?? null}
 					onSelect={(score) => answer(step.slug, score)}
 					labels={step.labels}
-					varyHeight={step.slug === MOOD_SLUG}
-					endLabels={step.endLabels}
+					disabled={saving}
+					endLabels={step.slug === MOOD_SLUG ? undefined : step.endLabels}
 				/>
-			</View>
-
-			{saveError ? <AppText color="danger">{saveError}</AppText> : null}
-			{step.slug === MOOD_SLUG ? null : (
+			</ScrollView>
+			<View style={styles.footer}>
+				{saveError ? (
+					<AppText accessibilityRole="alert" color="danger">
+						{saveError}
+					</AppText>
+				) : null}
 				<Button
-					label={isLast ? t("skipAndFinish") : t("skip")}
-					variant="text"
-					onPress={() => setIndex((current) => current + 1)}
+					label={isLast ? t("nav.saveCheckIn") : t("nav.continue")}
+					loading={saving}
+					disabled={values[step.slug] === undefined}
+					onPress={() =>
+						isLast ? void save() : setIndex((current) => current + 1)
+					}
 				/>
-			)}
+				<Button
+					label={t("nav.saveForNow")}
+					variant="secondary"
+					disabled={saving || values.mood === undefined}
+					onPress={() => void save()}
+				/>
+				{step.slug !== MOOD_SLUG && !isLast ? (
+					<Button
+						label={t("skip")}
+						variant="text"
+						disabled={saving}
+						onPress={() => setIndex((current) => current + 1)}
+					/>
+				) : null}
+			</View>
+			<ModalSheet
+				visible={confirmClose}
+				onClose={() => setConfirmClose(false)}
+				closeAccessibilityLabel={t("draft.continue")}
+			>
+				<AppText variant="title">{t("draft.title")}</AppText>
+				<AppText color="muted">{t("draft.body")}</AppText>
+				{saveError ? (
+					<AppText accessibilityRole="alert" color="danger">
+						{saveError}
+					</AppText>
+				) : null}
+				<Button label={t("draft.keep")} onPress={() => leaveDraft(false)} />
+				<Button
+					label={t("draft.discard")}
+					variant="text"
+					tone="danger"
+					onPress={() => leaveDraft(true)}
+				/>
+			</ModalSheet>
 		</Screen>
 	);
 }
 
 const styles = StyleSheet.create((theme) => ({
 	topBar: {
+		paddingHorizontal: theme.spacing.gutter,
+		paddingTop: theme.spacing.sm,
 		flexDirection: "row",
 		alignItems: "center",
 		justifyContent: "space-between",
@@ -421,7 +555,22 @@ const styles = StyleSheet.create((theme) => ({
 	},
 	pipReached: { backgroundColor: theme.colors.brand },
 	/** The prompt sits centred in the space the feed used to push around. */
-	body: { flex: 1, justifyContent: "center", gap: theme.spacing.xxl },
+	scroll: { flex: 1 },
+	body: {
+		paddingHorizontal: theme.spacing.gutter,
+		paddingVertical: theme.spacing.lg,
+		gap: theme.spacing.xl,
+	},
+	footer: {
+		paddingHorizontal: theme.spacing.gutter,
+		paddingBottom: theme.spacing.lg,
+		gap: theme.spacing.sm,
+	},
+	navButton: {
+		minHeight: theme.control.minHitArea,
+		minWidth: theme.control.minHitArea,
+		justifyContent: "center",
+	},
 	prompt: { gap: theme.spacing.sm },
-	centredText: { textAlign: "center" },
+	centredText: { textAlign: "left" },
 }));

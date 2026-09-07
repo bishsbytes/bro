@@ -29,7 +29,7 @@ export function Button({
 	const dangerTone = tone === "danger" || variant === "danger";
 	const foreground =
 		variant === "primary"
-			? theme.colors.onAccent
+			? theme.colors.onBrand
 			: variant === "danger"
 				? theme.colors.alert
 				: dangerTone
@@ -72,11 +72,11 @@ const styles = StyleSheet.create((theme) => ({
 		minHeight: theme.control.buttonMinHeight,
 		alignItems: "center",
 		justifyContent: "center",
-		borderRadius: 14,
+		borderRadius: theme.radius.control,
 		paddingHorizontal: theme.spacing.lg,
 		paddingVertical: theme.spacing.md,
 	},
-	primary: { backgroundColor: theme.colors.accent },
+	primary: { backgroundColor: theme.colors.brand },
 	secondary: {
 		borderWidth: 1,
 		borderColor: theme.colors.hairlineStrong,

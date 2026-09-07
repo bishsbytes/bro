@@ -60,7 +60,7 @@ export function MarkdownText({
 			marginBottom: 0,
 			itemSpacing: theme.spacing.xs,
 		},
-		link: { color: theme.colors.accent, underline: true },
+		link: { color: theme.colors.brand, underline: true },
 	};
 
 	return (

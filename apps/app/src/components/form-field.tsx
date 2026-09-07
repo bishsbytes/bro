@@ -34,6 +34,8 @@ export function FormField({
 			) : null}
 			<TextInput
 				accessibilityLabel={accessibilityLabel}
+				accessibilityHint={error ?? undefined}
+				keyboardAppearance={theme.isDark ? "dark" : "light"}
 				placeholderTextColor={placeholderTextColor ?? theme.colors.ink3}
 				style={[
 					styles.input,
@@ -53,7 +55,12 @@ export function FormField({
 				{...props}
 			/>
 			{error ? (
-				<AppText variant="caption" color="danger" style={styles.error}>
+				<AppText
+					accessibilityRole="alert"
+					variant="caption"
+					color="danger"
+					style={styles.error}
+				>
 					{error}
 				</AppText>
 			) : null}
@@ -70,12 +77,12 @@ const styles = StyleSheet.create((theme) => ({
 		borderRadius: theme.radius.control,
 		paddingHorizontal: theme.spacing.lg,
 		paddingVertical: theme.spacing.md,
-		fontSize: theme.typography.label.fontSize,
+		fontSize: theme.typography.body.fontSize,
 		fontFamily: theme.typography.body.fontFamily,
 		color: theme.colors.ink,
 		backgroundColor: theme.colors.surface2,
 	},
-	focused: { borderWidth: 2, borderColor: theme.colors.accent },
+	focused: { borderWidth: 2, borderColor: theme.colors.brand },
 	invalid: { borderColor: theme.colors.alert },
 	multiline: {
 		minHeight: theme.control.noteMinHeight,

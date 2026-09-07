@@ -1,0 +1,429 @@
+{
+	"name": "Grounded Editorial - proposed tokens",
+	"version": "0.3",
+	"status": "Light and dark Grounded Editorial specified; native implementation validation pending",
+	"colour": {
+		"light": {
+			"canvas": "#F4F1EB",
+			"surface": "#FFFDFA",
+			"ink": "#202725",
+			"textSecondary": "#626B65",
+			"brand": "#174F4A",
+			"onBrand": "#FFFFFF",
+			"accent": "#A14F36",
+			"onAccent": "#FFFFFF",
+			"border": "#D8DDD6",
+			"historyFill": "#DDE5DD",
+			"interactiveBorder": "#78847D",
+			"selectedSoft": "#E0ECE7",
+			"error": "#A33932"
+		},
+		"dark": {
+			"accent": "#D99A78",
+			"border": "#39483F",
+			"brand": "#A8CDBE",
+			"canvas": "#171D1A",
+			"error": "#F2ABA0",
+			"historyFill": "#344C40",
+			"ink": "#F2F0E9",
+			"interactiveBorder": "#7D9183",
+			"onAccent": "#281B14",
+			"onBrand": "#14261D",
+			"selectedSoft": "#304B3E",
+			"surface": "#202923",
+			"surfaceRaised": "#29352D",
+			"textSecondary": "#B3BDB5"
+		},
+		"semanticNotes": [
+			"Brand/accent colours do not encode mood quality.",
+			"History fill is not a clinical safe range.",
+			"Select, warning and error require text/icon indicators and independent contrast verification.",
+			"The warm charcoal/sage dark mapping replaces the initial blue-grey palette. Use exact tokens and native charts, not raster colour sampling."
+		]
+	},
+	"type": {
+		"display": {
+			"size": 32,
+			"lineHeight": 38
+		},
+		"title": {
+			"size": 28,
+			"lineHeight": 34
+		},
+		"section": {
+			"size": 20,
+			"lineHeight": 26
+		},
+		"body": {
+			"size": 16,
+			"lineHeight": 24
+		},
+		"label": {
+			"size": 14,
+			"lineHeight": 20
+		},
+		"metadata": {
+			"size": 12,
+			"lineHeight": 16
+		},
+		"familyRoles": {
+			"display": "Licensed sturdy editorial serif, exact face to confirm",
+			"ui": "Native platform sans serif"
+		},
+		"scaleWithSystem": true,
+		"metricNumerals": "tabular"
+	},
+	"spacing": [4, 8, 12, 16, 24, 32, 48],
+	"radius": {
+		"card": 16,
+		"input": 12,
+		"sheet": 24
+	},
+	"controls": {
+		"primaryButtonHeight": 52,
+		"minHitArea": 48,
+		"selectionRowMinHeight": 56,
+		"screenInset": 24,
+		"iconSize": 24,
+		"dateCellMinHitArea": 48,
+		"factorChipVisualHeight": 40,
+		"factorChipMinHitArea": 48
+	},
+	"motionMs": {
+		"feedback": [120, 180],
+		"sheet": [220, 280]
+	},
+	"navigation": ["Journal", "Intake", "Body", "Life"],
+	"globalAction": "+ Log",
+	"moodLabels": ["Low", "Flat", "Okay", "Good", "Very good"],
+	"requiredStates": [
+		"empty",
+		"loading",
+		"sparse",
+		"stale",
+		"offline",
+		"syncPending",
+		"syncFailure",
+		"permissionDenied",
+		"selected",
+		"disabled",
+		"saving",
+		"saved",
+		"edited",
+		"deletedWithUndo",
+		"returningAfterGap"
+	],
+	"verifiedContrastRatios": {
+		"inkOnCanvas": 13.52,
+		"secondaryOnCanvas": 4.89,
+		"whiteOnBrand": 9.32,
+		"whiteOnAccent": 5.7,
+		"darkInkOnCanvas": 15.01,
+		"interactiveBorderOnSurface": 3.83,
+		"errorOnSurface": 6.49,
+		"brandOnSelectedSoft": 7.69
+	},
+	"terminology": {
+		"Heading": "Retained in this visual pass",
+		"Life review": "Use existing configured areas and scale"
+	},
+	"components": [
+		{
+			"id": "C01",
+			"name": "AppScaffold",
+			"usedBy": "All primary screens",
+			"contract": "Safe areas, scroll container and stable tab/action placement."
+		},
+		{
+			"id": "C02",
+			"name": "ScreenHeader",
+			"usedBy": "All screens",
+			"contract": "Title, optional eyebrow, back/close and contextual action."
+		},
+		{
+			"id": "C03",
+			"name": "DateStrip",
+			"usedBy": "J01, I01",
+			"contract": "Selected date and recorded-entry indicators are independent."
+		},
+		{
+			"id": "C04",
+			"name": "BottomNavigation",
+			"usedBy": "J01, I01, B01, L01",
+			"contract": "Journal / Intake / Body / Life; icon plus visible label."
+		},
+		{
+			"id": "C05",
+			"name": "LogAction",
+			"usedBy": "Primary screens",
+			"contract": "Labelled + Log; destination-aware options preserve the active date."
+		},
+		{
+			"id": "C06",
+			"name": "Button",
+			"usedBy": "All flows",
+			"contract": "Primary, secondary, text, destructive, loading and disabled states."
+		},
+		{
+			"id": "C07",
+			"name": "IconButton",
+			"usedBy": "Add, remove, settings",
+			"contract": "Named action, minimum hit area and distinct selected/pressed state."
+		},
+		{
+			"id": "C08",
+			"name": "SelectableRow",
+			"usedBy": "J02-J04",
+			"contract": "Equal height; no default answer; explicit selection."
+		},
+		{
+			"id": "C09",
+			"name": "FactorChip",
+			"usedBy": "J01",
+			"contract": "Stable factor ID, readable label, group and selected state."
+		},
+		{
+			"id": "C10",
+			"name": "SegmentedControl",
+			"usedBy": "Filters, units, ranges",
+			"contract": "One selected option; purpose and selection announced."
+		},
+		{
+			"id": "C11",
+			"name": "FormField",
+			"usedBy": "I03-I04, B03, L04",
+			"contract": "Persistent label, input, helper, optionality and inline error."
+		},
+		{
+			"id": "C12",
+			"name": "QuantityField",
+			"usedBy": "I03-I04, B03",
+			"contract": "Numeric value, unit metadata, direct input and optional step."
+		},
+		{
+			"id": "C13",
+			"name": "DetailRow",
+			"usedBy": "Details and editors",
+			"contract": "Label/value pair, optional source/date and disclosure action."
+		},
+		{
+			"id": "C14",
+			"name": "FeedbackBanner",
+			"usedBy": "Save and error states",
+			"contract": "Outcome, scope and one relevant action such as Undo or Retry."
+		},
+		{
+			"id": "C15",
+			"name": "CheckInCard",
+			"usedBy": "J01",
+			"contract": "Not started, partial, complete; event time and human labels."
+		},
+		{
+			"id": "C16",
+			"name": "CheckInStepper",
+			"usedBy": "J02-J04",
+			"contract": "Step count, draft retention and distinct continue/save actions."
+		},
+		{
+			"id": "C17",
+			"name": "IntakeRow",
+			"usedBy": "I01-I02",
+			"contract": "Item, visible amount/unit and contextual repeat/edit action."
+		},
+		{
+			"id": "C18",
+			"name": "SourceStamp",
+			"usedBy": "B01-B03, I03",
+			"contract": "Origin, measurement time and optional separate sync time."
+		},
+		{
+			"id": "C19",
+			"name": "MeasurementCard",
+			"usedBy": "B01-B02",
+			"contract": "Complete value/unit, event time, range and comparison basis."
+		},
+		{
+			"id": "C20",
+			"name": "RecentRange",
+			"usedBy": "B01-B02",
+			"contract": "Neutral interval with window, method and sufficient-data state."
+		},
+		{
+			"id": "C21",
+			"name": "TrendChart",
+			"usedBy": "B01-B02, history",
+			"contract": "Labelled axes/units, gaps, selected reading and text alternative."
+		},
+		{
+			"id": "C22",
+			"name": "LifeWheel",
+			"usedBy": "L01",
+			"contract": "Stable area IDs/order, configured scale, two review styles."
+		},
+		{
+			"id": "C23",
+			"name": "LifeAreaRow",
+			"usedBy": "L02 and area editing",
+			"contract": "Named area/value, scale, previous value and missing state."
+		},
+		{
+			"id": "C24",
+			"name": "HeadingCard",
+			"usedBy": "B02, L01-L03",
+			"contract": "Status, title, intent/target, dates and detail/edit action."
+		},
+		{
+			"id": "C25",
+			"name": "PracticeRow",
+			"usedBy": "L03 and activity",
+			"contract": "Action, completion/event reference and optional amount/time."
+		},
+		{
+			"id": "C26",
+			"name": "ReadingsList",
+			"usedBy": "B02",
+			"contract": "Exact recorded values, timestamps, units and sources."
+		},
+		{
+			"id": "C27",
+			"name": "ManagementRow",
+			"usedBy": "B04, life-area settings",
+			"contract": "Visibility, reorder and labels; deletion is separate."
+		},
+		{
+			"id": "C28",
+			"name": "ActionSheet",
+			"usedBy": "+ Log, More factors",
+			"contract": "Named options, dismiss, date context and keyboard handling."
+		}
+	],
+	"screens": [
+		{
+			"id": "J01",
+			"name": "Journal overview",
+			"basis": "Direct redesign",
+			"coverage": "Calendar, AM/PM cards, grouped factors, add action."
+		},
+		{
+			"id": "J02",
+			"name": "Mood check-in",
+			"basis": "Direct redesign",
+			"coverage": "Existing five mood words, equal options, progress and save."
+		},
+		{
+			"id": "J03",
+			"name": "Energy check-in",
+			"basis": "Proposed view",
+			"coverage": "Shared selection component; scale labels need confirmation."
+		},
+		{
+			"id": "J04",
+			"name": "Motivation check-in",
+			"basis": "Proposed view",
+			"coverage": "Shared selection component and complete/partial save."
+		},
+		{
+			"id": "I01",
+			"name": "Intake overview",
+			"basis": "Proposed view",
+			"coverage": "Daily entries, timestamps and a direct logging action."
+		},
+		{
+			"id": "I02",
+			"name": "Search and recents",
+			"basis": "Direct redesign",
+			"coverage": "Food/drink filters, suggestions and Something else."
+		},
+		{
+			"id": "I03",
+			"name": "Item amount",
+			"basis": "Proposed view",
+			"coverage": "Amount, units, date/time and nutrition disclosure."
+		},
+		{
+			"id": "I04",
+			"name": "Custom item",
+			"basis": "Proposed view",
+			"coverage": "Name, type, amount, optional details and reuse choice."
+		},
+		{
+			"id": "B01",
+			"name": "Body overview",
+			"basis": "Direct redesign",
+			"coverage": "Lead measurement, personal history and measurement list."
+		},
+		{
+			"id": "B02",
+			"name": "Measurement detail",
+			"basis": "Direct redesign",
+			"coverage": "Source, range, readings, Heading and history."
+		},
+		{
+			"id": "B03",
+			"name": "Add reading",
+			"basis": "Proposed view",
+			"coverage": "Metric, numeric value, units, event time and note."
+		},
+		{
+			"id": "B04",
+			"name": "Manage measurements",
+			"basis": "Proposed view",
+			"coverage": "Visibility, ordering, custom metric and display units."
+		},
+		{
+			"id": "L01",
+			"name": "Life overview",
+			"basis": "Direct redesign",
+			"coverage": "Review date, wheel, manage areas and Headings."
+		},
+		{
+			"id": "L02",
+			"name": "Review detail",
+			"basis": "Proposed view",
+			"coverage": "Named life-area values and previous-review comparison."
+		},
+		{
+			"id": "L03",
+			"name": "Heading detail",
+			"basis": "Proposed view",
+			"coverage": "Target/intention, practice, activity and archive/remove."
+		},
+		{
+			"id": "L04",
+			"name": "Edit Heading",
+			"basis": "Proposed view",
+			"coverage": "Name, intent, life area, dates and optional reason."
+		}
+	],
+	"dataContracts": {
+		"moodLabels": "Preserve current labels and scale versions",
+		"energyMotivationLabels": "Proposed labels in PoC; verify existing meaning before mapping saved values",
+		"personalRange": "Preserve existing middle-half definition and calculation convention; show period, method and valid count",
+		"lifeWheel": "Read area IDs/order/labels and scale from configuration; do not use illustrative names as defaults",
+		"nutritionBasis": "Explicitly state per-quantity, per-100g/ml or per-serving basis; unknown is not zero",
+		"units": "Metric- and item-specific conversions; do not silently equate mass and volume",
+		"draftSelection": "No default answer in a fresh check-in",
+		"recordIdentity": "Keep IDs stable across edits, retries and views"
+	},
+	"appearance": {
+		"preferenceOptions": ["system", "light", "dark"],
+		"default": "system",
+		"preferenceStorage": "Persist per device; resolve before first app frame",
+		"systemChanges": "Follow only while preference is system",
+		"preserveOnChange": ["route", "scrollPosition", "drafts", "formValues"],
+		"sharedLayout": true,
+		"darkStudyScreens": ["J01", "I01", "B01", "L01"],
+		"coverage": "Apply both appearances to all 28 component contracts and all 16 screen layouts"
+	},
+	"darkVerifiedContrastRatios": {
+		"brandOnSelectedSoft": 5.51,
+		"errorOnSurface": 7.92,
+		"inkOnCanvas": 15.01,
+		"interactiveBorderOnSurface": 4.46,
+		"interactiveBorderOnSurfaceRaised": 3.81,
+		"onAccentOnAccent": 7.04,
+		"onBrandOnBrand": 9.16,
+		"textSecondaryOnSurface": 7.74,
+		"textSecondaryOnSurfaceRaised": 6.62
+	}
+}

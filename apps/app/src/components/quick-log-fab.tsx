@@ -1,3 +1,4 @@
+import { localDayOf } from "@bro/domain";
 import type { ConsumableKind } from "@bro/domain/consumable";
 import { OPTIONAL_STREAM_KINDS } from "@bro/domain/consumable";
 import { type Href, router } from "expo-router";
@@ -11,6 +12,7 @@ import { StyleSheet, useUnistyles } from "../theme/unistyles";
 import { AppText } from "./app-text";
 import { Icon, type IconName } from "./icon";
 import { LoadingIndicator } from "./loading-indicator";
+import { useLogDate } from "./log-date-context";
 import { ModalSheet } from "./modal-sheet";
 
 type QuickLogPage = "options" | "body";
@@ -63,21 +65,26 @@ function QuickLogAction({
 }
 
 /** The log screen, preset to one kind so muscle memory survives the merge. */
-export function intakeLogHref(kind: ConsumableKind): Href {
-	return `/intake/log?kind=${kind}` as Href;
+export function intakeLogHref(kind: ConsumableKind, day?: string): Href {
+	return `/intake/log?kind=${kind}${day ? `&day=${day}` : ""}` as Href;
 }
 
 export function QuickLogFab({
 	bottom,
 	bodyActive = false,
+	activeTab = bodyActive ? "body" : "journal",
 	enabledKinds = enabledIntakeKinds,
 }: {
 	bottom: number;
 	bodyActive?: boolean;
+	activeTab?: string;
 	enabledKinds?: () => Promise<ConsumableKind[]>;
 }) {
 	const { t } = useTranslation("navigation");
 	const { theme } = useUnistyles();
+	const selectedDay = useLogDate(activeTab);
+	const pastDay =
+		selectedDay === localDayOf(new Date()) ? undefined : selectedDay;
 	const [open, setOpen] = useState(false);
 	const [page, setPage] = useState<QuickLogPage>("options");
 	const [optionalKinds, setOptionalKinds] = useState<ConsumableKind[]>([]);
@@ -138,6 +145,9 @@ export function QuickLogFab({
 					color={theme.colors.onAccent}
 					size={24}
 				/>
+				<AppText variant="label" style={styles.fabLabel}>
+					{t("quickLog.label")}
+				</AppText>
 			</TouchableOpacity>
 
 			<ModalSheet
@@ -152,35 +162,94 @@ export function QuickLogFab({
 				{page === "options" ? (
 					<>
 						<AppText variant="section">{t("quickLog.title")}</AppText>
+						<AppText variant="caption" color="muted">
+							{selectedDay}
+						</AppText>
 						<View style={styles.actions}>
-							<QuickLogAction
-								icon="note"
-								domain="mind"
-								title={t("quickLog.note")}
-								detail={t("quickLog.noteDetail")}
-								onPress={() => choose("/notes/new")}
-							/>
+							{activeTab === "body" ? (
+								<QuickLogAction
+									icon="body"
+									domain="body"
+									title={t("quickLog.body")}
+									detail={t("quickLog.bodyDetail")}
+									onPress={chooseBody}
+								/>
+							) : null}
+							{activeTab === "journal" ? (
+								<QuickLogAction
+									icon="check-in"
+									domain="mind"
+									title={t("quickLog.checkIn")}
+									detail={t("quickLog.checkInDetail")}
+									onPress={() =>
+										choose(
+											selectedDay === localDayOf(new Date())
+												? "/check-in"
+												: (`/history/${selectedDay}` as Href),
+										)
+									}
+								/>
+							) : null}
+							{activeTab === "life" ? (
+								<QuickLogAction
+									icon="explore"
+									domain="mind"
+									title={t("quickLog.practice")}
+									detail={t("quickLog.practiceDetail")}
+									onPress={() => choose("/habits")}
+								/>
+							) : null}
 							<QuickLogAction
 								icon="food"
 								domain="body"
 								title={t("quickLog.food")}
 								detail={t("quickLog.foodDetail")}
-								onPress={() => choose(intakeLogHref("food"))}
+								onPress={() => choose(intakeLogHref("food", pastDay))}
 							/>
 							<QuickLogAction
 								icon="drink"
 								domain="load"
 								title={t("quickLog.drink")}
 								detail={t("quickLog.drinkDetail")}
-								onPress={() => choose(intakeLogHref("drink"))}
+								onPress={() => choose(intakeLogHref("drink", pastDay))}
 							/>
 							<QuickLogAction
-								icon="body"
-								domain="body"
-								title={t("quickLog.body")}
-								detail={t("quickLog.bodyDetail")}
-								onPress={chooseBody}
+								icon="note"
+								domain="mind"
+								title={t("quickLog.note")}
+								detail={t("quickLog.noteDetail")}
+								onPress={() =>
+									choose(
+										pastDay
+											? (`/notes/new?localDay=${pastDay}` as Href)
+											: "/notes/new",
+									)
+								}
 							/>
+							{activeTab !== "body" ? (
+								<QuickLogAction
+									icon="body"
+									domain="body"
+									title={t("quickLog.body")}
+									detail={t("quickLog.bodyDetail")}
+									onPress={chooseBody}
+								/>
+							) : null}
+							{activeTab !== "journal" ? (
+								<QuickLogAction
+									icon="check-in"
+									domain="mind"
+									title={t("quickLog.checkIn")}
+									detail={t("quickLog.checkInDetail")}
+									onPress={() =>
+										choose(
+											selectedDay === localDayOf(new Date())
+												? "/check-in"
+												: (`/history/${selectedDay}` as Href),
+										)
+									}
+								/>
+							) : null}
 							{optionalKinds.map((kind) => (
 								<QuickLogAction
 									key={kind}
@@ -188,16 +257,9 @@ export function QuickLogFab({
 									domain="load"
 									title={t(`quickLog.${kind}`)}
 									detail={t(`quickLog.${kind}Detail`)}
-									onPress={() => choose(intakeLogHref(kind))}
+									onPress={() => choose(intakeLogHref(kind, pastDay))}
 								/>
 							))}
-							<QuickLogAction
-								icon="check-in"
-								domain="mind"
-								title={t("quickLog.checkIn")}
-								detail={t("quickLog.checkInDetail")}
-								onPress={() => choose("/check-in")}
-							/>
 						</View>
 					</>
 				) : bodyLogSurface ? (
@@ -216,15 +278,19 @@ export function QuickLogFab({
 const styles = StyleSheet.create((theme) => ({
 	fab: {
 		position: "absolute",
-		right: theme.spacing.lg,
+		right: theme.spacing.gutter,
 		zIndex: 10,
-		width: 56,
-		height: 56,
+		minHeight: theme.control.buttonMinHeight,
+		paddingHorizontal: theme.spacing.lg,
+		paddingVertical: theme.spacing.md,
+		flexDirection: "row",
+		gap: theme.spacing.sm,
 		alignItems: "center",
 		justifyContent: "center",
-		borderRadius: 14,
+		borderRadius: theme.radius.pill,
 		backgroundColor: theme.colors.accent,
 	},
+	fabLabel: { color: theme.colors.onAccent },
 	actions: { gap: theme.spacing.sm },
 	loading: { alignItems: "center", gap: theme.spacing.md },
 	actionRow: {

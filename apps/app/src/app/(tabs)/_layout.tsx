@@ -7,7 +7,9 @@ import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { BodyLogSurfaceProvider } from "../../body/body-log-surface-context";
 import { AppHeader } from "../../components/app-header";
 import { HeaderIconButton } from "../../components/header-icon-button";
+import { LogDateProvider } from "../../components/log-date-context";
 import { QuickLogFab } from "../../components/quick-log-fab";
+import "../../components/tab-bar-layout";
 import {
 	TodayHeaderMonthProvider,
 	useTodayHeaderMonth,
@@ -45,7 +47,10 @@ function TabShell() {
 			? t(activeTabKey)
 			: undefined;
 	const canQuickLog =
-		pathname === "/" || pathname === "/intake" || pathname === "/body";
+		pathname === "/" ||
+		pathname === "/intake" ||
+		pathname === "/body" ||
+		pathname === "/life";
 	const lastTabHeader = useRef(
 		activeHeaderTitle
 			? {
@@ -78,7 +83,7 @@ function TabShell() {
 	const activeTabName = pathname === "/" ? "index" : pathname.slice(1);
 
 	return (
-		<View style={styles.shell}>
+		<View testID="tab-shell" style={styles.shell}>
 			{title ? (
 				<AppHeader
 					title={title}
@@ -112,9 +117,9 @@ function TabShell() {
 				}
 				iconColor={{
 					default: theme.colors.ink2,
-					selected: theme.colors.accent,
+					selected: theme.colors.brand,
 				}}
-				indicatorColor={theme.colors.accentDeep}
+				indicatorColor={theme.colors.selectedSoft}
 				// `auto` drops to selected-only labels past three tabs, and there are
 				// four - so every label is pinned on instead.
 				labelVisibilityMode="labeled"
@@ -130,10 +135,10 @@ function TabShell() {
 					selected: {
 						fontFamily: theme.fonts.sans,
 						fontSize: 12,
-						color: theme.colors.accent,
+						color: theme.colors.brand,
 					},
 				}}
-				minimizeBehavior="onScrollDown"
+				minimizeBehavior="never"
 				shadowColor={theme.colors.hairlineStrong}
 				screenListeners={({ route }) => ({
 					tabPress: () => {
@@ -184,6 +189,7 @@ function TabShell() {
 						NATIVE_TAB_BAR_CONTENT_HEIGHT + insets.bottom + theme.spacing.lg
 					}
 					bodyActive={pathname === "/body"}
+					activeTab={pathname === "/" ? "journal" : pathname.slice(1)}
 				/>
 			) : null}
 		</View>
@@ -192,11 +198,13 @@ function TabShell() {
 
 export default function TabLayout() {
 	return (
-		<BodyLogSurfaceProvider>
-			<TodayHeaderMonthProvider>
-				<TabShell />
-			</TodayHeaderMonthProvider>
-		</BodyLogSurfaceProvider>
+		<LogDateProvider>
+			<BodyLogSurfaceProvider>
+				<TodayHeaderMonthProvider>
+					<TabShell />
+				</TodayHeaderMonthProvider>
+			</BodyLogSurfaceProvider>
+		</LogDateProvider>
 	);
 }
 

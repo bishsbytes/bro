@@ -77,7 +77,7 @@ describe("BaselineGauge", () => {
 		expect(view.getByTestId("gauge-marker")).toBeTruthy();
 	});
 
-	it("uses the measurement domain for the current marker glow", async () => {
+	it("shows a crisp current marker without glow", async () => {
 		const view = await render(
 			<BaselineGauge
 				label="Sleep"
@@ -92,14 +92,8 @@ describe("BaselineGauge", () => {
 
 		const markerCap = view.getByTestId("gauge-marker").props.children[0];
 		const style = flat(markerCap.props.style);
-		expect(style.boxShadow).toEqual([
-			{
-				offsetX: 0,
-				offsetY: 0,
-				blurRadius: lightTheme.readingMarker.glow,
-				color: lightTheme.colors.sleep,
-			},
-		]);
+		expect(style.backgroundColor).toBe(lightTheme.colors.sleep);
+		expect(style.boxShadow).toBeUndefined();
 	});
 
 	it("renders the unit with caption typography", async () => {

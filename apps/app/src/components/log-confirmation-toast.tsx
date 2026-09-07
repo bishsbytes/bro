@@ -13,11 +13,15 @@ export function LogConfirmationToast({
 	actionLabel,
 	onDismiss,
 	onAction,
+	secondaryActionLabel,
+	onSecondaryAction,
 }: {
 	message: string | null;
 	actionLabel: string;
 	onDismiss: () => void;
 	onAction: () => void;
+	secondaryActionLabel?: string;
+	onSecondaryAction?: () => void;
 }) {
 	const { theme } = useUnistyles();
 	const insets = useSafeAreaInsets();
@@ -38,6 +42,13 @@ export function LogConfirmationToast({
 			<View accessibilityLiveRegion="polite" style={styles.toast}>
 				<Icon name="check-circle" color={theme.colors.ink2} size={24} />
 				<AppText style={styles.message}>{message}</AppText>
+				{secondaryActionLabel && onSecondaryAction ? (
+					<Button
+						label={secondaryActionLabel}
+						variant="text"
+						onPress={onSecondaryAction}
+					/>
+				) : null}
 				<Button
 					label={actionLabel}
 					variant="text"
@@ -62,6 +73,7 @@ const styles = StyleSheet.create((theme) => ({
 	toast: {
 		minHeight: 64,
 		flexDirection: "row",
+		flexWrap: "wrap",
 		alignItems: "center",
 		gap: theme.spacing.sm,
 		paddingLeft: theme.spacing.md,
@@ -74,7 +86,7 @@ const styles = StyleSheet.create((theme) => ({
 	},
 	message: { flex: 1 },
 	action: {
-		minHeight: 44,
+		minHeight: theme.control.minHitArea,
 		paddingHorizontal: theme.spacing.md,
 		paddingVertical: theme.spacing.sm,
 	},

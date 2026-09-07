@@ -1,3 +1,11 @@
+# bro — current design package
+
+Grounded Editorial is the selected direction. Start with [DESIGN.md](DESIGN.md), [the guide](mens-health-design-guide.md), [the tokens](mens-health-design-tokens.json) and [the native component mapping](REACT_NATIVE.md).
+
+The PDF contains the screen boards and precise component specimens. The app uses the shared runtime theme in `apps/app/src/theme/unistyles.ts`; the old `tokens/`, `COMPONENTS.md` and HTML studies are Helm reference material.
+
+---
+
 # bro — design package (Helm)
 
 Drop this `design/` folder into the repo root. Reference `design/DESIGN.md`

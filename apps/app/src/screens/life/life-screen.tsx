@@ -106,7 +106,12 @@ export function LifeScreen({ reviewStore, habitsStore, now }: LifeScreenProps) {
 		: t("habits.noRoutine");
 
 	return (
-		<Screen scroll padded gap="lg">
+		<Screen
+			scroll
+			padded
+			gap="lg"
+			contentContainerStyle={{ paddingBottom: 96 }}
+		>
 			<AppText color="muted">{t("intro")}</AppText>
 
 			{latest && completedAt !== null ? (

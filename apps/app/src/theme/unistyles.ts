@@ -6,7 +6,7 @@ import {
 	useUnistyles,
 } from "react-native-unistyles";
 
-// Expo Router can evaluate route modules before the root layout, so Helm is
+// Expo Router can evaluate route modules before the root layout, so the theme is
 // configured in the module every component imports rather than in App itself.
 export { StyleSheet, useUnistyles };
 
@@ -125,7 +125,7 @@ const spacing = {
 	xxl: 32,
 	xxxl: 48,
 	huge: 64,
-	section: 64,
+	section: 32,
 	s1: 4,
 	s2: 8,
 	s3: 12,
@@ -134,96 +134,108 @@ const spacing = {
 	s6: 32,
 	s7: 48,
 	s8: 64,
-	gutter: 16,
+	gutter: 24,
 } as const;
 
 const radius = {
 	xs: 6,
 	sm: 6,
 	md: 12,
-	lg: 20,
+	lg: 16,
 	pill: 999,
 	chip: 6,
 	control: 12,
-	card: 20,
-	sheet: 28,
+	card: 16,
+	sheet: 24,
 	device: 44,
 } as const;
 
 const tabular = ["tabular-nums"] as TextStyle["fontVariant"];
+const sans = Platform.select({
+	ios: "System",
+	android: "sans-serif",
+	default: "system-ui",
+});
 const largeTitle = {
-	fontFamily: "InstrumentSans_700Bold",
+	fontFamily: "InstrumentSerif_400Regular",
 	fontSize: 32,
-	lineHeight: 36,
-	letterSpacing: -0.96,
+	lineHeight: 38,
+	letterSpacing: -0.4,
 };
 const title = {
-	fontFamily: "InstrumentSans_600SemiBold",
-	fontSize: 26,
-	lineHeight: 30,
-	letterSpacing: -0.52,
+	fontFamily: "InstrumentSerif_400Regular",
+	fontSize: 28,
+	lineHeight: 34,
+	letterSpacing: -0.3,
 };
 const section = {
-	fontFamily: "InstrumentSans_600SemiBold",
-	fontSize: 19,
-	lineHeight: 23,
+	fontFamily: sans,
+	fontWeight: "600" as const,
+	fontSize: 20,
+	lineHeight: 26,
 };
 const body = {
-	fontFamily: "InstrumentSans_400Regular",
-	fontSize: 15,
-	lineHeight: 22,
+	fontFamily: sans,
+	fontSize: 16,
+	lineHeight: 24,
 };
 const bodyMedium = {
-	fontFamily: "InstrumentSans_500Medium",
-	fontSize: 15,
-	lineHeight: 22,
+	fontFamily: sans,
+	fontWeight: "500" as const,
+	fontSize: 16,
+	lineHeight: 24,
 };
 const caption = {
-	fontFamily: "InstrumentSans_400Regular",
-	fontSize: 12.5,
-	lineHeight: 17,
+	fontFamily: sans,
+	fontSize: 14,
+	lineHeight: 20,
 };
 const footnote = {
-	fontFamily: "InstrumentSans_400Regular",
+	fontFamily: sans,
 	fontSize: 12,
 	lineHeight: 16,
 };
 const monoHero = {
-	fontFamily: "GeistMono_600SemiBold",
+	fontFamily: sans,
+	fontWeight: "600" as const,
 	fontSize: 56,
 	lineHeight: 58,
-	letterSpacing: -2.8,
+	letterSpacing: -1.2,
 	fontVariant: tabular,
 };
 const monoDial = {
-	fontFamily: "GeistMono_600SemiBold",
+	fontFamily: sans,
+	fontWeight: "600" as const,
 	fontSize: 44,
 	lineHeight: 46,
-	letterSpacing: -1.76,
+	letterSpacing: -0.8,
 	fontVariant: tabular,
 };
 const monoReadout = {
-	fontFamily: "GeistMono_600SemiBold",
+	fontFamily: sans,
+	fontWeight: "600" as const,
 	fontSize: 30,
 	lineHeight: 34,
-	letterSpacing: -0.9,
+	letterSpacing: -0.4,
 	fontVariant: tabular,
 };
 const monoList = {
-	fontFamily: "GeistMono_600SemiBold",
+	fontFamily: sans,
+	fontWeight: "600" as const,
 	fontSize: 18,
 	lineHeight: 22,
 	fontVariant: tabular,
 };
 const monoInline = {
-	fontFamily: "GeistMono_500Medium",
+	fontFamily: sans,
+	fontWeight: "500" as const,
 	fontSize: 13,
 	lineHeight: 16,
 	fontVariant: tabular,
 };
 const serifQuote = {
-	fontFamily: "InstrumentSerif_400Regular",
-	fontSize: 21,
+	fontFamily: sans,
+	fontSize: 20,
 	lineHeight: 26,
 };
 
@@ -246,7 +258,7 @@ const typography = {
 	display: largeTitle,
 	score: monoList,
 	lead: serifQuote,
-	label: bodyMedium,
+	label: { ...bodyMedium, fontSize: 14, lineHeight: 20 },
 	micro: footnote,
 	face: { fontSize: 22, lineHeight: 28 },
 	eyebrow: { letterSpacing: 0 },
@@ -257,15 +269,16 @@ const shared = {
 	radius,
 	typography,
 	fonts: {
-		sans: "InstrumentSans_400Regular",
-		mono: "GeistMono_400Regular",
+		sans,
+		mono: sans,
 		serif: "InstrumentSerif_400Regular",
 	},
 	control: {
-		buttonMinHeight: 44,
-		scoreMinHeight: 52,
+		buttonMinHeight: 52,
+		minHitArea: 48,
+		scoreMinHeight: 56,
 		noteMinHeight: 112,
-		avatarSize: 44,
+		avatarSize: 48,
 		avatarIconSize: 20,
 		focusIconSize: 20,
 		areaPromptIconSize: 32,
@@ -317,40 +330,55 @@ const shared = {
 	},
 } as const;
 
+// Grounded Editorial, design/mens-health-design-tokens.json.
 const palettes = {
-	dark: {
-		base: "#0B0F14",
-		surface1: "#121820",
-		surface2: "#1A222C",
-		surface3: "#232D39",
-		hairline: "rgba(255,255,255,0.08)",
-		hairlineStrong: "rgba(255,255,255,0.14)",
-		glass: "rgba(26,34,44,0.74)",
-		ink: "#E8ECF0",
-		ink2: "#9AA6B2",
-		ink3: "#5F6B77",
-		mind: "#7FB3D5",
-		body: "#8FBF8A",
-		sleep: "#A99BE0",
-		load: "#E0B45A",
-		alert: "#E07A6A",
-	},
 	light: {
-		base: "#EEF1F4",
-		surface1: "#F7F8FA",
-		surface2: "#FFFFFF",
-		surface3: "#E3E8ED",
-		hairline: "rgba(10,20,30,0.08)",
-		hairlineStrong: "rgba(10,20,30,0.14)",
-		glass: "rgba(255,255,255,0.74)",
-		ink: "#12181F",
-		ink2: "#4F5B67",
-		ink3: "#8B96A1",
-		mind: "#3F7CA3",
-		body: "#4E8B55",
-		sleep: "#6E5FB8",
-		load: "#A8791E",
-		alert: "#B8483B",
+		base: "#F4F1EB",
+		surface1: "#FFFDFA",
+		surface2: "#FFFDFA",
+		surface3: "#E0ECE7",
+		hairline: "#D8DDD6",
+		hairlineStrong: "#78847D",
+		glass: "#FFFDFA",
+		ink: "#202725",
+		ink2: "#626B65",
+		ink3: "#626B65",
+		brand: "#174F4A",
+		onBrand: "#FFFFFF",
+		accent: "#A14F36",
+		onAccent: "#FFFFFF",
+		selectedSoft: "#E0ECE7",
+		historyFill: "#DDE5DD",
+		interactiveBorder: "#78847D",
+		mind: "#174F4A",
+		body: "#174F4A",
+		sleep: "#174F4A",
+		load: "#174F4A",
+		alert: "#A33932",
+	},
+	dark: {
+		base: "#171D1A",
+		surface1: "#202923",
+		surface2: "#29352D",
+		surface3: "#304B3E",
+		hairline: "#39483F",
+		hairlineStrong: "#7D9183",
+		glass: "#202923",
+		ink: "#F2F0E9",
+		ink2: "#B3BDB5",
+		ink3: "#B3BDB5",
+		brand: "#A8CDBE",
+		onBrand: "#14261D",
+		accent: "#D99A78",
+		onAccent: "#281B14",
+		selectedSoft: "#304B3E",
+		historyFill: "#344C40",
+		interactiveBorder: "#7D9183",
+		mind: "#A8CDBE",
+		body: "#A8CDBE",
+		sleep: "#A8CDBE",
+		load: "#A8CDBE",
+		alert: "#F2ABA0",
 	},
 } as const;
 
@@ -362,44 +390,42 @@ export function createTheme(
 	_chroma = ACCENT_CHROMA,
 ) {
 	const palette = palettes[scheme];
-	const accent = deriveAccent(hue, scheme === "dark");
+
 	const colors = {
 		...palette,
-		...accent,
 		mindTint: `${palette.mind}38`,
 		bodyTint: `${palette.body}38`,
 		sleepTint: `${palette.sleep}38`,
 		loadTint: `${palette.load}38`,
 		alertTint: `${palette.alert}38`,
-		accentTint: accent.accentDeep,
-		accentLine: accent.accent,
-		accentStrong: accent.accent,
-		// Compatibility aliases: all legacy call sites now resolve to Helm materials.
+		accentTint: palette.selectedSoft,
+		accentLine: palette.brand,
+		accentStrong: palette.brand,
+		// Compatibility roles keep existing forms and records on the same theme.
+		accentDeep: palette.selectedSoft,
 		canvas: palette.base,
 		surface: palette.surface1,
 		surfaceSunk: palette.surface2,
 		line: palette.hairline,
 		lineStrong: palette.hairlineStrong,
-		inkInvert: accent.onAccent,
-		scrim: scheme === "dark" ? "rgba(11,15,20,0.65)" : "rgba(238,241,244,0.65)",
+		inkInvert: palette.onBrand,
+		scrim: scheme === "dark" ? "rgba(23,29,26,0.65)" : "rgba(32,39,37,0.4)",
 		background: palette.base,
 		text: palette.ink,
 		textMuted: palette.ink2,
 		textSubtle: palette.ink3,
 		border: palette.hairline,
 		danger: palette.alert,
-		onDanger: accent.onAccent,
+		onDanger: palette.onBrand,
 		headerBackground: palette.base,
 		headerBorder: palette.hairline,
 		tabBackground: palette.glass,
 		tabInactive: palette.ink2,
-		tabIndicator: accent.accentDeep,
+		tabIndicator: palette.selectedSoft,
 		// The Android press ripple, tinted to settle into the indicator it sits under.
-		tabRipple: `${accent.accentDeep}38`,
-		brand: accent.accent,
-		onBrand: accent.onAccent,
-		selected: accent.accentDeep,
-		onSelected: palette.ink,
+		tabRipple: `${palette.selectedSoft}38`,
+		selected: palette.selectedSoft,
+		onSelected: palette.brand,
 	};
 	return {
 		...shared,
@@ -442,7 +468,7 @@ export function stackScreenOptions(
 		headerTintColor: theme.colors.ink,
 		headerShadowVisible: false,
 		// Native-stack does not inset Android content beneath a transparent
-		// edge-to-edge header. Keep the Helm glass treatment on iOS, where the
+		// edge-to-edge header. Keep the native translucent treatment on iOS, where the
 		// scroll inset participates in large-title collapse, and use the native
 		// opaque material boundary on Android/web so page tops remain visible.
 		headerTransparent: glassHeader,
@@ -454,14 +480,13 @@ export function stackScreenOptions(
 		headerLargeTitle: true,
 		headerLargeTitleShadowVisible: false,
 		headerLargeTitleStyle: {
-			fontFamily: "InstrumentSans_700Bold",
-			fontSize: 32,
-			fontWeight: "700" as const,
+			...theme.typography.largeTitle,
+			fontWeight: "400" as const,
 			color: theme.colors.ink,
 		},
 		headerTitleStyle: {
-			fontFamily: "InstrumentSans_600SemiBold",
-			fontWeight: "600" as const,
+			fontFamily: theme.fonts.serif,
+			fontWeight: "400" as const,
 			color: theme.colors.ink,
 		},
 		contentStyle: { backgroundColor: theme.colors.base },

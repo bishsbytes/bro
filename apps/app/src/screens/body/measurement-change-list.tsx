@@ -93,7 +93,7 @@ export function MeasurementChangeList({
 										style={[
 											styles.band,
 											{
-												backgroundColor: theme.colors[change.domain],
+												backgroundColor: theme.colors.historyFill,
 												left: `${position(change.band.min, change.rail)}%`,
 												width: `${Math.max(
 													position(change.band.max, change.rail) -
@@ -123,14 +123,6 @@ export function MeasurementChangeList({
 												{
 													backgroundColor: theme.colors[change.domain],
 													left: `${position(change.current, change.rail)}%`,
-													boxShadow: [
-														{
-															offsetX: 0,
-															offsetY: 0,
-															blurRadius: theme.readingMarker.glow,
-															color: theme.colors[change.domain],
-														},
-													],
 												},
 											]}
 										/>
@@ -170,7 +162,7 @@ const styles = StyleSheet.create((theme) => ({
 		position: "absolute",
 		top: 0,
 		bottom: 0,
-		opacity: theme.opacity.domainTint,
+		opacity: 1,
 	},
 	previous: {
 		position: "absolute",

@@ -1,3 +1,4 @@
+import i18n from "i18next";
 import { resolveMetric } from "../content";
 
 /**
@@ -25,7 +26,7 @@ type ScoredCheckIn = {
  */
 export function checkInScoreSummary(checkIn: ScoredCheckIn): string {
 	return [
-		`Mood ${checkIn.mood.value}`,
+		`${i18n.t("checkIn:steps.moodLabel")} ${i18n.t(`checkIn:mood.${(["low", "flat", "okay", "good", "sharp"] as const)[checkIn.mood.value - 1] ?? "okay"}`)}`,
 		...checkIn.optionalScores.map(
 			(score) => `${metricLabel(score.metricSlug)} ${score.value}`,
 		),

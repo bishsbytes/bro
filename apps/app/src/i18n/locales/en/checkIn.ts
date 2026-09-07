@@ -32,6 +32,7 @@ export const checkIn = {
 	},
 	steps: {
 		moodLabel: "Mood",
+		moodQuestion: "How are you feeling?",
 		/** Meaning and endpoints for each optional check-in score. */
 		ratings: {
 			fallbackDescription: "How this feels for you right now.",
@@ -61,13 +62,24 @@ export const checkIn = {
 	},
 	/** Today's two sitting cards. */
 	sittings: {
+		partial: "Not answered: {{labels}}",
 		title: "Check-ins",
 		done: "Done",
 		start: "Check in",
 		editA11y: "Edit {{sitting}} check-in: {{summary}}",
 		startA11y: "Start {{sitting}} check-in",
 	},
+	draft: {
+		title: "Keep this check-in?",
+		body: "Your answers can stay on this device until you are ready to save.",
+		keep: "Keep draft",
+		discard: "Discard",
+		continue: "Continue editing check-in",
+	},
 	nav: {
+		continue: "Continue",
+		saveForNow: "Save for now",
+		saveCheckIn: "Save check-in",
 		back: "Back",
 		close: "Close",
 		closeA11y: "Close check-in",
@@ -80,6 +92,7 @@ export const checkIn = {
 	skip: "Skip",
 	skipAndFinish: "Skip and finish",
 	confirmation: {
+		partial: "Check-in saved for now",
 		saved: "Checked in",
 		updated: "Check-in updated",
 		done: "Done",

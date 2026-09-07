@@ -51,17 +51,17 @@ const styles = StyleSheet.create((theme) => ({
 		backgroundColor: "transparent",
 	},
 	surfaceButton: {
-		width: 34,
-		height: 34,
+		width: theme.control.minHitArea,
+		height: theme.control.minHitArea,
 	},
 	surface: {
-		width: 34,
-		height: 34,
+		width: theme.control.minHitArea,
+		height: theme.control.minHitArea,
 		alignItems: "center",
 		justifyContent: "center",
 		borderWidth: 1,
 		borderColor: theme.colors.hairline,
-		borderRadius: 11,
+		borderRadius: theme.radius.control,
 		backgroundColor: theme.colors.surface2,
 	},
 }));

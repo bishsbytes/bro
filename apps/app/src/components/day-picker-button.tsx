@@ -78,5 +78,5 @@ const styles = StyleSheet.create((theme) => ({
 		paddingVertical: theme.spacing.sm,
 		backgroundColor: theme.colors.surface,
 	},
-	pressed: { backgroundColor: theme.colors.accentTint },
+	pressed: { backgroundColor: theme.colors.selectedSoft },
 }));

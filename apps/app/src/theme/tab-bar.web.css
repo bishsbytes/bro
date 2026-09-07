@@ -1,0 +1,26 @@
+/* Expo's web fallback floats at the top by default. Keep the four destinations
+   below the content, matching the native app and clearing the Log action. */
+[data-testid="tab-shell"] [role="tablist"][aria-label="Main"] {
+	top: auto;
+	bottom: 0;
+	left: 0;
+	transform: none;
+	width: 100%;
+	max-width: none;
+	height: calc(56px + env(safe-area-inset-bottom));
+	padding: 4px 8px calc(4px + env(safe-area-inset-bottom));
+	border-radius: 0;
+}
+
+[data-testid="tab-shell"] [role="tablist"] [role="tab"] {
+	flex: 1;
+	min-width: 48px;
+	min-height: 48px;
+	padding: 0 8px;
+	border-radius: 12px;
+}
+
+[data-testid="tab-shell"] [role="tabpanel"] {
+	min-height: 0;
+	margin-bottom: calc(56px + env(safe-area-inset-bottom));
+}

@@ -3,6 +3,7 @@ import { localDayOf, shiftLocalDay, type WeekStartDay } from "@bro/domain";
 import {
 	CHECK_IN_SLOTS,
 	type CheckInSlot,
+	suggestedCheckInSlot,
 	type TagCategory,
 } from "@bro/domain/metric-registry";
 import { formatLocalDayLabel, isWheelReviewDue } from "@bro/logic";
@@ -26,7 +27,9 @@ import { Button } from "../../components/button";
 import { Card } from "../../components/card";
 import { DayPager } from "../../components/day-pager";
 import { EmptyState } from "../../components/empty-state";
+import { Icon } from "../../components/icon";
 import { LoadingIndicator } from "../../components/loading-indicator";
+import { useSetLogDate } from "../../components/log-date-context";
 import { NoteRow } from "../../components/note-row";
 import { LoadingScreen, Screen } from "../../components/screen";
 import { SectionHeader } from "../../components/section-header";
@@ -53,7 +56,7 @@ import {
 	type ReviewResult,
 	type ReviewStore,
 } from "../../review/review-store";
-import { StyleSheet } from "../../theme/unistyles";
+import { StyleSheet, useUnistyles } from "../../theme/unistyles";
 import {
 	createUnitSettingsStore,
 	type UnitSettingsStore,
@@ -348,6 +351,8 @@ export function HomeScreen({
 	now,
 }: HomeScreenProps) {
 	const { t } = useTranslation(["home", "checkIn", "common"]);
+	const { theme } = useUnistyles();
+	const [allFactors, setAllFactors] = useState(false);
 	const clockSource = useRef(now ?? systemNow);
 	clockSource.current = now ?? systemNow;
 	const clock = useCallback(() => clockSource.current(), []);
@@ -374,6 +379,7 @@ export function HomeScreen({
 	const previousTodayLocalDay = useRef(initialTodayLocalDay);
 	const [selectedDay, setSelectedDay] = useState<string | null>(null);
 	const resolvedSelectedDay = selectedDay ?? todayLocalDay;
+	useSetLogDate("journal", resolvedSelectedDay);
 	const [previewDay, setPreviewDay] = useState<string | null>(null);
 	const calendarSelectedDay = previewDay ?? resolvedSelectedDay;
 	const calendarSelectedDayRef = useRef(calendarSelectedDay);
@@ -837,6 +843,18 @@ export function HomeScreen({
 					const sitting = today.sittings[slot];
 					const name = t(`checkIn:slots.${slot}.name`);
 					const summary = sitting ? checkInScoreSummary(sitting) : null;
+					const featured =
+						!sitting && slot === suggestedCheckInSlot(new Date());
+					const missing = sitting
+						? today.availableOptionalScores[slot]
+								.filter(
+									(metric) =>
+										!sitting.optionalScores.some(
+											(score) => score.metricSlug === metric.slug,
+										),
+								)
+								.map((metric) => metric.label)
+						: [];
 					return (
 						<TouchableOpacity
 							key={slot}
@@ -849,18 +867,55 @@ export function HomeScreen({
 							}
 							onPress={() => openSitting(slot)}
 						>
-							<Card style={styles.sittingCard}>
-								<AppText variant="label">{name}</AppText>
-								<AppText variant="caption" color="subtle">
+							<Card
+								style={[styles.sittingCard, featured && styles.featuredSitting]}
+							>
+								<View style={styles.sittingHeading}>
+									<Icon
+										name={slot === "morning" ? "theme-light" : "theme-dark"}
+										size={24}
+										color={featured ? theme.colors.onBrand : theme.colors.brand}
+									/>
+									<AppText
+										variant="label"
+										color={featured ? "onBrand" : "default"}
+									>
+										{name}
+									</AppText>
+									<Icon
+										name="chevron-right"
+										size={20}
+										color={featured ? theme.colors.onBrand : theme.colors.ink2}
+									/>
+								</View>
+								<AppText
+									variant="title"
+									color={featured ? "onBrand" : "default"}
+								>
 									{t(`checkIn:slots.${slot}.tagline`)}
 								</AppText>
 								<AppText
 									variant="caption"
-									color={summary ? "brand" : "muted"}
+									color={featured ? "onBrand" : "muted"}
 									style={styles.sittingStatus}
 								>
 									{summary ?? t("checkIn:sittings.start")}
 								</AppText>
+								{missing.length > 0 ? (
+									<AppText variant="caption" color="muted">
+										{t("checkIn:sittings.partial", {
+											labels: missing.join(", "),
+										})}
+									</AppText>
+								) : null}
+								{sitting ? (
+									<AppText variant="micro" color="muted">
+										{new Date(sitting.observedAt).toLocaleTimeString([], {
+											hour: "2-digit",
+											minute: "2-digit",
+										})}
+									</AppText>
+								) : null}
 							</Card>
 						</TouchableOpacity>
 					);
@@ -888,44 +943,72 @@ export function HomeScreen({
 								{label}
 							</AppText>
 							<View style={styles.tagRow}>
-								{tags.map((tag) => {
-									const selected = selectedTags.includes(tag.slug);
-									return (
-										<TouchableOpacity
-											key={tag.slug}
-											accessibilityRole="button"
-											accessibilityLabel={tag.label}
-											accessibilityState={{ selected }}
-											style={[
-												styles.tagButton,
-												selected && styles.choiceSelected,
-											]}
-											disabled={reviewingTags}
-											onPress={() => void toggleTag(tag.slug)}
-										>
-											<AppText
-												variant="caption"
-												color="muted"
-												style={[selected && styles.choiceSelectedText]}
+								{tags
+									.filter(
+										(tag, index) =>
+											allFactors ||
+											index < 3 ||
+											selectedTags.includes(tag.slug),
+									)
+									.map((tag) => {
+										const selected = selectedTags.includes(tag.slug);
+										return (
+											<TouchableOpacity
+												key={tag.slug}
+												accessibilityRole="button"
+												accessibilityLabel={tag.label}
+												accessibilityState={{
+													selected,
+													disabled: reviewingTags,
+												}}
+												style={[
+													styles.tagButton,
+													selected && styles.choiceSelected,
+												]}
+												disabled={reviewingTags}
+												onPress={() => void toggleTag(tag.slug)}
 											>
-												{tag.label}
-											</AppText>
-										</TouchableOpacity>
-									);
-								})}
+												{selected ? (
+													<Icon
+														name="check"
+														size={16}
+														color={theme.colors.brand}
+													/>
+												) : null}
+												<AppText
+													variant="caption"
+													color="muted"
+													style={[selected && styles.choiceSelectedText]}
+												>
+													{tag.label}
+												</AppText>
+											</TouchableOpacity>
+										);
+									})}
 							</View>
 						</View>
 					) : null,
 				)}
-				<AppText variant="caption" color="muted">
-					{t("tags.reviewHint")}
-				</AppText>
-				<Button
-					label={t("tags.confirm")}
-					loading={reviewingTags}
-					variant="text"
-					onPress={() => void confirmTags()}
-				/>
+				{groupedTags.some((group) => group.tags.length > 3) ? (
+					<Button
+						label={t(allFactors ? "tags.fewer" : "tags.more")}
+						variant="text"
+						onPress={() => setAllFactors(!allFactors)}
+					/>
+				) : null}
+				{allFactors || !groupedTags.some((group) => group.tags.length > 3) ? (
+					<>
+						<AppText variant="caption" color="muted">
+							{t("tags.reviewHint")}
+						</AppText>
+						<Button
+							label={t("tags.confirm")}
+							loading={reviewingTags}
+							variant="text"
+							onPress={() => void confirmTags()}
+						/>
+					</>
+				) : null}
 			</View>
 		) : null;
 
@@ -1161,9 +1244,9 @@ const styles = StyleSheet.create((theme) => ({
 		paddingVertical: theme.spacing.xs,
 		paddingHorizontal: theme.spacing.sm,
 		borderRadius: theme.radius.xs,
-		backgroundColor: theme.colors.bodyTint,
+		backgroundColor: theme.colors.surface1,
 	},
-	measurementDeltaText: { color: theme.colors.body },
+	measurementDeltaText: { color: theme.colors.ink },
 	habitCard: {
 		flexDirection: "row",
 		alignItems: "center",
@@ -1175,10 +1258,16 @@ const styles = StyleSheet.create((theme) => ({
 		justifyContent: "space-between",
 		alignItems: "center",
 	},
-	/** The two sittings sit side by side and share the row evenly. */
-	sittings: { flexDirection: "row", gap: theme.spacing.md },
-	sittingCardWrapper: { flex: 1 },
-	sittingCard: { flex: 1, gap: theme.spacing.xs },
+	/** Sittings stack and grow with their summaries and any unanswered dimensions. */
+	sittings: { gap: theme.spacing.md },
+	sittingCardWrapper: { flexShrink: 0 },
+	sittingCard: { gap: theme.spacing.md },
+	featuredSitting: { backgroundColor: theme.colors.brand },
+	sittingHeading: {
+		flexDirection: "row",
+		alignItems: "center",
+		gap: theme.spacing.sm,
+	},
 	sittingStatus: { marginTop: theme.spacing.sm },
 	prompt: {
 		fontWeight: "600",
@@ -1193,9 +1282,13 @@ const styles = StyleSheet.create((theme) => ({
 	categoryLabel: { marginBottom: theme.spacing.xs },
 	tagRow: { flexDirection: "row", flexWrap: "wrap", gap: theme.spacing.sm },
 	tagButton: {
+		minHeight: theme.control.minHitArea,
+		flexDirection: "row",
+		alignItems: "center",
+		gap: theme.spacing.sm,
 		borderWidth: 1,
-		borderColor: theme.colors.border,
-		borderRadius: theme.radius.md,
+		borderColor: theme.colors.interactiveBorder,
+		borderRadius: theme.radius.pill,
 		backgroundColor: theme.colors.surface,
 		paddingVertical: theme.spacing.sm,
 		paddingHorizontal: theme.spacing.md,

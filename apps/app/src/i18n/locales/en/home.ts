@@ -5,6 +5,8 @@ export const home = {
 		none: "No check-in was logged.",
 	},
 	tags: {
+		more: "More factors",
+		fewer: "Fewer factors",
 		title: "What happened",
 		hint: "Tap anything that applied today.",
 		reviewHint:

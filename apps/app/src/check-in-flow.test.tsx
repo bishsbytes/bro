@@ -6,6 +6,9 @@ import { createNodeSqliteMock } from "./test-support/node-sqlite";
 
 const mockSqlite = createNodeSqliteMock();
 let mockRandomSeed = 0;
+jest.mock("expo-sqlite/kv-store", () => ({
+	SQLiteStorage: mockSqlite.SQLiteStorage,
+}));
 
 jest.mock("expo-sqlite", () => ({
 	openDatabaseSync: mockSqlite.openDatabaseSync,
@@ -99,25 +102,43 @@ describe("daily check-in flow", () => {
 		// asks is put on its own page.
 		await fireEvent.press(view.getByLabelText("Start Morning check-in"));
 		await fireEvent.press(await view.findByLabelText("Mood 4"));
+		await fireEvent.press(
+			view.queryByText("Continue") ?? view.getByText("Save check-in"),
+		);
 		await fireEvent.press(await view.findByLabelText("Energy 3"));
+		await fireEvent.press(
+			view.queryByText("Continue") ?? view.getByText("Save check-in"),
+		);
 		await fireEvent.press(await view.findByLabelText("Motivation 5"));
+		await fireEvent.press(
+			view.queryByText("Continue") ?? view.getByText("Save check-in"),
+		);
 		expect(await view.findByText("Checked in")).toBeTruthy();
 		await fireEvent.press(view.getByText("Done"));
 
 		// The finished sitting reports itself on the card that opened it.
 		expect(
-			await view.findByText("Mood 4 · Energy 3 · Motivation 5"),
+			await view.findByText("Mood Good · Energy 3 · Motivation 5"),
 		).toBeTruthy();
 
 		// The evening asks its own scores and is a separate sitting entirely.
 		await fireEvent.press(view.getByLabelText("Start Evening check-in"));
 		await fireEvent.press(await view.findByLabelText("Mood 3"));
+		await fireEvent.press(
+			view.queryByText("Continue") ?? view.getByText("Save check-in"),
+		);
 		await fireEvent.press(await view.findByLabelText("Productivity 4"));
+		await fireEvent.press(
+			view.queryByText("Continue") ?? view.getByText("Save check-in"),
+		);
 		await fireEvent.press(await view.findByLabelText("Libido 2"));
+		await fireEvent.press(
+			view.queryByText("Continue") ?? view.getByText("Save check-in"),
+		);
 		expect(await view.findByText("Checked in")).toBeTruthy();
 		await fireEvent.press(view.getByText("Done"));
 		expect(
-			await view.findByText("Mood 3 · Productivity 4 · Libido 2"),
+			await view.findByText("Mood Okay · Productivity 4 · Libido 2"),
 		).toBeTruthy();
 
 		const observations = new databaseApp.ObservationRepository(db);
@@ -186,15 +207,24 @@ describe("daily check-in flow", () => {
 		// answering the morning again must not leave the day with two of them.
 		await fireEvent.press(
 			view.getByLabelText(
-				"Edit Morning check-in: Mood 4 · Energy 3 · Motivation 5",
+				"Edit Morning check-in: Mood Good · Energy 3 · Motivation 5",
 			),
 		);
 		await fireEvent.press(await view.findByLabelText("Mood 5"));
+		await fireEvent.press(
+			view.queryByText("Continue") ?? view.getByText("Save check-in"),
+		);
 		await fireEvent.press(await view.findByLabelText("Energy 4"));
+		await fireEvent.press(
+			view.queryByText("Continue") ?? view.getByText("Save check-in"),
+		);
 		await fireEvent.press(await view.findByLabelText("Motivation 4"));
+		await fireEvent.press(
+			view.queryByText("Continue") ?? view.getByText("Save check-in"),
+		);
 		await fireEvent.press(await view.findByText("Done"));
 		expect(
-			await view.findByText("Mood 5 · Energy 4 · Motivation 4"),
+			await view.findByText("Mood Very good · Energy 4 · Motivation 4"),
 		).toBeTruthy();
 
 		// Tags belong to the day, so deselecting clears it for the day rather
@@ -230,10 +260,10 @@ describe("daily check-in flow", () => {
 		await act(async () => undefined);
 
 		expect(
-			await view.findByText("Mood 5 · Energy 4 · Motivation 4"),
+			await view.findByText("Mood Very good · Energy 4 · Motivation 4"),
 		).toBeTruthy();
 		expect(
-			await view.findByText("Mood 3 · Productivity 4 · Libido 2"),
+			await view.findByText("Mood Okay · Productivity 4 · Libido 2"),
 		).toBeTruthy();
 		// Two product opens across the cold relaunch plus one local-store open.
 		expect(mockSqlite.openDatabaseAsync).toHaveBeenCalledTimes(3);

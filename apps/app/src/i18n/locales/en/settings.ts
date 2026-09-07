@@ -2,11 +2,10 @@ export const settings = {
 	loadFailedBody: "Try again.",
 	index: {
 		appearance: "Appearance",
-		appearanceDetail:
-			"Choose a theme and a quiet accent for actions and selections.",
+		appearanceDetail: "Choose System, Light or Dark appearance.",
 		appearanceA11y: "Manage appearance",
 		/** The chosen theme and accent, shown side by side. */
-		appearanceValue: "{{theme}} · {{accent}}",
+		appearanceValue: "{{theme}}",
 		health: "Health data",
 		/** {{platform}} is Apple Health or Health Connect. */
 		healthDetail: "Import from {{platform}}. Your data stays on this device.",
@@ -57,7 +56,7 @@ export const settings = {
 	},
 	appearance: {
 		intro:
-			"Keep bro calm and monochrome, or add a little colour where it matters. Changes appear instantly and stay on this device.",
+			"Choose the appearance that feels comfortable. System follows your device. Changes appear instantly and stay on this device.",
 		themeTitle: "Theme",
 		themeA11y: "{{name}} theme",
 		themeSystem: "System",

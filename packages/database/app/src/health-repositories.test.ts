@@ -258,7 +258,11 @@ describe("health import repositories", () => {
 			["off:delete", "{}", "delete", 1],
 		);
 
+		databaseApp.writeCheckInDraft("morning", "unsaved morning");
+		databaseApp.writeCheckInDraft("evening", "unsaved evening");
 		await databaseApp.deleteLocalProductData(productDb, localDb);
+		expect(databaseApp.readCheckInDraft("morning")).toBeNull();
+		expect(databaseApp.readCheckInDraft("evening")).toBeNull();
 
 		for (const table of [
 			"intake_events",

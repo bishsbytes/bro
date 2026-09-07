@@ -1,6 +1,6 @@
 import type { SQLiteDatabase } from "expo-sqlite";
 import { getDb } from "./connection";
-import { writeNoteDraft } from "./device-settings";
+import { writeCheckInDraft, writeNoteDraft } from "./device-settings";
 import { getLocalDb } from "./local-connection";
 import { LOCAL_TABLES } from "./local-tables";
 import { PRODUCT_TABLES } from "./product-tables";
@@ -16,6 +16,8 @@ export async function deleteLocalProductData(
 	localDb: SQLiteDatabase = getLocalDb(),
 ): Promise<void> {
 	writeNoteDraft(null);
+	writeCheckInDraft("morning", null);
+	writeCheckInDraft("evening", null);
 	await withTransaction(db, async ({ database }) => {
 		for (const table of PRODUCT_TABLES) {
 			await database.runAsync(`DELETE FROM "${table}"`);

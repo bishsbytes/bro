@@ -106,8 +106,8 @@ export function BaselineGauge({
 									{
 										left: `${bandStart}%`,
 										width: `${Math.max(bandEnd - bandStart, 0)}%`,
-										backgroundColor: dataColor,
-										borderColor: dataColor,
+										backgroundColor: theme.colors.historyFill,
+										borderColor: theme.colors.interactiveBorder,
 									},
 								]}
 							/>
@@ -140,14 +140,6 @@ export function BaselineGauge({
 									styles.markerCap,
 									{
 										backgroundColor: dataColor,
-										boxShadow: [
-											{
-												offsetX: 0,
-												offsetY: 0,
-												blurRadius: theme.readingMarker.glow,
-												color: dataColor,
-											},
-										],
 									},
 								]}
 							/>
@@ -192,6 +184,7 @@ const styles = StyleSheet.create((theme) => ({
 	root: { gap: theme.spacing.sm },
 	heading: {
 		flexDirection: "row",
+		flexWrap: "wrap",
 		alignItems: "baseline",
 		justifyContent: "space-between",
 		gap: theme.spacing.sm,
@@ -201,7 +194,7 @@ const styles = StyleSheet.create((theme) => ({
 		height: RAIL_HEIGHT,
 		marginTop: theme.spacing.xs,
 		borderRadius: theme.radius.chip,
-		backgroundColor: theme.colors.hairlineStrong,
+		backgroundColor: theme.colors.hairline,
 	},
 	tick: {
 		position: "absolute",
@@ -214,7 +207,6 @@ const styles = StyleSheet.create((theme) => ({
 		position: "absolute",
 		bottom: 0,
 		height: RAIL_HEIGHT,
-		opacity: theme.opacity.domainTint,
 		borderLeftWidth: 1,
 		borderRightWidth: 1,
 		borderRadius: theme.radius.chip,

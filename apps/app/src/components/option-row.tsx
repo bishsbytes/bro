@@ -72,7 +72,7 @@ export function OptionRow({
 			<Icon
 				name={selected ? mark.on : mark.off}
 				size={20}
-				color={selected ? theme.colors.brand : theme.colors.border}
+				color={selected ? theme.colors.brand : theme.colors.interactiveBorder}
 			/>
 		</TouchableOpacity>
 	);
@@ -86,10 +86,13 @@ const styles = StyleSheet.create((theme) => ({
 		gap: theme.spacing.md,
 		padding: theme.spacing.md,
 		borderRadius: theme.radius.control,
+		borderWidth: 1,
+		borderColor: theme.colors.interactiveBorder,
 		backgroundColor: theme.colors.surface2,
 	},
 	selectedOption: {
-		backgroundColor: theme.colors.accentDeep,
+		borderColor: theme.colors.brand,
+		backgroundColor: theme.colors.selectedSoft,
 	},
 	disabled: { opacity: theme.opacity.disabled },
 	icon: {
@@ -98,6 +101,8 @@ const styles = StyleSheet.create((theme) => ({
 		alignItems: "center",
 		justifyContent: "center",
 		borderRadius: theme.radius.control,
+		borderWidth: 1,
+		borderColor: theme.colors.interactiveBorder,
 		backgroundColor: theme.colors.surface3,
 	},
 	selectedIcon: { backgroundColor: theme.colors.surface1 },
