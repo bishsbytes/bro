@@ -59,9 +59,8 @@ const styles = StyleSheet.create((theme) => ({
 		height: theme.control.minHitArea,
 		alignItems: "center",
 		justifyContent: "center",
-		borderWidth: 1,
-		borderColor: theme.colors.hairline,
-		borderRadius: theme.radius.control,
+		borderWidth: 0,
+		borderRadius: theme.control.minHitArea / 2,
 		backgroundColor: theme.colors.surface2,
 	},
 }));

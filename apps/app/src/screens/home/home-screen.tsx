@@ -1019,27 +1019,31 @@ export function HomeScreen({
 													selected,
 													disabled: reviewingTags,
 												}}
-												style={[
-													styles.tagButton,
-													selected && styles.choiceSelected,
-												]}
+												style={styles.tagButton}
 												disabled={reviewingTags}
 												onPress={() => void toggleTag(tag.slug)}
 											>
-												<AppText
-													variant="caption"
-													color="muted"
-													style={[selected && styles.choiceSelectedText]}
+												<View
+													style={[
+														styles.tagSurface,
+														selected && styles.choiceSelected,
+													]}
 												>
-													{tag.label}
-												</AppText>
-												{selected ? (
-													<Icon
-														name="check"
-														size={16}
-														color={theme.colors.brand}
-													/>
-												) : null}
+													<AppText
+														variant="caption"
+														color="muted"
+														style={[selected && styles.choiceSelectedText]}
+													>
+														{tag.label}
+													</AppText>
+													{selected ? (
+														<Icon
+															name="check"
+															size={16}
+															color={theme.colors.brand}
+														/>
+													) : null}
+												</View>
 											</TouchableOpacity>
 										);
 									})}
@@ -1360,7 +1364,7 @@ const styles = StyleSheet.create((theme) => ({
 		marginBottom: theme.spacing.sm,
 	},
 	choiceSelected: {
-		borderColor: theme.colors.brand,
+		borderColor: "transparent",
 		backgroundColor: theme.colors.selected,
 	},
 	choiceSelectedText: { color: theme.colors.onSelected },
@@ -1377,13 +1381,18 @@ const styles = StyleSheet.create((theme) => ({
 	tagRow: { flexDirection: "row", flexWrap: "wrap", gap: theme.spacing.sm },
 	tagButton: {
 		minHeight: theme.control.minHitArea,
+		minWidth: theme.control.minHitArea,
+		justifyContent: "center",
+	},
+	tagSurface: {
+		minHeight: theme.control.factorChipVisualHeight,
 		flexDirection: "row",
 		alignItems: "center",
 		gap: theme.spacing.sm,
 		borderWidth: 1,
-		borderColor: theme.colors.hairline,
-		borderRadius: theme.radius.pill,
-		backgroundColor: theme.colors.surface,
+		borderColor: theme.colors.hairlineSoft,
+		borderRadius: theme.radius.control,
+		backgroundColor: "transparent",
 		paddingVertical: theme.spacing.sm,
 		paddingHorizontal: theme.spacing.md,
 	},

@@ -113,7 +113,8 @@ describe("TabLayout", () => {
 		expect(insightsSurface).toMatchObject({
 			width: 48,
 			height: 48,
-			borderRadius: 12,
+			borderRadius: 24,
+			borderWidth: 0,
 			backgroundColor: themeModule.lightTheme.colors.surface2,
 		});
 		expect(
@@ -158,7 +159,8 @@ describe("TabLayout", () => {
 		).toMatchObject({
 			width: 48,
 			height: 48,
-			borderRadius: 12,
+			borderRadius: 24,
+			borderWidth: 0,
 			backgroundColor: themeModule.lightTheme.colors.surface2,
 		});
 	});

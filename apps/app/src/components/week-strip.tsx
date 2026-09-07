@@ -255,54 +255,62 @@ export function WeekStrip({
 								style={[
 									styles.day,
 									pageWidth < 384 && styles.compactDay,
-									localDay === todayLocalDay && styles.today,
-									selected && styles.selectedDay,
 									future && styles.futureDay,
 								]}
 							>
-								<AppText
-									variant="micro"
-									color="subtle"
-									style={[styles.weekday, selected && styles.selectedText]}
+								<View
+									style={[
+										styles.daySurface,
+										localDay === todayLocalDay && styles.today,
+										selected && styles.selectedDay,
+									]}
 								>
-									{presentation?.weekday ?? weekdayLabel(localDay)}
-								</AppText>
-								<AppText
-									variant="monoInline"
-									color={
-										localDay === todayLocalDay || selected ? "brand" : "subtle"
-									}
-									style={[styles.dayNumber, selected && styles.selectedText]}
-								>
-									{presentation?.number ?? dayNumber(localDay)}
-								</AppText>
-								<View style={styles.indicators}>
-									{indicator.hasCheckIn ? (
-										<View
-											testID={`week-strip-check-in-${localDay}`}
-											style={[
-												styles.indicator,
-												{
-													backgroundColor: selected
-														? theme.colors.onBrand
-														: theme.colors.brand,
-												},
-											]}
-										/>
-									) : null}
-									{indicator.habitsCompleted > 0 ? (
-										<View
-											testID={`week-strip-adherence-${localDay}`}
-											style={[
-												styles.indicator,
-												{
-													backgroundColor: selected
-														? theme.colors.onBrand
-														: theme.colors.brand,
-												},
-											]}
-										/>
-									) : null}
+									<AppText
+										variant="micro"
+										color="subtle"
+										style={[styles.weekday, selected && styles.selectedText]}
+									>
+										{presentation?.weekday ?? weekdayLabel(localDay)}
+									</AppText>
+									<AppText
+										variant="monoInline"
+										color={
+											localDay === todayLocalDay || selected
+												? "brand"
+												: "subtle"
+										}
+										style={[styles.dayNumber, selected && styles.selectedText]}
+									>
+										{presentation?.number ?? dayNumber(localDay)}
+									</AppText>
+									<View style={styles.indicators}>
+										{indicator.hasCheckIn ? (
+											<View
+												testID={`week-strip-check-in-${localDay}`}
+												style={[
+													styles.indicator,
+													{
+														backgroundColor: selected
+															? theme.colors.onBrand
+															: theme.colors.brand,
+													},
+												]}
+											/>
+										) : null}
+										{indicator.habitsCompleted > 0 ? (
+											<View
+												testID={`week-strip-adherence-${localDay}`}
+												style={[
+													styles.indicator,
+													{
+														backgroundColor: selected
+															? theme.colors.onBrand
+															: theme.colors.brand,
+													},
+												]}
+											/>
+										) : null}
+									</View>
 								</View>
 							</Pressable>
 						);
@@ -327,10 +335,14 @@ const styles = StyleSheet.create((theme) => ({
 	},
 	day: {
 		flex: 1,
-		backgroundColor: theme.colors.surface,
-		borderWidth: 2,
-		borderColor: theme.colors.background,
 		minHeight: 64,
+		padding: 2,
+	},
+	daySurface: {
+		flex: 1,
+		backgroundColor: theme.colors.surface,
+		borderWidth: 1,
+		borderColor: theme.colors.hairline,
 		alignItems: "center",
 		justifyContent: "center",
 		gap: 2,
@@ -343,10 +355,12 @@ const styles = StyleSheet.create((theme) => ({
 		marginBottom: theme.spacing.xs,
 	},
 	today: {
-		borderWidth: 1,
 		borderColor: theme.colors.hairlineStrong,
 	},
-	selectedDay: { backgroundColor: theme.colors.brand },
+	selectedDay: {
+		backgroundColor: theme.colors.brand,
+		borderColor: theme.colors.brand,
+	},
 	selectedText: { color: theme.colors.onBrand },
 	futureDay: { opacity: theme.opacity.disabled },
 	weekday: { fontWeight: "500" },

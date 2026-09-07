@@ -276,6 +276,7 @@ const shared = {
 	control: {
 		buttonMinHeight: 52,
 		minHitArea: 48,
+		factorChipVisualHeight: 40,
 		scoreMinHeight: 56,
 		noteMinHeight: 112,
 		avatarSize: 48,
@@ -393,6 +394,7 @@ export function createTheme(
 
 	const colors = {
 		...palette,
+		hairlineSoft: `${palette.hairline}80`,
 		mindTint: `${palette.mind}38`,
 		bodyTint: `${palette.body}38`,
 		sleepTint: `${palette.sleep}38`,
