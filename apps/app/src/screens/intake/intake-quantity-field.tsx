@@ -9,6 +9,15 @@ import { ModalSheet, SheetTextInput } from "../../components/modal-sheet";
 import { OptionRow } from "../../components/option-row";
 import { StyleSheet, useUnistyles } from "../../theme/unistyles";
 
+/** One choice in the amount control: a portion, or the basis unit itself. */
+export type IntakeQuantityOption = {
+	id: string;
+	label: string;
+	accessibilityLabel?: string;
+	selected: boolean;
+	onSelect: () => void;
+};
+
 export function IntakeQuantityField({
 	label,
 	value,
@@ -28,15 +37,9 @@ export function IntakeQuantityField({
 	unitInput?: {
 		value: string;
 		onChange: (value: string) => void;
-		suggestions: string[];
+		suggestions: readonly string[];
 	};
-	options?: {
-		id: string;
-		label: string;
-		accessibilityLabel?: string;
-		selected: boolean;
-		onSelect: () => void;
-	}[];
+	options?: readonly IntakeQuantityOption[];
 }) {
 	const { t } = useTranslation("intake");
 	const { theme } = useUnistyles();

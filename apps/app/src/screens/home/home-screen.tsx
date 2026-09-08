@@ -1,39 +1,21 @@
-import type { DayNote } from "@bro/database-app";
 import { localDayOf, shiftLocalDay, type WeekStartDay } from "@bro/domain";
-import {
-	CHECK_IN_SLOTS,
-	type CheckInSlot,
-	suggestedCheckInSlot,
-	type TagCategory,
-} from "@bro/domain/metric-registry";
-import { formatLocalDayLabel, isWheelReviewDue } from "@bro/logic";
+import type { CheckInSlot } from "@bro/domain/metric-registry";
+import { isWheelReviewDue } from "@bro/logic";
 import { type Href, router, useFocusEffect, useScrollToTop } from "expo-router";
-import type { TFunction } from "i18next";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
-import { TouchableOpacity, View } from "react-native";
-import {
-	checkInScoreSummary,
-	checkInSourceStamp,
-	metricLabel,
-} from "../../check-in/check-in-presentation";
+import { View } from "react-native";
 import {
 	type CheckInStore,
 	createCheckInStore,
 	type TodayCheckIn,
 } from "../../check-in/check-in-store";
-import { TAG_CATEGORY_KEYS } from "../../check-in/tag-categories";
 import { AppText } from "../../components/app-text";
 import { Button } from "../../components/button";
 import { Card } from "../../components/card";
 import { DayPager } from "../../components/day-pager";
-import { EmptyState } from "../../components/empty-state";
-import { Icon } from "../../components/icon";
-import { LoadingIndicator } from "../../components/loading-indicator";
 import { useSetLogDate } from "../../components/log-date-context";
-import { NoteRow } from "../../components/note-row";
 import { LoadingScreen, Screen } from "../../components/screen";
-import { SectionHeader } from "../../components/section-header";
 import { useSetTodayHeaderVisibleMonthDay } from "../../components/today-header-month-context";
 import {
 	WeekStrip,
@@ -48,7 +30,6 @@ import {
 import {
 	createHistoryStore,
 	type HistoryDay,
-	type HistoryMeasurementChange,
 	type HistoryStore,
 } from "../../history/history-store";
 import { toMessage } from "../../lib/errors";
@@ -57,11 +38,16 @@ import {
 	type ReviewResult,
 	type ReviewStore,
 } from "../../review/review-store";
-import { StyleSheet, useUnistyles } from "../../theme/unistyles";
+import { StyleSheet } from "../../theme/unistyles";
 import {
 	createUnitSettingsStore,
 	type UnitSettingsStore,
 } from "../../units/unit-settings-store";
+import { CheckInSittingsSection } from "./check-in-sittings-section";
+import { FactorsSection } from "./factors-section";
+import { JournalNotesSection } from "./journal-notes-section";
+import { PastDaySection } from "./past-day-section";
+import { TodayRoutinesSection } from "./today-routines-section";
 
 type HomeScreenProps = {
 	store?: Pick<
@@ -92,40 +78,6 @@ function localDaysBetween(fromLocalDay: string, throughLocalDay: string) {
 	return days;
 }
 
-function measurementChangeDetailLabel(
-	t: TFunction<"home">,
-	change: HistoryMeasurementChange,
-): string {
-	if (change.direction === "unchanged") {
-		return t("measurements.unchanged");
-	}
-	return change.direction === "increase"
-		? t("measurements.higher", { delta: change.formattedDelta })
-		: t("measurements.lower", { delta: change.formattedDelta });
-}
-
-function habitStatus(
-	t: TFunction<"home">,
-	item: TodayHabitsSnapshot["habits"][number],
-): string {
-	return item.completed ? t("habits.doneToday") : t("habits.stillToDo");
-}
-
-type PastDaySectionProps = {
-	localDay: string;
-	todayLocalDay: string;
-	day: HistoryDay | null;
-	habits: TodayHabitsSnapshot | null;
-	loading: boolean;
-	error: string | null;
-	routineError: string | null;
-	routineBusy: string | null;
-	onToggleHabit: (habitId: string) => void;
-	onEdit: () => void;
-	onAddNote: () => void;
-	onOpenNotes: () => void;
-};
-
 type PastDaySnapshot = {
 	day: HistoryDay | null;
 	habits: TodayHabitsSnapshot | null;
@@ -141,208 +93,6 @@ type PastDaySnapshot = {
  */
 const PAST_DAY_CACHE_LIMIT = 7;
 
-function JournalNotesSection({
-	notes,
-	todayLocalDay,
-	onAddNote,
-	onOpenNotes,
-}: {
-	notes: readonly DayNote[];
-	todayLocalDay: string;
-	onAddNote: () => void;
-	onOpenNotes: () => void;
-}) {
-	const { t } = useTranslation("notes");
-
-	return (
-		<View style={styles.section}>
-			<SectionHeader
-				title={t("journal.title")}
-				action={
-					<TouchableOpacity
-						accessibilityRole="button"
-						style={styles.notesAction}
-						onPress={onOpenNotes}
-					>
-						<AppText variant="label" color="brand">
-							{t("actions.viewAll")}
-						</AppText>
-					</TouchableOpacity>
-				}
-			/>
-			{notes.length === 0 ? (
-				<EmptyState
-					title={t("journal.emptyTitle")}
-					body={t("journal.emptyBody")}
-					actionLabel={t("actions.add")}
-					onAction={onAddNote}
-				/>
-			) : null}
-			{notes.length > 0 ? (
-				<View>
-					{notes.map((note, index) => {
-						const dayLabel = formatLocalDayLabel(note.localDay, todayLocalDay);
-						return (
-							<NoteRow
-								key={note.id}
-								accessibilityLabel={t("actions.openA11y", {
-									day: dayLabel,
-									position: index + 1,
-									count: notes.length,
-								})}
-								markdown={note.body}
-								createdAt={note.createdAt}
-								updatedAt={note.updatedAt}
-								first={index === 0}
-								onPress={() => router.push(`/notes/${note.id}` as Href)}
-							/>
-						);
-					})}
-				</View>
-			) : null}
-		</View>
-	);
-}
-
-function PastDaySection({
-	localDay,
-	todayLocalDay,
-	day,
-	habits,
-	loading,
-	error,
-	routineError,
-	routineBusy,
-	onToggleHabit,
-	onEdit,
-	onAddNote,
-	onOpenNotes,
-}: PastDaySectionProps) {
-	const { t } = useTranslation(["home", "checkIn"]);
-
-	return (
-		<>
-			<AppText variant="section" style={styles.pageTitle}>
-				{formatLocalDayLabel(localDay, todayLocalDay)}
-			</AppText>
-			{loading ? <LoadingIndicator size="large" /> : null}
-			{error ? <AppText color="danger">{error}</AppText> : null}
-			{day ? (
-				<>
-					<View style={styles.section}>
-						<SectionHeader title={t("checkIns.title")} />
-						{day.checkIns.length === 0 ? (
-							<Card>
-								<AppText color="muted">{t("checkIns.none")}</AppText>
-							</Card>
-						) : (
-							day.checkIns.map((checkIn) => (
-								<Card key={checkIn.id} style={styles.savedSitting}>
-									<AppText variant="eyebrow" color="muted">
-										{t(`checkIn:slots.${checkIn.slot}.name`)}
-									</AppText>
-									<AppText variant="label">
-										{checkInScoreSummary(checkIn)}
-									</AppText>
-									<AppText variant="caption" color="subtle">
-										{checkInSourceStamp(checkIn)}
-									</AppText>
-								</Card>
-							))
-						)}
-					</View>
-					{day.tags.length > 0 ? (
-						<View style={styles.section}>
-							<SectionHeader title={t("tags.title")} />
-							<Card>
-								<AppText color="muted">
-									{day.tags
-										.map((tag) => metricLabel(tag.metricSlug))
-										.join(", ")}
-								</AppText>
-							</Card>
-						</View>
-					) : null}
-					{day.measurements.length > 0 ? (
-						<View style={styles.section}>
-							<SectionHeader title={t("measurements.title")} />
-							{day.measurements.map((measurement) => (
-								<Card
-									key={measurement.id}
-									style={styles.measurementSummaryCard}
-								>
-									<View style={styles.measurementSummaryHeader}>
-										<AppText
-											variant="caption"
-											color="muted"
-											style={styles.measurementSummaryLabel}
-										>
-											{measurement.label}
-										</AppText>
-									</View>
-									<AppText variant="monoList">
-										{measurement.formattedValue}
-									</AppText>
-									{measurement.changeFromPreviousDay ? (
-										<AppText variant="footnote" color="subtle">
-											{measurementChangeDetailLabel(
-												t,
-												measurement.changeFromPreviousDay,
-											)}
-										</AppText>
-									) : null}
-								</Card>
-							))}
-						</View>
-					) : null}
-					<JournalNotesSection
-						notes={day.notes}
-						todayLocalDay={todayLocalDay}
-						onAddNote={onAddNote}
-						onOpenNotes={onOpenNotes}
-					/>
-				</>
-			) : null}
-			{habits && habits.habits.length > 0 ? (
-				<View style={styles.section}>
-					<SectionHeader title={t("habits.title")} />
-					{habits.habits.map((item) => (
-						<Card key={item.habit.id} style={styles.habitCard}>
-							<View style={styles.routineCopy}>
-								<AppText variant="monoList">{item.label}</AppText>
-								{item.progressLabel ? (
-									<AppText color="muted">{item.progressLabel}</AppText>
-								) : null}
-								<AppText variant="caption" color="subtle">
-									{item.completed ? t("habits.doneOnDay") : t("habits.notDone")}
-								</AppText>
-							</View>
-							{item.habit.kind === "manual" ? (
-								<Button
-									label={
-										item.completed ? t("habits.undo") : t("habits.markDone")
-									}
-									variant={item.completed ? "text" : "secondary"}
-									loading={routineBusy === item.habit.id}
-									onPress={() => onToggleHabit(item.habit.id)}
-								/>
-							) : null}
-						</Card>
-					))}
-				</View>
-			) : null}
-			{routineError ? <AppText color="danger">{routineError}</AppText> : null}
-			{day && habits ? (
-				<Button
-					label={t("pastDay.edit")}
-					variant="secondary"
-					onPress={onEdit}
-				/>
-			) : null}
-		</>
-	);
-}
-
 export function HomeScreen({
 	store,
 	habitsStore,
@@ -352,8 +102,6 @@ export function HomeScreen({
 	now,
 }: HomeScreenProps) {
 	const { t } = useTranslation(["home", "checkIn", "common"]);
-	const { theme } = useUnistyles();
-	const [allFactors, setAllFactors] = useState(false);
 	const clockSource = useRef(now ?? systemNow);
 	clockSource.current = now ?? systemNow;
 	const clock = useCallback(() => clockSource.current(), []);
@@ -826,265 +574,24 @@ export function HomeScreen({
 	if (!weekStart) {
 		return <LoadingScreen variant="tab" />;
 	}
-	const groupedTags = Object.entries(TAG_CATEGORY_KEYS).map(
-		([category, key]) => ({
-			category: category as TagCategory,
-			label: t(`checkIn:${key}` as const),
-			tags: today.availableTags.filter((tag) => tag.category === category),
-		}),
-	);
-	const primaryFactorGroups: readonly TagCategory[] = [
-		"body",
-		"lifestyle",
-		"mind",
-	];
-	const hasMoreFactors = groupedTags.some((group) =>
-		group.tags.some(
-			(tag, index) =>
-				!selectedTags.includes(tag.slug) &&
-				(index >= 3 || !primaryFactorGroups.includes(group.category)),
-		),
-	);
 	const checkInsSection = (
-		<View style={styles.section}>
-			<SectionHeader title={t("checkIn:sittings.title")} />
-
-			{/* One invitation leads; the other sitting stays compact. Saved cards
-			    show the actual answers, missing dimensions and event metadata. */}
-			<View style={styles.sittings}>
-				{CHECK_IN_SLOTS.map((slot) => {
-					const sitting = today.sittings[slot];
-					const name = t(`checkIn:slots.${slot}.name`);
-					const summary = sitting ? checkInScoreSummary(sitting) : null;
-					const featured = !sitting && slot === suggestedCheckInSlot(clock());
-					const missing = sitting
-						? today.availableOptionalScores[slot]
-								.filter(
-									(metric) =>
-										!sitting.optionalScores.some(
-											(score) => score.metricSlug === metric.slug,
-										),
-								)
-								.map((metric) => metric.label)
-						: [];
-					return (
-						<TouchableOpacity
-							key={slot}
-							style={styles.sittingCardWrapper}
-							accessibilityRole="button"
-							accessibilityLabel={
-								summary
-									? t("checkIn:sittings.editA11y", { sitting: name, summary })
-									: t("checkIn:sittings.startA11y", { sitting: name })
-							}
-							accessibilityHint={
-								sitting
-									? [
-											checkInSourceStamp(sitting),
-											missing.length > 0
-												? t("checkIn:sittings.partial", {
-														labels: missing.join(", "),
-													})
-												: t("checkIn:sittings.complete"),
-										].join(". ")
-									: undefined
-							}
-							onPress={() => openSitting(slot)}
-						>
-							<Card
-								style={[
-									styles.sittingCard,
-									featured && styles.featuredSitting,
-									!featured && !sitting && styles.compactSitting,
-								]}
-							>
-								<View style={styles.sittingCopy}>
-									<View style={styles.sittingHeading}>
-										<AppText
-											variant="eyebrow"
-											color={featured ? "onBrand" : "muted"}
-											style={styles.sittingName}
-										>
-											{name}
-										</AppText>
-										{sitting ? (
-											<AppText variant="footnote" color="muted">
-												{t(
-													missing.length > 0
-														? "checkIn:sittings.partialStatus"
-														: "checkIn:sittings.complete",
-												)}
-											</AppText>
-										) : null}
-									</View>
-									<AppText
-										variant={featured ? "title" : "body"}
-										color={featured ? "onBrand" : "default"}
-									>
-										{summary ?? t(`checkIn:slots.${slot}.tagline`)}
-									</AppText>
-									{featured ? (
-										<>
-											<AppText variant="caption" color="onBrand">
-												{t("checkIn:sittings.dimensions", {
-													labels: [
-														t("checkIn:steps.moodLabel"),
-														...today.availableOptionalScores[slot].map(
-															(metric) => metric.label,
-														),
-													].join(", "),
-												})}
-											</AppText>
-											<View style={styles.sittingAction}>
-												<AppText variant="label" color="brand">
-													{t("checkIn:sittings.start")}
-												</AppText>
-												<Icon
-													name="chevron-right"
-													size={20}
-													color={theme.colors.brand}
-												/>
-											</View>
-										</>
-									) : null}
-									{missing.length > 0 ? (
-										<AppText variant="caption" color="muted">
-											{t("checkIn:sittings.partial", {
-												labels: missing.join(", "),
-											})}
-										</AppText>
-									) : null}
-									{sitting ? (
-										<AppText variant="footnote" color="muted">
-											{checkInSourceStamp(sitting)}
-										</AppText>
-									) : null}
-								</View>
-								{!featured ? (
-									<Icon
-										name="chevron-right"
-										size={20}
-										color={theme.colors.ink2}
-									/>
-								) : null}
-							</Card>
-						</TouchableOpacity>
-					);
-				})}
-			</View>
-			{error ? <AppText color="danger">{error}</AppText> : null}
-		</View>
+		<CheckInSittingsSection
+			today={today}
+			now={clock()}
+			error={error}
+			onOpenSitting={openSitting}
+		/>
 	);
 
-	const tagsSection =
-		today.availableTags.length > 0 ? (
-			<View style={styles.section}>
-				<View style={styles.factorHeading}>
-					<SectionHeader title={t("tags.title")} />
-					<AppText variant="caption" color="muted">
-						{t("tags.hint")}
-					</AppText>
-				</View>
-				{groupedTags.map(({ category, label, tags }) =>
-					tags.length > 0 &&
-					(allFactors ||
-						primaryFactorGroups.includes(category) ||
-						tags.some((tag) => selectedTags.includes(tag.slug))) ? (
-						<View key={category} style={styles.tagGroup}>
-							<AppText
-								variant="caption"
-								color="subtle"
-								style={styles.categoryLabel}
-							>
-								{label}
-							</AppText>
-							<View style={styles.tagRow}>
-								{tags
-									.filter(
-										(tag, index) =>
-											allFactors ||
-											(index < 3 && primaryFactorGroups.includes(category)) ||
-											selectedTags.includes(tag.slug),
-									)
-									.map((tag) => {
-										const selected = selectedTags.includes(tag.slug);
-										return (
-											<TouchableOpacity
-												key={tag.slug}
-												accessibilityRole="button"
-												accessibilityLabel={tag.label}
-												aria-pressed={selected}
-												aria-disabled={reviewingTags}
-												accessibilityState={{
-													selected,
-													disabled: reviewingTags,
-												}}
-												style={styles.tagButton}
-												disabled={reviewingTags}
-												onPress={() => void toggleTag(tag.slug)}
-											>
-												<View
-													style={[
-														styles.tagSurface,
-														selected && styles.choiceSelected,
-													]}
-												>
-													<AppText
-														variant="caption"
-														color="muted"
-														style={[selected && styles.choiceSelectedText]}
-													>
-														{tag.label}
-													</AppText>
-													{selected ? (
-														<Icon
-															name="check"
-															size={16}
-															color={theme.colors.brand}
-														/>
-													) : null}
-												</View>
-											</TouchableOpacity>
-										);
-									})}
-							</View>
-						</View>
-					) : null,
-				)}
-				{hasMoreFactors ? (
-					<TouchableOpacity
-						accessibilityRole="button"
-						accessibilityLabel={t(allFactors ? "tags.fewer" : "tags.more")}
-						accessibilityState={{ expanded: allFactors }}
-						aria-expanded={allFactors}
-						style={styles.moreFactors}
-						onPress={() => setAllFactors(!allFactors)}
-					>
-						<AppText variant="label" color="brand">
-							{t(allFactors ? "tags.fewer" : "tags.more")}
-						</AppText>
-						<Icon
-							name={allFactors ? "chevron-down" : "chevron-right"}
-							size={16}
-							color={theme.colors.brand}
-						/>
-					</TouchableOpacity>
-				) : null}
-				{allFactors || !hasMoreFactors ? (
-					<>
-						<AppText variant="caption" color="muted">
-							{t("tags.reviewHint")}
-						</AppText>
-						<Button
-							label={t("tags.confirm")}
-							loading={reviewingTags}
-							variant="text"
-							onPress={() => void confirmTags()}
-						/>
-					</>
-				) : null}
-			</View>
-		) : null;
+	const factorsSection = (
+		<FactorsSection
+			availableTags={today.availableTags}
+			selectedTags={selectedTags}
+			reviewing={reviewingTags}
+			onToggleTag={(slug) => void toggleTag(slug)}
+			onConfirm={() => void confirmTags()}
+		/>
+	);
 
 	const journalNotesSection = (
 		<JournalNotesSection
@@ -1132,113 +639,19 @@ export function HomeScreen({
 				) : (
 					<>
 						{checkInsSection}
-						{tagsSection}
+						{factorsSection}
 						{journalNotesSection}
-						{finishedChallenge ? (
-							<Card style={styles.routineCard}>
-								<AppText variant="section">
-									{t("challenges.completeTitle")}
-								</AppText>
-								<AppText color="muted">
-									{t("challenges.completeBody", { name: finishedChallenge })}
-								</AppText>
-								<Button
-									label={t("challenges.dismiss")}
-									variant="text"
-									onPress={() => setFinishedChallenge(null)}
-								/>
-							</Card>
-						) : null}
-						{habitsToday &&
-						habitsToday.habits.length === 0 &&
-						habitsToday.challenges.length === 0 &&
-						!habitsToday.hasHabits ? (
-							<Card style={styles.routineCard}>
-								<AppText variant="section">{t("habits.emptyTitle")}</AppText>
-								<AppText color="muted">{t("habits.emptyBody")}</AppText>
-								<Button
-									label={t("habits.choose")}
-									variant="secondary"
-									onPress={() => router.push("/habits")}
-								/>
-							</Card>
-						) : null}
-						{habitsToday && habitsToday.habits.length > 0 ? (
-							<View style={styles.section}>
-								<SectionHeader
-									title={t("habits.title")}
-									action={
-										<TouchableOpacity onPress={() => router.push("/habits")}>
-											<AppText variant="label" color="brand">
-												{t("habits.manage")}
-											</AppText>
-										</TouchableOpacity>
-									}
-								/>
-								{habitsToday.habits.map((item) => (
-									<Card key={item.habit.id} style={styles.habitCard}>
-										<View style={styles.routineCopy}>
-											<AppText variant="monoList">{item.label}</AppText>
-											{item.progressLabel ? (
-												<AppText color="muted">{item.progressLabel}</AppText>
-											) : null}
-											<AppText variant="caption" color="subtle">
-												{habitStatus(t, item)}
-											</AppText>
-										</View>
-										{item.habit.kind === "manual" ? (
-											<Button
-												label={
-													item.completed
-														? t("habits.undo")
-														: t("habits.markDone")
-												}
-												variant={item.completed ? "text" : "secondary"}
-												loading={routineBusy === item.habit.id}
-												onPress={() => void toggleHabit(item.habit.id)}
-											/>
-										) : null}
-									</Card>
-								))}
-							</View>
-						) : null}
-						{habitsToday && habitsToday.challenges.length > 0 ? (
-							<View style={styles.section}>
-								<SectionHeader title={t("challenges.title")} />
-								{habitsToday.challenges.map((challenge) => (
-									<Card key={challenge.enrolmentId} style={styles.routineCard}>
-										<AppText variant="caption" color="brand">
-											{t("challenges.dayOf", {
-												day: challenge.dayIndex,
-												total: challenge.durationDays,
-											})}
-										</AppText>
-										<AppText variant="section">{challenge.dayTitle}</AppText>
-										<AppText color="muted">{challenge.action}</AppText>
-										<Button
-											label={t("challenges.markStepDone")}
-											loading={routineBusy === challenge.enrolmentId}
-											onPress={() =>
-												void completeChallenge(
-													challenge.enrolmentId,
-													challenge.dayIndex,
-												)
-											}
-										/>
-										<Button
-											label={t("challenges.view")}
-											variant="text"
-											onPress={() =>
-												router.push(`/challenges/${challenge.enrolmentId}`)
-											}
-										/>
-									</Card>
-								))}
-							</View>
-						) : null}
-						{routineError ? (
-							<AppText color="danger">{routineError}</AppText>
-						) : null}
+						<TodayRoutinesSection
+							habits={habitsToday}
+							busyId={routineBusy}
+							error={routineError}
+							finishedChallenge={finishedChallenge}
+							onDismissFinished={() => setFinishedChallenge(null)}
+							onToggleHabit={(habitId) => void toggleHabit(habitId)}
+							onCompleteChallengeDay={(enrolmentId, dayIndex) =>
+								void completeChallenge(enrolmentId, dayIndex)
+							}
+						/>
 						{latestWheel !== undefined &&
 						isWheelReviewDue(
 							latestWheel?.assessment.completedAt ?? null,
@@ -1291,110 +704,6 @@ export function HomeScreen({
 const styles = StyleSheet.create((theme) => ({
 	home: { flex: 1 },
 	content: { paddingBottom: theme.control.fabClearance },
-	pageTitle: { marginBottom: theme.spacing.lg },
-	loading: {
-		gap: theme.spacing.md,
-	},
+	loading: { gap: theme.spacing.md },
 	stockCard: { gap: theme.spacing.sm, marginBottom: theme.spacing.xl },
-	routineCard: { gap: theme.spacing.sm, marginBottom: theme.spacing.xl },
-	section: { marginBottom: theme.spacing.xl, gap: theme.spacing.md },
-	notesAction: {
-		minHeight: theme.control.buttonMinHeight,
-		justifyContent: "center",
-	},
-	measurementSummaryCard: { gap: theme.spacing.xs },
-	measurementSummaryHeader: {
-		width: "100%",
-		flexDirection: "row",
-		alignItems: "center",
-		justifyContent: "space-between",
-		gap: theme.spacing.sm,
-	},
-	measurementSummaryLabel: { flex: 1 },
-	measurementDeltaBadge: {
-		paddingVertical: theme.spacing.xs,
-		paddingHorizontal: theme.spacing.sm,
-		borderRadius: theme.radius.xs,
-		backgroundColor: theme.colors.surface1,
-	},
-	measurementDeltaText: { color: theme.colors.ink },
-	habitCard: {
-		flexDirection: "row",
-		alignItems: "center",
-		gap: theme.spacing.md,
-	},
-	routineCopy: { flex: 1, gap: theme.spacing.xs },
-	entryCard: {
-		flexDirection: "row",
-		justifyContent: "space-between",
-		alignItems: "center",
-	},
-	/** Sittings stack and grow with their summaries and any unanswered dimensions. */
-	sittings: { gap: theme.spacing.sm },
-	sittingCardWrapper: { flexShrink: 0 },
-	sittingCard: {
-		flexDirection: "row",
-		alignItems: "center",
-		gap: theme.spacing.md,
-	},
-	compactSitting: { borderRadius: theme.radius.control },
-	sittingCopy: { flex: 1, gap: theme.spacing.sm },
-	savedSitting: { gap: theme.spacing.sm },
-	sittingName: { flex: 1 },
-	sittingAction: {
-		alignSelf: "flex-start",
-		flexDirection: "row",
-		alignItems: "center",
-		gap: theme.spacing.xl,
-		minHeight: theme.control.minHitArea,
-		paddingHorizontal: theme.spacing.lg,
-		marginTop: theme.spacing.xs,
-		borderRadius: theme.radius.pill,
-		backgroundColor: theme.colors.surface,
-	},
-	featuredSitting: { backgroundColor: theme.colors.brand },
-	sittingHeading: {
-		flexDirection: "row",
-		alignItems: "center",
-		gap: theme.spacing.sm,
-	},
-	sittingStatus: { marginTop: theme.spacing.sm },
-	prompt: {
-		fontWeight: "600",
-		marginBottom: theme.spacing.sm,
-	},
-	choiceSelected: {
-		borderColor: "transparent",
-		backgroundColor: theme.colors.selected,
-	},
-	choiceSelectedText: { color: theme.colors.onSelected },
-	factorHeading: { gap: theme.spacing.xs },
-	moreFactors: {
-		flexDirection: "row",
-		alignItems: "center",
-		alignSelf: "flex-start",
-		gap: theme.spacing.xs,
-		minHeight: theme.control.minHitArea,
-	},
-	tagGroup: { gap: theme.spacing.xs },
-	categoryLabel: {},
-	tagRow: { flexDirection: "row", flexWrap: "wrap", gap: theme.spacing.sm },
-	tagButton: {
-		minHeight: theme.control.minHitArea,
-		minWidth: theme.control.minHitArea,
-		justifyContent: "center",
-	},
-	tagSurface: {
-		minHeight: theme.control.factorChipVisualHeight,
-		flexDirection: "row",
-		alignItems: "center",
-		gap: theme.spacing.sm,
-		borderWidth: 1,
-		borderColor: theme.colors.hairlineSoft,
-		borderRadius: theme.radius.control,
-		backgroundColor: "transparent",
-		paddingVertical: theme.spacing.sm,
-		paddingHorizontal: theme.spacing.md,
-	},
-	hint: { marginTop: theme.spacing.sm },
 }));

@@ -28,15 +28,15 @@ Paths below are relative to `apps/app/src`.
 | C06 Button | `components/button.tsx` |
 | C07 IconButton | `components/header-icon-button.tsx` and existing named row actions |
 | C08 SelectableRow | `components/score-row.tsx`; five equally sized options, borderless on `surface2` |
-| C09 FactorChip | `screens/home/home-screen.tsx` |
+| C09 FactorChip | `components/factor-chip.tsx` |
 | C10 SegmentedControl | `components/segmented-control.tsx`; existing Intake filters and quantity choices |
 | C11 FormField | `components/form-field.tsx`, date/time and markdown fields |
 | C12 QuantityField | `components/measurement-field.tsx`, `screens/intake/intake-quantity-field.tsx` |
 | C13 DetailRow | `components/list-row.tsx`, `screens/intake/intake-rows.tsx` |
 | C14 FeedbackBanner | `components/log-confirmation-toast.tsx` and inline errors |
-| C15 CheckInCard | Journal sitting cards in `screens/home/home-screen.tsx` |
+| C15 CheckInCard | `components/check-in-card.tsx`; Journal sittings compose it |
 | C16 CheckInStepper | `screens/check-in/check-in-screen.tsx`; device-local drafts are separate from observations |
-| C17 IntakeRow | `screens/intake/intake-rows.tsx`, recent rows in `intake-log-screen.tsx` |
+| C17 IntakeRow | `screens/intake/intake-rows.tsx`, `screens/intake/recent-intake-row.tsx` |
 | C18 SourceStamp | Body reading metadata and exact history rows; Intake entry details |
 | C19 MeasurementCard | `screens/body/body-baseline-gauge.tsx` and Body overview/detail cards |
 | C20 RecentRange | `components/baseline-gauge.tsx`; existing middle-half calculation retained |
@@ -44,7 +44,7 @@ Paths below are relative to `apps/app/src`.
 | C22 LifeWheel | `components/wheel-chart.tsx`; actual snapshot order/labels, current solid and previous dashed |
 | C23 LifeAreaRow | Wheel's named-value alternative and `screens/review/review-result-screen.tsx` |
 | C24 HeadingCard | Existing Body, Life and review Heading cards |
-| C25 PracticeRow | Existing habit rows and `screens/habits/` |
+| C25 PracticeRow | `components/practice-row.tsx`, `screens/habits/` |
 | C26 ReadingsList | Body history and TrendChart's text alternative |
 | C27 ManagementRow | Existing Body management and `screens/life/life-areas-screen.tsx` |
 | C28 ActionSheet | `components/modal-sheet.tsx`, quick log and existing option sheets |
@@ -72,6 +72,15 @@ Intake places the day switcher at the top, with no week strip. The “Add to you
 Body uses the shared `FormSheet`, `EventWhenFields`, `MeasurementField`, `SourceStamp`, `SegmentedControl` and `ListRow`. The overview leads with an available reading, complete units and source; the overview previews the last seven days, and measurement details offer Week / Month / Year windows and a pinned Add reading action. Compact history rows open manual records for editing and imported records for source details; imported daily values remain read-only and show their day rather than an invented sensor time. The recent-range explanation retains the middle-half calculation over 180 days and reports the valid reading count. Management switches preserve the existing tracking/import visibility policy and link to the existing unit preferences. Notes, custom metric creation and reordering are not added by this visual pass.
 
 Body uses `ListRow`’s inline layout, compact section headers and `TextAction` for quiet navigation links. The outlined overview card places the reading and source above the chart, with the recent-range legend below. `TrendChartPlot` draws readable axes and actual reading dots, breaks lines at missing days, and gives narrow ranges some headroom. Heading management opens from the compact summary so History stays within reach. The Body Log action sits at the right above the native tabs.
+
+## Screen composition
+
+Journal and the intake log are orchestrators, not layouts. Each holds its state,
+effects and store calls, and composes sections that live beside it:
+`screens/home/` has the sittings, factors, notes, routines and past-day
+sections; `screens/intake/` has the browse surface, the two form sheets and the
+recent row. Shared shapes (C09, C15, C25) are in `components/` so any screen can
+reach them. Keep new screen surfaces this way rather than growing a single file.
 
 ## Token discipline
 
