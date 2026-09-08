@@ -96,7 +96,7 @@ export function ChallengeDetailScreen({
 
 	return (
 		<Screen scroll padded contentContainerStyle={styles.content}>
-			<AppText variant="display">{detail.title}</AppText>
+			<AppText variant="largeTitle">{detail.title}</AppText>
 			<AppText color="muted">
 				{t("detail.progress", {
 					started: detail.startedOn,

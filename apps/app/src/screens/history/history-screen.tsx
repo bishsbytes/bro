@@ -68,7 +68,7 @@ export function HistoryScreen({ store }: HistoryScreenProps) {
 						}
 					>
 						{day.moodValues.length > 0 || day.energyValues.length > 0 ? (
-							<AppText variant="score">
+							<AppText variant="monoList">
 								{t("summary.scores", {
 									mood: day.moodValues.join(", "),
 									energy: day.energyValues.join(", "),

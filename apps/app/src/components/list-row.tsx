@@ -60,7 +60,11 @@ export function ListRow({
 						</AppText>
 					) : null}
 					{detail && layout === "inline" ? (
-						<AppText variant="micro" color="muted" style={styles.inlineDetail}>
+						<AppText
+							variant="footnote"
+							color="muted"
+							style={styles.inlineDetail}
+						>
 							{detail}
 						</AppText>
 					) : null}
@@ -81,12 +85,12 @@ export function ListRow({
 
 const styles = StyleSheet.create((theme) => ({
 	inlineRow: {
-		paddingVertical: 8,
+		paddingVertical: theme.spacing.sm,
 		paddingHorizontal: 0,
-		gap: 8,
+		gap: theme.spacing.sm,
 		backgroundColor: "transparent",
 	},
-	inlineHeading: { gap: 8, flexWrap: "wrap" },
+	inlineHeading: { gap: theme.spacing.sm, flexWrap: "wrap" },
 	inlineTitle: { flex: 1, minWidth: 60 },
 	inlineValue: { textAlign: "left", flex: 1, minWidth: 68, maxWidth: "60%" },
 	inlineDetail: { flexShrink: 1, textAlign: "right", maxWidth: "38%" },

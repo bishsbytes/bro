@@ -51,7 +51,7 @@ export function IntakeRow({
 		<>
 			{thumbnail}
 			{leading ? (
-				<AppText variant="micro" color="subtle" style={styles.leading}>
+				<AppText variant="footnote" color="subtle" style={styles.leading}>
 					{leading}
 				</AppText>
 			) : null}
@@ -121,7 +121,7 @@ export function RowPanel({ children, heading, meta, testID }: RowPanelProps) {
 				<View style={styles.heading}>
 					<AppText variant="label">{heading}</AppText>
 					{meta ? (
-						<AppText variant="micro" color="subtle">
+						<AppText variant="footnote" color="subtle">
 							{meta}
 						</AppText>
 					) : null}

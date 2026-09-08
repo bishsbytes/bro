@@ -83,9 +83,7 @@ const styles = StyleSheet.create((theme) => ({
 		fontSize: theme.typography.body.fontSize,
 		fontFamily: theme.typography.body.fontFamily,
 		color: theme.colors.ink,
-		backgroundColor: theme.isDark
-			? theme.colors.surface2
-			: theme.colors.background,
+		backgroundColor: theme.colors.field,
 	},
 	focused: { borderWidth: 2, borderColor: theme.colors.brand },
 	invalid: { borderColor: theme.colors.alert },

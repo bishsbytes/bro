@@ -45,7 +45,7 @@ export function useWebPickerInputStyle({
 		fontFamily: theme.typography.body.fontFamily,
 		fontVariantNumeric: "tabular-nums",
 		color: theme.colors.ink,
-		backgroundColor: theme.colors.surface,
+		backgroundColor: theme.colors.field,
 		colorScheme: rt.themeName === "dark" ? "dark" : "light",
 		outline: "none",
 	};

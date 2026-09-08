@@ -266,7 +266,7 @@ export function WeekStrip({
 									]}
 								>
 									<AppText
-										variant="micro"
+										variant="footnote"
 										color="subtle"
 										style={[styles.weekday, selected && styles.selectedText]}
 									>

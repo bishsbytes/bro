@@ -1,10 +1,4 @@
-import {
-	ACCENT_OPTIONS,
-	createTheme,
-	darkTheme,
-	lightTheme,
-	stackScreenOptions,
-} from "./theme/unistyles";
+import { darkTheme, lightTheme, stackScreenOptions } from "./theme/unistyles";
 
 function relativeLuminance(hex: string): number {
 	const channels = hex
@@ -65,25 +59,19 @@ describe("design tokens", () => {
 		expect(darkTheme.opacity).toEqual(lightTheme.opacity);
 	});
 
-	it("gives every curated accent a complete light and dark treatment", () => {
-		for (const option of ACCENT_OPTIONS) {
-			const light = createTheme("light", option.hue, option.chroma);
-			const dark = createTheme("dark", option.hue, option.chroma);
-
-			expect(Object.keys(light.colors).sort()).toEqual(
-				Object.keys(lightTheme.colors).sort(),
-			);
-			expect(Object.keys(dark.colors).sort()).toEqual(
-				Object.keys(darkTheme.colors).sort(),
-			);
-			expect(light.colors.brand).not.toBe(dark.colors.brand);
-			expect(light.spacing).toBe(lightTheme.spacing);
-			expect(dark.spacing).toBe(darkTheme.spacing);
+	it("keeps every stacked surface distinct within a theme", () => {
+		// The light appearance once mapped surface1, surface2 and surfaceSunk onto
+		// one hex, so a pressed row, a control fill and the card beneath them all
+		// rendered identically and borderless controls vanished into their card.
+		const roles = ["background", "surface", "surface2", "surfaceSunk"] as const;
+		for (const theme of [lightTheme, darkTheme]) {
+			const values = roles.map((role) => theme.colors[role]);
+			expect(new Set(values).size).toBe(roles.length);
 		}
 	});
 
 	it("uses darker surfaces on the light canvas and lighter surfaces on the dark canvas", () => {
-		for (const surface of ["surface", "surface2"] as const) {
+		for (const surface of ["surface", "surface2", "surfaceSunk"] as const) {
 			expect(relativeLuminance(lightTheme.colors[surface])).toBeLessThan(
 				relativeLuminance(lightTheme.colors.background),
 			);
@@ -93,25 +81,31 @@ describe("design tokens", () => {
 		}
 	});
 
-	it("meets text and control contrast in both schemes and every accent", () => {
-		for (const scheme of ["light", "dark"] as const) {
-			for (const option of ACCENT_OPTIONS) {
-				const theme = createTheme(scheme, option.hue, option.chroma);
-				for (const background of ["canvas", "surface", "surface2"] as const) {
-					expect(
-						contrast(theme.colors.ink, theme.colors[background]),
-					).toBeGreaterThanOrEqual(7);
-					expect(
-						contrast(theme.colors.ink2, theme.colors[background]),
-					).toBeGreaterThanOrEqual(4.5);
-					expect(
-						contrast(theme.colors.interactiveBorder, theme.colors[background]),
-					).toBeGreaterThanOrEqual(3);
-				}
+	it("meets text and control contrast on every resting surface", () => {
+		for (const theme of [lightTheme, darkTheme]) {
+			for (const background of ["canvas", "surface", "surface2"] as const) {
 				expect(
-					contrast(theme.colors.onAccent, theme.colors.accent),
+					contrast(theme.colors.ink, theme.colors[background]),
+				).toBeGreaterThanOrEqual(7);
+				expect(
+					contrast(theme.colors.ink2, theme.colors[background]),
 				).toBeGreaterThanOrEqual(4.5);
+				expect(
+					contrast(theme.colors.interactiveBorder, theme.colors[background]),
+				).toBeGreaterThanOrEqual(3);
 			}
+			// surfaceSunk is the transient pressed fill. It carries primary ink for
+			// the length of a touch, so it is held to that and not to muted text or
+			// to resting control borders, which never come to rest on it.
+			expect(
+				contrast(theme.colors.ink, theme.colors.surfaceSunk),
+			).toBeGreaterThanOrEqual(7);
+			expect(
+				contrast(theme.colors.onAccent, theme.colors.accent),
+			).toBeGreaterThanOrEqual(4.5);
+			expect(
+				contrast(theme.colors.onBrand, theme.colors.brand),
+			).toBeGreaterThanOrEqual(4.5);
 		}
 	});
 

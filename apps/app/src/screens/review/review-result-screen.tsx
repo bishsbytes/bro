@@ -77,7 +77,7 @@ export function ReviewResultScreen({
 	return (
 		<Screen scroll padded contentContainerStyle={styles.content}>
 			<View>
-				<AppText variant="display">{t("result.title")}</AppText>
+				<AppText variant="largeTitle">{t("result.title")}</AppText>
 				<AppText color="muted">
 					{t("result.completed", { date: completed })}
 				</AppText>
@@ -124,7 +124,7 @@ export function ReviewResultScreen({
 									</AppText>
 								) : null}
 							</View>
-							<AppText variant="score">
+							<AppText variant="monoList">
 								{t("scoreOutOf", { value: formatScore(score.value) })}
 							</AppText>
 						</View>

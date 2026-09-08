@@ -14,7 +14,7 @@ type BaselineGaugeProps = {
 	/** Unit copy kept out of metric type, e.g. "cm" or "st 4 lb". */
 	unit?: string | null;
 	/** The 56px size is one per screen, so the caller decides who gets it. */
-	valueVariant?: "metric" | "score";
+	valueVariant?: "hero" | "readout";
 	rail?: GaugeRange | null;
 	railLabels?: { min: string; max: string } | null;
 	/** The user's own usual range. Absent until there are enough readings. */
@@ -49,7 +49,7 @@ export function BaselineGauge({
 	meta,
 	value,
 	unit,
-	valueVariant = "score",
+	valueVariant = "readout",
 	rail,
 	railLabels,
 	band,
@@ -73,12 +73,12 @@ export function BaselineGauge({
 					{label}
 				</AppText>
 				{meta ? (
-					<AppText variant="micro" color="subtle">
+					<AppText variant="footnote" color="subtle">
 						{meta}
 					</AppText>
 				) : null}
 			</View>
-			<AppText variant={valueVariant === "metric" ? "metric" : "monoReadout"}>
+			<AppText variant={valueVariant === "hero" ? "monoHero" : "monoReadout"}>
 				{value}
 				{unit ? (
 					<AppText testID="gauge-unit" variant="monoInline" color="subtle">
@@ -149,10 +149,10 @@ export function BaselineGauge({
 						</View>
 					</View>
 					<View style={styles.scale}>
-						<AppText variant="micro" color="subtle">
+						<AppText variant="footnote" color="subtle">
 							{railLabels.min}
 						</AppText>
-						<AppText variant="micro" color="subtle">
+						<AppText variant="footnote" color="subtle">
 							{railLabels.max}
 						</AppText>
 					</View>

@@ -125,7 +125,7 @@ export function DiscreteScale({
 
 	return (
 		<View style={styles.container}>
-			<AppText variant="metric" color="brand" style={styles.heroValue}>
+			<AppText variant="monoHero" color="brand" style={styles.heroValue}>
 				{shownSelection ?? "—"}
 			</AppText>
 			<KeyboardPressable

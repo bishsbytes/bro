@@ -8,7 +8,7 @@ export function PrivacyContent() {
 
 	return (
 		<View style={styles.content}>
-			<AppText variant="display">{t("title")}</AppText>
+			<AppText variant="largeTitle">{t("title")}</AppText>
 
 			<View style={styles.section}>
 				<AppText variant="label">{t("device.heading")}</AppText>

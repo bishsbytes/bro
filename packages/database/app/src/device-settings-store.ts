@@ -3,30 +3,6 @@ export const DEVICE_SETTINGS_DATABASE_NAME = "bro-device.db";
 const THEME_MODES = ["system", "light", "dark"] as const;
 export type ThemeMode = (typeof THEME_MODES)[number];
 
-export const DEFAULT_ACCENT_HUE = 212;
-export const DEFAULT_ACCENT_CHROMA = 0.12;
-/** @deprecated Helm has one fixed chroma; retained for API compatibility. */
-export const GRAPHITE_ACCENT_CHROMA = DEFAULT_ACCENT_CHROMA;
-
-const LEGACY_ACCENTS = {
-	neutral: { hue: 212, chroma: DEFAULT_ACCENT_CHROMA },
-	emerald: { hue: 145, chroma: DEFAULT_ACCENT_CHROMA },
-	sky: { hue: 235, chroma: DEFAULT_ACCENT_CHROMA },
-	rose: { hue: 318, chroma: DEFAULT_ACCENT_CHROMA },
-	amber: { hue: 85, chroma: DEFAULT_ACCENT_CHROMA },
-	amethyst: { hue: 318, chroma: DEFAULT_ACCENT_CHROMA },
-} as const;
-
-export function normalizeAccentHue(value: unknown): number {
-	const hue = Number(value);
-	if (!Number.isFinite(hue)) return DEFAULT_ACCENT_HUE;
-	return ((Math.round(hue) % 360) + 360) % 360;
-}
-
-function normalizeAccentChroma(_value: unknown): number {
-	return DEFAULT_ACCENT_CHROMA;
-}
-
 /**
  * Device-local settings. Never replicated: everything in the product database
  * (`bro.db`) syncs once a user opts in, so onboarding state and lock
@@ -43,10 +19,6 @@ export type DeviceSettingsSnapshot = {
 	appLockEnabled: boolean;
 	appLockTimeoutSeconds: number | null;
 	themeMode: ThemeMode;
-	/** User-owned hue. Derived accent colours are never persisted. */
-	accentHue: number;
-	/** Compatibility field; Helm fixes chroma system-wide and persists only hue. */
-	accentChroma: number;
 	/** Lets startup skip all session work for a user who has never registered. */
 	hasStoredRemoteSession: boolean;
 	/** The account currently signed in on this device, or null. Not a claim on the data. */
@@ -60,15 +32,15 @@ export const DEVICE_SETTINGS_KEYS = {
 	appLockEnabled: "appLockEnabled",
 	appLockTimeoutSeconds: "appLockTimeoutSeconds",
 	themeMode: "themeMode",
-	accentHue: "accentHue",
-	accentChroma: "accentChroma",
-	/** Version-one key, read once so existing installs keep their choice. */
-	accentColor: "accentColor",
 	hasStoredRemoteSession: "hasStoredRemoteSession",
 	lastRemoteUserId: "lastRemoteUserId",
 } as const;
 
-const SCHEMA_VERSION = 3;
+/** Version four drops the accent preference; Grounded Editorial fixes the palette. */
+const SCHEMA_VERSION = 4;
+
+/** Keys written by earlier versions, cleared on upgrade rather than migrated. */
+const RETIRED_KEYS = ["accentHue", "accentChroma", "accentColor"] as const;
 
 /**
  * The only things a platform has to supply. Everything above this line — the
@@ -89,11 +61,7 @@ export type DeviceSettingsApi = {
 	readDeviceSettings: () => DeviceSettingsSnapshot;
 	setOnboardingComplete: (complete: boolean) => void;
 	setAppLock: (enabled: boolean, timeoutSeconds: number | null) => void;
-	setAppearance: (
-		themeMode: ThemeMode,
-		accentHue: number,
-		accentChroma?: number,
-	) => void;
+	setAppearance: (themeMode: ThemeMode) => void;
 	setRemoteSessionMarker: (
 		hasStoredRemoteSession: boolean,
 		lastRemoteUserId: string | null,
@@ -152,23 +120,8 @@ export function createDeviceSettings(
 			);
 		}
 
-		const legacyAccent = backend.getItem(DEVICE_SETTINGS_KEYS.accentColor);
-		const legacyPreference =
-			legacyAccent && legacyAccent in LEGACY_ACCENTS
-				? LEGACY_ACCENTS[legacyAccent as keyof typeof LEGACY_ACCENTS]
-				: undefined;
-		const accentHue = normalizeAccentHue(
-			backend.getItem(DEVICE_SETTINGS_KEYS.accentHue) ?? legacyPreference?.hue,
-		);
-		const accentChroma = normalizeAccentChroma(
-			backend.getItem(DEVICE_SETTINGS_KEYS.accentChroma) ??
-				legacyPreference?.chroma,
-		);
-
 		if ((storedVersion ?? 1) < SCHEMA_VERSION) {
-			backend.setItem(DEVICE_SETTINGS_KEYS.accentHue, String(accentHue));
-			backend.removeItem(DEVICE_SETTINGS_KEYS.accentChroma);
-			backend.removeItem(DEVICE_SETTINGS_KEYS.accentColor);
+			for (const key of RETIRED_KEYS) backend.removeItem(key);
 			backend.setItem(
 				DEVICE_SETTINGS_KEYS.schemaVersion,
 				String(SCHEMA_VERSION),
@@ -187,8 +140,6 @@ export function createDeviceSettings(
 				THEME_MODES,
 				"system",
 			),
-			accentHue,
-			accentChroma,
 			hasStoredRemoteSession: readBoolean(
 				DEVICE_SETTINGS_KEYS.hasStoredRemoteSession,
 			),
@@ -223,13 +174,8 @@ export function createDeviceSettings(
 			);
 		},
 
-		setAppearance(themeMode, accentHue, _accentChroma = DEFAULT_ACCENT_CHROMA) {
+		setAppearance(themeMode) {
 			backend.setItem(DEVICE_SETTINGS_KEYS.themeMode, themeMode);
-			backend.setItem(
-				DEVICE_SETTINGS_KEYS.accentHue,
-				String(normalizeAccentHue(accentHue)),
-			);
-			backend.removeItem(DEVICE_SETTINGS_KEYS.accentChroma);
 		},
 
 		setRemoteSessionMarker(hasStoredRemoteSession, lastRemoteUserId) {

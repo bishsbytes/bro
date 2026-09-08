@@ -4,22 +4,20 @@ import { useUnistyles } from "../theme/unistyles";
 
 type TextVariant =
 	| "largeTitle"
-	| "metric"
+	| "title"
+	| "section"
+	| "body"
+	| "caption"
+	| "footnote"
+	| "monoHero"
 	| "monoDial"
 	| "monoReadout"
 	| "monoList"
 	| "monoInline"
 	| "serifQuote"
-	| "display"
-	| "title"
-	| "section"
-	| "score"
 	| "lead"
-	| "body"
 	| "label"
-	| "caption"
-	| "eyebrow"
-	| "micro";
+	| "eyebrow";
 
 type TextColor =
 	| "default"

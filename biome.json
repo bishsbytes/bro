@@ -15,10 +15,8 @@
 			"!**/drizzle/meta",
 			"!apps/app/ios",
 			"!apps/app/android",
-			"!design/reference",
-			"!openwiki",
-			"!design/tokens/*.css",
-			"!design/tokens/*.json"
+			"!design/archive",
+			"!openwiki"
 		]
 	},
 	"formatter": {

@@ -160,12 +160,7 @@ export function IntakeScreen({ store }: IntakeScreenProps) {
 					</Pressable>
 				</View>
 			</View>
-			<Screen
-				scroll
-				padded
-				gap="xl"
-				contentContainerStyle={{ paddingBottom: 96 }}
-			>
+			<Screen scroll padded gap="xl" contentContainerStyle={styles.content}>
 				<IntakeDayContent
 					snapshot={snapshot}
 					error={error}
@@ -183,6 +178,7 @@ export function IntakeScreen({ store }: IntakeScreenProps) {
 export default IntakeScreen;
 
 const styles = StyleSheet.create((theme) => ({
+	content: { paddingBottom: theme.control.fabClearance },
 	intake: { flex: 1, minHeight: 0, backgroundColor: theme.colors.background },
 	dayHeading: {
 		paddingHorizontal: theme.spacing.gutter,

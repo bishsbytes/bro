@@ -46,7 +46,7 @@ export function NoteRow({
 		>
 			<View style={styles.content}>
 				<MarkdownText markdown={markdown} containerStyle={styles.preview} />
-				<AppText variant="micro" color="subtle">
+				<AppText variant="footnote" color="subtle">
 					{t(edited ? "row.editedAt" : "row.addedAt", { time })}
 				</AppText>
 			</View>

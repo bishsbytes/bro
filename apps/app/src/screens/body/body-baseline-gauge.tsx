@@ -36,13 +36,13 @@ function gaugeValueParts(metric: BodyMetricSummary): {
 export function BodyBaselineGauge({
 	metric,
 	locale,
-	valueVariant = "score",
+	valueVariant = "list",
 	explored,
 	showLabel = true,
 }: {
 	metric: BodyMetricSummary;
 	locale: string | undefined;
-	valueVariant?: "metric" | "score";
+	valueVariant?: "hero" | "list";
 	explored?: { point: TrendPoint; formatted: string } | null;
 	showLabel?: boolean;
 }) {
@@ -53,7 +53,7 @@ export function BodyBaselineGauge({
 		<View testID="measurement-readout" style={styles.summary}>
 			{showLabel ? <AppText variant="label">{metric.label}</AppText> : null}
 			<AppText
-				variant={valueVariant}
+				variant={valueVariant === "hero" ? "monoHero" : "monoList"}
 				style={styles.value}
 				accessibilityLabel={t("body:read.gaugeA11y", {
 					name: metric.label,
@@ -104,11 +104,11 @@ export function BodyRecentRange({ metric }: { metric: BodyMetricSummary }) {
 			>
 				{range ? <View style={styles.swatch} /> : null}
 				<View style={styles.rangeCopy}>
-					<AppText variant="micro" color="muted">
+					<AppText variant="footnote" color="muted">
 						{range ? t("body:read.rangeTitle") : t("body:read.noRange")}
 					</AppText>
 					{range ? (
-						<AppText variant="micro" color="muted">
+						<AppText variant="footnote" color="muted">
 							{t("body:read.rangeBasis")}
 						</AppText>
 					) : null}

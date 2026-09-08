@@ -17,7 +17,7 @@ export default function StartRoute() {
 
 	return (
 		<Screen padded centered>
-			<AppText variant="display" style={styles.title}>
+			<AppText variant="largeTitle" style={styles.title}>
 				{t("start.title")}
 			</AppText>
 			<AppText color="muted" style={styles.body}>

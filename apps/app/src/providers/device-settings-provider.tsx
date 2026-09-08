@@ -18,11 +18,7 @@ import { applyAppearance } from "../theme/unistyles";
 type DeviceSettingsContextValue = {
 	settings: DeviceSettingsSnapshot;
 	completeOnboarding: () => void;
-	updateAppearance: (
-		themeMode: ThemeMode,
-		accentHue: number,
-		accentChroma: number,
-	) => void;
+	updateAppearance: (themeMode: ThemeMode) => void;
 	markRemoteSessionStored: (userId: string | null) => Promise<void>;
 	clearRemoteSession: () => Promise<void>;
 };
@@ -45,19 +41,11 @@ export function DeviceSettingsProvider({
 		setSettings((current) => ({ ...current, onboardingComplete: true }));
 	}, []);
 
-	const updateAppearance = useCallback(
-		(themeMode: ThemeMode, accentHue: number, accentChroma: number) => {
-			setAppearance(themeMode, accentHue, accentChroma);
-			applyAppearance(themeMode, accentHue, accentChroma);
-			setSettings((current) => ({
-				...current,
-				themeMode,
-				accentHue,
-				accentChroma,
-			}));
-		},
-		[],
-	);
+	const updateAppearance = useCallback((themeMode: ThemeMode) => {
+		setAppearance(themeMode);
+		applyAppearance(themeMode);
+		setSettings((current) => ({ ...current, themeMode }));
+	}, []);
 
 	// The auth provider owns the marker's lifecycle and awaits these, so they
 	// stay promise-returning even though the write beneath them is synchronous.

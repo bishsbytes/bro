@@ -9,7 +9,7 @@ import { type Edge, SafeAreaView } from "react-native-safe-area-context";
 import { StyleSheet, useUnistyles } from "../theme/unistyles";
 import { LoadingIndicator } from "./loading-indicator";
 
-type Spacing = "xs" | "sm" | "md" | "lg" | "xl" | "xxl" | "xxxl";
+type Spacing = "xs" | "sm" | "md" | "lg" | "xl" | "xxl";
 
 type ScreenProps = {
 	children: ReactNode;

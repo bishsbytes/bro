@@ -76,7 +76,7 @@ export function MeasurementChangeList({
 							{change.label}
 						</AppText>
 						{change.since ? (
-							<AppText variant="micro" color="subtle" numberOfLines={2}>
+							<AppText variant="footnote" color="subtle" numberOfLines={2}>
 								{change.since}
 							</AppText>
 						) : null}

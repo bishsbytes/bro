@@ -233,7 +233,7 @@ export function NewReviewScreen({ store }: NewReviewScreenProps) {
 		return (
 			<Screen padded centered gap="lg">
 				<View style={styles.prompt}>
-					<AppText variant="display" style={styles.centredText}>
+					<AppText variant="largeTitle" style={styles.centredText}>
 						{t("sitting.discardTitle")}
 					</AppText>
 					<AppText color="muted" style={styles.centredText}>
@@ -264,7 +264,7 @@ export function NewReviewScreen({ store }: NewReviewScreenProps) {
 					contentContainerStyle={styles.focusContent}
 				>
 					<View style={styles.prompt}>
-						<AppText variant="display" style={styles.centredText}>
+						<AppText variant="largeTitle" style={styles.centredText}>
 							{t("sitting.focusTitle")}
 						</AppText>
 						<AppText color="muted" style={styles.centredText}>
@@ -319,7 +319,10 @@ export function NewReviewScreen({ store }: NewReviewScreenProps) {
 									style={styles.scoreAction}
 									onPress={() => goTo(position)}
 								>
-									<AppText variant="score" color={selected ? "brand" : "muted"}>
+									<AppText
+										variant="monoList"
+										color={selected ? "brand" : "muted"}
+									>
 										{t("scoreOutOf", { value: formatScore(item.value) })}
 									</AppText>
 								</TouchableOpacity>
@@ -417,7 +420,7 @@ export function NewReviewScreen({ store }: NewReviewScreenProps) {
 							color={theme.colors.textMuted}
 						/>
 					</View>
-					<AppText variant="display" style={styles.centredText}>
+					<AppText variant="largeTitle" style={styles.centredText}>
 						{step.label}
 					</AppText>
 					<AppText color="muted" style={styles.centredText}>

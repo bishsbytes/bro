@@ -57,13 +57,13 @@ function CheckInEditor({
 			<AppText variant="caption" color="subtle">
 				{t(`checkIn:slots.${checkIn.slot}.name`)}
 			</AppText>
-			<AppText variant="score">
+			<AppText variant="monoList">
 				{new Date(checkIn.observedAt).toLocaleTimeString([], {
 					hour: "2-digit",
 					minute: "2-digit",
 				})}
 			</AppText>
-			<AppText variant="micro" color="subtle">
+			<AppText variant="footnote" color="subtle">
 				{t("day.moodSource", { source: checkIn.mood.source })}
 			</AppText>
 			<AppText variant="label" color="muted">
@@ -168,8 +168,8 @@ function ObservationRow({
 	return (
 		<Card style={styles.observationRow}>
 			<View style={styles.grow}>
-				<AppText variant="score">{title}</AppText>
-				<AppText variant="micro" color="subtle">
+				<AppText variant="monoList">{title}</AppText>
+				<AppText variant="footnote" color="subtle">
 					{t("day.source", { source: observation.source })}
 				</AppText>
 			</View>
@@ -235,7 +235,7 @@ export function HistoryDayScreen({ localDay, store }: HistoryDayScreenProps) {
 					) : null}
 					{day.habitCompletions.map((completion) => (
 						<Card key={completion.id} style={styles.card}>
-							<AppText variant="score">{completion.label}</AppText>
+							<AppText variant="monoList">{completion.label}</AppText>
 						</Card>
 					))}
 					{day.challengeSteps.length > 0 ? (
@@ -249,7 +249,7 @@ export function HistoryDayScreen({ localDay, store }: HistoryDayScreenProps) {
 									day: step.dayIndex,
 								})}
 							</AppText>
-							<AppText variant="score">{step.dayTitle}</AppText>
+							<AppText variant="monoList">{step.dayTitle}</AppText>
 						</Card>
 					))}
 					<SectionHeader title={t("day.checkIns")} />
@@ -310,13 +310,13 @@ export function HistoryDayScreen({ localDay, store }: HistoryDayScreenProps) {
 							style={styles.observationRow}
 						>
 							<View style={styles.grow}>
-								<AppText variant="score">
+								<AppText variant="monoList">
 									{t("day.labelledValue", {
 										label: measurement.label,
 										value: measurement.formattedValue,
 									})}
 								</AppText>
-								<AppText variant="micro" color="subtle">
+								<AppText variant="footnote" color="subtle">
 									{measurement.selected
 										? t("day.usedForDay", {
 												source: t("day.source", {

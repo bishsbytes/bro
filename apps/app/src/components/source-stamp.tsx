@@ -26,7 +26,7 @@ export function SourceStamp({
 				})
 			: formatReadingDay(localDay, locale);
 	return (
-		<AppText variant="micro" color="muted">
+		<AppText variant="footnote" color="muted">
 			{t("reading.stamp", {
 				when,
 				source:

@@ -158,11 +158,7 @@ export default function RootLayout() {
 			// the stores in sequence because expo-sqlite's web VFS initialization is
 			// not safe when distinct databases perform their first open concurrently.
 			const settings = readDeviceSettings();
-			applyAppearance(
-				settings.themeMode,
-				settings.accentHue,
-				settings.accentChroma,
-			);
+			applyAppearance(settings.themeMode);
 			const db = await initDb();
 			const localDb = await initLocalDb();
 			await Promise.all([runMigrations(db), runLocalMigrations(localDb)]);

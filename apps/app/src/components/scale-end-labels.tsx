@@ -9,10 +9,10 @@ export type EndLabels = Readonly<{ minimum: string; maximum: string }>;
 export function ScaleEndLabels({ minimum, maximum }: EndLabels) {
 	return (
 		<View style={styles.endLabels}>
-			<AppText variant="micro" color="subtle">
+			<AppText variant="footnote" color="subtle">
 				{minimum}
 			</AppText>
-			<AppText variant="micro" color="subtle">
+			<AppText variant="footnote" color="subtle">
 				{maximum}
 			</AppText>
 		</View>

@@ -42,11 +42,11 @@ export function AppHeader({
 								onPress={onEyebrowPress}
 								style={styles.dateAction}
 							>
-								<Text style={styles.eyebrow}>{eyebrow}</Text>
+								{eyebrow ? <Text style={styles.eyebrow}>{eyebrow}</Text> : null}
 							</Pressable>
 						) : (
 							<View style={styles.dateAction}>
-								<Text style={styles.eyebrow}>{eyebrow}</Text>
+								{eyebrow ? <Text style={styles.eyebrow}>{eyebrow}</Text> : null}
 							</View>
 						)}
 						<View style={styles.actions}>
@@ -75,7 +75,9 @@ export function AppHeader({
 						onPress={onEyebrowPress}
 					>
 						{eyebrow ? <Text style={styles.eyebrow}>{eyebrow}</Text> : null}
-						<Text style={styles.title}>{title}</Text>
+						<Text accessibilityRole="header" style={styles.title}>
+							{title}
+						</Text>
 					</Pressable>
 				) : (
 					<View
@@ -86,7 +88,9 @@ export function AppHeader({
 						]}
 					>
 						{eyebrow ? <Text style={styles.eyebrow}>{eyebrow}</Text> : null}
-						<Text style={styles.title}>{title}</Text>
+						<Text accessibilityRole="header" style={styles.title}>
+							{title}
+						</Text>
 					</View>
 				)}
 				<View style={styles.actions}>

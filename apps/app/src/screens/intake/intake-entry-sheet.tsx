@@ -49,7 +49,7 @@ function EventEditor({
 		<View style={styles.sheet}>
 			<View>
 				<AppText variant="eyebrow">{t("event.editTitle")}</AppText>
-				<AppText variant="display">{event.name}</AppText>
+				<AppText variant="largeTitle">{event.name}</AppText>
 				<IntakeArtwork
 					hero
 					name={event.name}

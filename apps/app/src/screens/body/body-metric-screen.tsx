@@ -127,7 +127,7 @@ function HistoryEditor({
 				editable={!busy}
 				onChangeEntry={setValue}
 			/>
-			<AppText variant="micro" color="subtle">
+			<AppText variant="footnote" color="subtle">
 				{t("history.source", {
 					source: sourceLabel(t, entry.observation.source),
 				})}
@@ -331,7 +331,7 @@ export function BodyMetricScreen({ metricSlug, store }: BodyMetricScreenProps) {
 						showLabel={false}
 						explored={explored?.detail === detail ? explored : null}
 						locale={detail.inputLocale}
-						valueVariant="metric"
+						valueVariant="hero"
 					/>
 				</View>
 				<SegmentedControl

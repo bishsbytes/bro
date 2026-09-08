@@ -42,7 +42,7 @@ export function AppearanceScreen() {
 	const { settings, updateAppearance } = useDeviceSettings();
 
 	function chooseTheme(themeMode: ThemeMode) {
-		updateAppearance(themeMode, settings.accentHue, settings.accentChroma);
+		updateAppearance(themeMode);
 	}
 
 	return (

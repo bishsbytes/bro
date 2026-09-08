@@ -17,8 +17,6 @@ const settings: DeviceSettingsSnapshot = {
 	appLockEnabled: false,
 	appLockTimeoutSeconds: null,
 	themeMode: "dark",
-	accentHue: 212,
-	accentChroma: 0.12,
 	hasStoredRemoteSession: false,
 	lastRemoteUserId: null,
 };
@@ -42,7 +40,7 @@ describe("appearance screen", () => {
 
 		await fireEvent.press(view.getByLabelText("Light theme"));
 		await waitFor(() =>
-			expect(mockSetAppearance).toHaveBeenLastCalledWith("light", 212, 0.12),
+			expect(mockSetAppearance).toHaveBeenLastCalledWith("light"),
 		);
 		expect(view.getByLabelText("Light theme").props.accessibilityState).toEqual(
 			expect.objectContaining({ selected: true }),
@@ -50,7 +48,7 @@ describe("appearance screen", () => {
 
 		await fireEvent.press(view.getByLabelText("System theme"));
 		await waitFor(() =>
-			expect(mockSetAppearance).toHaveBeenLastCalledWith("system", 212, 0.12),
+			expect(mockSetAppearance).toHaveBeenLastCalledWith("system"),
 		);
 		expect(
 			view.getByLabelText("System theme").props.accessibilityState,

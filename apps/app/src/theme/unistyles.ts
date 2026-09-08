@@ -10,144 +10,35 @@ import {
 // configured in the module every component imports rather than in App itself.
 export { StyleSheet, useUnistyles };
 
-export const ACCENT_DEFAULT_HUE = 212;
-export const ACCENT_CHROMA = 0.12;
-
-export type AccentOption = {
-	value: string;
-	labelKey: string;
-	hue: number;
-	chroma: number;
-};
-
-export const ACCENT_OPTIONS = [
-	{
-		value: "ice",
-		labelKey: "appearance.accentIce",
-		hue: 212,
-		chroma: ACCENT_CHROMA,
-	},
-	{
-		value: "lichen",
-		labelKey: "appearance.accentLichen",
-		hue: 140,
-		chroma: ACCENT_CHROMA,
-	},
-	{
-		value: "amber",
-		labelKey: "appearance.accentAmber",
-		hue: 80,
-		chroma: ACCENT_CHROMA,
-	},
-	{
-		value: "ember",
-		labelKey: "appearance.accentEmber",
-		hue: 35,
-		chroma: ACCENT_CHROMA,
-	},
-	{
-		value: "violet",
-		labelKey: "appearance.accentViolet",
-		hue: 300,
-		chroma: ACCENT_CHROMA,
-	},
-	{
-		value: "teal",
-		labelKey: "appearance.accentTeal",
-		hue: 190,
-		chroma: ACCENT_CHROMA,
-	},
-] as const satisfies readonly AccentOption[];
-
-export function normalizeAccentHue(value: unknown): number {
-	const hue = Number(value);
-	if (!Number.isFinite(hue)) return ACCENT_DEFAULT_HUE;
-	return ((Math.round(hue) % 360) + 360) % 360;
-}
-
-export function matchingAccentOption(hue: number, _chroma?: number) {
-	return ACCENT_OPTIONS.find(
-		(option) => option.hue === normalizeAccentHue(hue),
-	);
-}
-
-const toHex = (value: number): string => {
-	const bounded = Math.max(0, Math.min(1, value));
-	const encoded =
-		bounded <= 0.0031308
-			? 12.92 * bounded
-			: 1.055 * bounded ** (1 / 2.4) - 0.055;
-	return Math.round(encoded * 255)
-		.toString(16)
-		.padStart(2, "0")
-		.toUpperCase();
-};
-
-/** Converts Helm's user-owned OKLCH accent into React Native-compatible sRGB. */
-export function oklchToHex(
-	lightness: number,
-	chroma: number,
-	hue: number,
-): string {
-	const radians = (normalizeAccentHue(hue) * Math.PI) / 180;
-	const a = chroma * Math.cos(radians);
-	const b = chroma * Math.sin(radians);
-	const lRoot = lightness + 0.3963377774 * a + 0.2158037573 * b;
-	const mRoot = lightness - 0.1055613458 * a - 0.0638541728 * b;
-	const sRoot = lightness - 0.0894841775 * a - 1.291485548 * b;
-	const l = lRoot ** 3;
-	const m = mRoot ** 3;
-	const s = sRoot ** 3;
-	return `#${toHex(4.0767416621 * l - 3.3077115913 * m + 0.2309699292 * s)}${toHex(-1.2684380046 * l + 2.6097574011 * m - 0.3413193965 * s)}${toHex(-0.0041960863 * l - 0.7034186147 * m + 1.707614701 * s)}`;
-}
-
-export function deriveAccent(hue: number, dark: boolean) {
-	const normalized = normalizeAccentHue(hue);
-	return dark
-		? {
-				accent: oklchToHex(0.74, ACCENT_CHROMA, normalized),
-				accentDeep: oklchToHex(0.36, ACCENT_CHROMA * 0.7, normalized),
-				onAccent: oklchToHex(0.16, 0.04, normalized),
-			}
-		: {
-				accent: oklchToHex(0.5, ACCENT_CHROMA, normalized),
-				accentDeep: oklchToHex(0.9, ACCENT_CHROMA * 0.45, normalized),
-				onAccent: oklchToHex(0.98, 0.02, normalized),
-			};
-}
-
-const spacing = {
+const scale = {
 	xs: 4,
 	sm: 8,
 	md: 12,
 	lg: 16,
 	xl: 24,
 	xxl: 32,
-	xxxl: 48,
 	huge: 64,
-	section: 32,
-	s1: 4,
-	s2: 8,
-	s3: 12,
-	s4: 16,
-	s5: 24,
-	s6: 32,
-	s7: 48,
-	s8: 64,
-	gutter: 24,
 } as const;
 
-const radius = {
+const spacing = {
+	...scale,
+	/** Page inset. Aliased so it can never drift from the scale step it is. */
+	gutter: scale.xl,
+} as const;
+
+const radiusScale = {
 	xs: 6,
-	sm: 6,
 	md: 12,
 	lg: 16,
 	pill: 999,
-	chip: 6,
-	control: 12,
-	card: 16,
+} as const;
+
+const radius = {
+	...radiusScale,
+	chip: radiusScale.xs,
+	control: radiusScale.md,
+	card: radiusScale.lg,
 	sheet: 24,
-	device: 44,
 } as const;
 
 const tabular = ["tabular-nums"] as TextStyle["fontVariant"];
@@ -244,7 +135,6 @@ const typography = {
 	title,
 	section,
 	body,
-	bodyMedium,
 	caption,
 	footnote,
 	monoHero,
@@ -253,14 +143,8 @@ const typography = {
 	monoList,
 	monoInline,
 	serifQuote,
-	// Compatibility roles used throughout the existing component API.
-	metric: monoHero,
-	display: largeTitle,
-	score: monoList,
 	lead: { ...serifQuote, fontFamily: sans },
 	label: { ...bodyMedium, fontSize: 14, lineHeight: 20 },
-	micro: footnote,
-	face: { fontSize: 22, lineHeight: 28 },
 	eyebrow: {
 		...footnote,
 		fontWeight: "500",
@@ -268,6 +152,8 @@ const typography = {
 		textTransform: "uppercase",
 	},
 } as const;
+
+const buttonMinHeight = 52;
 
 const shared = {
 	spacing,
@@ -279,9 +165,15 @@ const shared = {
 		serif: "Caladea_400Regular",
 	},
 	control: {
-		buttonMinHeight: 52,
+		buttonMinHeight,
 		minHitArea: 48,
 		headerActionVisualSize: 40,
+		headerActionIconSize: 18,
+		/**
+		 * Scroll padding that keeps the last row clear of the floating log action,
+		 * which sits a gutter above the tab bar. Derived so the two cannot drift.
+		 */
+		fabClearance: buttonMinHeight + scale.xl + scale.lg,
 		factorChipVisualHeight: 40,
 		scoreMinHeight: 56,
 		noteMinHeight: 112,
@@ -342,14 +234,17 @@ const palettes = {
 	light: {
 		base: "#FFFDFA",
 		surface1: "#F4F1EB",
-		surface2: "#F4F1EB",
+		// The guide's light appearance defined no raised step, so cards, controls
+		// and pressed rows all collapsed onto surface1. These two carry that scale.
+		surface2: "#EDE9E1",
+		surfaceSunk: "#E2DCD0",
 		surface3: "#E0ECE7",
+		field: "#FFFDFA",
 		hairline: "#D8DDD6",
 		hairlineStrong: "#78847D",
 		glass: "#FFFDFA",
 		ink: "#202725",
 		ink2: "#626B65",
-		ink3: "#626B65",
 		brand: "#174F4A",
 		onBrand: "#FFFFFF",
 		accent: "#A14F36",
@@ -367,13 +262,14 @@ const palettes = {
 		base: "#171D1A",
 		surface1: "#202923",
 		surface2: "#29352D",
+		surfaceSunk: "#313F37",
 		surface3: "#304B3E",
+		field: "#29352D",
 		hairline: "#39483F",
 		hairlineStrong: "#7D9183",
 		glass: "#202923",
 		ink: "#F2F0E9",
 		ink2: "#B3BDB5",
-		ink3: "#B3BDB5",
 		brand: "#A8CDBE",
 		onBrand: "#14261D",
 		accent: "#D99A78",
@@ -391,44 +287,27 @@ const palettes = {
 
 export type DataDomain = "mind" | "body" | "sleep" | "load";
 
-export function createTheme(
-	scheme: "light" | "dark",
-	hue = ACCENT_DEFAULT_HUE,
-	_chroma = ACCENT_CHROMA,
-) {
+export function createTheme(scheme: "light" | "dark") {
 	const palette = palettes[scheme];
 
 	const colors = {
 		...palette,
 		hairlineSoft: `${palette.hairline}80`,
 		mindTint: `${palette.mind}38`,
-		bodyTint: `${palette.body}38`,
-		sleepTint: `${palette.sleep}38`,
-		loadTint: `${palette.load}38`,
-		alertTint: `${palette.alert}38`,
-		accentTint: palette.selectedSoft,
-		accentLine: palette.brand,
-		accentStrong: palette.brand,
-		// Compatibility roles keep existing forms and records on the same theme.
-		accentDeep: palette.selectedSoft,
+		// Grounded Editorial defines a single secondary ink; subtle and muted text
+		// share it rather than each owning a copy of the same hex.
+		ink3: palette.ink2,
 		canvas: palette.base,
 		surface: palette.surface1,
-		surfaceSunk: palette.surface2,
 		line: palette.hairline,
 		lineStrong: palette.hairlineStrong,
-		inkInvert: palette.onBrand,
 		scrim: scheme === "dark" ? "rgba(23,29,26,0.65)" : "rgba(32,39,37,0.4)",
 		background: palette.base,
 		text: palette.ink,
 		textMuted: palette.ink2,
-		textSubtle: palette.ink3,
+		textSubtle: palette.ink2,
 		border: palette.hairline,
-		danger: palette.alert,
-		onDanger: palette.onBrand,
 		headerBackground: palette.base,
-		headerBorder: palette.hairline,
-		tabBackground: palette.glass,
-		tabInactive: palette.ink2,
 		tabIndicator: palette.selectedSoft,
 		// The Android press ripple, tinted to settle into the indicator it sits under.
 		tabRipple: `${palette.selectedSoft}38`,
@@ -439,10 +318,9 @@ export function createTheme(
 		...shared,
 		name: scheme,
 		isDark: scheme === "dark",
-		accentHue: normalizeAccentHue(hue),
 		colors,
 		tint: (hex: string, alpha = 0.22) =>
-			`${hex}${Math.round(alpha * 255)
+			`${hex}${Math.round(Math.max(0, Math.min(1, alpha)) * 255)
 				.toString(16)
 				.padStart(2, "0")}`,
 		domain: (domain: DataDomain | "alert") => colors[domain],
@@ -452,13 +330,7 @@ export function createTheme(
 export const lightTheme = createTheme("light");
 export const darkTheme = createTheme("dark");
 
-export function applyAppearance(
-	themeMode: ThemeMode,
-	accentHue: number,
-	_accentChroma = ACCENT_CHROMA,
-) {
-	UnistylesRuntime.updateTheme("light", () => createTheme("light", accentHue));
-	UnistylesRuntime.updateTheme("dark", () => createTheme("dark", accentHue));
+export function applyAppearance(themeMode: ThemeMode) {
 	if (themeMode === "system") {
 		UnistylesRuntime.setAdaptiveThemes(true);
 		return;

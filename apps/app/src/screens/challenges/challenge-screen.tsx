@@ -53,7 +53,7 @@ export function ChallengeScreen({
 
 	return (
 		<Screen scroll padded contentContainerStyle={styles.content}>
-			<AppText variant="display">{challenge.title}</AppText>
+			<AppText variant="largeTitle">{challenge.title}</AppText>
 			<AppText color="muted">{challenge.intro}</AppText>
 			<AppText variant="caption" color="brand">
 				{t("overview.summary", { total: challenge.durationDays })}

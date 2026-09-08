@@ -251,7 +251,7 @@ export function RemindersScreen({
 				<Card key={reminder.id} style={styles.reminder}>
 					<View style={styles.reminderHeading}>
 						<View style={styles.reminderCopy}>
-							<AppText variant="score">
+							<AppText variant="monoList">
 								{formatTime(reminder.minuteOfDay)}
 							</AppText>
 							<AppText color="muted">

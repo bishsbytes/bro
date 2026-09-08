@@ -284,7 +284,7 @@ function PastDaySection({
 										{measurement.formattedValue}
 									</AppText>
 									{measurement.changeFromPreviousDay ? (
-										<AppText variant="micro" color="subtle">
+										<AppText variant="footnote" color="subtle">
 											{measurementChangeDetailLabel(
 												t,
 												measurement.changeFromPreviousDay,
@@ -309,7 +309,7 @@ function PastDaySection({
 					{habits.habits.map((item) => (
 						<Card key={item.habit.id} style={styles.habitCard}>
 							<View style={styles.routineCopy}>
-								<AppText variant="score">{item.label}</AppText>
+								<AppText variant="monoList">{item.label}</AppText>
 								{item.progressLabel ? (
 									<AppText color="muted">{item.progressLabel}</AppText>
 								) : null}
@@ -908,7 +908,7 @@ export function HomeScreen({
 											{name}
 										</AppText>
 										{sitting ? (
-											<AppText variant="micro" color="muted">
+											<AppText variant="footnote" color="muted">
 												{t(
 													missing.length > 0
 														? "checkIn:sittings.partialStatus"
@@ -955,7 +955,7 @@ export function HomeScreen({
 										</AppText>
 									) : null}
 									{sitting ? (
-										<AppText variant="micro" color="muted">
+										<AppText variant="footnote" color="muted">
 											{checkInSourceStamp(sitting)}
 										</AppText>
 									) : null}
@@ -1178,7 +1178,7 @@ export function HomeScreen({
 								{habitsToday.habits.map((item) => (
 									<Card key={item.habit.id} style={styles.habitCard}>
 										<View style={styles.routineCopy}>
-											<AppText variant="score">{item.label}</AppText>
+											<AppText variant="monoList">{item.label}</AppText>
 											{item.progressLabel ? (
 												<AppText color="muted">{item.progressLabel}</AppText>
 											) : null}
@@ -1290,7 +1290,7 @@ export function HomeScreen({
 
 const styles = StyleSheet.create((theme) => ({
 	home: { flex: 1 },
-	content: { paddingBottom: theme.spacing.xxl * 2 },
+	content: { paddingBottom: theme.control.fabClearance },
 	pageTitle: { marginBottom: theme.spacing.lg },
 	loading: {
 		gap: theme.spacing.md,

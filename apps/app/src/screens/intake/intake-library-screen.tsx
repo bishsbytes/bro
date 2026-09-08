@@ -627,7 +627,7 @@ export function IntakeLibraryScreen({
 							})}
 						</RowPanel>
 					)}
-					<AppText variant="micro" color="subtle">
+					<AppText variant="footnote" color="subtle">
 						{t("intake:library.licenceNotice")}
 					</AppText>
 				</View>

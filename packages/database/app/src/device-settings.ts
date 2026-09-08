@@ -6,12 +6,8 @@ import {
 } from "./device-settings-store";
 
 export {
-	DEFAULT_ACCENT_CHROMA,
-	DEFAULT_ACCENT_HUE,
 	DEVICE_SETTINGS_DATABASE_NAME,
 	type DeviceSettingsSnapshot,
-	GRAPHITE_ACCENT_CHROMA,
-	normalizeAccentHue,
 	type ThemeMode,
 } from "./device-settings-store";
 

@@ -40,7 +40,7 @@ export function MarkdownField({
 					focused && appearance === "boxed" && styles.focused,
 				]}
 			/>
-			<AppText variant="micro" color="muted">
+			<AppText variant="footnote" color="muted">
 				{t("format.markdownHint")}
 			</AppText>
 		</View>

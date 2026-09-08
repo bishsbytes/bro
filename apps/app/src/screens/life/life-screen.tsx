@@ -106,12 +106,7 @@ export function LifeScreen({ reviewStore, habitsStore, now }: LifeScreenProps) {
 		: t("habits.noRoutine");
 
 	return (
-		<Screen
-			scroll
-			padded
-			gap="lg"
-			contentContainerStyle={{ paddingBottom: 96 }}
-		>
+		<Screen scroll padded gap="lg" contentContainerStyle={styles.content}>
 			<AppText color="muted">{t("intro")}</AppText>
 
 			{latest && completedAt !== null ? (
@@ -182,7 +177,7 @@ export function LifeScreen({ reviewStore, habitsStore, now }: LifeScreenProps) {
 							<AppText variant="label" style={styles.grow}>
 								{score.label}
 							</AppText>
-							<AppText variant="score">
+							<AppText variant="monoList">
 								{t("focus.scoreOutOf", { value: score.value })}
 							</AppText>
 						</Card>
@@ -261,6 +256,7 @@ export function LifeScreen({ reviewStore, habitsStore, now }: LifeScreenProps) {
 }
 
 const styles = StyleSheet.create((theme) => ({
+	content: { paddingBottom: theme.control.fabClearance },
 	section: { gap: theme.spacing.md },
 	hero: { gap: theme.spacing.md },
 	actions: { gap: theme.spacing.sm },

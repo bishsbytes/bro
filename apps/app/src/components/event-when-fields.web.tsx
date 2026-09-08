@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { useTranslation } from "react-i18next";
 import { View } from "react-native";
-import { StyleSheet } from "../theme/unistyles";
+import { StyleSheet, useUnistyles } from "../theme/unistyles";
 import { AppText } from "./app-text";
 import type { EventWhenFields as NativeEventWhenFields } from "./event-when-fields";
 import { useWebPickerInputStyle } from "./web-picker-input";
@@ -48,6 +48,7 @@ function PickerRow({
 	onChange: (value: string) => void;
 }) {
 	const [focused, setFocused] = useState(false);
+	const { theme } = useUnistyles();
 	const inputStyle = useWebPickerInputStyle({ focused });
 	return (
 		<View style={styles.row}>
@@ -61,7 +62,7 @@ function PickerRow({
 					...inputStyle,
 					width: "65%",
 					minWidth: 0,
-					padding: 8,
+					padding: theme.spacing.sm,
 					textAlign: "right",
 					backgroundColor: "transparent",
 					borderColor: focused ? inputStyle.borderColor : "transparent",

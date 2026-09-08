@@ -6,6 +6,8 @@
 		"light": {
 			"canvas": "#FFFDFA",
 			"surface": "#F4F1EB",
+			"surfaceRaised": "#EDE9E1",
+			"surfaceSunk": "#E2DCD0",
 			"ink": "#202725",
 			"textSecondary": "#626B65",
 			"brand": "#174F4A",
@@ -32,6 +34,7 @@
 			"selectedSoft": "#304B3E",
 			"surface": "#202923",
 			"surfaceRaised": "#29352D",
+			"surfaceSunk": "#313F37",
 			"textSecondary": "#B3BDB5"
 		},
 		"semanticNotes": [
@@ -39,7 +42,8 @@
 			"Brand/accent colours do not encode mood quality.",
 			"History fill is not a clinical safe range.",
 			"Select, warning and error require text/icon indicators and independent contrast verification.",
-			"The warm charcoal/sage dark mapping replaces the initial blue-grey palette. Use exact tokens and native charts, not raster colour sampling."
+			"The warm charcoal/sage dark mapping replaces the initial blue-grey palette. Use exact tokens and native charts, not raster colour sampling.",
+			"surfaceRaised is the resting fill for controls that sit on a card (choices, option rows, secondary buttons, header action circles); surfaceSunk is the transient pressed fill. Light originally defined neither, so cards, controls and pressed rows collapsed onto one hex and borderless controls disappeared into the card beneath them. Muted text may rest on surfaceRaised but never on surfaceSunk."
 		]
 	},
 	"type": {
@@ -123,7 +127,11 @@
 		"darkInkOnCanvas": 15.01,
 		"interactiveBorderOnSurface": 3.45,
 		"errorOnSurface": 5.84,
-		"brandOnSelectedSoft": 7.69
+		"brandOnSelectedSoft": 7.69,
+		"lightTextSecondaryOnSurfaceRaised": 4.55,
+		"lightInkOnSurfaceRaised": 12.58,
+		"lightInteractiveBorderOnSurfaceRaised": 3.21,
+		"lightInkOnSurfaceSunk": 11.16
 	},
 	"terminology": {
 		"Heading": "Retained in this visual pass",
@@ -426,6 +434,8 @@
 		"onAccentOnAccent": 7.04,
 		"onBrandOnBrand": 9.16,
 		"textSecondaryOnSurface": 7.74,
-		"textSecondaryOnSurfaceRaised": 6.62
+		"textSecondaryOnSurfaceRaised": 6.62,
+		"inkOnSurfaceSunk": 9.71,
+		"textSecondaryOnSurfaceSunk": 5.73
 	}
 }

@@ -615,7 +615,7 @@ export function BodyScreen({ store }: BodyScreenProps) {
 					<BodyBaselineGauge
 						metric={heroMetric}
 						locale={locale}
-						valueVariant="metric"
+						valueVariant="hero"
 					/>
 					{heroMetric.series.observedDayCount > 0 ? (
 						<TrendChart
@@ -675,7 +675,7 @@ export function BodyScreen({ store }: BodyScreenProps) {
 				)}
 			</View>
 
-			<AppText variant="micro" color="muted">
+			<AppText variant="footnote" color="muted">
 				{t("body:overview.rangeNote")}
 			</AppText>
 
@@ -802,7 +802,7 @@ export function BodyScreen({ store }: BodyScreenProps) {
 
 const styles = StyleSheet.create((theme) => ({
 	section: { gap: 0 },
-	overviewContent: { paddingTop: 0, paddingBottom: 96 },
+	overviewContent: { paddingTop: 0, paddingBottom: theme.control.fabClearance },
 	heroCard: {
 		gap: theme.spacing.xs,
 		borderWidth: 1,

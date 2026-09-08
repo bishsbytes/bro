@@ -12,7 +12,7 @@ export default function WelcomeRoute() {
 			<AppText variant="label" color="brand" style={styles.eyebrow}>
 				{t("welcome.eyebrow")}
 			</AppText>
-			<AppText variant="display" style={styles.title}>
+			<AppText variant="largeTitle" style={styles.title}>
 				{t("welcome.title")}
 			</AppText>
 			<AppText color="muted" style={styles.body}>

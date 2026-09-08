@@ -671,7 +671,7 @@ export function IntakeLogScreen({
 				keyboardShouldPersistTaps="handled"
 				contentInsetAdjustmentBehavior="automatic"
 			>
-				<AppText variant="display">{t("intake:log.heading")}</AppText>
+				<AppText variant="largeTitle">{t("intake:log.heading")}</AppText>
 				<View style={styles.headerSearch}>
 					<Icon name="search" color={theme.colors.ink2} size={24} />
 					<TextInput
@@ -931,7 +931,7 @@ export function IntakeLogScreen({
 				}
 			>
 				<View style={styles.sheet}>
-					<AppText variant="display">{t("intake:free.title")}</AppText>
+					<AppText variant="largeTitle">{t("intake:free.title")}</AppText>
 					<FormField
 						label={t("intake:free.name")}
 						placeholder={t("intake:free.namePlaceholder")}
@@ -1088,14 +1088,14 @@ export function IntakeLogScreen({
 				{pick ? (
 					<View style={styles.sheet}>
 						<View>
-							<AppText variant="display">{pickName}</AppText>
+							<AppText variant="largeTitle">{pickName}</AppText>
 							{pickBrand ? (
 								<AppText variant="caption" color="muted">
 									{pickBrand}
 								</AppText>
 							) : null}
 							{pick.type === "composition" && pick.provenance ? (
-								<AppText variant="micro" color="subtle">
+								<AppText variant="footnote" color="subtle">
 									{pick.provenance}
 								</AppText>
 							) : null}

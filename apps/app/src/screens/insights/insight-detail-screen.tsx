@@ -54,14 +54,14 @@ export function InsightDetailScreen({ id, store }: InsightDetailScreenProps) {
 				title={t("detail.title")}
 				eyebrow={t("patterns.eyebrow")}
 			/>
-			<AppText variant="score">{renderInsightSummary(insight)}</AppText>
+			<AppText variant="monoList">{renderInsightSummary(insight)}</AppText>
 
 			<View style={styles.arms}>
 				<Card style={styles.arm}>
 					<AppText variant="caption" color="muted">
 						{insight.pair.copy.trueArmLabel}
 					</AppText>
-					<AppText variant="score">
+					<AppText variant="monoList">
 						{formatInsightValue(insight.pair, insight.trueArm.mean)}
 					</AppText>
 					<AppText variant="caption" color="subtle">
@@ -72,7 +72,7 @@ export function InsightDetailScreen({ id, store }: InsightDetailScreenProps) {
 					<AppText variant="caption" color="muted">
 						{insight.pair.copy.falseArmLabel}
 					</AppText>
-					<AppText variant="score">
+					<AppText variant="monoList">
 						{formatInsightValue(insight.pair, insight.falseArm.mean)}
 					</AppText>
 					<AppText variant="caption" color="subtle">

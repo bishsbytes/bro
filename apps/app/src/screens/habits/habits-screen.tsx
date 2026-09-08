@@ -397,7 +397,7 @@ export function HabitsScreen({
 					{group.habits.map((template) => (
 						<Card key={template.slug} style={styles.catalogueCard}>
 							<View style={styles.copy}>
-								<AppText variant="score">{template.label}</AppText>
+								<AppText variant="monoList">{template.label}</AppText>
 								<AppText color="muted">{template.description}</AppText>
 							</View>
 							<Button

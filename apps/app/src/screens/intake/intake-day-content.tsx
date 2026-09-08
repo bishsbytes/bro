@@ -210,7 +210,7 @@ export function IntakeDayContent({
 										meta={total.meta}
 										value={total.dayValueParts?.value ?? t("common:emDash")}
 										unit={total.dayValueParts?.unit ?? null}
-										valueVariant="score"
+										valueVariant="readout"
 										rail={total.gauge?.rail ?? null}
 										railLabels={total.gauge?.railLabels ?? null}
 										band={total.gauge?.band ?? null}
@@ -256,7 +256,7 @@ export function IntakeDayContent({
 						</View>
 					) : (
 						<View testID="intake-entries">
-							<AppText variant="micro" color="subtle">
+							<AppText variant="footnote" color="subtle">
 								{t("intake:tab.entryCount", {
 									count: snapshot.events.length,
 								})}

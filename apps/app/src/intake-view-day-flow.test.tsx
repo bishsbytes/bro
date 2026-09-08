@@ -27,8 +27,6 @@ const settings: DatabaseApp.DeviceSettingsSnapshot = {
 	appLockEnabled: false,
 	appLockTimeoutSeconds: null,
 	themeMode: "dark",
-	accentHue: 212,
-	accentChroma: 0.12,
 	hasStoredRemoteSession: false,
 	lastRemoteUserId: null,
 };

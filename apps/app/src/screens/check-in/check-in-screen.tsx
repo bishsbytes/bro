@@ -379,7 +379,7 @@ export function CheckInScreen({
 		return (
 			<Screen padded centered gap="lg">
 				<View style={styles.prompt}>
-					<AppText variant="display" style={styles.leftText}>
+					<AppText variant="largeTitle" style={styles.leftText}>
 						{partial
 							? t("confirmation.partial")
 							: openedOnEntry
@@ -486,7 +486,7 @@ export function CheckInScreen({
 					<AppText variant="eyebrow" color="subtle" style={styles.leftText}>
 						{t(`slots.${slot}.title`)}
 					</AppText>
-					<AppText variant="display" accessibilityRole="header">
+					<AppText variant="largeTitle" accessibilityRole="header">
 						{step.question}
 					</AppText>
 					{step.description ? (

@@ -33,7 +33,11 @@ export function HeaderIconButton({
 					testID={testID}
 					name={icon}
 					color={theme.colors.ink2}
-					size={surface ? 18 : theme.control.avatarIconSize}
+					size={
+						surface
+							? theme.control.headerActionIconSize
+							: theme.control.avatarIconSize
+					}
 				/>
 			</View>
 		</TouchableOpacity>

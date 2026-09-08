@@ -113,7 +113,9 @@ describe("BaselineGauge", () => {
 			view.getByTestId("gauge-unit").props.style as StyleProp<TextStyle>,
 		);
 		expect(unitStyle?.fontSize).toBe(lightTheme.typography.monoInline.fontSize);
-		expect(unitStyle?.fontSize).not.toBe(lightTheme.typography.metric.fontSize);
+		expect(unitStyle?.fontSize).not.toBe(
+			lightTheme.typography.monoHero.fontSize,
+		);
 	});
 
 	it("supports a metric with no readings", async () => {

@@ -3,7 +3,7 @@ import { switchColors } from "./themed-switch";
 
 describe("ThemedSwitch", () => {
 	it("uses a solid accent thumb over a tonal accent track on Android", () => {
-		const theme = createTheme("light", 145, 0.055);
+		const theme = createTheme("light");
 
 		expect(switchColors(theme, true, "android")).toEqual({
 			trackColor: {
@@ -20,7 +20,7 @@ describe("ThemedSwitch", () => {
 	it.each(["light", "dark"] as const)(
 		"themes the web thumb in %s appearance",
 		(mode) => {
-			const theme = createTheme(mode, 145, 0.055);
+			const theme = createTheme(mode);
 			expect(switchColors(theme, true, "web").thumbColor).toBe(
 				theme.colors.onBrand,
 			);
@@ -31,7 +31,7 @@ describe("ThemedSwitch", () => {
 	);
 
 	it("preserves the native iOS thumb treatment", () => {
-		const theme = createTheme("dark", 318, 0.055);
+		const theme = createTheme("dark");
 
 		expect(switchColors(theme, true, "ios")).toEqual({
 			trackColor: {
