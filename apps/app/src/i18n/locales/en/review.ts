@@ -25,6 +25,8 @@ export const review = {
 		currentValueUnknown: "No current value",
 		targetValue: "Heading {{value}}",
 		targetDate: "By {{date}}",
+		/** Stands in for the aim of a heading that carries neither target nor intent. */
+		noTarget: "No target — you decide when it is done",
 		targetReached: "",
 		percentComplete: "",
 		/** {{goal}} is the goal's own label, e.g. "Work & career". */
@@ -82,6 +84,8 @@ export const review = {
 		notFound: "Focus area not found",
 		notFoundBody: "This area is not part of the saved review focus.",
 		currentScore: "Your current wheel score is {{score}}.",
+		/** Prefilled with the life area's own label, and editable from the start. */
+		nameField: "Name",
 		targetScore: "Heading",
 		targetScorePlaceholder: "1–10",
 		targetDate: "By (optional)",
@@ -94,21 +98,25 @@ export const review = {
 	result: {
 		notFound: "Review not found",
 		notFoundBody: "This review is no longer on this device.",
-		title: "Your wheel",
+		/** The review a person lands on from the Life tab. */
+		titleLatest: "Your latest review.",
+		/** Any earlier review, opened from history or from the one after it. */
+		title: "This review.",
 		completed: "Completed {{date}}",
-		lifeAreas: "Life areas",
-		comparedWithPrevious: "Compared with your previous review",
 		focus: "Focus",
 		noChange: "No change",
 		/** {{delta}} is already signed, e.g. "+2 from 6". */
 		delta: "{{delta}} from {{previous}}",
 		previousLabel: "Previously “{{label}}”",
 		notPreviouslyRated: "Not rated in your previous review",
+		viewPrevious: "View previous review",
+		nextTitle: "What you chose to work on",
+		nextEyebrow: "Your focus",
 		setGoal: "Set a heading for {{area}}",
 		readChallenge: "Read “{{title}}”",
 		addHabit: "Add habit “{{label}}”",
 		firstSnapshot:
 			"This is your first snapshot. Your next review will show what moved.",
-		takeStockAgain: "Take stock again",
+		startNew: "Start a new review",
 	},
 } as const;

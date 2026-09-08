@@ -61,18 +61,48 @@ export type WheelComparison = {
 export type ReviewResult = {
 	assessment: Assessment;
 	scores: WheelScore[];
+	/** Whether this is the most recent completed sitting, which titles the screen. */
+	isLatest: boolean;
 	previousAssessment: Assessment | null;
 	previousScores: WheelScore[];
 	comparisons: WheelComparison[];
 };
 
 export type GoalProgress = ResolvedGoalProgress & {
+	/** The heading's own name. */
 	label: string;
+	/** The life area it sits in, where it is placed in one. */
+	areaLabel: string | null;
 };
 
 export type ReviewOverview = {
 	sittings: Assessment[];
 	goals: GoalProgress[];
+};
+
+/**
+ * What a person writes on a heading, whether or not it is measured. The
+ * measurable half — metric, direction and target — is fixed when the heading is
+ * created from a review focus area or a measurement.
+ */
+export type HeadingDraft = {
+	name: string;
+	intent: string | null;
+	areaSlug: string | null;
+	targetDate: string | null;
+	startedAt: number;
+	note: string | null;
+};
+
+export type LifeAreaOption = {
+	slug: string;
+	label: string;
+};
+
+export type HeadingDetail = {
+	heading: GoalProgress;
+	/** The areas a heading may be filed under, as configured today. */
+	areaOptions: LifeAreaOption[];
 };
 
 export type GoalSetup = {
@@ -84,6 +114,19 @@ export type GoalSetup = {
 
 /** Rolling window a consumption goal's "current level" is averaged over. */
 const GOAL_MEAN_WINDOW_DAYS = 7;
+
+function blankToNull(value: string | null): string | null {
+	const trimmed = value?.trim() ?? "";
+	return trimmed === "" ? null : trimmed;
+}
+
+function assertHeadingName(name: string): string {
+	const trimmed = name.trim();
+	if (trimmed === "") {
+		throw new TypeError(i18n.t("validation:review.headingName"));
+	}
+	return trimmed;
+}
 
 function formatWheelScore(value: number): string {
 	return `${Number.isInteger(value) ? value : value.toFixed(1)}/10`;
@@ -273,11 +316,21 @@ export class ReviewStore {
 		// consumption metrics); this overview is the one place all of them show
 		// together, so each kind resolves through its own series and units.
 		const progressFor = (goal: Goal): ResolvedGoalProgress => {
-			const resolved = resolveMetric(goal.metricSlug);
+			const metricSlug = goal.metricSlug;
+			if (metricSlug === null) {
+				// A qualitative heading has no series and no target: only the
+				// person who set it can say how it is going.
+				return resolveGoalProgress({
+					goal,
+					series: [],
+					format: (value) => String(value),
+				});
+			}
+			const resolved = resolveMetric(metricSlug);
 			if (resolved.kind === "known" && resolved.metric.kind === "assessment") {
 				return resolveGoalProgress({
 					goal,
-					series: sortedObservations(goal.metricSlug).map((observation) => ({
+					series: sortedObservations(metricSlug).map((observation) => ({
 						observedAt: observation.observedAt,
 						value: valueOnWheelScale(observation),
 					})),
@@ -338,7 +391,7 @@ export class ReviewStore {
 			// stored numbers rather than disappearing or crashing.
 			return resolveGoalProgress({
 				goal,
-				series: sortedObservations(goal.metricSlug),
+				series: sortedObservations(metricSlug),
 				format: (value) => String(value),
 			});
 		};
@@ -347,7 +400,8 @@ export class ReviewStore {
 			sittings,
 			goals: goals.map((goal) => ({
 				...progressFor(goal),
-				label: labelFor(goal.metricSlug),
+				label: goal.name,
+				areaLabel: goal.areaSlug === null ? null : labelFor(goal.areaSlug),
 			})),
 		};
 	}
@@ -444,16 +498,17 @@ export class ReviewStore {
 		};
 	}
 
+	/** A measurable heading, set on an area this review chose to focus on. */
 	async createGoal(
 		assessmentId: string,
 		metricSlug: string,
-		targetValue: number,
-		targetDate: string | null,
+		input: { name: string; targetValue: number; targetDate: string | null },
 	): Promise<Goal> {
 		const setup = await this.loadGoalSetup(assessmentId, metricSlug);
 		if (!setup) {
 			throw new TypeError(i18n.t("validation:review.goalFromFocusArea"));
 		}
+		const { targetValue } = input;
 		if (!Number.isInteger(targetValue) || targetValue < 1 || targetValue > 10) {
 			throw new RangeError(i18n.t("validation:review.targetRange"));
 		}
@@ -461,12 +516,72 @@ export class ReviewStore {
 			throw new RangeError(i18n.t("validation:review.targetSameAsCurrent"));
 		}
 		return await this.goals.create({
+			name: assertHeadingName(input.name),
+			intent: null,
+			// A wheel heading is filed under the very area it is measured on.
+			areaSlug: metricSlug,
 			metricSlug,
 			direction: targetValue > setup.currentValue ? "increase" : "decrease",
 			targetValue,
-			targetDate,
+			targetDate: input.targetDate,
 			startedAt: this.now().getTime(),
+			note: null,
 		});
+	}
+
+	/** A heading in the person's own words, measured by nothing but them. */
+	async createHeading(draft: HeadingDraft): Promise<Goal> {
+		return await this.goals.create({
+			name: assertHeadingName(draft.name),
+			intent: blankToNull(draft.intent),
+			areaSlug: draft.areaSlug,
+			metricSlug: null,
+			direction: null,
+			targetValue: null,
+			targetDate: draft.targetDate,
+			startedAt: draft.startedAt,
+			note: blankToNull(draft.note),
+		});
+	}
+
+	async updateHeading(id: string, draft: HeadingDraft): Promise<Goal> {
+		const updated = await this.goals.update(id, {
+			name: assertHeadingName(draft.name),
+			intent: blankToNull(draft.intent),
+			areaSlug: draft.areaSlug,
+			targetDate: draft.targetDate,
+			startedAt: draft.startedAt,
+			note: blankToNull(draft.note),
+		});
+		if (!updated) {
+			throw new TypeError(i18n.t("validation:review.headingNotFound"));
+		}
+		return updated;
+	}
+
+	async loadLifeAreaOptions(): Promise<LifeAreaOption[]> {
+		const overlays = await this.trackedMetrics.listResolved(
+			DEFAULT_LIFE_AREA_METRICS,
+		);
+		return listActiveLifeAreas(overlays).map((area) => ({
+			slug: area.slug,
+			label: area.label,
+		}));
+	}
+
+	/**
+	 * One heading, resolved the same way the overview resolves them all. It
+	 * reads through the overview rather than keeping a second derivation, so a
+	 * heading can never read one way on the Life tab and another on its own
+	 * screen.
+	 */
+	async loadHeading(id: string): Promise<HeadingDetail | null> {
+		const [overview, areaOptions] = await Promise.all([
+			this.loadOverview(),
+			this.loadLifeAreaOptions(),
+		]);
+		const heading = overview.goals.find((progress) => progress.goal.id === id);
+		return heading ? { heading, areaOptions } : null;
 	}
 
 	async achieveGoal(id: string): Promise<Goal | null> {
@@ -507,6 +622,7 @@ export class ReviewStore {
 		return {
 			assessment,
 			scores,
+			isLatest: currentIndex === 0,
 			previousAssessment,
 			previousScores,
 			comparisons: compareWheelScores(scores, previousScores),

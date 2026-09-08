@@ -102,6 +102,10 @@ const assessment: Assessment = {
 
 const goal: Goal = {
 	id: "goal-1",
+	name: "Steadier working week",
+	intent: null,
+	areaSlug: "wheel:career",
+	note: null,
 	metricSlug: "wheel:career",
 	direction: "increase",
 	targetValue: 8,

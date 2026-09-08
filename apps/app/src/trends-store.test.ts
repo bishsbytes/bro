@@ -119,6 +119,10 @@ describe("trends store", () => {
 			});
 		}
 		await new databaseApp.GoalRepository(db).create({
+			name: "Weight",
+			intent: null,
+			areaSlug: null,
+			note: null,
 			metricSlug: "weight",
 			direction: "decrease",
 			targetValue: 60,

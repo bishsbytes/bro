@@ -4,6 +4,10 @@ import { goalTargetReached, resolveGoalProgress } from "./goal-presentation";
 function goal(overrides: Partial<Goal> = {}): Goal {
 	return {
 		id: "goal-1",
+		name: "Lighter by summer",
+		intent: null,
+		areaSlug: null,
+		note: null,
 		metricSlug: "weight",
 		direction: "decrease",
 		targetValue: 80,

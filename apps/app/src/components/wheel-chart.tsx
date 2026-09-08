@@ -39,9 +39,15 @@ function polygonPoints(values: readonly number[]): string {
 type WheelChartProps = {
 	scores: readonly WheelScore[];
 	previousScores?: readonly WheelScore[];
+	/** Off where the screen already reads the scores out as named values. */
+	showValueToggle?: boolean;
 };
 
-export function WheelChart({ scores, previousScores = [] }: WheelChartProps) {
+export function WheelChart({
+	scores,
+	previousScores = [],
+	showValueToggle = true,
+}: WheelChartProps) {
 	const { t } = useTranslation("common");
 	const { theme } = useUnistyles();
 	const [showValues, setShowValues] = useState(false);
@@ -150,12 +156,14 @@ export function WheelChart({ scores, previousScores = [] }: WheelChartProps) {
 					</View>
 				) : null}
 			</View>
-			<Button
-				label={t(showValues ? "wheel.hideValues" : "wheel.showValues")}
-				variant="text"
-				onPress={() => setShowValues(!showValues)}
-			/>
-			{showValues ? (
+			{showValueToggle ? (
+				<Button
+					label={t(showValues ? "wheel.hideValues" : "wheel.showValues")}
+					variant="text"
+					onPress={() => setShowValues(!showValues)}
+				/>
+			) : null}
+			{showValueToggle && showValues ? (
 				<View style={styles.values}>
 					{scores.map((score) => (
 						<View key={score.slug} style={styles.valueRow}>

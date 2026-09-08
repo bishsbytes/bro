@@ -141,6 +141,10 @@ describe("delete local data", () => {
 			],
 		});
 		await goals.create({
+			name: "Work & career",
+			intent: null,
+			areaSlug: "wheel:career",
+			note: null,
 			metricSlug: "wheel:career",
 			direction: "increase",
 			targetValue: 8,

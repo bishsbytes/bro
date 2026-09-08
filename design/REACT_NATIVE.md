@@ -42,9 +42,9 @@ Paths below are relative to `apps/app/src`.
 | C20 RecentRange | `components/baseline-gauge.tsx`; existing middle-half calculation retained |
 | C21 TrendChart | `components/trend-chart.tsx`; SVG from actual series, missing-day gaps and readings list |
 | C22 LifeWheel | `components/wheel-chart.tsx`; actual snapshot order/labels, current solid and previous dashed |
-| C23 LifeAreaRow | Wheel's named-value alternative and `screens/review/review-result-screen.tsx` |
-| C24 HeadingCard | Existing Body, Life and review Heading cards |
-| C25 PracticeRow | `components/practice-row.tsx`, `screens/habits/` |
+| C23 LifeAreaRow | `components/life-area-row.tsx`; the wheel's named-value alternative on Life and `screens/review/review-result-screen.tsx` |
+| C24 HeadingCard | `screens/life/heading-card.tsx`; `screens/life/heading-detail-screen.tsx`; existing Body Heading cards |
+| C25 PracticeRow | `components/practice-row.tsx`, `screens/habits/`, a heading's own practices |
 | C26 ReadingsList | Body history and TrendChart's text alternative |
 | C27 ManagementRow | Existing Body management and `screens/life/life-areas-screen.tsx` |
 | C28 ActionSheet | `components/modal-sheet.tsx`, quick log and existing option sheets |
@@ -57,7 +57,9 @@ A check-in draft is stored per sitting on this device, with its date and existin
 
 Recent intake rows edit on tap and repeat via a separate named plus action. The displayed quantity and portion are the repeat amount. Local write success is retained if refreshing the list fails. Undo removes the event just created, without deleting its reusable item. Existing mass/volume/portion conversion and unknown-nutrition rules remain authoritative.
 
-The ten supporting screen studies are mapped onto existing destinations and forms. Illustrative custom-metric schemas, qualitative Heading fields, reusable-item switches and new archive models are not inferred from the boards. The existing storage and supported actions remain authoritative.
+The ten supporting screen studies are mapped onto existing destinations and forms. Illustrative custom-metric schemas, reusable-item switches and new archive models are not inferred from the boards. The existing storage and supported actions remain authoritative.
+
+Heading fields were confirmed in September 2026 and the record now carries them. A heading has a name, an optional intent, an optional life area, a start date, an optional target date and an optional reason. It is measurable or qualitative and never half of each: a measurable heading carries `metricSlug`, `direction` and `targetValue` together and reads its progress from that metric's own records; a qualitative one carries none of the three and only its owner says how it is going. Editing changes the words, the area and the dates; what a heading is measured against is fixed where it is created — from a review focus area, a body measurement or an intake metric — so an edit cannot move the target the recorded progress was measured towards. Archive and remove keep the record and both say what they do before they are pressed; neither deletes anything.
 
 ## Verification
 
@@ -66,6 +68,10 @@ Run the app and database-app Nx tests, relevant typecheck/lint targets, and repo
 Intake opens on the daily entries, with totals available under Summary. Search keeps its custom-entry action above the bottom safe area. Amount and custom-entry forms use full-height modals with a Close header, scrolling content and pinned actions above the keyboard and bottom safe area. They reuse decimal quantity fields with inline units; supported portion/mass/volume changes use the existing composition metadata and preserve the consumed amount. Date and time appear as detail rows backed by native pickers (browser inputs on web); saving uses the displayed timestamp. Custom nutrition remains explicitly per portion and requires at least one known value under the current store contract; reusable items remain managed through Your library.
 
 Food artwork lives in `apps/app/assets/intake/`, with the generation prompts and mapping policy in its README. Transparent illustrations are bundled for offline use, matched to stable system keys or exact unbranded local dish names, and never supply nutrition. Other items keep a neutral icon.
+
+Life leads with the wheel as one dated card, carrying its own Open latest review action, with Manage life areas as a quiet link beneath it. Focus areas and the review detail share `LifeAreaRow`, so a score is always readable as a named value beside its bar. The review detail keeps the chart for reviews the Life tab no longer leads with, and drops the chart's own value toggle where the rows below already list them. Its title names whether the review is the latest one, and it links back to the review before it rather than only to the list.
+
+A heading opens its own screen from the Life tab and from the review index: its name, state, aim, dates and reason, the practices filed under its life area with their recent completions, and the edit, archive and remove actions. Editing and creating share one full-height form sheet. The practices and their activity are the same habit records the habit surfaces show, and marking one done there writes the same completion.
 
 Intake places the day switcher at the top, with no week strip. The “Add to your day” invitation card appears only on Today, below the switcher.
 

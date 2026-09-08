@@ -124,6 +124,7 @@ function RootNavigator() {
 					options={{ title: t("intake.library") }}
 				/>
 				<Stack.Screen name="habits" options={{ headerShown: false }} />
+				<Stack.Screen name="headings" options={{ headerShown: false }} />
 				<Stack.Screen
 					name="life-areas"
 					options={{ title: t("root.lifeAreas") }}

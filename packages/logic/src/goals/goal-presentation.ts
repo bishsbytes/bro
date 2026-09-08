@@ -3,6 +3,7 @@ import {
 	type GoalStatus,
 	goalProgressPercent,
 	goalStatus,
+	isMeasurableGoal,
 } from "./goal-progress";
 
 export type GoalSeriesPoint = {
@@ -18,7 +19,8 @@ export type ResolvedGoalProgress = {
 	progressPercent: number | null;
 	/** The tracked value has met the target, but only a person marks it done. */
 	targetReached: boolean;
-	targetFormatted: string;
+	/** Null for a qualitative heading, which has no number to reach. */
+	targetFormatted: string | null;
 	startFormatted: string | null;
 	currentFormatted: string | null;
 };
@@ -28,7 +30,7 @@ export function goalTargetReached(
 	status: GoalStatus,
 	currentValue: number | null,
 ): boolean {
-	if (status !== "active" || currentValue === null) {
+	if (!isMeasurableGoal(goal) || status !== "active" || currentValue === null) {
 		return false;
 	}
 	return goal.direction === "increase"
@@ -67,7 +69,8 @@ export function resolveGoalProgress(options: {
 		currentValue,
 		progressPercent: goalProgressPercent(goal, startValue, currentValue),
 		targetReached: goalTargetReached(goal, status, currentValue),
-		targetFormatted: format(goal.targetValue),
+		targetFormatted:
+			goal.targetValue === null ? null : format(goal.targetValue),
 		startFormatted: startValue === null ? null : format(startValue),
 		currentFormatted: currentValue === null ? null : format(currentValue),
 	};

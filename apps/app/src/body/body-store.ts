@@ -525,11 +525,17 @@ export class BodyStore {
 			throw new TypeError(i18n.t("validation:body.activeGoalExists"));
 		}
 		return await this.goals.create({
+			// A measurement heading is named by what it measures until the person
+			// renames it; the measurement itself stays its subject.
+			name: metric.label,
+			intent: null,
+			areaSlug: null,
 			metricSlug: metric.slug,
 			direction: targetValue > latest.value ? "increase" : "decrease",
 			targetValue,
 			targetDate,
 			startedAt: this.now().getTime(),
+			note: null,
 		});
 	}
 

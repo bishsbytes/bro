@@ -226,13 +226,30 @@ export type UpsertFoodCacheEntry<Payload = unknown> = Pick<
 
 export type GoalDirection = "increase" | "decrease";
 
+/**
+ * A heading: the direction a person has set, in their own words.
+ *
+ * A heading is measurable or qualitative, never half of each. A measurable one
+ * carries `metricSlug`, `direction` and `targetValue` together and reads its
+ * progress from that metric's own records; a qualitative one carries none of
+ * the three and is judged by the person, not by a number.
+ */
 export type Goal = {
 	id: string;
-	metricSlug: string;
-	direction: GoalDirection;
-	targetValue: number;
+	/** What the person calls it, e.g. "Make time to unwind". */
+	name: string;
+	/** What they are aiming for, in their words. */
+	intent: string | null;
+	/** The life area it belongs to, where they placed it in one. */
+	areaSlug: string | null;
+	/** The metric a measurable heading is read against. */
+	metricSlug: string | null;
+	direction: GoalDirection | null;
+	targetValue: number | null;
 	targetDate: string | null;
 	startedAt: number;
+	/** Why it matters to them. */
+	note: string | null;
 	achievedAt: number | null;
 	abandonedAt: number | null;
 	createdAt: number;
@@ -241,7 +258,25 @@ export type Goal = {
 
 export type CreateGoal = Pick<
 	Goal,
-	"metricSlug" | "direction" | "targetValue" | "targetDate" | "startedAt"
+	| "name"
+	| "intent"
+	| "areaSlug"
+	| "metricSlug"
+	| "direction"
+	| "targetValue"
+	| "targetDate"
+	| "startedAt"
+	| "note"
+>;
+
+/**
+ * What editing a heading may change. What it is measured against is fixed at
+ * creation, so an edit can never silently re-point a heading at another metric
+ * or move a target the recorded progress was measured towards.
+ */
+export type UpdateGoal = Pick<
+	Goal,
+	"name" | "intent" | "areaSlug" | "targetDate" | "startedAt" | "note"
 >;
 
 export type HabitKind = "manual" | "metric";

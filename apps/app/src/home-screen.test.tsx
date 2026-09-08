@@ -73,6 +73,7 @@ function wheelAt(completedAt: number): ReviewResult {
 			updatedAt: completedAt,
 		},
 		scores: [],
+		isLatest: true,
 		previousAssessment: null,
 		previousScores: [],
 		comparisons: [],

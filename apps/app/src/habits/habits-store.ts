@@ -79,6 +79,15 @@ export type TodayHabitsSnapshot = {
 	challenges: TodayChallenge[];
 };
 
+export type AreaPractice = {
+	habit: Habit;
+	label: string;
+	completed: boolean;
+	progressLabel: string | null;
+	/** Days this practice was done, most recent first. */
+	recentDays: string[];
+};
+
 export type HabitAdherenceSummaryDay = {
 	localDay: string;
 	scheduledCount: number;
@@ -261,6 +270,9 @@ function localDaysInRange(
 }
 
 /** Optional intake streams a metric habit implies. */
+/** How far back a heading's recent activity looks. */
+const RECENT_PRACTICE_DAYS = 27;
+
 const STREAM_FOR_HABIT_METRIC: Partial<Record<string, OptionalStreamKind>> = {
 	nicotine_intake: "nicotine",
 };
@@ -487,6 +499,68 @@ export class HabitsStore {
 			habits: habitCards,
 			challenges: challengeCards,
 		};
+	}
+
+	/**
+	 * The practices filed under one life area, with what has actually been done
+	 * lately. A heading shows these so the direction and the doing sit together;
+	 * a completion here is the same record the habit surfaces show.
+	 */
+	async loadAreaPractices(
+		areaSlug: string,
+		localDay = this.today(),
+	): Promise<AreaPractice[]> {
+		const locale = this.locale();
+		const fromLocalDay = shiftLocalDay(localDay, -RECENT_PRACTICE_DAYS);
+		const active = (await this.habits.listActive()).filter(
+			(habit) => habit.areaSlug === areaSlug,
+		);
+		return await Promise.all(
+			active.map(async (habit): Promise<AreaPractice> => {
+				if (habit.kind === "manual") {
+					const rows = await this.completions.listByHabit(habit.id);
+					const days = rows
+						.map((row) => row.localDay)
+						.filter((day) => day <= localDay)
+						.sort((left, right) => right.localeCompare(left));
+					return {
+						habit,
+						label: displayLabel(habit),
+						completed: days[0] === localDay,
+						progressLabel: null,
+						recentDays: days,
+					};
+				}
+				const metricSlug = habit.metricSlug;
+				if (!metricSlug || !isHabitMetricSlug(metricSlug)) {
+					throw new TypeError(`Unsupported metric habit: ${habit.metricSlug}`);
+				}
+				const rawValue = await this.metricDayValues(
+					metricSlug,
+					fromLocalDay,
+					localDay,
+				);
+				const complete = (day: string) =>
+					isMetricHabitComplete(habit, {
+						metricSlug,
+						value: habitMetricDayValue(habit, rawValue(day)),
+					});
+				return {
+					habit,
+					label: displayLabel(habit),
+					completed: complete(localDay),
+					progressLabel: formatProgress(
+						habit,
+						habitMetricDayValue(habit, rawValue(localDay)),
+						locale,
+						await this.metricValueFormatter(metricSlug, locale),
+					),
+					recentDays: localDaysInRange(fromLocalDay, localDay)
+						.filter(complete)
+						.reverse(),
+				};
+			}),
+		);
 	}
 
 	async loadAdherenceRange(

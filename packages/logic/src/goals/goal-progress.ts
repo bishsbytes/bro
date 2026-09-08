@@ -1,4 +1,4 @@
-import type { Goal } from "@bro/mobile-model";
+import type { Goal, GoalDirection } from "@bro/mobile-model";
 
 export type GoalStatus = "active" | "achieved" | "abandoned";
 
@@ -12,12 +12,19 @@ export function goalStatus(goal: Goal): GoalStatus {
 	return "active";
 }
 
+/** A heading read against a metric, rather than judged by the person alone. */
+export function isMeasurableGoal(
+	goal: Goal,
+): goal is Goal & { direction: GoalDirection; targetValue: number } {
+	return goal.direction !== null && goal.targetValue !== null;
+}
+
 export function goalProgressPercent(
 	goal: Goal,
 	startValue: number | null,
 	currentValue: number | null,
 ): number | null {
-	if (startValue === null || currentValue === null) {
+	if (!isMeasurableGoal(goal) || startValue === null || currentValue === null) {
 		return null;
 	}
 	const distance =

@@ -96,11 +96,15 @@ export const assessments = sqliteTable(PRODUCT_TABLE_NAMES.assessments, {
 
 export const goals = sqliteTable(PRODUCT_TABLE_NAMES.goals, {
 	id: text("id").primaryKey(),
-	metricSlug: text("metric_slug").notNull(),
-	direction: text("direction").notNull(),
-	targetValue: real("target_value").notNull(),
+	name: text("name").notNull(),
+	intent: text("intent"),
+	areaSlug: text("area_slug"),
+	metricSlug: text("metric_slug"),
+	direction: text("direction"),
+	targetValue: real("target_value"),
 	targetDate: text("target_date"),
 	startedAt: integer("started_at").notNull(),
+	note: text("note"),
 	achievedAt: integer("achieved_at"),
 	abandonedAt: integer("abandoned_at"),
 	createdAt: integer("created_at").notNull(),

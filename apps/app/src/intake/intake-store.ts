@@ -781,11 +781,15 @@ export class IntakeStore {
 			throw new TypeError(i18n.t("validation:intake.activeGoalExists"));
 		}
 		return await this.goals.create({
+			name: metric.label,
+			intent: null,
+			areaSlug: null,
 			metricSlug: metric.slug,
 			direction: parsed.canonicalValue > latest.value ? "increase" : "decrease",
 			targetValue: parsed.canonicalValue,
 			targetDate,
 			startedAt: this.now().getTime(),
+			note: null,
 		});
 	}
 

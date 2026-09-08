@@ -387,7 +387,9 @@ export function BodyMetricScreen({ metricSlug, store }: BodyMetricScreenProps) {
 						{activeGoal ? (
 							<>
 								<ListRow
-									title={t("goal.reach", { value: activeGoal.targetFormatted })}
+									title={t("goal.reach", {
+										value: activeGoal.targetFormatted ?? t("common:emDash"),
+									})}
 									detail={
 										activeGoal.goal.targetDate
 											? t("goal.targetDate", {
@@ -446,7 +448,7 @@ export function BodyMetricScreen({ metricSlug, store }: BodyMetricScreenProps) {
 											goal.status === "achieved"
 												? t("goal.statusAchieved")
 												: t("goal.statusAbandoned"),
-										value: goal.targetFormatted,
+										value: goal.targetFormatted ?? t("common:emDash"),
 									})}
 								</AppText>
 							))}
@@ -508,7 +510,9 @@ export function BodyMetricScreen({ metricSlug, store }: BodyMetricScreenProps) {
 				>
 					<Card style={styles.goalCard}>
 						<AppText variant="section">
-							{t("goal.target", { value: activeGoal.targetFormatted })}
+							{t("goal.target", {
+								value: activeGoal.targetFormatted ?? t("common:emDash"),
+							})}
 						</AppText>
 						<AppText color="muted">
 							{t("goal.summary", {

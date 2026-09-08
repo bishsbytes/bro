@@ -1,36 +1,52 @@
+import { resolveLocalMoment } from "@bro/domain";
 import { isWheelReviewDue } from "@bro/logic";
 import { router } from "expo-router";
-import { useCallback, useMemo } from "react";
+import { useCallback, useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { View } from "react-native";
 import { AppText } from "../../components/app-text";
 import { Button } from "../../components/button";
 import { Card } from "../../components/card";
 import { EmptyState } from "../../components/empty-state";
-import { Icon } from "../../components/icon";
+import { LifeAreaRow } from "../../components/life-area-row";
 import { ListRow } from "../../components/list-row";
 import { LoadingScreen, Screen } from "../../components/screen";
 import { SectionHeader } from "../../components/section-header";
 import { SupportLink } from "../../components/support-link";
+import { TextAction } from "../../components/text-action";
 import { WheelChart } from "../../components/wheel-chart";
 import {
 	createHabitsStore,
 	type HabitsStore,
 	type TodayHabitsSnapshot,
 } from "../../habits/habits-store";
+import { toMessage } from "../../lib/errors";
 import { useFocusStoreLoad } from "../../lib/use-store-load";
-import { lifeAreaIconName } from "../../review/life-area-icons";
-import { formatReviewDate } from "../../review/review-presentation";
+import {
+	formatReviewDate,
+	formatScore,
+} from "../../review/review-presentation";
 import {
 	createReviewStore,
+	type GoalProgress,
+	type LifeAreaOption,
 	type ReviewOverview,
 	type ReviewResult,
 	type ReviewStore,
 } from "../../review/review-store";
-import { StyleSheet, useUnistyles } from "../../theme/unistyles";
+import { StyleSheet } from "../../theme/unistyles";
+import { HeadingCard } from "./heading-card";
+import {
+	emptyHeadingForm,
+	HeadingFormSheet,
+	type HeadingFormValues,
+} from "./heading-form-sheet";
 
 type LifeScreenProps = {
-	reviewStore?: Pick<ReviewStore, "loadOverview" | "loadLatestWheel">;
+	reviewStore?: Pick<
+		ReviewStore,
+		"loadOverview" | "loadLatestWheel" | "loadLifeAreaOptions" | "createHeading"
+	>;
 	habitsStore?: Pick<HabitsStore, "loadToday">;
 	now?: () => Date;
 };
@@ -39,11 +55,16 @@ type LifeSnapshot = {
 	overview: ReviewOverview;
 	latest: ReviewResult | null;
 	habits: TodayHabitsSnapshot;
+	areaOptions: LifeAreaOption[];
 };
 
+/**
+ * L01 Life overview: where life stands, the direction set from it, and the
+ * practices underneath. The wheel leads as one card, dated by the review it
+ * came from; everything below it reads as a list.
+ */
 export function LifeScreen({ reviewStore, habitsStore, now }: LifeScreenProps) {
 	const { t } = useTranslation(["life", "common"]);
-	const { theme } = useUnistyles();
 	const reviews = useMemo(
 		() => reviewStore ?? createReviewStore(),
 		[reviewStore],
@@ -52,21 +73,50 @@ export function LifeScreen({ reviewStore, habitsStore, now }: LifeScreenProps) {
 		() => habitsStore ?? createHabitsStore(),
 		[habitsStore],
 	);
+	const [draft, setDraft] = useState<HeadingFormValues | null>(null);
+	const [saving, setSaving] = useState(false);
 	const {
 		data: snapshot,
 		error,
 		loading,
 		reload,
+		setError,
 	} = useFocusStoreLoad(
 		useCallback(async (): Promise<LifeSnapshot> => {
-			const [overview, latest, habitsToday] = await Promise.all([
+			const [overview, latest, habitsToday, areaOptions] = await Promise.all([
 				reviews.loadOverview(),
 				reviews.loadLatestWheel(),
 				habits.loadToday(),
+				reviews.loadLifeAreaOptions(),
 			]);
-			return { overview, latest, habits: habitsToday };
+			return { overview, latest, habits: habitsToday, areaOptions };
 		}, [habits, reviews]),
 	);
+
+	async function saveHeading(values: HeadingFormValues) {
+		if (saving) return;
+		setSaving(true);
+		setError(null);
+		try {
+			await reviews.createHeading({
+				name: values.name,
+				intent: values.intent,
+				areaSlug: values.areaSlug,
+				targetDate: values.targetDate.trim() || null,
+				startedAt: resolveLocalMoment({
+					localDay: values.startedOn,
+					time: "12:00",
+				}).occurredAt,
+				note: values.note,
+			});
+			setDraft(null);
+			await reload();
+		} catch (caught) {
+			setError(toMessage(caught));
+		} finally {
+			setSaving(false);
+		}
+	}
 
 	if (loading) {
 		return <LoadingScreen variant="tab" />;
@@ -87,12 +137,22 @@ export function LifeScreen({ reviewStore, habitsStore, now }: LifeScreenProps) {
 	}
 
 	const { latest, overview } = snapshot;
+	const currentTime = (now ?? (() => new Date()))();
 	const completedAt = latest?.assessment.completedAt ?? null;
-	const reviewDue = isWheelReviewDue(
-		completedAt,
-		(now ?? (() => new Date()))().getTime(),
-	);
+	const reviewDue = isWheelReviewDue(completedAt, currentTime.getTime());
 	const focusAreas = latest?.scores.filter((score) => score.focused) ?? [];
+	// A measurable heading reads as its numbers; a qualitative one as the words
+	// its owner wrote. Neither is dressed up as the other.
+	const headingAim = (progress: GoalProgress): string =>
+		progress.targetFormatted === null
+			? (progress.goal.intent ?? t("goals.noTarget"))
+			: t("goals.summary", {
+					current:
+						progress.currentFormatted === null
+							? t("goals.currentValueUnknown")
+							: t("goals.currentValue", { value: progress.currentFormatted }),
+					target: t("goals.targetValue", { value: progress.targetFormatted }),
+				});
 	const completedHabits = snapshot.habits.habits.filter(
 		(item) => item.completed,
 	).length;
@@ -106,24 +166,24 @@ export function LifeScreen({ reviewStore, habitsStore, now }: LifeScreenProps) {
 		: t("habits.noRoutine");
 
 	return (
-		<Screen scroll padded gap="lg" contentContainerStyle={styles.content}>
-			<AppText color="muted">{t("intro")}</AppText>
-
+		<Screen scroll padded gap="xl" contentContainerStyle={styles.content}>
 			{latest && completedAt !== null ? (
 				<View style={styles.section}>
-					<SectionHeader
-						title={t("wheel.title")}
-						eyebrow={t("wheel.reviewedEyebrow", {
-							date: formatReviewDate(completedAt),
-						})}
-					/>
-					{latest.scores.length >= 3 ? (
-						<WheelChart
-							scores={latest.scores}
-							previousScores={latest.previousScores}
-						/>
-					) : null}
-					<View style={styles.actions}>
+					<Card style={styles.wheelCard}>
+						<View style={styles.wheelCopy}>
+							<AppText variant="section">{t("wheel.title")}</AppText>
+							<AppText variant="caption" color="muted">
+								{t("wheel.reviewedEyebrow", {
+									date: formatReviewDate(completedAt),
+								})}
+							</AppText>
+						</View>
+						{latest.scores.length >= 3 ? (
+							<WheelChart
+								scores={latest.scores}
+								previousScores={latest.previousScores}
+							/>
+						) : null}
 						<Button
 							label={t("wheel.openLatest")}
 							variant="secondary"
@@ -134,12 +194,12 @@ export function LifeScreen({ reviewStore, habitsStore, now }: LifeScreenProps) {
 								})
 							}
 						/>
-						<Button
-							label={t("wheel.manageAreas")}
-							variant="text"
-							onPress={() => router.push("/life-areas")}
-						/>
-					</View>
+					</Card>
+					<TextAction
+						label={t("wheel.manageAreas")}
+						chevron
+						onPress={() => router.push("/life-areas")}
+					/>
 				</View>
 			) : (
 				<Card style={styles.hero}>
@@ -168,60 +228,51 @@ export function LifeScreen({ reviewStore, habitsStore, now }: LifeScreenProps) {
 						eyebrow={t("focus.eyebrow")}
 					/>
 					{focusAreas.map((score) => (
-						<Card key={score.slug} style={styles.focusRow}>
-							<Icon
-								name={lifeAreaIconName(score.slug)}
-								size={theme.control.focusIconSize}
-								color={theme.colors.textMuted}
-							/>
-							<AppText variant="label" style={styles.grow}>
-								{score.label}
-							</AppText>
-							<AppText variant="monoList">
-								{t("focus.scoreOutOf", { value: score.value })}
-							</AppText>
-						</Card>
+						<LifeAreaRow
+							key={score.slug}
+							label={score.label}
+							value={score.value}
+							valueLabel={t("common:wheel.scoreOfScale", {
+								value: formatScore(score.value),
+								max: 10,
+							})}
+						/>
 					))}
 				</View>
 			) : null}
 
-			{overview.goals.length > 0 ? (
-				<View style={styles.section}>
-					<SectionHeader
-						title={t("goals.title")}
-						eyebrow={t("goals.eyebrow")}
+			<View style={styles.section}>
+				<SectionHeader
+					title={t("goals.title")}
+					eyebrow={t("goals.eyebrow")}
+					action={
+						<TextAction
+							label={t("heading.add")}
+							onPress={() => setDraft(emptyHeadingForm(currentTime))}
+						/>
+					}
+				/>
+				{overview.goals.map((progress) => (
+					<HeadingCard
+						key={progress.goal.id}
+						label={progress.label}
+						status={progress.status}
+						statusLabel={t(`goals.status.${progress.status}`)}
+						summary={headingAim(progress)}
+						detail={
+							progress.goal.targetDate
+								? t("goals.targetDate", { date: progress.goal.targetDate })
+								: null
+						}
+						onPress={() =>
+							router.push({
+								pathname: "/headings/[id]",
+								params: { id: progress.goal.id },
+							})
+						}
 					/>
-					{overview.goals.map((progress) => (
-						<Card key={progress.goal.id} style={styles.goalCard}>
-							<View style={styles.focusRow}>
-								<AppText variant="label" style={styles.grow}>
-									{progress.label}
-								</AppText>
-								<AppText variant="caption" color="brand">
-									{progress.status === "active"
-										? t("goals.statusActive")
-										: progress.status === "achieved"
-											? t("goals.statusAchieved")
-											: t("goals.statusAbandoned")}
-								</AppText>
-							</View>
-							<AppText color="muted">
-								{t("goals.summary", {
-									current:
-										progress.currentFormatted === null
-											? t("goals.currentValueUnknown")
-											: t("goals.currentValue", {
-													value: progress.currentFormatted,
-												}),
-									target: t("goals.targetValue", {
-										value: progress.targetFormatted,
-									}),
-								})}
-							</AppText>
-						</Card>
-					))}
-				</View>
-			) : null}
+				))}
+			</View>
 
 			<View style={styles.section}>
 				<SectionHeader
@@ -251,6 +302,20 @@ export function LifeScreen({ reviewStore, habitsStore, now }: LifeScreenProps) {
 				</Card>
 			) : null}
 			<SupportLink />
+
+			<HeadingFormSheet
+				visible={draft !== null}
+				mode="create"
+				values={draft ?? emptyHeadingForm(currentTime)}
+				areaOptions={snapshot.areaOptions}
+				busy={saving}
+				error={error}
+				onChange={setDraft}
+				onClose={() => setDraft(null)}
+				onSave={() => {
+					if (draft) void saveHeading(draft);
+				}}
+			/>
 		</Screen>
 	);
 }
@@ -259,15 +324,8 @@ const styles = StyleSheet.create((theme) => ({
 	content: { paddingBottom: theme.control.fabClearance },
 	section: { gap: theme.spacing.md },
 	hero: { gap: theme.spacing.md },
-	actions: { gap: theme.spacing.sm },
-	focusRow: {
-		flexDirection: "row",
-		alignItems: "center",
-		justifyContent: "space-between",
-		gap: theme.spacing.md,
-	},
-	goalCard: { gap: theme.spacing.sm },
-	grow: { flex: 1 },
+	wheelCard: { gap: theme.spacing.lg },
+	wheelCopy: { gap: theme.spacing.xs },
 }));
 
 export default LifeScreen;

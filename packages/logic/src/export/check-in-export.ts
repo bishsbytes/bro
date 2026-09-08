@@ -174,11 +174,15 @@ function copyAssessment(assessment: Assessment): Assessment {
 function copyGoal(goal: Goal): Goal {
 	return {
 		id: goal.id,
+		name: goal.name,
+		intent: goal.intent,
+		areaSlug: goal.areaSlug,
 		metricSlug: goal.metricSlug,
 		direction: goal.direction,
 		targetValue: goal.targetValue,
 		targetDate: goal.targetDate,
 		startedAt: goal.startedAt,
+		note: goal.note,
 		achievedAt: goal.achievedAt,
 		abandonedAt: goal.abandonedAt,
 		createdAt: goal.createdAt,
@@ -501,7 +505,10 @@ export function buildCheckInExport(
 					compareText(left.id, right.id),
 			),
 		goals: input.goals
-			.filter((goal) => includeSlug(goal.metricSlug))
+			// A qualitative heading is tied to no metric, so no metric can exclude it.
+			.filter(
+				(goal) => goal.metricSlug === null || includeSlug(goal.metricSlug),
+			)
 			.map(copyGoal)
 			.sort(
 				(left, right) =>

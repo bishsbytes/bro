@@ -36,6 +36,7 @@ export {
 	type GoalStatus,
 	goalProgressPercent,
 	goalStatus,
+	isMeasurableGoal,
 } from "./goals/goal-progress";
 export {
 	deriveHabitAdherence,

@@ -5,22 +5,21 @@ import { useTranslation } from "react-i18next";
 import { View } from "react-native";
 import { AppText } from "../../components/app-text";
 import { Button } from "../../components/button";
-import { Card } from "../../components/card";
 import { EmptyState } from "../../components/empty-state";
-import { Icon } from "../../components/icon";
+import { LifeAreaRow } from "../../components/life-area-row";
 import { LoadingScreen, StackScreen as Screen } from "../../components/screen";
 import { SectionHeader } from "../../components/section-header";
+import { TextAction } from "../../components/text-action";
 import { WheelChart } from "../../components/wheel-chart";
 import { challengeForArea, habitsForArea } from "../../content";
 import { useStoreLoad } from "../../lib/use-store-load";
-import { lifeAreaIconName } from "../../review/life-area-icons";
 import {
 	assessmentDate,
 	formatReviewDate,
 	formatScore,
 } from "../../review/review-presentation";
 import { createReviewStore, type ReviewStore } from "../../review/review-store";
-import { StyleSheet, useUnistyles } from "../../theme/unistyles";
+import { StyleSheet } from "../../theme/unistyles";
 
 type ReviewResultScreenProps = {
 	assessmentId: string;
@@ -34,12 +33,16 @@ function formatDelta(t: TFunction<"review">, value: number): string {
 	return `${value > 0 ? "+" : ""}${formatScore(value)}`;
 }
 
+/**
+ * L02 Review detail: the same review the wheel draws, read as named values.
+ * The chart stays for reviews the overview no longer leads with, and the rows
+ * below it carry the precise scores and the comparison with last time.
+ */
 export function ReviewResultScreen({
 	assessmentId,
 	store,
 }: ReviewResultScreenProps) {
-	const { t } = useTranslation("review");
-	const { theme } = useUnistyles();
+	const { t } = useTranslation(["review", "common"]);
 	const reviews = useMemo(() => store ?? createReviewStore(), [store]);
 	const {
 		data: result,
@@ -72,14 +75,21 @@ export function ReviewResultScreen({
 	const comparisonBySlug = new Map(
 		result.comparisons.map((comparison) => [comparison.slug, comparison]),
 	);
-	const completed = formatReviewDate(assessmentDate(result.assessment));
+	const completedAt = assessmentDate(result.assessment);
+	const completed = formatReviewDate(completedAt);
+	const focusAreas = result.scores.filter((score) => score.focused);
 
 	return (
 		<Screen scroll padded contentContainerStyle={styles.content}>
-			<View>
-				<AppText variant="largeTitle">{t("result.title")}</AppText>
-				<AppText color="muted">
-					{t("result.completed", { date: completed })}
+			<View style={styles.heading}>
+				<AppText variant="largeTitle">
+					{t(result.isLatest ? "result.titleLatest" : "result.title")}
+				</AppText>
+				<AppText
+					color="muted"
+					accessibilityLabel={t("result.completed", { date: completed })}
+				>
+					{completed}
 				</AppText>
 			</View>
 
@@ -87,74 +97,74 @@ export function ReviewResultScreen({
 				<WheelChart
 					scores={result.scores}
 					previousScores={result.previousScores}
+					showValueToggle={false}
 				/>
 			) : null}
 
-			<SectionHeader
-				title={t("result.lifeAreas")}
-				action={
-					result.previousAssessment ? (
-						<AppText variant="caption" color="muted">
-							{t("result.comparedWithPrevious")}
-						</AppText>
-					) : null
-				}
-			/>
-
-			{result.scores.map((score) => {
-				const comparison = comparisonBySlug.get(score.slug);
-				const challenge = challengeForArea(score.slug);
-				return (
-					<Card key={score.slug} style={styles.scoreCard}>
-						<View style={styles.scoreHeading}>
-							<Icon
-								name={lifeAreaIconName(score.slug)}
-								size={theme.control.focusIconSize}
-								color={
-									score.focused ? theme.colors.brand : theme.colors.textMuted
-								}
-							/>
-							<View style={styles.labelGroup}>
-								<AppText variant="label" style={styles.label}>
-									{score.label}
-								</AppText>
-								{score.focused ? (
-									<AppText variant="caption" color="muted">
-										{t("result.focus")}
-									</AppText>
-								) : null}
-							</View>
-							<AppText variant="monoList">
-								{t("scoreOutOf", { value: formatScore(score.value) })}
-							</AppText>
-						</View>
-						{comparison ? (
-							<View>
-								<AppText
-									variant="caption"
-									color="muted"
-									style={comparison.delta === 0 ? undefined : styles.comparison}
-								>
-									{t("result.delta", {
-										delta: formatDelta(t, comparison.delta),
-										previous: formatScore(comparison.previousValue),
-									})}
-								</AppText>
-								{comparison.previousLabel !== comparison.label ? (
-									<AppText variant="caption" color="subtle">
-										{t("result.previousLabel", {
+			<View style={styles.areas}>
+				{result.scores.map((score) => {
+					const comparison = comparisonBySlug.get(score.slug);
+					return (
+						<LifeAreaRow
+							key={score.slug}
+							label={score.label}
+							value={score.value}
+							valueLabel={t("common:wheel.scoreOfScale", {
+								value: formatScore(score.value),
+								max: 10,
+							})}
+							focusLabel={score.focused ? t("result.focus") : null}
+							detail={
+								comparison
+									? t("result.delta", {
+											delta: formatDelta(t, comparison.delta),
+											previous: formatScore(comparison.previousValue),
+										})
+									: result.previousAssessment
+										? t("result.notPreviouslyRated")
+										: null
+							}
+							detailTone={
+								comparison && comparison.delta !== 0 ? "mind" : "muted"
+							}
+							note={
+								comparison && comparison.previousLabel !== comparison.label
+									? t("result.previousLabel", {
 											label: comparison.previousLabel,
-										})}
-									</AppText>
-								) : null}
-							</View>
-						) : result.previousAssessment ? (
-							<AppText variant="caption" color="muted">
-								{t("result.notPreviouslyRated")}
-							</AppText>
-						) : null}
-						{score.focused ? (
-							<View style={styles.nextActions}>
+										})
+									: null
+							}
+						/>
+					);
+				})}
+			</View>
+
+			{result.previousAssessment ? (
+				<TextAction
+					label={t("result.viewPrevious")}
+					chevron
+					onPress={() =>
+						router.push({
+							pathname: "/review/[id]",
+							params: { id: result.previousAssessment?.id ?? "" },
+						})
+					}
+				/>
+			) : (
+				<AppText color="muted">{t("result.firstSnapshot")}</AppText>
+			)}
+
+			{focusAreas.length > 0 ? (
+				<View style={styles.next}>
+					<SectionHeader
+						title={t("result.nextTitle")}
+						eyebrow={t("result.nextEyebrow")}
+					/>
+					{focusAreas.map((score) => {
+						const challenge = challengeForArea(score.slug);
+						return (
+							<View key={score.slug} style={styles.nextArea}>
+								<AppText variant="label">{score.label}</AppText>
 								<Button
 									label={t("result.setGoal", { area: score.label })}
 									variant="secondary"
@@ -169,11 +179,10 @@ export function ReviewResultScreen({
 									}
 								/>
 								{challenge ? (
-									<Button
+									<TextAction
 										label={t("result.readChallenge", {
 											title: challenge.title,
 										})}
-										variant="text"
 										onPress={() =>
 											router.push({
 												pathname: "/review/challenge/[slug]",
@@ -185,10 +194,9 @@ export function ReviewResultScreen({
 								{habitsForArea(score.slug)
 									.slice(0, 2)
 									.map((template) => (
-										<Button
+										<TextAction
 											key={template.slug}
 											label={t("result.addHabit", { label: template.label })}
-											variant="text"
 											onPress={() =>
 												router.push({
 													pathname: "/habits",
@@ -198,23 +206,18 @@ export function ReviewResultScreen({
 										/>
 									))}
 							</View>
-						) : null}
-					</Card>
-				);
-			})}
-
-			{!result.previousAssessment ? (
-				<AppText color="muted">{t("result.firstSnapshot")}</AppText>
+						);
+					})}
+				</View>
 			) : null}
 
 			<Button
-				label={t("result.takeStockAgain")}
-				accessibilityLabel={t("result.takeStockAgain")}
+				label={t("result.startNew")}
+				accessibilityLabel={t("result.startNew")}
 				onPress={() => router.push("/review/new")}
 			/>
-			<Button
+			<TextAction
 				label={t("backToReviews")}
-				variant="secondary"
 				onPress={() => router.replace("/review")}
 			/>
 		</Screen>
@@ -223,21 +226,8 @@ export function ReviewResultScreen({
 
 const styles = StyleSheet.create((theme) => ({
 	content: { gap: theme.spacing.lg },
-	scoreCard: { gap: theme.spacing.sm },
-	scoreHeading: {
-		flexDirection: "row",
-		alignItems: "center",
-		justifyContent: "space-between",
-		gap: theme.spacing.md,
-	},
-	labelGroup: {
-		flex: 1,
-		flexDirection: "row",
-		alignItems: "baseline",
-		flexWrap: "wrap",
-		gap: theme.spacing.xs,
-	},
-	label: { fontWeight: "600" },
-	comparison: { color: theme.colors.mind },
-	nextActions: { gap: theme.spacing.sm, marginTop: theme.spacing.sm },
+	heading: { gap: theme.spacing.xs },
+	areas: { gap: theme.spacing.xs },
+	next: { gap: theme.spacing.md },
+	nextArea: { gap: theme.spacing.sm },
 }));

@@ -266,13 +266,14 @@ describe("review store", () => {
 		);
 
 		now = new Date("2026-08-14T12:10:00.000Z");
-		const goal = await store.createGoal(
-			first.assessment.id,
-			"wheel:career",
-			8,
-			"2026-12-01",
-		);
+		const goal = await store.createGoal(first.assessment.id, "wheel:career", {
+			name: "Work & career",
+			targetValue: 8,
+			targetDate: "2026-12-01",
+		});
 		expect(goal).toMatchObject({
+			name: "Work & career",
+			areaSlug: "wheel:career",
 			metricSlug: "wheel:career",
 			direction: "increase",
 			targetValue: 8,
@@ -312,8 +313,7 @@ describe("review store", () => {
 		const decreasing = await store.createGoal(
 			second.assessment.id,
 			"wheel:career",
-			4,
-			null,
+			{ name: "Work & career", targetValue: 4, targetDate: null },
 		);
 		expect(decreasing.direction).toBe("decrease");
 		await store.abandonGoal(decreasing.id);
@@ -354,6 +354,10 @@ describe("review store", () => {
 		});
 		const goals = new databaseApp.GoalRepository(db);
 		const weightGoal = await goals.create({
+			name: "Weight",
+			intent: null,
+			areaSlug: null,
+			note: null,
 			metricSlug: "weight",
 			direction: "decrease",
 			targetValue: 80,
@@ -369,6 +373,10 @@ describe("review store", () => {
 		});
 
 		const alcoholGoal = await goals.create({
+			name: "Alcohol",
+			intent: null,
+			areaSlug: null,
+			note: null,
 			metricSlug: "ethanol_intake",
 			direction: "decrease",
 			targetValue: 2 * KILOGRAMS_ETHANOL_PER_UK_UNIT,
@@ -437,10 +445,18 @@ describe("review store", () => {
 		);
 
 		await expect(
-			store.createGoal(result.assessment.id, "wheel:money", 7, null),
+			store.createGoal(result.assessment.id, "wheel:money", {
+				name: "Money",
+				targetValue: 7,
+				targetDate: null,
+			}),
 		).rejects.toThrow("saved focus area");
 		await expect(
-			store.createGoal(result.assessment.id, "wheel:career", 5, null),
+			store.createGoal(result.assessment.id, "wheel:career", {
+				name: "Work & career",
+				targetValue: 5,
+				targetDate: null,
+			}),
 		).rejects.toThrow("different from your current score");
 	});
 });

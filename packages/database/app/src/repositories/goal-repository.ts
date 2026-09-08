@@ -1,16 +1,25 @@
 import { isCalendarDay } from "@bro/domain";
-import type { CreateGoal, Goal } from "@bro/mobile-model";
+import type { CreateGoal, Goal, UpdateGoal } from "@bro/mobile-model";
 import { BaseRepository } from "./base-repository";
 
-export type { CreateGoal, Goal, GoalDirection } from "@bro/mobile-model";
+export type {
+	CreateGoal,
+	Goal,
+	GoalDirection,
+	UpdateGoal,
+} from "@bro/mobile-model";
 
 type GoalRow = {
 	id: string;
-	metric_slug: string;
-	direction: string;
-	target_value: number;
+	name: string;
+	intent: string | null;
+	area_slug: string | null;
+	metric_slug: string | null;
+	direction: string | null;
+	target_value: number | null;
 	target_date: string | null;
 	started_at: number;
+	note: string | null;
 	achieved_at: number | null;
 	abandoned_at: number | null;
 	created_at: number;
@@ -18,21 +27,29 @@ type GoalRow = {
 };
 
 const SELECT_COLUMNS = `
-	id, metric_slug, direction, target_value, target_date, started_at, achieved_at,
-	abandoned_at, created_at, updated_at
+	id, name, intent, area_slug, metric_slug, direction, target_value, target_date,
+	started_at, note, achieved_at, abandoned_at, created_at, updated_at
 `;
 
 function toGoal(row: GoalRow): Goal {
-	if (row.direction !== "increase" && row.direction !== "decrease") {
+	if (
+		row.direction !== null &&
+		row.direction !== "increase" &&
+		row.direction !== "decrease"
+	) {
 		throw new TypeError(`Unknown goal direction: ${row.direction}`);
 	}
 	return {
 		id: row.id,
+		name: row.name,
+		intent: row.intent,
+		areaSlug: row.area_slug,
 		metricSlug: row.metric_slug,
 		direction: row.direction,
 		targetValue: row.target_value,
 		targetDate: row.target_date,
 		startedAt: row.started_at,
+		note: row.note,
 		achievedAt: row.achieved_at,
 		abandonedAt: row.abandoned_at,
 		createdAt: row.created_at,
@@ -40,7 +57,37 @@ function toGoal(row: GoalRow): Goal {
 	};
 }
 
+function assertName(name: string): void {
+	if (!name.trim()) {
+		throw new TypeError("Goal name must not be empty.");
+	}
+}
+
+function assertDates(input: Pick<Goal, "targetDate" | "startedAt">): void {
+	if (input.targetDate !== null && !isCalendarDay(input.targetDate)) {
+		throw new TypeError("Goal targetDate must be a real YYYY-MM-DD date.");
+	}
+	if (!Number.isInteger(input.startedAt)) {
+		throw new TypeError("Goal startedAt must be epoch milliseconds.");
+	}
+}
+
+/**
+ * A heading is measurable or qualitative. Half a measurement — a target with no
+ * metric, or a metric with no target — would render as progress towards
+ * nothing, so it is rejected at the boundary rather than guessed at later.
+ */
 function assertGoal(input: CreateGoal): void {
+	assertName(input.name);
+	assertDates(input);
+	if (input.metricSlug === null) {
+		if (input.direction !== null || input.targetValue !== null) {
+			throw new TypeError(
+				"A goal without a metricSlug must carry no direction or targetValue.",
+			);
+		}
+		return;
+	}
 	if (!input.metricSlug.trim()) {
 		throw new TypeError("Goal metricSlug must not be empty.");
 	}
@@ -49,12 +96,6 @@ function assertGoal(input: CreateGoal): void {
 	}
 	if (!Number.isFinite(input.targetValue)) {
 		throw new RangeError("Goal targetValue must be finite.");
-	}
-	if (input.targetDate !== null && !isCalendarDay(input.targetDate)) {
-		throw new TypeError("Goal targetDate must be a real YYYY-MM-DD date.");
-	}
-	if (!Number.isInteger(input.startedAt)) {
-		throw new TypeError("Goal startedAt must be epoch milliseconds.");
 	}
 }
 
@@ -73,16 +114,21 @@ export class GoalRepository extends BaseRepository {
 
 		await this.run(
 			`INSERT INTO goals (
-				id, metric_slug, direction, target_value, target_date, started_at,
-				achieved_at, abandoned_at, created_at, updated_at
-			) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+				id, name, intent, area_slug, metric_slug, direction, target_value,
+				target_date, started_at, note, achieved_at, abandoned_at, created_at,
+				updated_at
+			) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
 			[
 				goal.id,
+				goal.name,
+				goal.intent,
+				goal.areaSlug,
 				goal.metricSlug,
 				goal.direction,
 				goal.targetValue,
 				goal.targetDate,
 				goal.startedAt,
+				goal.note,
 				goal.achievedAt,
 				goal.abandonedAt,
 				goal.createdAt,
@@ -90,6 +136,33 @@ export class GoalRepository extends BaseRepository {
 			],
 		);
 		return goal;
+	}
+
+	/**
+	 * Edits what a person wrote, never what the heading is measured against.
+	 * A row that has gone is left alone rather than resurrected.
+	 */
+	async update(id: string, input: UpdateGoal): Promise<Goal | null> {
+		assertName(input.name);
+		assertDates(input);
+		const now = this.now();
+		await this.run(
+			`UPDATE goals
+			 SET name = ?, intent = ?, area_slug = ?, target_date = ?, started_at = ?,
+			     note = ?, updated_at = ?
+			 WHERE id = ?`,
+			[
+				input.name,
+				input.intent,
+				input.areaSlug,
+				input.targetDate,
+				input.startedAt,
+				input.note,
+				now,
+				id,
+			],
+		);
+		return await this.findById(id);
 	}
 
 	async findById(id: string): Promise<Goal | null> {

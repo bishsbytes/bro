@@ -46,6 +46,8 @@ export const validation = {
 	},
 	review: {
 		rateEveryArea: "Rate every displayed life area before saving.",
+		headingName: "Give the heading a name before saving.",
+		headingNotFound: "This heading is no longer on this device.",
 		/** {{area}} is the life area's own label. */
 		scoreRange: "{{area}} must be a whole number from 1 to 10.",
 		focusLimit: "Choose no more than three unique focus areas from this wheel.",

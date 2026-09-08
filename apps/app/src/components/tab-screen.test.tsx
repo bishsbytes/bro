@@ -60,18 +60,22 @@ describe("TabScreen", () => {
 	});
 
 	it.each([
-		["body", "Your body, over time."],
-		["life", "Life"],
-	] as const)("renders the %s header with settings", async (tab, title) => {
-		const screen = await render(
-			<TabScreen tab={tab}>
-				<Text>Content</Text>
-			</TabScreen>,
-		);
-		expect(screen.getByText(title)).toBeTruthy();
-		expect(screen.getByLabelText("Settings")).toBeTruthy();
-		expect(screen.queryByLabelText("Open insights")).toBeNull();
-	});
+		["body", "Your body, over time.", "Body"],
+		["life", "Where life stands.", "Life"],
+	] as const)(
+		"renders the %s header with settings",
+		async (tab, title, eyebrow) => {
+			const screen = await render(
+				<TabScreen tab={tab}>
+					<Text>Content</Text>
+				</TabScreen>,
+			);
+			expect(screen.getByText(title)).toBeTruthy();
+			expect(screen.getByText(eyebrow)).toBeTruthy();
+			expect(screen.getByLabelText("Settings")).toBeTruthy();
+			expect(screen.queryByLabelText("Open insights")).toBeNull();
+		},
+	);
 
 	it.each([
 		["journal", "Open insights", "insights-header-icon"],

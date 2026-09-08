@@ -8,6 +8,7 @@ export const navigation = {
 		body: "Body",
 		bodyTitle: "Your body, over time.",
 		life: "Life",
+		lifeTitle: "Where life stands.",
 		openHistory: "Open history",
 		openInsights: "Open insights",
 	},
@@ -25,7 +26,7 @@ export const navigation = {
 	review: {
 		index: "Review",
 		new: "Take stock",
-		result: "Your wheel",
+		result: "Life review",
 		goal: "Set a heading",
 		challenge: "Starter challenge",
 	},
@@ -41,6 +42,9 @@ export const navigation = {
 		new: "New note",
 		edit: "Note",
 		addA11y: "Add note",
+	},
+	headings: {
+		detail: "Heading",
 	},
 	habits: {
 		index: "Habits",

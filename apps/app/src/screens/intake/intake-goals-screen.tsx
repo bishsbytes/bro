@@ -92,7 +92,7 @@ export function IntakeGoalsScreen({ store }: IntakeGoalsScreenProps) {
 							<>
 								<AppText>
 									{t("intake:goals.summary", {
-										target: active.targetFormatted,
+										target: active.targetFormatted ?? t("common:emDash"),
 										current: active.currentFormatted ?? t("common:emDash"),
 									})}
 								</AppText>

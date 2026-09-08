@@ -11,7 +11,7 @@ const TITLE_KEYS = {
 	journal: "tabs.journalTitle",
 	intake: "tabs.intakeTitle",
 	body: "tabs.bodyTitle",
-	life: "tabs.life",
+	life: "tabs.lifeTitle",
 } as const;
 
 /** Keep each header in its native tab so it switches with the page. */
@@ -34,13 +34,14 @@ export function TabScreen({
 				timeZone: "UTC",
 			}).format(new Date(`${localDay}T00:00:00.000Z`))
 		: undefined;
+	const eyebrow = dated ? date : t(`tabs.${tab}` as const);
 
 	return (
 		<View style={styles.screen}>
 			<AppHeader
 				title={t(TITLE_KEYS[tab])}
-				stacked={tab !== "life"}
-				eyebrow={dated ? date : tab === "body" ? t("tabs.body") : undefined}
+				stacked
+				eyebrow={eyebrow}
 				eyebrowAccessibilityLabel={
 					isJournal ? t("tabs.openHistory") : undefined
 				}

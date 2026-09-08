@@ -26,6 +26,7 @@ export function GoalScreen({
 }: GoalScreenProps) {
 	const { t } = useTranslation("review");
 	const reviews = useMemo(() => store ?? createReviewStore(), [store]);
+	const [name, setName] = useState("");
 	const [target, setTarget] = useState("");
 	const [targetDate, setTargetDate] = useState("");
 	const [saving, setSaving] = useState(false);
@@ -40,6 +41,7 @@ export function GoalScreen({
 			// Open on the next point up, so the common case is one tap to save.
 			if (next) {
 				setTarget(String(next.currentValue < 10 ? next.currentValue + 1 : 9));
+				setName(next.label);
 			}
 			return next;
 		}, [assessmentId, metricSlug, reviews]),
@@ -52,12 +54,11 @@ export function GoalScreen({
 		setSaving(true);
 		setError(null);
 		try {
-			await reviews.createGoal(
-				assessmentId,
-				metricSlug,
-				Number(target),
-				targetDate.trim() || null,
-			);
+			await reviews.createGoal(assessmentId, metricSlug, {
+				name,
+				targetValue: Number(target),
+				targetDate: targetDate.trim() || null,
+			});
 			router.replace("/review");
 		} catch (caught) {
 			setError(toMessage(caught));
@@ -99,6 +100,12 @@ export function GoalScreen({
 				</AppText>
 			</Card>
 
+			<FormField
+				label={t("goal.nameField")}
+				value={name}
+				autoCapitalize="sentences"
+				onChangeText={setName}
+			/>
 			<FormField
 				label={t("goal.targetScore")}
 				value={target}

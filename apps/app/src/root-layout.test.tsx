@@ -74,6 +74,7 @@ jest.mock("./review/review-store", () => ({
 	createReviewStore: () => ({
 		loadLatestWheel: async () => null,
 		loadOverview: async () => ({ sittings: [], goals: [] }),
+		loadLifeAreaOptions: async () => [],
 	}),
 }));
 

@@ -17,6 +17,7 @@ import {
 	buildTrendSeries,
 	formatMetricValue,
 	goalStatus,
+	isMeasurableGoal,
 	MEASUREMENT_BASELINE_WINDOW_DAYS,
 	metricDisplayUnit,
 	resolveMeasurementBaseline,
@@ -178,8 +179,11 @@ export class TrendsStore {
 									goalStatus(goal) === "active",
 							)
 						: undefined;
+				// Only a measurable heading draws a line on a chart.
 				const heading =
-					metric.kind === "measurement" && activeHeading
+					metric.kind === "measurement" &&
+					activeHeading &&
+					isMeasurableGoal(activeHeading)
 						? {
 								value: activeHeading.targetValue,
 								formatted: formatMetricValue(

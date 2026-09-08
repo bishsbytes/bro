@@ -79,11 +79,15 @@ CREATE TABLE `day_notes` (
 CREATE INDEX `idx_day_notes_day` ON `day_notes` (`local_day`);--> statement-breakpoint
 CREATE TABLE `goals` (
 	`id` text PRIMARY KEY NOT NULL,
-	`metric_slug` text NOT NULL,
-	`direction` text NOT NULL,
-	`target_value` real NOT NULL,
+	`name` text NOT NULL,
+	`intent` text,
+	`area_slug` text,
+	`metric_slug` text,
+	`direction` text,
+	`target_value` real,
 	`target_date` text,
 	`started_at` integer NOT NULL,
+	`note` text,
 	`achieved_at` integer,
 	`abandoned_at` integer,
 	`created_at` integer NOT NULL,

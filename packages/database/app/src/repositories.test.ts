@@ -1170,11 +1170,15 @@ describe("product repositories", () => {
 			createId: () => "goal-1",
 		});
 		const created = await repository.create({
+			name: "Steadier working week",
+			intent: "Finish by six",
+			areaSlug: "wheel:career",
 			metricSlug: "wheel:career",
 			direction: "increase",
 			targetValue: 8,
 			targetDate: "2026-12-01",
 			startedAt: 900,
+			note: null,
 		});
 		expect(await repository.listAll()).toEqual([created]);
 
@@ -1193,13 +1197,95 @@ describe("product repositories", () => {
 
 		await expect(
 			repository.create({
+				name: "Steadier working week",
+				intent: null,
+				areaSlug: "wheel:career",
 				metricSlug: "wheel:career",
 				direction: "increase",
 				targetValue: 8,
 				targetDate: "2026-13-40",
 				startedAt: 900,
+				note: null,
 			}),
 		).rejects.toThrow("real YYYY-MM-DD date");
+	});
+
+	it("keeps a heading measurable or qualitative, and edits only its words", async () => {
+		let now = 1_000;
+		const repository = new databaseApp.GoalRepository(db, {
+			now: () => now,
+			createId: () => "goal-2",
+		});
+		const qualitative = await repository.create({
+			name: "Make time to unwind",
+			intent: "20 minutes after work",
+			areaSlug: "wheel:leisure",
+			metricSlug: null,
+			direction: null,
+			targetValue: null,
+			targetDate: null,
+			startedAt: 900,
+			note: "A little space after a busy day.",
+		});
+		expect(qualitative).toMatchObject({
+			metricSlug: null,
+			direction: null,
+			targetValue: null,
+		});
+
+		await expect(
+			repository.create({
+				name: "Half a heading",
+				intent: null,
+				areaSlug: null,
+				metricSlug: null,
+				direction: "increase",
+				targetValue: 8,
+				targetDate: null,
+				startedAt: 900,
+				note: null,
+			}),
+		).rejects.toThrow("no direction or targetValue");
+		await expect(
+			repository.create({
+				name: "   ",
+				intent: null,
+				areaSlug: null,
+				metricSlug: null,
+				direction: null,
+				targetValue: null,
+				targetDate: null,
+				startedAt: 900,
+				note: null,
+			}),
+		).rejects.toThrow("name must not be empty");
+
+		now = 2_000;
+		await expect(
+			repository.update(qualitative.id, {
+				name: "Make time to unwind",
+				intent: "30 minutes after work",
+				areaSlug: "wheel:leisure",
+				targetDate: "2026-12-01",
+				startedAt: 900,
+				note: null,
+			}),
+		).resolves.toMatchObject({
+			intent: "30 minutes after work",
+			targetDate: "2026-12-01",
+			note: null,
+			updatedAt: 2_000,
+		});
+		expect(
+			await repository.update("missing", {
+				name: "Nothing here",
+				intent: null,
+				areaSlug: null,
+				targetDate: null,
+				startedAt: 900,
+				note: null,
+			}),
+		).toBeNull();
 	});
 
 	it("sets unit preferences and resolves replicated rows latest-first", async () => {

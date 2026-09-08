@@ -88,7 +88,7 @@ describe("wheel-of-life review flow", () => {
 		await fireEvent.press(firstRun.getByText("Save review"));
 
 		expect(await firstRun.findByLabelText("Wheel of life chart")).toBeTruthy();
-		expect(firstRun.getAllByText("Your wheel").length).toBeGreaterThan(0);
+		expect(firstRun.getByText("Your latest review.")).toBeTruthy();
 		expect(
 			firstRun.getByText(
 				"This is your first snapshot. Your next review will show what moved.",
@@ -156,8 +156,17 @@ describe("wheel-of-life review flow", () => {
 		expect(
 			secondRun.getByText("Started at 6/10 · Latest 6/10 · Heading 8/10"),
 		).toBeTruthy();
-		await fireEvent.press(secondRun.getByText("Archive Work & career heading"));
+		// Archiving lives on the heading's own screen, which explains its scope
+		// before the heading leaves the active list.
+		await fireEvent.press(secondRun.getByLabelText("Work & career"));
+		expect(
+			await secondRun.findByText(
+				"Archiving keeps the heading and its history, and stops it counting as active.",
+			),
+		).toBeTruthy();
+		await fireEvent.press(secondRun.getByText("Archive heading"));
 		expect(await secondRun.findByText("Archived")).toBeTruthy();
+		await act(async () => expoRouter.back());
 
 		await fireEvent.press(
 			secondRun.getByRole("button", { name: "Take stock" }),

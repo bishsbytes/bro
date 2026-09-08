@@ -7,6 +7,8 @@ export const common = {
 		showValues: "Show area values",
 		hideValues: "Hide area values",
 		value: "{{value}}/10",
+		/** A wheel score read as words beside its bar, e.g. "6 of 10". */
+		scoreOfScale: "{{value}} of {{max}}",
 		previous: "Previous: {{value}}/10",
 	},
 	support: {

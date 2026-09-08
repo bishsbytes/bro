@@ -1,4 +1,4 @@
-import { render } from "@testing-library/react-native";
+import { fireEvent, render } from "@testing-library/react-native";
 import type { TodayHabit, TodayHabitsSnapshot } from "./habits/habits-store";
 import type { ReviewResult } from "./review/review-store";
 import { LifeScreen } from "./screens/life/life-screen";
@@ -78,20 +78,55 @@ function wheelAt(completedAt: number): ReviewResult {
 			value: 6,
 			focused: item.slug === "wheel:career",
 		})),
+		isLatest: true,
 		previousAssessment: null,
 		previousScores: [],
 		comparisons: [],
 	};
 }
 
+const heading = {
+	goal: {
+		id: "goal-1",
+		name: "Steadier working week",
+		intent: null,
+		areaSlug: "wheel:career",
+		note: null,
+		metricSlug: "wheel:career",
+		direction: "increase" as const,
+		targetValue: 8,
+		targetDate: "2026-12-01",
+		startedAt: Date.parse("2026-08-01T12:00:00Z"),
+		achievedAt: null,
+		abandonedAt: null,
+		createdAt: 1,
+		updatedAt: 1,
+	},
+	label: "Steadier working week",
+	areaLabel: "Work & career",
+	status: "active" as const,
+	startValue: 6,
+	currentValue: 6,
+	progressPercent: 0,
+	targetReached: false,
+	targetFormatted: "8/10",
+	startFormatted: "6/10",
+	currentFormatted: "6/10",
+};
+
 function stores(
 	latest: ReviewResult | null,
 	habits: TodayHabitsSnapshot = emptyHabits,
+	goals: (typeof heading)[] = [],
 ) {
 	return {
 		reviewStore: {
-			loadOverview: jest.fn(async () => ({ sittings: [], goals: [] })),
+			loadOverview: jest.fn(async () => ({ sittings: [], goals })),
 			loadLatestWheel: jest.fn(async () => latest),
+			loadLifeAreaOptions: jest.fn(async () => [
+				{ slug: "wheel:career", label: "Work & career" },
+			]),
+			createHeading: jest.fn(),
 		},
 		habitsStore: { loadToday: jest.fn(async () => habits) },
 	};
@@ -122,8 +157,57 @@ describe("Life screen", () => {
 		);
 
 		expect(await screen.findByLabelText("Wheel of life chart")).toBeTruthy();
-		expect(screen.getByText("Work & career")).toBeTruthy();
+		expect(screen.getByText("Your wheel")).toBeTruthy();
+		expect(screen.getByText("Reviewed August 1, 2026")).toBeTruthy();
+		// The focus area reads as a named value, not only as a shape on the wheel.
+		expect(screen.getByLabelText("Work & career, 6 of 10")).toBeTruthy();
+		expect(screen.getByText("Open latest review")).toBeTruthy();
+		expect(screen.getByLabelText("Manage life areas")).toBeTruthy();
 		expect(screen.queryByText("Time to take stock")).toBeNull();
+	});
+
+	it("writes a heading in the person's own words, measured by nothing", async () => {
+		const state = stores(null);
+		const screen = await render(
+			<LifeScreen {...state} now={() => new Date("2026-09-08T12:00:00Z")} />,
+		);
+
+		await fireEvent.press(await screen.findByLabelText("Add a heading"));
+		expect(await screen.findByText("Set your direction.")).toBeTruthy();
+		await fireEvent.changeText(
+			screen.getByLabelText("Name"),
+			"Make time to unwind",
+		);
+		await fireEvent.changeText(
+			screen.getByLabelText("What are you aiming for?"),
+			"20 minutes after work",
+		);
+		await fireEvent.press(screen.getByLabelText("Work & career"));
+		await fireEvent.press(screen.getByText("Create heading"));
+
+		expect(state.reviewStore.createHeading).toHaveBeenCalledWith({
+			name: "Make time to unwind",
+			intent: "20 minutes after work",
+			areaSlug: "wheel:career",
+			targetDate: null,
+			startedAt: expect.any(Number),
+			note: "",
+		});
+	});
+
+	it("gives each heading its state, aim and date", async () => {
+		const screen = await render(
+			<LifeScreen
+				{...stores(null, emptyHabits, [heading])}
+				now={() => new Date("2026-08-20T12:00:00Z")}
+			/>,
+		);
+
+		expect(await screen.findByText("Headings")).toBeTruthy();
+		expect(screen.getByText("Active")).toBeTruthy();
+		expect(screen.getByText("Steadier working week")).toBeTruthy();
+		expect(screen.getByText("Latest 6/10 · Heading 8/10")).toBeTruthy();
+		expect(screen.getByText("By 2026-12-01")).toBeTruthy();
 	});
 
 	it("prompts again when the latest review is over 35 days old", async () => {
