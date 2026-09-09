@@ -52,7 +52,7 @@ describe("quick log fab", () => {
 		jest.clearAllMocks();
 	});
 
-	it("offers note and universal log actions without assuming smoking", async () => {
+	it("offers universal log actions without Body or Check-in", async () => {
 		const view = await render(
 			<QuickLogFab bottom={24} enabledKinds={async () => ["food", "drink"]} />,
 		);
@@ -62,8 +62,8 @@ describe("quick log fab", () => {
 		expect(view.getByText("Note")).toBeTruthy();
 		expect(view.getByText("Food")).toBeTruthy();
 		expect(view.getByText("Drink")).toBeTruthy();
-		expect(view.getByText("Body")).toBeTruthy();
-		expect(view.getByText("Check-in")).toBeTruthy();
+		expect(view.queryByText("Body")).toBeNull();
+		expect(view.queryByText("Check-in")).toBeNull();
 		// Smoking is a minority behaviour: it is not offered unasked.
 		await waitFor(() => expect(view.queryByText("Smoke or vape")).toBeNull());
 
@@ -122,7 +122,7 @@ describe("quick log fab", () => {
 		expect(router.push).toHaveBeenCalledWith("/intake/log?kind=drink");
 	});
 
-	it("offers each optional stream only once it is switched on", async () => {
+	it("offers each optional stream only once it is switched on, before Note", async () => {
 		const view = await render(
 			<QuickLogFab
 				bottom={24}
@@ -134,12 +134,17 @@ describe("quick log fab", () => {
 		expect(await view.findByText("Smoke or vape")).toBeTruthy();
 		expect(view.getByText("Supplement")).toBeTruthy();
 		expect(view.queryByText("Medication")).toBeNull();
+		const actions = view
+			.getAllByRole("button")
+			.map((button) => button.props.accessibilityLabel);
+		expect(actions.indexOf("Supplement")).toBeLessThan(actions.indexOf("Note"));
+		expect(actions.at(-1)).toBe("Note");
 
 		await fireEvent.press(view.getByLabelText("Smoke or vape"));
 		expect(router.push).toHaveBeenCalledWith("/intake/log?kind=nicotine");
 	});
 
-	it("uses the open quick-log sheet for Body sub-navigation", async () => {
+	it("opens Body logging directly from the Body tab", async () => {
 		const view = await render(
 			<BodyLogSurfaceProvider>
 				<QuickLogFab
@@ -153,7 +158,6 @@ describe("quick log fab", () => {
 
 		await fireEvent.press(view.getByLabelText("Log"));
 		const sheetBackdrop = view.getByTestId("modal-sheet-backdrop");
-		await fireEvent.press(view.getByLabelText("Body"));
 
 		expect(view.getByText("Body log options")).toBeTruthy();
 		expect(view.queryByText("What would you like to log?")).toBeNull();
@@ -163,21 +167,6 @@ describe("quick log fab", () => {
 		await fireEvent.press(view.getByText("Back to log menu"));
 		expect(view.getByText("What would you like to log?")).toBeTruthy();
 		expect(view.getByTestId("modal-sheet-backdrop")).toBe(sheetBackdrop);
-	});
-
-	it("moves to Body before opening its log from another tab", async () => {
-		const view = await render(
-			<BodyLogSurfaceProvider>
-				<QuickLogFab bottom={24} enabledKinds={async () => ["food", "drink"]} />
-				<RegisteredBodyLog />
-			</BodyLogSurfaceProvider>,
-		);
-
-		await fireEvent.press(view.getByLabelText("Log"));
-		await fireEvent.press(view.getByLabelText("Body"));
-
-		expect(router.push).toHaveBeenCalledWith("/body");
-		expect(view.getByText("Body log options")).toBeTruthy();
 	});
 
 	it("hides the smoking action when the tracked check fails", async () => {
@@ -193,8 +182,10 @@ describe("quick log fab", () => {
 		await fireEvent.press(view.getByLabelText("Log"));
 
 		// A failed read must not surface a smoking button to someone who never
-		// asked for one; the other three actions still work.
+		// asked for one; the universal actions still work.
 		await waitFor(() => expect(view.queryByText("Smoke or vape")).toBeNull());
-		expect(view.getByText("Check-in")).toBeTruthy();
+		expect(view.getByText("Food")).toBeTruthy();
+		expect(view.getByText("Drink")).toBeTruthy();
+		expect(view.getByText("Note")).toBeTruthy();
 	});
 });

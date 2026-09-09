@@ -105,11 +105,6 @@ export function QuickLogFab({
 		router.push(href);
 	}
 
-	function chooseBody() {
-		setPage("body");
-		if (!bodyActive) router.push("/body");
-	}
-
 	/**
 	 * Eating and drinking are universal; every other stream is asked about
 	 * before it is offered. A standing smoking or medication button in every
@@ -117,6 +112,7 @@ export function QuickLogFab({
 	 */
 	function openSheet() {
 		playSelectionHaptic();
+		setPage(bodyActive ? "body" : "options");
 		setOpen(true);
 		enabledKinds()
 			.then((kinds) =>
@@ -165,30 +161,6 @@ export function QuickLogFab({
 							{selectedDay}
 						</AppText>
 						<View style={styles.actions}>
-							{activeTab === "body" ? (
-								<QuickLogAction
-									icon="body"
-									domain="body"
-									title={t("quickLog.body")}
-									detail={t("quickLog.bodyDetail")}
-									onPress={chooseBody}
-								/>
-							) : null}
-							{activeTab === "journal" ? (
-								<QuickLogAction
-									icon="check-in"
-									domain="mind"
-									title={t("quickLog.checkIn")}
-									detail={t("quickLog.checkInDetail")}
-									onPress={() =>
-										choose(
-											selectedDay === localDayOf(new Date())
-												? "/check-in"
-												: (`/history/${selectedDay}` as Href),
-										)
-									}
-								/>
-							) : null}
 							{activeTab === "life" ? (
 								<QuickLogAction
 									icon="explore"
@@ -212,6 +184,16 @@ export function QuickLogFab({
 								detail={t("quickLog.drinkDetail")}
 								onPress={() => choose(intakeLogHref("drink", pastDay))}
 							/>
+							{optionalKinds.map((kind) => (
+								<QuickLogAction
+									key={kind}
+									icon="drink"
+									domain="load"
+									title={t(`quickLog.${kind}`)}
+									detail={t(`quickLog.${kind}Detail`)}
+									onPress={() => choose(intakeLogHref(kind, pastDay))}
+								/>
+							))}
 							<QuickLogAction
 								icon="note"
 								domain="mind"
@@ -225,40 +207,6 @@ export function QuickLogFab({
 									)
 								}
 							/>
-							{activeTab !== "body" ? (
-								<QuickLogAction
-									icon="body"
-									domain="body"
-									title={t("quickLog.body")}
-									detail={t("quickLog.bodyDetail")}
-									onPress={chooseBody}
-								/>
-							) : null}
-							{activeTab !== "journal" ? (
-								<QuickLogAction
-									icon="check-in"
-									domain="mind"
-									title={t("quickLog.checkIn")}
-									detail={t("quickLog.checkInDetail")}
-									onPress={() =>
-										choose(
-											selectedDay === localDayOf(new Date())
-												? "/check-in"
-												: (`/history/${selectedDay}` as Href),
-										)
-									}
-								/>
-							) : null}
-							{optionalKinds.map((kind) => (
-								<QuickLogAction
-									key={kind}
-									icon="drink"
-									domain="load"
-									title={t(`quickLog.${kind}`)}
-									detail={t(`quickLog.${kind}Detail`)}
-									onPress={() => choose(intakeLogHref(kind, pastDay))}
-								/>
-							))}
 						</View>
 					</>
 				) : bodyLogSurface ? (

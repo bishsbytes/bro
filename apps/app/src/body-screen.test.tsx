@@ -179,7 +179,6 @@ function mountedWith(
 
 async function openBodyLog(screen: Awaited<ReturnType<typeof mountedWith>>) {
 	await fireEvent.press(await screen.findByLabelText("Log"));
-	await fireEvent.press(screen.getByLabelText("Body"));
 }
 
 describe("Body screen", () => {
