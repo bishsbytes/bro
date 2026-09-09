@@ -11,7 +11,7 @@ type CheckInCardProps = {
 	summary: string | null;
 	/** Shown in place of a summary before the sitting is recorded. */
 	tagline: string;
-	/** One sitting leads with a brand fill; the others stay compact. */
+	/** One sitting leads with the featured fill; the others stay compact. */
 	featured?: boolean;
 	/** Complete or partial, once the sitting exists. */
 	statusLabel?: string | null;
@@ -66,7 +66,7 @@ export function CheckInCard({
 					<View style={styles.heading}>
 						<AppText
 							variant="eyebrow"
-							color={featured ? "onBrand" : "muted"}
+							color={featured ? "onFeatured" : "muted"}
 							style={styles.name}
 						>
 							{name}
@@ -79,12 +79,12 @@ export function CheckInCard({
 					</View>
 					<AppText
 						variant={featured ? "title" : "body"}
-						color={featured ? "onBrand" : "default"}
+						color={featured ? "onFeatured" : "default"}
 					>
 						{summary ?? tagline}
 					</AppText>
 					{featured && dimensionsLabel ? (
-						<AppText variant="caption" color="onBrand">
+						<AppText variant="caption" color="onFeatured">
 							{dimensionsLabel}
 						</AppText>
 					) : null}
@@ -116,7 +116,11 @@ const styles = StyleSheet.create((theme) => ({
 		gap: theme.spacing.md,
 	},
 	compact: { borderRadius: theme.radius.control },
-	featured: { backgroundColor: theme.colors.brand },
+	featured: {
+		backgroundColor: theme.colors.featured,
+		borderWidth: theme.isDark ? 1 : 0,
+		borderColor: theme.colors.featuredBorder,
+	},
 	copy: { flex: 1, gap: theme.spacing.sm },
 	name: { flex: 1 },
 	heading: {

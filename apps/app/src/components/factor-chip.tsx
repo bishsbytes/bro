@@ -13,7 +13,7 @@ type FactorChipProps = {
 
 /**
  * C09 FactorChip. Unselected chips are transparent with a faint outline;
- * selected chips take the soft selection tint and a checkmark rather than a
+ * selected chips take the selection fill and a checkmark rather than a
  * contrasting border. The 40-point visual height sits inside a 48-point touch
  * target and grows with larger text.
  */
@@ -47,7 +47,7 @@ export function FactorChip({
 					{label}
 				</AppText>
 				{selected ? (
-					<Icon name="check" size={16} color={theme.colors.brand} />
+					<Icon name="check" size={16} color={theme.colors.onSelected} />
 				) : null}
 			</View>
 		</TouchableOpacity>

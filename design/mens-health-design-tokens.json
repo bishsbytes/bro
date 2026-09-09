@@ -1,6 +1,6 @@
 {
 	"name": "Grounded Editorial - current tokens",
-	"version": "0.5",
+	"version": "0.6",
 	"status": "Current native component contracts aligned; real-device accessibility validation remains a release check",
 	"colour": {
 		"light": {
@@ -18,7 +18,14 @@
 			"historyFill": "#DDE5DD",
 			"interactiveBorder": "#78847D",
 			"selectedSoft": "#E0ECE7",
-			"error": "#A33932"
+			"error": "#A33932",
+			"featured": "#174F4A",
+			"onFeatured": "#FFFFFF",
+			"featuredBorder": "#174F4A",
+			"cardAction": "#F4F1EB",
+			"onCardAction": "#174F4A",
+			"selected": "#E0ECE7",
+			"onSelected": "#174F4A"
 		},
 		"dark": {
 			"accent": "#D99A78",
@@ -35,7 +42,14 @@
 			"surface": "#202923",
 			"surfaceRaised": "#29352D",
 			"surfaceSunk": "#313F37",
-			"textSecondary": "#B3BDB5"
+			"textSecondary": "#B3BDB5",
+			"featured": "#1D3E37",
+			"onFeatured": "#F2F0E9",
+			"featuredBorder": "#315B50",
+			"cardAction": "#A8CDBE",
+			"onCardAction": "#14261D",
+			"selected": "#A8CDBE",
+			"onSelected": "#14261D"
 		},
 		"semanticNotes": [
 			"Light appearance uses an off-white canvas with darker warm stone surfaces, matching the screen studies.",
@@ -44,8 +58,9 @@
 			"Select, warning and error require text/icon indicators and independent contrast verification.",
 			"The warm charcoal/sage dark mapping replaces the initial blue-grey palette. Use exact tokens and native charts, not raster colour sampling.",
 			"surfaceRaised is the resting fill for controls that sit on a card (choices, option rows, header action circles). surfaceSunk is reserved for transient presses carrying primary ink. Rows with metadata use rowPressed, aliased to surfaceRaised, so muted text remains readable. Muted text may rest on surfaceRaised but never on surfaceSunk.",
-			"Standalone cards, including the Body lead measurement and Life wheel, use surface without a border. Featured invitations may use brand. Continuous lists use dividers instead of a surface per record.",
-			"Secondary buttons use canvas with a strong interactiveBorder outline and neutral ink in both appearances. The featured Journal check-in card and Intake invitation share an inset surface-filled action cue with brand text; the whole card is the action."
+			"Standalone cards, including the Body lead measurement and Life wheel, use surface without a border. Featured invitations use featured/onFeatured with a featuredBorder outline in dark appearance. Continuous lists use dividers instead of a surface per record.",
+			"Secondary buttons use canvas with a strong interactiveBorder outline and neutral ink in both appearances. The featured Journal check-in card and Intake invitation share an inset cardAction/onCardAction cue: stone with brand text in light, sage with dark ink in dark; the whole card is the action.",
+			"Factor chips and segmented controls use selected/onSelected: soft teal with brand ink in light, sage with dark ink in dark. selectedSoft remains the subtle fill for option rows, status and switch tracks."
 		]
 	},
 	"type": {
@@ -256,7 +271,7 @@
 			"id": "C15",
 			"name": "CheckInCard",
 			"usedBy": "J01",
-			"contract": "Not started, partial, complete; event time and human labels. The whole card is tappable; the featured card retains its surface-filled decorative action cue with brand text."
+			"contract": "Not started, partial, complete; event time and human labels. The whole card is tappable; the featured card uses a decorative cardAction/onCardAction cue."
 		},
 		{
 			"id": "C16",

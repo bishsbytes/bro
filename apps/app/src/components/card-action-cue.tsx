@@ -8,10 +8,10 @@ export function CardActionCue({ label }: { label: string }) {
 	const { theme } = useUnistyles();
 	return (
 		<View style={styles.cue}>
-			<AppText variant="label" color="brand" style={styles.label}>
+			<AppText variant="label" style={styles.label}>
 				{label}
 			</AppText>
-			<Icon name="chevron-right" size={20} color={theme.colors.brand} />
+			<Icon name="chevron-right" size={20} color={theme.colors.onCardAction} />
 		</View>
 	);
 }
@@ -28,7 +28,7 @@ const styles = StyleSheet.create((theme) => ({
 		paddingVertical: theme.spacing.sm,
 		marginTop: theme.spacing.xs,
 		borderRadius: theme.radius.pill,
-		backgroundColor: theme.colors.surface,
+		backgroundColor: theme.colors.cardAction,
 	},
-	label: { flexShrink: 1 },
+	label: { flexShrink: 1, color: theme.colors.onCardAction },
 }));

@@ -325,8 +325,13 @@ export function IntakeDayContent({
 const styles = StyleSheet.create((theme) => ({
 	hero: { gap: theme.spacing.lg },
 	invitationAction: { flexShrink: 0 },
-	invitation: { gap: theme.spacing.sm, backgroundColor: theme.colors.brand },
-	invitationText: { color: theme.colors.onBrand },
+	invitation: {
+		gap: theme.spacing.sm,
+		backgroundColor: theme.colors.featured,
+		borderWidth: theme.isDark ? 1 : 0,
+		borderColor: theme.colors.featuredBorder,
+	},
+	invitationText: { color: theme.colors.onFeatured },
 	segmentContent: { gap: theme.spacing.lg },
 	empty: { gap: theme.spacing.xs, paddingVertical: theme.spacing.sm },
 	section: { gap: theme.spacing.md },

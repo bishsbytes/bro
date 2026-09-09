@@ -277,6 +277,8 @@ const palettes = {
 		ink: "#F2F0E9",
 		ink2: "#B3BDB5",
 		brand: "#A8CDBE",
+		featured: "#1D3E37",
+		featuredBorder: "#315B50",
 		onBrand: "#14261D",
 		accent: "#D99A78",
 		onAccent: "#281B14",
@@ -317,8 +319,16 @@ export function createTheme(scheme: "light" | "dark") {
 		tabIndicator: palette.selectedSoft,
 		// The Android press ripple, tinted to settle into the indicator it sits under.
 		tabRipple: `${palette.selectedSoft}38`,
-		selected: palette.selectedSoft,
-		onSelected: palette.brand,
+		// Large invitations stay deep teal in dark mode. Sage is for their
+		// inset action and selected controls, not the entire card.
+		featured: scheme === "dark" ? palettes.dark.featured : palette.brand,
+		onFeatured: scheme === "dark" ? palette.ink : palette.onBrand,
+		featuredBorder:
+			scheme === "dark" ? palettes.dark.featuredBorder : palette.brand,
+		cardAction: scheme === "dark" ? palette.brand : palette.surface1,
+		onCardAction: scheme === "dark" ? palette.onBrand : palette.brand,
+		selected: scheme === "dark" ? palette.brand : palette.selectedSoft,
+		onSelected: scheme === "dark" ? palette.onBrand : palette.brand,
 		// Rows carry secondary metadata even during a press. This surface keeps
 		// that text readable; surfaceSunk is reserved for primary-ink controls.
 		rowPressed: palette.surface2,

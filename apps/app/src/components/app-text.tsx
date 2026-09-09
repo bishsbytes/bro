@@ -31,7 +31,8 @@ type TextColor =
 	| "body"
 	| "sleep"
 	| "load"
-	| "onBrand";
+	| "onBrand"
+	| "onFeatured";
 
 type AppTextProps = ComponentProps<typeof Text> & {
 	variant?: TextVariant;
@@ -56,6 +57,7 @@ export function AppText({
 		sleep: theme.colors.sleep,
 		load: theme.colors.load,
 		onBrand: theme.colors.onBrand,
+		onFeatured: theme.colors.onFeatured,
 	};
 
 	return (

@@ -8,7 +8,7 @@ describe("ThemedSwitch", () => {
 		expect(switchColors(theme, true, "android")).toEqual({
 			trackColor: {
 				false: theme.colors.border,
-				true: theme.colors.selected,
+				true: theme.colors.selectedSoft,
 			},
 			thumbColor: theme.colors.brand,
 		});

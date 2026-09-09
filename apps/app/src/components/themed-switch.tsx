@@ -18,7 +18,7 @@ export function switchColors(
 	return {
 		trackColor: {
 			false: theme.colors.border,
-			true: android ? theme.colors.selected : theme.colors.brand,
+			true: android ? theme.colors.selectedSoft : theme.colors.brand,
 		},
 		thumbColor: android
 			? checked

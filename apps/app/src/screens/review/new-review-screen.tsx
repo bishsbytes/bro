@@ -518,7 +518,7 @@ const styles = StyleSheet.create((theme) => ({
 	promptIcon: { alignItems: "center" },
 	focusSelected: {
 		borderColor: theme.colors.brand,
-		backgroundColor: theme.colors.selected,
+		backgroundColor: theme.colors.selectedSoft,
 	},
 	centredText: { textAlign: "center" },
 }));

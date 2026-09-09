@@ -118,6 +118,21 @@ describe("design tokens", () => {
 		});
 	});
 
+	it("keeps invitation and selected-control text readable in both appearances", () => {
+		for (const { colors } of [lightTheme, darkTheme]) {
+			for (const [foreground, background] of [
+				[colors.onFeatured, colors.featured],
+				[colors.onCardAction, colors.cardAction],
+				[colors.onSelected, colors.selected],
+			]) {
+				expect(contrast(foreground, background)).toBeGreaterThanOrEqual(4.5);
+			}
+		}
+		expect(relativeLuminance(darkTheme.colors.featured)).toBeLessThan(
+			relativeLuminance(darkTheme.colors.cardAction),
+		);
+	});
+
 	it("keeps row metadata and input boundaries readable in both appearances", () => {
 		for (const theme of [lightTheme, darkTheme]) {
 			expect(

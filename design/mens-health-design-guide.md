@@ -207,7 +207,7 @@ Sub-screen navigation and full-height form headers use centred uppercase sans ti
 
 Selected dates use brand/on-brand; logged-date dots are separate. Buttons have pill ends, a 52-point minimum height and medium 14/20 labels. Secondary buttons use the app canvas with a strong outline and neutral text in both appearances. Quiet navigation and disclosures use TextAction with a 48-point minimum hit area. Factor chips carry text plus a selected indicator. Selection rows are equal height. Saving suppresses repeated submission.
 
-Standalone cards use the shared stone surface without a border in light appearance and its charcoal equivalent in dark. Body's lead measurement and Life's wheel share this treatment. Continuous lists use dividers instead of a surface per record. Featured invitations may use brand fill. The featured Journal card and Intake’s “Add to your day” invitation are each one tappable component. Their inset action labels and chevrons share a stone fill, brand text and pill shape; the whole card owns the action, with no nested button.
+Standalone cards use the shared stone surface without a border in light appearance and its charcoal equivalent in dark. Body's lead measurement and Life's wheel share this treatment. Continuous lists use dividers instead of a surface per record. Featured invitations use brand fill in light and deep teal (#1D3E37) with warm off-white text and a subtle teal outline (#315B50) in dark. The featured Journal card and Intake’s “Add to your day” invitation are each one tappable component. Their inset action labels and chevrons share a pill shape, stone fill with brand text in light and sage fill with dark ink in dark; the whole card owns the action, with no nested button.
 
 Choices, option rows and header actions on a card use the raised surface. Pressed rows with metadata use that same surface to retain text contrast; reserve the deeper pressed surface for primary-ink controls. Shared action opacity is 0.72 when pressed and 0.4 when disabled. Form boundaries use the interactive border, brand focus and alert errors.
 
@@ -269,7 +269,7 @@ These names describe reusable design responsibilities; see [REACT_NATIVE.md](REA
 
 | ID | Component | Used by | Responsibility |
 | --- | --- | --- | --- |
-| C15 | CheckInCard | J01 | Not started, partial, complete; event time and human labels. The whole card is tappable; the featured card retains its surface-filled decorative action cue with brand text. |
+| C15 | CheckInCard | J01 | Not started, partial, complete; event time and human labels. The whole card is tappable; the featured card uses a decorative action cue, stone with brand text in light and sage with dark ink in dark. |
 | C16 | CheckInStepper | J02-J04 | Step count, draft retention and distinct continue/save actions. |
 | C17 | IntakeRow | I01-I02 | Item, visible amount/unit and contextual repeat/edit action. |
 | C18 | SourceStamp | B01-B03, I03 | Origin, measurement time and optional separate sync time. |
@@ -614,7 +614,10 @@ Semantic roles preserve hierarchy. A component resolves its colours from the cho
 | Accent / on-accent | #A14F36 / #FFFFFF | #D99A78 / #281B14 | The labelled + Log action. |
 | Control boundary | #78847D | #7D9183 | Inputs and controls needing a visible outline. |
 | Decorative divider | #D8DDD6 | #39483F | Non-essential grouping lines only. |
-| Selected soft | #E0ECE7 | #304B3E | Selected chips with brand text and a checkmark. |
+| Selected soft | #E0ECE7 | #304B3E | Option rows, status fills and Android switch tracks. |
+| Selected control / label | #E0ECE7 / #174F4A | #A8CDBE / #14261D | Factor chips and segmented controls; chips retain a checkmark. |
+| Featured / text | #174F4A / #FFFFFF | #1D3E37 / #F2F0E9 | Journal and Intake invitations; dark outline #315B50. |
+| Card action / label | #F4F1EB / #174F4A | #A8CDBE / #14261D | Decorative pill and chevron inside featured invitations. |
 | History fill | #DDE5DD | #344C40 | Neutral personal-history band, independent of targets. |
 | Error | #A33932 | #F2ABA0 | Error text, icons and outlines; include a message. |
 
