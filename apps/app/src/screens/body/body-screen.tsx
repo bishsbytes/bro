@@ -610,7 +610,7 @@ export function BodyScreen({ store }: BodyScreenProps) {
 			/>
 
 			{heroMetric?.baseline.current ? (
-				<Card variant="outlined" style={styles.heroCard}>
+				<Card style={styles.heroCard}>
 					<BodyBaselineGauge
 						metric={heroMetric}
 						locale={locale}

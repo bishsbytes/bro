@@ -2,17 +2,10 @@ import type { ComponentProps } from "react";
 import { View } from "react-native";
 import { StyleSheet } from "../theme/unistyles";
 
-type CardProps = ComponentProps<typeof View> & {
-	variant?: "filled" | "outlined";
-};
+type CardProps = ComponentProps<typeof View>;
 
-export function Card({ variant = "filled", style, ...props }: CardProps) {
-	return (
-		<View
-			{...props}
-			style={[styles.card, variant === "outlined" && styles.outlined, style]}
-		/>
-	);
+export function Card({ style, ...props }: CardProps) {
+	return <View {...props} style={[styles.card, style]} />;
 }
 
 const styles = StyleSheet.create((theme) => ({
@@ -20,10 +13,5 @@ const styles = StyleSheet.create((theme) => ({
 		padding: theme.spacing.lg,
 		borderRadius: theme.radius.card,
 		backgroundColor: theme.colors.surface1,
-	},
-	outlined: {
-		backgroundColor: theme.colors.canvas,
-		borderWidth: 1,
-		borderColor: theme.colors.line,
 	},
 }));
