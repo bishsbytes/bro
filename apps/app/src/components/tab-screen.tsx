@@ -4,7 +4,6 @@ import { useTranslation } from "react-i18next";
 import { View } from "react-native";
 import { StyleSheet } from "../theme/unistyles";
 import { AppHeader } from "./app-header";
-import { HeaderIconButton } from "./header-icon-button";
 import { useLogDate } from "./log-date-context";
 
 const TITLE_KEYS = {
@@ -46,18 +45,6 @@ export function TabScreen({
 					isJournal ? t("tabs.openHistory") : undefined
 				}
 				onEyebrowPress={isJournal ? () => router.push("/history") : undefined}
-				showSettings={!isJournal}
-				actions={
-					isJournal ? (
-						<HeaderIconButton
-							icon="insights"
-							testID="insights-header-icon"
-							label={t("tabs.openInsights")}
-							onPress={() => router.push("/insights")}
-							surface
-						/>
-					) : null
-				}
 			/>
 			{children}
 		</View>

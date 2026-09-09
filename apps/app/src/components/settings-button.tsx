@@ -15,8 +15,8 @@ export function SettingsButton({
 
 	return (
 		<HeaderIconButton
-			icon="settings"
-			testID="settings-header-icon"
+			icon="person"
+			testID="settings-avatar-icon"
 			label={t("a11y.settings")}
 			onPress={onPress}
 			surface={surface}

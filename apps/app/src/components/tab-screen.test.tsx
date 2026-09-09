@@ -40,15 +40,15 @@ describe("TabScreen", () => {
 		expect(journal.getByText("A moment for yourself.")).toBeTruthy();
 		expect(journal.getByText("Wednesday, September 2")).toBeTruthy();
 		expect(journal.getByText("Journal content")).toBeTruthy();
-		expect(journal.queryByLabelText("Settings")).toBeNull();
+		expect(journal.getByLabelText("Settings")).toBeTruthy();
 		expect(intake.getByText("What you’ve had.")).toBeTruthy();
 		expect(intake.getByText("Tuesday, September 1")).toBeTruthy();
 		expect(intake.getByText("Intake content")).toBeTruthy();
 		expect(intake.queryByLabelText("Open insights")).toBeNull();
 		expect(intake.queryByLabelText("Open history")).toBeNull();
 
-		await fireEvent.press(journal.getByLabelText("Open insights"));
-		expect(router.push).toHaveBeenLastCalledWith("/insights");
+		await fireEvent.press(journal.getByLabelText("Settings"));
+		expect(router.push).toHaveBeenLastCalledWith("/settings");
 		await fireEvent.press(journal.getByLabelText("Open history"));
 		expect(router.push).toHaveBeenLastCalledWith("/history");
 		await fireEvent.press(intake.getByLabelText("Settings"));
@@ -78,8 +78,8 @@ describe("TabScreen", () => {
 	);
 
 	it.each([
-		["journal", "Open insights", "insights-header-icon"],
-		["intake", "Settings", "settings-header-icon"],
+		["journal", "Settings", "settings-avatar-icon"],
+		["intake", "Settings", "settings-avatar-icon"],
 	] as const)(
 		"preserves header action sizing on %s",
 		async (tab, label, icon) => {

@@ -49,7 +49,7 @@ describe("AppHeader", () => {
 		},
 	);
 
-	it("renders a title and actions and opens Settings from the cog", async () => {
+	it("renders a title and actions and opens Settings from the avatar", async () => {
 		const onSettingsPress = jest.fn();
 		const screen = await render(
 			<AppHeader
@@ -73,11 +73,11 @@ describe("AppHeader", () => {
 		expect(onSettingsPress).toHaveBeenCalledTimes(1);
 	});
 
-	it("shows a settings cog without depending on account identity", async () => {
+	it("shows a settings avatar without depending on account identity", async () => {
 		const screen = await render(<AppHeader title="History" />);
 
 		expect(screen.getByLabelText("Settings")).toBeTruthy();
-		expect(screen.getByTestId("settings-header-icon")).toBeTruthy();
+		expect(screen.getByTestId("settings-avatar-icon")).toBeTruthy();
 	});
 
 	it("renders a compact date context above the title as one accessible target", async () => {
