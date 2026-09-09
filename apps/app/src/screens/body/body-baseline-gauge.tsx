@@ -6,6 +6,7 @@ import { Pressable, View } from "react-native";
 import type { BodyMetricSummary } from "../../body/body-store";
 import { AppText } from "../../components/app-text";
 import { ModalSheet } from "../../components/modal-sheet";
+import { SectionHeader } from "../../components/section-header";
 import { SourceStamp } from "../../components/source-stamp";
 import { StyleSheet } from "../../theme/unistyles";
 import { changeSentence } from "./baseline-copy";
@@ -119,7 +120,7 @@ export function BodyRecentRange({ metric }: { metric: BodyMetricSummary }) {
 				onClose={() => setExpanded(false)}
 				closeAccessibilityLabel={t("common:actions.close")}
 			>
-				<AppText variant="title">{t("body:read.rangeTitle")}</AppText>
+				<SectionHeader title={t("body:read.rangeTitle")} />
 				{range ? (
 					<AppText>
 						{t("body:read.range", {

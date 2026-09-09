@@ -163,12 +163,21 @@ export function UnitsScreen({ store }: UnitsScreenProps) {
 					options={editingSetting.options.map((option) => ({
 						value: option.unit,
 						label: option.label,
+						detail:
+							!editingSetting.explicitUnit &&
+							option.unit === editingSetting.resolvedUnit
+								? t(
+										editingSetting.resolutionSource === "locale"
+											? "common:selection.deviceDefault"
+											: "common:selection.default",
+									)
+								: undefined,
 						accessibilityLabel: t("units.useUnit", {
 							unit: option.label,
 							setting: editingSetting.title,
 						}),
 					}))}
-					selected={editingSetting.explicitUnit}
+					selected={editingSetting.resolvedUnit}
 					disabled={busyDimension !== null}
 					onSelect={(unit) => void choose(editingSetting.dimension, unit)}
 					onClose={() => setEditing(null)}

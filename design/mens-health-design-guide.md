@@ -220,6 +220,8 @@ Use SegmentedControl for fixed single-value choices and ranges, with radio seman
 
 Persistent labels, logical keyboard types, explicit units, contextual validation and stable detail rows. The amount-greater-than-zero example applies to consumption quantity; measurements use their own domain rules.
 
+Bottom-sheet pickers and management sheets use a left-aligned 20/26 semibold sans title, with an 8-point gap to supporting copy. Native and web share a 24-point handle area and 16-point content top/horizontal padding. Option rows use a 52-point minimum height, 12-point corners and padding, and 8-point gaps; selection adds soft tint, a brand outline and a radio/checkbox indicator. Immediate on/off preferences use switches. Single-choice pickers dismiss on selection; multiple-choice pickers stay open and offer Done, which dismisses without saving again. Unit pickers visibly select the effective value and identify inherited defaults without creating a preference on open.
+
 
 ## Shared cards tell the user what happened
 
@@ -280,7 +282,7 @@ These names describe reusable design responsibilities; see [REACT_NATIVE.md](REA
 | C25 | PracticeRow | L03 and activity | Action, completion/event reference and optional amount/time. |
 | C26 | ReadingsList | B02 | Exact recorded values, timestamps, units and sources. |
 | C27 | ManagementRow | B04, life-area settings | Visibility, reorder and labels; deletion is separate. |
-| C28 | ActionSheet | + Log, More factors | Named options, dismiss, date context and keyboard handling. |
+| C28 | ActionSheet | + Log, settings, units and contextual actions | Shared sans title and spacing, named options, date context and keyboard handling. Single choices dismiss on selection; multiple choices offer Done. Effective default units are visibly selected and identified. |
 
 
 ## Design the moments between screens

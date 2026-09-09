@@ -40,6 +40,7 @@ export function OptionRow({
 		<TouchableOpacity
 			accessibilityRole={selection === "single" ? "radio" : "checkbox"}
 			accessibilityLabel={accessibilityLabel}
+			accessibilityHint={detail}
 			aria-checked={selected}
 			aria-disabled={disabled}
 			accessibilityState={{ selected, checked: selected, disabled }}

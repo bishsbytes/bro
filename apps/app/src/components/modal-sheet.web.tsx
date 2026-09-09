@@ -168,7 +168,7 @@ const styles = StyleSheet.create((theme) => ({
 		backgroundColor: theme.colors.glass,
 	},
 	handleArea: {
-		height: 24,
+		height: theme.spacing.xl,
 		alignItems: "center",
 		justifyContent: "center",
 	},
@@ -180,7 +180,7 @@ const styles = StyleSheet.create((theme) => ({
 	},
 	content: {
 		gap: theme.spacing.lg,
-		paddingTop: theme.spacing.sm,
+		paddingTop: theme.spacing.lg,
 		paddingHorizontal: theme.spacing.lg,
 		paddingBottom: theme.spacing.lg,
 	},

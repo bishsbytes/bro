@@ -236,12 +236,17 @@ export function IntakeSettingsScreen({ store }: IntakeSettingsScreenProps) {
 					options={editingSetting.options.map((option) => ({
 						value: option.unit,
 						label: option.label,
+						detail:
+							!editingSetting.explicitUnit &&
+							option.unit === editingSetting.resolvedUnit
+								? t("common:selection.default")
+								: undefined,
 						accessibilityLabel: t("intake:settings.useUnit", {
 							unit: option.label,
 							setting: editingSetting.title,
 						}),
 					}))}
-					selected={editingSetting.explicitUnit}
+					selected={editingSetting.resolvedUnit}
 					disabled={busy}
 					onSelect={(unit) =>
 						void mutate(editingSetting.dimension, () =>

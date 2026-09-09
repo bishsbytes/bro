@@ -1,6 +1,8 @@
+import { useTranslation } from "react-i18next";
 import { View } from "react-native";
 import { StyleSheet } from "../theme/unistyles";
 import { AppText } from "./app-text";
+import { Button } from "./button";
 import type { IconName } from "./icon";
 import { ModalSheet } from "./modal-sheet";
 import { OptionRow } from "./option-row";
@@ -45,6 +47,7 @@ type OptionSheetProps<Value extends string> = {
 export function OptionSheet<Value extends string>(
 	props: OptionSheetProps<Value>,
 ) {
+	const { t } = useTranslation("common");
 	const {
 		visible,
 		title,
@@ -102,6 +105,13 @@ export function OptionSheet<Value extends string>(
 					/>
 				))}
 			</View>
+			{multiple ? (
+				<Button
+					label={t("datePicker.done")}
+					disabled={disabled}
+					onPress={onClose}
+				/>
+			) : null}
 		</ModalSheet>
 	);
 }

@@ -64,6 +64,9 @@ describe("OptionSheet", () => {
 
 		expect(onSelect).toHaveBeenCalledWith("kg");
 		expect(onClose).not.toHaveBeenCalled();
+		await fireEvent.press(view.getByRole("button", { name: "Done" }));
+		expect(onClose).toHaveBeenCalledTimes(1);
+		expect(onSelect).toHaveBeenCalledTimes(1);
 	});
 
 	it("ignores a choice while a write is in flight", async () => {

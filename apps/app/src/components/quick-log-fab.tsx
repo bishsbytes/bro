@@ -14,6 +14,7 @@ import { Icon, type IconName } from "./icon";
 import { LoadingIndicator } from "./loading-indicator";
 import { useLogDate } from "./log-date-context";
 import { ModalSheet } from "./modal-sheet";
+import { SectionHeader } from "./section-header";
 
 type QuickLogPage = "options" | "body";
 
@@ -159,7 +160,7 @@ export function QuickLogFab({
 			>
 				{page === "options" ? (
 					<>
-						<AppText variant="section">{t("quickLog.title")}</AppText>
+						<SectionHeader title={t("quickLog.title")} />
 						<AppText variant="caption" color="muted">
 							{selectedDay}
 						</AppText>

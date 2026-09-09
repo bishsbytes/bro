@@ -19,6 +19,7 @@ import { Icon } from "../../components/icon";
 import { ModalSheet } from "../../components/modal-sheet";
 import { ScoreRow } from "../../components/score-row";
 import { LoadingScreen, FullScreen as Screen } from "../../components/screen";
+import { SectionHeader } from "../../components/section-header";
 import { playSelectionHaptic } from "../../feedback/selection-haptic";
 import { toMessage } from "../../lib/errors";
 import { StyleSheet, useUnistyles } from "../../theme/unistyles";
@@ -584,7 +585,7 @@ export function CheckInScreen({
 				onClose={() => setConfirmClose(false)}
 				closeAccessibilityLabel={t("draft.continue")}
 			>
-				<AppText variant="title">{t("draft.title")}</AppText>
+				<SectionHeader title={t("draft.title")} />
 				<AppText color="muted">{t("draft.body")}</AppText>
 				{saveError ? (
 					<AppText accessibilityRole="alert" color="danger">

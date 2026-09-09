@@ -7,6 +7,7 @@ import { FormField } from "../../components/form-field";
 import { Icon } from "../../components/icon";
 import { ModalSheet, SheetTextInput } from "../../components/modal-sheet";
 import { OptionRow } from "../../components/option-row";
+import { SectionHeader } from "../../components/section-header";
 import { StyleSheet, useUnistyles } from "../../theme/unistyles";
 
 /** One choice in the amount control: a portion, or the basis unit itself. */
@@ -147,17 +148,17 @@ export function IntakeQuantityField({
 					onClose={closePortions}
 					closeAccessibilityLabel={t("free.closePortions")}
 				>
-					<View style={styles.sheetHeader}>
-						<AppText variant="section" style={styles.grow}>
-							{t(unitInput ? "free.choosePortion" : "log.chooseUnit")}
-						</AppText>
-						<Button
-							label={t("log.close")}
-							accessibilityLabel={t("free.closePortions")}
-							variant="text"
-							onPress={closePortions}
-						/>
-					</View>
+					<SectionHeader
+						title={t(unitInput ? "free.choosePortion" : "log.chooseUnit")}
+						action={
+							<Button
+								label={t("log.close")}
+								accessibilityLabel={t("free.closePortions")}
+								variant="text"
+								onPress={closePortions}
+							/>
+						}
+					/>
 					{unitInput ? (
 						<>
 							<FormField
@@ -270,10 +271,5 @@ const styles = StyleSheet.create((theme) => ({
 		borderRadius: theme.radius.control,
 	},
 	unitText: { flexShrink: 1, textAlign: "center" },
-	sheetHeader: {
-		flexDirection: "row",
-		alignItems: "center",
-		gap: theme.spacing.sm,
-	},
 	options: { gap: theme.spacing.sm },
 }));

@@ -89,7 +89,7 @@ describe("units screen", () => {
 		expect(store.set).not.toHaveBeenCalled();
 	});
 
-	it("says where an unchosen unit came from without marking it as saved", async () => {
+	it("marks the effective default without saving an override", async () => {
 		const store = {
 			load: jest.fn(async () => localeSnapshot),
 			set: jest.fn(),
@@ -106,11 +106,11 @@ describe("units screen", () => {
 		expect(
 			view.getByText("Used for weight entries, history, trends, and goals."),
 		).toBeTruthy();
-		// The locale resolved it, so no option is shown as the saved one.
+		expect(view.getByText("Device default")).toBeTruthy();
 		expect(
 			view.getByLabelText("Use Stones & pounds for Weight").props
 				.accessibilityState,
-		).toMatchObject({ selected: false });
+		).toMatchObject({ selected: true, checked: true });
 		expect(store.set).not.toHaveBeenCalled();
 	});
 

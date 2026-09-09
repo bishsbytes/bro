@@ -16,6 +16,10 @@ The header date, check-in card sitting names and check-in screen sitting label u
 
 ## Component contracts
 
+Bottom sheets use left-aligned, sentence-case `SectionHeader` titles (20/26 semibold sans). Compact pickers and management sheets share this treatment; full-height forms retain their centred uppercase navigation header. `ModalSheet` uses the same 24-point handle area, 16-point content top/horizontal padding and 16-point section gaps on native and web, with bottom safe-area padding. Picker titles and supporting copy are grouped with an 8-point gap.
+
+`OptionSheet` and `OptionRow` provide the shared outlined choices: 52-point minimum height, 12-point corners and padding, 8-point gaps, raised neutral fill, and soft selection tint with a brand outline and indicator. Radios mean one choice; checkboxes mean multiple choices; immediate on/off settings retain switches. Single-choice selection dismisses the sheet. Multiple-choice changes apply immediately and keep it open; Done dismisses without saving again and is disabled during a write. Unit pickers select the effective unit and label an inherited value as Device default or Default, without writing an override merely by opening the picker.
+
 Buttons use fully rounded ends (`theme.radius.pill`) across primary, secondary, destructive and text variants. Secondary buttons use the app background (`theme.colors.background`) in both appearances, with the strong outline and neutral label. Reuse `components/button.tsx` for labelled actions and inherit its radius instead of overriding it per screen. Custom compact action buttons use the same pill token; square icon actions are circular. Cards, fields, selectable rows and factor chips retain their own shape tokens.
 
 Use `Button` for submissions, cancellation, destructive actions and state-changing commands; use `TextAction` for quiet navigation and disclosures. Both use the 14/20 medium label role. Buttons keep their 52-point minimum; quiet links and icon actions keep a 48-point minimum. `opacity.pressed` is shared action feedback, distinct from `opacity.disabled`.

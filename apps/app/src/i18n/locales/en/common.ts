@@ -3,6 +3,10 @@
  * here; anything one screen owns stays in that feature's catalogue.
  */
 export const common = {
+	selection: {
+		deviceDefault: "Device default",
+		default: "Default",
+	},
 	wheel: {
 		showValues: "Show area values",
 		hideValues: "Hide area values",

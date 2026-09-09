@@ -7,6 +7,7 @@ import { Button } from "../../components/button";
 import { DateField } from "../../components/date-field";
 import { FormField } from "../../components/form-field";
 import { ModalSheet } from "../../components/modal-sheet";
+import { SectionHeader } from "../../components/section-header";
 import { TimeField } from "../../components/time-field";
 import type {
 	IntakeEventEdit,
@@ -49,7 +50,7 @@ function EventEditor({
 		<View style={styles.sheet}>
 			<View>
 				<AppText variant="eyebrow">{t("event.editTitle")}</AppText>
-				<AppText variant="largeTitle">{event.name}</AppText>
+				<SectionHeader title={event.name} />
 				<IntakeArtwork
 					hero
 					name={event.name}
@@ -191,7 +192,7 @@ function EntrySheetContent({
 	return (
 		<View style={styles.sheet}>
 			<View>
-				<AppText variant="section">{entry.name}</AppText>
+				<SectionHeader title={entry.name} />
 				<AppText color="muted">
 					{t("entry.groupIntro", { count: entry.events.length })}
 				</AppText>

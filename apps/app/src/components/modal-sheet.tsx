@@ -77,6 +77,7 @@ export function ModalSheet({
 					enableDynamicSizing={sizing === "content"}
 					enablePanDownToClose
 					handleIndicatorStyle={styles.handle}
+					handleStyle={styles.handleArea}
 					index={0}
 					keyboardBehavior="interactive"
 					keyboardBlurBehavior="restore"
@@ -111,6 +112,11 @@ const styles = StyleSheet.create((theme) => ({
 		borderWidth: 1,
 		borderColor: theme.colors.line,
 		backgroundColor: theme.colors.glass,
+	},
+	handleArea: {
+		height: theme.spacing.xl,
+		alignItems: "center",
+		justifyContent: "center",
 	},
 	handle: {
 		width: 36,

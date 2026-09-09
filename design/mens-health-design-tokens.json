@@ -333,8 +333,8 @@
 		{
 			"id": "C28",
 			"name": "ActionSheet",
-			"usedBy": "+ Log, More factors",
-			"contract": "Named options, dismiss, date context and keyboard handling."
+			"usedBy": "+ Log, settings, units and contextual actions",
+			"contract": "Shared sans title and spacing, named options, date context and keyboard handling. Single choices dismiss on selection; multiple choices offer Done. Effective default units are visibly selected and identified."
 		}
 	],
 	"screens": [

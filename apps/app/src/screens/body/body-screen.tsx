@@ -204,7 +204,7 @@ function BodyLogContent({
 	if (logMode === "options") {
 		return (
 			<View style={styles.logSheet}>
-				<AppText variant="section">{t("body:log.title")}</AppText>
+				<SectionHeader title={t("body:log.title")} />
 				<AppText color="muted">{t("body:log.intro")}</AppText>
 				{weight?.tracked ? (
 					<ListRow
@@ -255,13 +255,15 @@ function BodyLogContent({
 
 	return (
 		<View style={styles.logSheet}>
-			<AppText variant="section">
-				{logMode === "measurements"
-					? t("body:log.session")
-					: t("body:measurements.logMetric", {
-							name: logMetrics[0]?.label,
-						})}
-			</AppText>
+			<SectionHeader
+				title={
+					logMode === "measurements"
+						? t("body:log.session")
+						: t("body:measurements.logMetric", {
+								name: logMetrics[0]?.label,
+							})
+				}
+			/>
 			<AppText color="muted">
 				{logMode === "measurements"
 					? t("body:log.sessionFormIntro")
@@ -739,19 +741,24 @@ export function BodyScreen({ store }: BodyScreenProps) {
 						if (!busySlug) setEditingGroup(null);
 					}}
 				>
-					<AppText variant="eyebrow">
-						{t(`body:management.${editingGroup}.title`)}
-					</AppText>
-					<AppText variant="largeTitle">{t("body:management.title")}</AppText>
-					<AppText color="muted">
-						{t(`body:management.${editingGroup}.intro`)}
-					</AppText>
+					<View style={styles.sheetHeader}>
+						<SectionHeader title={t(`body:management.${editingGroup}.title`)} />
+						<AppText color="muted">
+							{t(`body:management.${editingGroup}.intro`)}
+						</AppText>
+					</View>
 					<View>
 						{overview.metrics
 							.filter((metric) => metric.bodyGroup === editingGroup)
-							.map((metric) => (
-								<View key={metric.metricSlug} style={styles.managementRow}>
-									<AppText style={styles.managementLabel}>
+							.map((metric, index, metrics) => (
+								<View
+									key={metric.metricSlug}
+									style={[
+										styles.managementRow,
+										index < metrics.length - 1 && styles.managementSeparator,
+									]}
+								>
+									<AppText variant="label" style={styles.managementLabel}>
 										{metric.label}
 									</AppText>
 									<ThemedSwitch
@@ -820,10 +827,13 @@ const styles = StyleSheet.create((theme) => ({
 		gap: theme.spacing.md,
 		minHeight: theme.control.buttonMinHeight,
 		paddingVertical: theme.spacing.sm,
+	},
+	managementSeparator: {
 		borderBottomWidth: 1,
 		borderBottomColor: theme.colors.line,
 	},
 	managementLabel: { flex: 1 },
+	sheetHeader: { gap: theme.spacing.sm },
 	logSheet: { gap: theme.spacing.lg },
 }));
 
