@@ -1,7 +1,7 @@
 import type { ReactNode } from "react";
 import { Pressable, Text, View } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
-import { StyleSheet } from "../theme/unistyles";
+import { StyleSheet, useUnistyles } from "../theme/unistyles";
 import { SettingsButton } from "./settings-button";
 
 type AppHeaderProps = {
@@ -30,9 +30,14 @@ export function AppHeader({
 	onSettingsPress,
 	stacked = false,
 }: AppHeaderProps) {
+	const { theme } = useUnistyles();
+	// SafeAreaView is a third-party native view, so pass its background explicitly
+	// and subscribe to theme changes instead of relying on native style updates.
+	const safeAreaStyle = { backgroundColor: theme.colors.background };
+
 	if (stacked) {
 		return (
-			<SafeAreaView style={styles.safeArea} edges={["top"]}>
+			<SafeAreaView style={safeAreaStyle} edges={["top"]}>
 				<View style={[styles.headerInsets, styles.stackedHeader]}>
 					<View style={styles.dateRow}>
 						{onEyebrowPress ? (
@@ -67,7 +72,7 @@ export function AppHeader({
 		);
 	}
 	return (
-		<SafeAreaView style={styles.safeArea} edges={["top"]}>
+		<SafeAreaView style={safeAreaStyle} edges={["top"]}>
 			<View style={[styles.headerInsets, styles.header]}>
 				{leading ? <View style={styles.leading}>{leading}</View> : null}
 				{onEyebrowPress ? (
@@ -113,7 +118,6 @@ export function AppHeader({
 }
 
 const styles = StyleSheet.create((theme) => ({
-	safeArea: { backgroundColor: theme.colors.background },
 	pressed: { opacity: theme.opacity.pressed },
 	headerInsets: {
 		paddingHorizontal: theme.spacing.gutter,
