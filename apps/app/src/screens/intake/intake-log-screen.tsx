@@ -523,7 +523,6 @@ export function IntakeLogScreen({
 		<>
 			<Stack.Screen
 				options={{
-					title: "",
 					headerBackVisible: false,
 					headerLeft: () => (
 						<Button

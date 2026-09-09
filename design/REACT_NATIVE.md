@@ -4,6 +4,8 @@ Use the September 2026 guide and JSON tokens, with the current component contrac
 
 System / Light / Dark resolves through `DeviceSettingsProvider`, before the splash hides. Native tab and stack navigation remains in place. Picker and sheet styles resolve from the same theme. Do not remount screens to change appearance.
 
+Sub-screen navigation headers use a centred uppercase `eyebrow` title: platform sans, 12/16 medium with 0.6-point letter spacing. `stackScreenOptions` applies this to every native stack, with large-title expansion disabled; routes supply only their translated or dynamic title and contextual actions. Keep source strings naturally cased and let typography apply uppercase. `FormSheet` uses the same title role and centres it between balanced action slots. These titles announce a heading. Main tabs retain their editorial page titles, and check-in/review step flows retain their purpose-built progress headers and question headings.
+
 Light appearance uses an off-white canvas (`#FFFDFA`) and darker warm stone cards (`#F4F1EB`), matching the screen studies. Choices, option rows and header actions resting on a card take `surface2` (`#EDE9E1`) and primary-ink pressed controls take `surfaceSunk` (`#E2DCD0`). Rows with metadata use `rowPressed` (aliased to `surface2`) so secondary text remains readable throughout a press. The separate surface steps prevent controls from disappearing into the card beneath them. Muted text may rest on `surface2`, never on `surfaceSunk`. Each tab owns its header through `components/tab-screen.tsx`, so the title and actions switch with the native page. Custom app headers use 24-point horizontal insets and 8-point vertical padding on every tab, inside the top safe area. Check-in headers use 24-point horizontal insets, 16 points above and 12 below. Keep header action touch targets at least 48 points and allow editorial titles the full width below the date/action row. Both header layouts announce their title as a heading. Scroll content on the four tabs clears the floating log action through `theme.control.fabClearance`, which is derived from the button height rather than repeated per screen.
 
 Day tiles have subtle borders inside their spacing; the full tile area remains tappable. Header action surfaces are borderless 40-point circles inside 48-point touch targets. Factor chips have 12-point corners and a 40-point visual height inside a minimum 48-point touch target; allow growth for larger text. Unselected chips are transparent with faint outlines; selected chips use the soft selection tint and a checkmark without a contrasting border.
@@ -31,7 +33,7 @@ Paths below are relative to `apps/app/src`.
 | Contract | Implementation |
 | --- | --- |
 | C01 AppScaffold | `components/screen.tsx`, `app/(tabs)/_layout.tsx` |
-| C02 ScreenHeader | `components/app-header.tsx`, `components/section-header.tsx`, native stack options |
+| C02 ScreenHeader | `components/app-header.tsx` for tabs; `theme/unistyles.ts`’s `stackScreenOptions` for centred uppercase sub-screen titles; `components/form-sheet.tsx` for full-height forms; `components/section-header.tsx` for content sections |
 | C03 DateStrip | `components/week-strip.tsx` for Journal; Intake uses its day switcher |
 | C04 BottomNavigation | `app/(tabs)/_layout.tsx`, Expo native tabs |
 | C05 LogAction | `components/quick-log-fab.tsx`, `components/log-date-context.tsx` |

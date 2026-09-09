@@ -75,6 +75,13 @@
 			"size": 12,
 			"lineHeight": 16
 		},
+		"eyebrow": {
+			"size": 12,
+			"lineHeight": 16,
+			"weight": 500,
+			"letterSpacing": 0.6,
+			"textTransform": "uppercase"
+		},
 		"familyRoles": {
 			"display": "Caladea Regular",
 			"notes": "Caladea",
@@ -171,7 +178,7 @@
 			"id": "C02",
 			"name": "ScreenHeader",
 			"usedBy": "All screens",
-			"contract": "Title, optional eyebrow, back/close and contextual action."
+			"contract": "Centred uppercase 12/16 medium sans navigation titles on sub-screens and full-height forms; no native large-title expansion. Main tabs retain editorial titles; step flows retain progress headers. Back/close and contextual actions keep their behavior."
 		},
 		{
 			"id": "C03",

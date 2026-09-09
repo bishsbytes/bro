@@ -42,7 +42,7 @@ import {
 	measurementInputOf,
 	parseMeasurementInput,
 } from "../../measurements/measurement-entry";
-import { StyleSheet, useUnistyles } from "../../theme/unistyles";
+import { StyleSheet } from "../../theme/unistyles";
 import { BodyBaselineGauge, BodyRecentRange } from "./body-baseline-gauge";
 import { BodyReadingSheet } from "./body-reading-sheet";
 
@@ -162,7 +162,6 @@ function HistoryEditor({
 export function BodyMetricScreen({ metricSlug, store }: BodyMetricScreenProps) {
 	const { t } = useTranslation(["body", "common"]);
 	const body = useMemo(() => store ?? createBodyStore(), [store]);
-	const { theme } = useUnistyles();
 	const scrollRef = useRef<ScrollView>(null);
 	const [historyY, setHistoryY] = useState(0);
 	const [managingHeading, setManagingHeading] = useState(false);
@@ -298,15 +297,7 @@ export function BodyMetricScreen({ metricSlug, store }: BodyMetricScreenProps) {
 			>
 				<Stack.Screen
 					options={{
-						headerTitleAlign: "center",
-						headerTitleStyle: {
-							fontFamily: theme.fonts.sans,
-							fontSize: 12,
-							fontWeight: "500",
-						},
-						headerTitle: () => (
-							<AppText variant="eyebrow">{t("measurementTitle")}</AppText>
-						),
+						title: t("measurementTitle"),
 						headerRight: isTapeSiteSlug(detail.metricSlug)
 							? () => (
 									<HeaderIconButton

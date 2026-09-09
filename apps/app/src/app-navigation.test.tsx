@@ -267,7 +267,7 @@ describe("app entry", () => {
 		expect(view.queryByText("What you’ve had.")).toBeNull();
 		expect(view.getByLabelText("Settings")).toBeTruthy();
 
-		await press(view, "Life");
+		await fireEvent.press(view.getByLabelText(/^Life, tab/));
 		await waitFor(() => expect(router.getPathname()).toBe("/life"));
 		expect(await view.findByText("Wheel of life")).toBeTruthy();
 		expect(view.getByLabelText("Settings")).toBeTruthy();
@@ -360,7 +360,7 @@ describe("app entry", () => {
 		await act(async () => expoRouter.back());
 		await waitFor(() => expect(router.getPathname()).toBe("/settings"));
 
-		await press(view, "Sign in");
+		await fireEvent.press(view.getByRole("button", { name: "Sign in" }));
 
 		await waitFor(() => expect(router.getPathname()).toBe("/sign-in"));
 		expect(view.getByText("Need an account? Sign up")).toBeTruthy();
@@ -447,7 +447,7 @@ describe("app entry", () => {
 		await press(view, "Sign out");
 		expect(view.getByText("Using bro without an account")).toBeTruthy();
 
-		await press(view, "Sign in");
+		await fireEvent.press(view.getByRole("button", { name: "Sign in" }));
 		await fireEvent.changeText(
 			view.getByPlaceholderText("Email"),
 			"bea@example.com",
@@ -456,7 +456,7 @@ describe("app entry", () => {
 			view.getByPlaceholderText("Password"),
 			"password",
 		);
-		await press(view, "Sign in");
+		await fireEvent.press(view.getByRole("button", { name: "Sign in" }));
 
 		expect(router.getPathname()).toBe("/settings");
 		expect(await view.findByText("bea@example.com")).toBeTruthy();

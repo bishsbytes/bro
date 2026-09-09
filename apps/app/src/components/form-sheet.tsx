@@ -59,7 +59,11 @@ export function FormSheet({
 							onPress={onClose}
 							style={styles.close}
 						/>
-						<AppText variant="eyebrow" style={styles.title}>
+						<AppText
+							variant="eyebrow"
+							accessibilityRole="header"
+							style={styles.title}
+						>
 							{title}
 						</AppText>
 						<View style={styles.balance} />

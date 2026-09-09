@@ -203,6 +203,8 @@ These are rendered component specimens. Use the tokens and contracts to resolve 
 
 ### Foundation specimens
 
+Sub-screen navigation and full-height form headers use centred uppercase sans titles: the 12/16 medium eyebrow role with 0.6-point letter spacing. Native stacks do not expand these into large titles. Keep translations and dynamic title strings naturally cased. Main tabs keep their editorial titles, and check-in/review step flows keep progress headers and question headings.
+
 Selected dates use brand/on-brand; logged-date dots are separate. Buttons have pill ends, a 52-point minimum height and medium 14/20 labels. Secondary buttons use the app canvas with a strong outline and neutral text in both appearances. Quiet navigation and disclosures use TextAction with a 48-point minimum hit area. Factor chips carry text plus a selected indicator. Selection rows are equal height. Saving suppresses repeated submission.
 
 Standalone cards use the shared stone surface without a border in light appearance and its charcoal equivalent in dark. Body's lead measurement and Life's wheel share this treatment. Continuous lists use dividers instead of a surface per record. Featured invitations may use brand fill. The featured Journal card is one tappable component; its stone-filled “Check in” cue and brand label are decorative parts of that card, so they retain their own treatment.
@@ -244,7 +246,7 @@ These names describe reusable design responsibilities; see [REACT_NATIVE.md](REA
 | ID | Component | Used by | Responsibility |
 | --- | --- | --- | --- |
 | C01 | AppScaffold | All primary screens | Safe areas, scroll container and stable tab/action placement. |
-| C02 | ScreenHeader | All screens | Title, optional eyebrow, back/close and contextual action. |
+| C02 | ScreenHeader | All screens | Centred uppercase 12/16 medium sans navigation titles on sub-screens and full-height forms; no native large-title expansion. Main tabs retain editorial titles; step flows retain progress headers. Back/close and contextual actions keep their behavior. |
 | C03 | DateStrip | J01, I01 | Selected date and recorded-entry indicators are independent. |
 | C04 | BottomNavigation | J01, I01, B01, L01 | Journal / Intake / Body / Life; icon plus visible label. |
 | C05 | LogAction | Primary screens | Labelled + Log; destination-aware options preserve the active date. |

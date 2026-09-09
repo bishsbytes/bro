@@ -1,5 +1,6 @@
 import type { ThemeMode } from "@bro/database-app";
-import { Platform, type TextStyle } from "react-native";
+import { createElement } from "react";
+import { Platform, Text, type TextStyle } from "react-native";
 import {
 	StyleSheet,
 	UnistylesRuntime,
@@ -357,7 +358,7 @@ export function stackScreenOptions(
 		headerShadowVisible: false,
 		// Native-stack does not inset Android content beneath a transparent
 		// edge-to-edge header. Keep the native translucent treatment on iOS, where the
-		// scroll inset participates in large-title collapse, and use the native
+		// scroll inset accounts for the header, and use the native
 		// opaque material boundary on Android/web so page tops remain visible.
 		headerTransparent: glassHeader,
 		headerBlurEffect: glassHeader
@@ -365,18 +366,24 @@ export function stackScreenOptions(
 				? ("systemUltraThinMaterialDark" as const)
 				: ("systemUltraThinMaterialLight" as const)
 			: undefined,
-		headerLargeTitle: true,
-		headerLargeTitleShadowVisible: false,
-		headerLargeTitleStyle: {
-			...theme.typography.largeTitle,
-			fontWeight: "400" as const,
-			color: theme.colors.ink,
-		},
-		headerTitleStyle: {
-			fontFamily: theme.typography.title.fontFamily,
-			fontWeight: "400" as const,
-			color: theme.colors.ink,
-		},
+		headerLargeTitle: false,
+		headerTitleAlign: "center" as const,
+		// Native title styles do not support textTransform. Render the shared role
+		// so translated and dynamic route titles retain their natural source casing.
+		headerTitle: ({ children }: { children: string }) =>
+			createElement(
+				Text,
+				{
+					accessibilityRole: "header",
+					numberOfLines: 1,
+					style: {
+						...theme.typography.eyebrow,
+						color: theme.colors.ink,
+						textAlign: "center",
+					},
+				},
+				children,
+			),
 		contentStyle: { backgroundColor: theme.colors.base },
 	};
 }

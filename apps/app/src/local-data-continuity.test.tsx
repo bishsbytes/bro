@@ -157,7 +157,7 @@ describe("product data continuity across optional identity", () => {
 
 		await fireEvent.press(view.getByLabelText(/^Life, tab/));
 		await fireEvent.press(await view.findByLabelText("Settings"));
-		await press(view, "Sign in");
+		await fireEvent.press(view.getByRole("button", { name: "Sign in" }));
 		await fireEvent.changeText(
 			view.getByPlaceholderText("Email"),
 			"ada@example.com",
@@ -166,7 +166,7 @@ describe("product data continuity across optional identity", () => {
 			view.getByPlaceholderText("Password"),
 			"password",
 		);
-		await press(view, "Sign in");
+		await fireEvent.press(view.getByRole("button", { name: "Sign in" }));
 		expect(await view.findByText("ada@example.com")).toBeTruthy();
 		await expectSentinels();
 
@@ -175,7 +175,7 @@ describe("product data continuity across optional identity", () => {
 		expect(view.getByText("Using bro without an account")).toBeTruthy();
 		await expectSentinels();
 
-		await press(view, "Sign in");
+		await fireEvent.press(view.getByRole("button", { name: "Sign in" }));
 		await fireEvent.changeText(
 			view.getByPlaceholderText("Email"),
 			"bea@example.com",
@@ -184,7 +184,7 @@ describe("product data continuity across optional identity", () => {
 			view.getByPlaceholderText("Password"),
 			"password",
 		);
-		await press(view, "Sign in");
+		await fireEvent.press(view.getByRole("button", { name: "Sign in" }));
 		expect(await view.findByText("bea@example.com")).toBeTruthy();
 		await expectSentinels();
 

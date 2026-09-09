@@ -271,7 +271,9 @@ describe("delete local data", () => {
 		expect(await view.findByText("Data on this device")).toBeTruthy();
 		expect(view.queryByText(DELETE_COPY)).toBeNull();
 
-		await fireEvent.press(view.getByText("Delete local data"));
+		await fireEvent.press(
+			view.getByRole("button", { name: "Delete local data" }),
+		);
 		expect(view.getByText(DELETE_COPY)).toBeTruthy();
 		expect(await observations.listAll()).toHaveLength(2);
 		expect(await notes.listAll()).toHaveLength(1);
@@ -286,7 +288,9 @@ describe("delete local data", () => {
 		expect(view.queryByText(DELETE_COPY)).toBeNull();
 		expect(await observations.listAll()).toHaveLength(2);
 
-		await fireEvent.press(view.getByText("Delete local data"));
+		await fireEvent.press(
+			view.getByRole("button", { name: "Delete local data" }),
+		);
 		await fireEvent.press(view.getByText("Permanently delete local data"));
 		expect(await view.findByText("Local data deleted")).toBeTruthy();
 
