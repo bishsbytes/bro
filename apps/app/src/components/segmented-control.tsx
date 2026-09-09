@@ -24,6 +24,7 @@ export function SegmentedControl<T extends string | number>({
 			accessibilityLabel={label}
 			style={styles.group}
 		>
+			<View pointerEvents="none" style={styles.track} />
 			{options.map((option) => (
 				<Pressable
 					key={option.value}
@@ -42,43 +43,61 @@ export function SegmentedControl<T extends string | number>({
 					onPress={() => onChange(option.value)}
 					style={({ pressed }) => [
 						styles.option,
-						value === option.value && styles.selected,
 						pressed && !disabled && styles.pressed,
 						disabled && styles.disabled,
 					]}
 				>
-					<AppText
-						variant="label"
-						color={value === option.value ? "onBrand" : "muted"}
-						style={styles.label}
-					>
-						{option.label}
-					</AppText>
+					<View style={styles.surface(value === option.value)}>
+						<AppText
+							variant="label"
+							color={value === option.value ? "onBrand" : "muted"}
+							style={styles.label}
+						>
+							{option.label}
+						</AppText>
+					</View>
 				</Pressable>
 			))}
 		</View>
 	);
 }
 
-const styles = StyleSheet.create((theme) => ({
-	group: {
-		flexDirection: "row",
-		backgroundColor: theme.colors.surface1,
-		borderRadius: theme.radius.control,
-		padding: 0,
-	},
-	option: {
-		flex: 1,
-		minWidth: 0,
-		minHeight: theme.control.minHitArea,
-		justifyContent: "center",
-		alignItems: "center",
-		paddingHorizontal: theme.spacing.sm,
-		paddingVertical: theme.spacing.xs,
-		borderRadius: theme.radius.control,
-	},
-	selected: { backgroundColor: theme.colors.brand },
-	label: { textAlign: "center" },
-	pressed: { opacity: theme.opacity.pressed },
-	disabled: { opacity: theme.opacity.disabled },
-}));
+const styles = StyleSheet.create((theme) => {
+	const visualInset =
+		Math.max(
+			0,
+			theme.control.minHitArea - theme.control.factorChipVisualHeight,
+		) / 2;
+	return {
+		group: {
+			flexDirection: "row",
+		},
+		track: {
+			...StyleSheet.absoluteFillObject,
+			top: visualInset,
+			bottom: visualInset,
+			backgroundColor: theme.colors.surface1,
+			borderRadius: theme.radius.control,
+		},
+		option: {
+			flex: 1,
+			minWidth: 0,
+			minHeight: theme.control.minHitArea,
+			paddingVertical: visualInset,
+		},
+		surface: (selected: boolean) => ({
+			flexGrow: 1,
+			minHeight: theme.control.factorChipVisualHeight,
+			justifyContent: "center",
+			alignItems: "center",
+			paddingHorizontal: theme.spacing.sm,
+			paddingVertical: theme.spacing.xs,
+			borderRadius: theme.radius.control,
+			overflow: "hidden",
+			backgroundColor: selected ? theme.colors.brand : "transparent",
+		}),
+		label: { textAlign: "center" },
+		pressed: { opacity: theme.opacity.pressed },
+		disabled: { opacity: theme.opacity.disabled },
+	};
+});

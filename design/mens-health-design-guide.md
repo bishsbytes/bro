@@ -211,7 +211,7 @@ Standalone cards use the shared stone surface without a border in light appearan
 
 Choices, option rows and header actions on a card use the raised surface. Pressed rows with metadata use that same surface to retain text contrast; reserve the deeper pressed surface for primary-ink controls. Shared action opacity is 0.72 when pressed and 0.4 when disabled. Form boundaries use the interactive border, brand focus and alert errors.
 
-Use SegmentedControl for fixed single-value choices and ranges, with radio semantics for choices and tab semantics for content switches. FactorChip handles wrapping filters and optional/multiple choices, with a 40-point visual height inside a minimum 48-point touch target, 12-point corners and a selected checkmark. Preserve the screen's selection behavior.
+Use SegmentedControl for fixed single-value choices and ranges, with radio semantics for choices and tab semantics for content switches. The track and selected segment match FactorChip’s 40-point minimum visible height inside 48-point touch targets; both grow with larger text or wrapping labels. FactorChip handles wrapping filters and optional/multiple choices, with a 40-point visual height inside a minimum 48-point touch target, 12-point corners and a selected checkmark. Preserve the screen's selection behavior.
 
 
 ## Shared fields, rows and quantity controls
@@ -256,7 +256,7 @@ These names describe reusable design responsibilities; see [REACT_NATIVE.md](REA
 | C07 | IconButton | Add, remove, settings | Named action, minimum hit area and distinct selected/pressed state. |
 | C08 | SelectableRow | J02-J04 | Equal height; no default answer; explicit selection. |
 | C09 | FactorChip | Journal factors, Intake filters, habit areas and weekdays | Wrapping choices with readable labels, selected checkmarks and at least 48-point touch targets. Preserve optional and multiple selection where supported. |
-| C10 | SegmentedControl | Body and Insights ranges, Intake day tabs and item types | Fixed single-value choices use radios; content switches use tabs. Announce selection and disabled states; minimum hit area 48. |
+| C10 | SegmentedControl | Body and Insights ranges, Intake day tabs and item types | Fixed single-value choices use radios; content switches use tabs. Share FactorChip’s 40-point minimum visual height inside 48-point touch targets, growing with text. Announce selection and disabled states. |
 | C11 | FormField | I03-I04, B03, L04 | Persistent label, input, helper, optionality and inline error. |
 | C12 | QuantityField | I03-I04, B03 | Numeric value, unit metadata, direct input and optional step. Measurement and Intake quantity inputs use 18/22 semibold tabular sans, including compound units. |
 | C13 | DetailRow | Details and editors | Label/value pair, optional source/date and disclosure action. Layout, fill, density and separators are independent; continuous lists use dividers and omit the final separator. Metadata rows press on surfaceRaised. |

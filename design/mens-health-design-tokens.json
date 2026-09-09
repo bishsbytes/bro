@@ -226,7 +226,7 @@
 			"id": "C10",
 			"name": "SegmentedControl",
 			"usedBy": "Body and Insights ranges, Intake day tabs and item types",
-			"contract": "Fixed single-value choices use radios; content switches use tabs. Announce selection and disabled states; minimum hit area 48."
+			"contract": "Fixed single-value choices use radios; content switches use tabs. Share FactorChip’s 40-point minimum visual height inside 48-point touch targets, growing with text. Announce selection and disabled states."
 		},
 		{
 			"id": "C11",

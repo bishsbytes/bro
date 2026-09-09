@@ -12,7 +12,7 @@
 	border-radius: 0;
 }
 
-[data-testid="tab-shell"] [role="tablist"] [role="tab"] {
+[data-testid="tab-shell"] [role="tablist"][aria-label="Main"] [role="tab"] {
 	flex: 1;
 	min-width: 48px;
 	min-height: 48px;
