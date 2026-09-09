@@ -40,7 +40,10 @@ export function AppHeader({
 								accessibilityRole="button"
 								accessibilityLabel={eyebrowAccessibilityLabel}
 								onPress={onEyebrowPress}
-								style={styles.dateAction}
+								style={({ pressed }) => [
+									styles.dateAction,
+									pressed && styles.pressed,
+								]}
 							>
 								{eyebrow ? <Text style={styles.eyebrow}>{eyebrow}</Text> : null}
 							</Pressable>
@@ -71,7 +74,12 @@ export function AppHeader({
 					<Pressable
 						accessibilityRole="button"
 						accessibilityLabel={eyebrowAccessibilityLabel}
-						style={[styles.copy, centerTitle && styles.centeredCopy]}
+						style={({ pressed }) => [
+							styles.copy,
+							styles.dateAction,
+							centerTitle && styles.centeredCopy,
+							pressed && styles.pressed,
+						]}
 						onPress={onEyebrowPress}
 					>
 						{eyebrow ? <Text style={styles.eyebrow}>{eyebrow}</Text> : null}
@@ -106,6 +114,7 @@ export function AppHeader({
 
 const styles = StyleSheet.create((theme) => ({
 	safeArea: { backgroundColor: theme.colors.background },
+	pressed: { opacity: theme.opacity.pressed },
 	headerInsets: {
 		paddingHorizontal: theme.spacing.gutter,
 		paddingVertical: theme.spacing.sm,

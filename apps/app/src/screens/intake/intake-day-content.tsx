@@ -2,12 +2,13 @@ import { INTAKE_BASELINE_MIN_LOGGED_DAYS } from "@bro/logic";
 import { type Href, router } from "expo-router";
 import { useEffect, useLayoutEffect, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
-import { AccessibilityInfo, Animated, Pressable, View } from "react-native";
+import { AccessibilityInfo, Animated, View } from "react-native";
 import { AppText } from "../../components/app-text";
 import { BaselineGauge } from "../../components/baseline-gauge";
 import { Button } from "../../components/button";
 import { Card } from "../../components/card";
 import { SectionHeader } from "../../components/section-header";
+import { SegmentedControl } from "../../components/segmented-control";
 import type {
 	IntakeDaySnapshot,
 	IntakeEventEdit,
@@ -45,40 +46,17 @@ function Segments({
 	onChange: (segment: IntakeDaySegment) => void;
 }) {
 	const { t } = useTranslation("intake");
-	const segments: { key: IntakeDaySegment; label: string }[] = [
-		{ key: "summary", label: t("tab.summary") },
-		{ key: "logged", label: t("tab.logged") },
-	];
 	return (
-		<View accessibilityRole="tablist" style={styles.segments}>
-			{segments.map((segment, index) => {
-				const selected = segment.key === value;
-				return (
-					<Pressable
-						key={segment.key}
-						accessibilityRole="tab"
-						accessibilityLabel={segment.label}
-						accessibilityState={{ selected }}
-						hitSlop={4}
-						onPress={() => onChange(segment.key)}
-						style={({ pressed }) => [
-							styles.segment,
-							index === 0 ? styles.segmentFirst : styles.segmentLast,
-							selected && styles.segmentSelected,
-							pressed && styles.segmentPressed,
-						]}
-					>
-						<AppText
-							variant="caption"
-							color="muted"
-							style={selected && styles.segmentSelectedText}
-						>
-							{segment.label}
-						</AppText>
-					</Pressable>
-				);
-			})}
-		</View>
+		<SegmentedControl<IntakeDaySegment>
+			role="tab"
+			label={`${t("tab.summary")} / ${t("tab.logged")}`}
+			options={[
+				{ value: "summary", label: t("tab.summary") },
+				{ value: "logged", label: t("tab.logged") },
+			]}
+			value={value}
+			onChange={onChange}
+		/>
 	);
 }
 
@@ -338,35 +316,6 @@ const styles = StyleSheet.create((theme) => ({
 	hero: { gap: theme.spacing.lg },
 	invitation: { gap: theme.spacing.md, backgroundColor: theme.colors.brand },
 	invitationText: { color: theme.colors.onBrand },
-	segments: {
-		flexDirection: "row",
-		width: "100%",
-	},
-	segment: {
-		flex: 1,
-		alignItems: "center",
-		justifyContent: "center",
-		minHeight: theme.control.minHitArea,
-		backgroundColor: theme.colors.surface,
-		paddingVertical: theme.spacing.sm,
-		paddingHorizontal: theme.spacing.md,
-	},
-	segmentFirst: {
-		borderTopLeftRadius: theme.radius.md,
-		borderBottomLeftRadius: theme.radius.md,
-	},
-	segmentLast: {
-		marginLeft: -1,
-		borderTopRightRadius: theme.radius.md,
-		borderBottomRightRadius: theme.radius.md,
-	},
-	segmentSelected: {
-		zIndex: 1,
-		borderColor: theme.colors.brand,
-		backgroundColor: theme.colors.brand,
-	},
-	segmentSelectedText: { color: theme.colors.onBrand },
-	segmentPressed: { opacity: theme.opacity.disabled },
 	segmentContent: { gap: theme.spacing.lg },
 	empty: { gap: theme.spacing.xs, paddingVertical: theme.spacing.sm },
 	section: { gap: theme.spacing.md },

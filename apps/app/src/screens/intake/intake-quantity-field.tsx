@@ -266,7 +266,7 @@ const styles = StyleSheet.create((theme) => ({
 		paddingHorizontal: theme.spacing.md,
 		paddingVertical: theme.spacing.sm,
 		borderWidth: 1,
-		borderColor: theme.colors.line,
+		borderColor: theme.colors.interactiveBorder,
 		borderRadius: theme.radius.control,
 	},
 	unitText: { flexShrink: 1, textAlign: "center" },

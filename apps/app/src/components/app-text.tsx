@@ -6,6 +6,8 @@ type TextVariant =
 	| "largeTitle"
 	| "title"
 	| "section"
+	| "sectionCompact"
+	| "contentTitle"
 	| "body"
 	| "caption"
 	| "footnote"

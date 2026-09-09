@@ -2,11 +2,11 @@ import type { DayNote } from "@bro/database-app";
 import { formatLocalDayLabel } from "@bro/logic";
 import { type Href, router } from "expo-router";
 import { useTranslation } from "react-i18next";
-import { TouchableOpacity, View } from "react-native";
-import { AppText } from "../../components/app-text";
+import { View } from "react-native";
 import { EmptyState } from "../../components/empty-state";
 import { NoteRow } from "../../components/note-row";
 import { SectionHeader } from "../../components/section-header";
+import { TextAction } from "../../components/text-action";
 import { StyleSheet } from "../../theme/unistyles";
 
 type JournalNotesSectionProps = {
@@ -29,15 +29,7 @@ export function JournalNotesSection({
 			<SectionHeader
 				title={t("journal.title")}
 				action={
-					<TouchableOpacity
-						accessibilityRole="button"
-						style={styles.viewAll}
-						onPress={onOpenNotes}
-					>
-						<AppText variant="label" color="brand">
-							{t("actions.viewAll")}
-						</AppText>
-					</TouchableOpacity>
+					<TextAction label={t("actions.viewAll")} onPress={onOpenNotes} />
 				}
 			/>
 			{notes.length === 0 ? (
@@ -76,8 +68,4 @@ export function JournalNotesSection({
 
 const styles = StyleSheet.create((theme) => ({
 	section: { marginBottom: theme.spacing.xl, gap: theme.spacing.md },
-	viewAll: {
-		minHeight: theme.control.buttonMinHeight,
-		justifyContent: "center",
-	},
 }));

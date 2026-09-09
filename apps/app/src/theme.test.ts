@@ -117,4 +117,15 @@ describe("design tokens", () => {
 			contentStyle: { backgroundColor: lightTheme.colors.background },
 		});
 	});
+
+	it("keeps row metadata and input boundaries readable in both appearances", () => {
+		for (const theme of [lightTheme, darkTheme]) {
+			expect(
+				contrast(theme.colors.ink2, theme.colors.rowPressed),
+			).toBeGreaterThanOrEqual(4.5);
+			expect(
+				contrast(theme.colors.interactiveBorder, theme.colors.field),
+			).toBeGreaterThanOrEqual(3);
+		}
+	});
 });

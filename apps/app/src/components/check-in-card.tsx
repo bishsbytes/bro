@@ -47,6 +47,7 @@ export function CheckInCard({
 
 	return (
 		<TouchableOpacity
+			activeOpacity={theme.opacity.pressed}
 			style={styles.wrapper}
 			accessibilityRole="button"
 			accessibilityLabel={accessibilityLabel}

@@ -3,6 +3,7 @@ import { useTranslation } from "react-i18next";
 import { AppText } from "../../components/app-text";
 import { Button } from "../../components/button";
 import { FullScreen as Screen } from "../../components/screen";
+import { TextAction } from "../../components/text-action";
 import { useDeviceSettings } from "../../providers/device-settings-provider";
 import { onboardingStyles as styles } from "../../screens/onboarding/onboarding-styles";
 
@@ -31,9 +32,8 @@ export default function StartRoute() {
 				style={styles.primaryButton}
 				onPress={start}
 			/>
-			<Button
+			<TextAction
 				label={t("start.haveAccount")}
-				variant="text"
 				style={styles.secondaryButton}
 				onPress={() => router.push("/sign-in")}
 			/>

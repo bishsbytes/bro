@@ -168,7 +168,7 @@ function ObservationRow({
 	return (
 		<Card style={styles.observationRow}>
 			<View style={styles.grow}>
-				<AppText variant="monoList">{title}</AppText>
+				<AppText variant="contentTitle">{title}</AppText>
 				<AppText variant="footnote" color="subtle">
 					{t("day.source", { source: observation.source })}
 				</AppText>
@@ -235,7 +235,7 @@ export function HistoryDayScreen({ localDay, store }: HistoryDayScreenProps) {
 					) : null}
 					{day.habitCompletions.map((completion) => (
 						<Card key={completion.id} style={styles.card}>
-							<AppText variant="monoList">{completion.label}</AppText>
+							<AppText variant="contentTitle">{completion.label}</AppText>
 						</Card>
 					))}
 					{day.challengeSteps.length > 0 ? (
@@ -249,7 +249,7 @@ export function HistoryDayScreen({ localDay, store }: HistoryDayScreenProps) {
 									day: step.dayIndex,
 								})}
 							</AppText>
-							<AppText variant="monoList">{step.dayTitle}</AppText>
+							<AppText variant="contentTitle">{step.dayTitle}</AppText>
 						</Card>
 					))}
 					<SectionHeader title={t("day.checkIns")} />

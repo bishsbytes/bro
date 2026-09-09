@@ -109,6 +109,7 @@ export function MeasurementField({
 						showLabel={false}
 						containerStyle={styles.partInput}
 						value={entry.major}
+						style={styles.value}
 						onChangeText={(major) => onChangeEntry({ ...entry, major })}
 						keyboardType="decimal-pad"
 						editable={editable}
@@ -127,6 +128,7 @@ export function MeasurementField({
 						showLabel={false}
 						containerStyle={styles.partInput}
 						value={entry.minor}
+						style={styles.value}
 						onChangeText={(minor) => onChangeEntry({ ...entry, minor })}
 						keyboardType="decimal-pad"
 						editable={editable}
@@ -147,7 +149,7 @@ export function MeasurementField({
 
 const styles = StyleSheet.create((theme) => ({
 	label: { marginBottom: theme.spacing.sm },
-	value: { ...theme.typography.monoReadout },
+	value: { ...theme.typography.monoList },
 	unit: {
 		minHeight: theme.control.buttonMinHeight,
 		alignSelf: "flex-start",

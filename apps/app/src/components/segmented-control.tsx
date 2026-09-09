@@ -6,37 +6,49 @@ export function SegmentedControl<T extends string | number>({
 	label,
 	options,
 	value,
+	role = "radio",
 	disabled = false,
 	onChange,
 }: {
 	label: string;
 	options: readonly { value: T; label: string }[];
 	value: T;
+	/** Tabs switch content; radios change one value. Both share the same shape. */
+	role?: "radio" | "tab";
 	disabled?: boolean;
 	onChange: (value: T) => void;
 }) {
 	return (
 		<View
-			accessibilityRole="radiogroup"
+			accessibilityRole={role === "tab" ? "tablist" : "radiogroup"}
 			accessibilityLabel={label}
 			style={styles.group}
 		>
 			{options.map((option) => (
 				<Pressable
 					key={option.value}
-					accessibilityRole="radio"
+					accessibilityRole={role}
 					accessibilityLabel={option.label}
-					accessibilityState={{ checked: value === option.value, disabled }}
+					aria-selected={role === "tab" ? value === option.value : undefined}
+					aria-checked={role === "radio" ? value === option.value : undefined}
+					aria-disabled={disabled}
+					accessibilityState={{
+						...(role === "tab"
+							? { selected: value === option.value }
+							: { checked: value === option.value }),
+						disabled,
+					}}
 					disabled={disabled}
 					onPress={() => onChange(option.value)}
-					style={[
+					style={({ pressed }) => [
 						styles.option,
 						value === option.value && styles.selected,
+						pressed && !disabled && styles.pressed,
 						disabled && styles.disabled,
 					]}
 				>
 					<AppText
-						variant="caption"
+						variant="label"
 						color={value === option.value ? "onBrand" : "muted"}
 						style={styles.label}
 					>
@@ -57,6 +69,7 @@ const styles = StyleSheet.create((theme) => ({
 	},
 	option: {
 		flex: 1,
+		minWidth: 0,
 		minHeight: theme.control.minHitArea,
 		justifyContent: "center",
 		alignItems: "center",
@@ -66,5 +79,6 @@ const styles = StyleSheet.create((theme) => ({
 	},
 	selected: { backgroundColor: theme.colors.brand },
 	label: { textAlign: "center" },
+	pressed: { opacity: theme.opacity.pressed },
 	disabled: { opacity: theme.opacity.disabled },
 }));

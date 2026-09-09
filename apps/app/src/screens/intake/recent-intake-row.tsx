@@ -32,7 +32,11 @@ export function RecentIntakeRow({
 				accessibilityState={{ disabled }}
 				disabled={disabled}
 				onPress={onEdit}
-				style={styles.copy}
+				style={({ pressed }) => [
+					styles.copy,
+					pressed && styles.pressedRow,
+					disabled && styles.disabled,
+				]}
 			>
 				<IntakeArtwork
 					name={event.name}
@@ -57,7 +61,11 @@ export function RecentIntakeRow({
 				accessibilityState={{ disabled }}
 				disabled={disabled}
 				onPress={onRepeat}
-				style={styles.repeat}
+				style={({ pressed }) => [
+					styles.repeat,
+					pressed && styles.pressedAction,
+					disabled && styles.disabled,
+				]}
 			>
 				<Icon name="add" size={24} color={theme.colors.brand} />
 			</Pressable>
@@ -74,6 +82,7 @@ const styles = StyleSheet.create((theme) => ({
 		width: "100%",
 	},
 	copy: {
+		borderRadius: theme.radius.card,
 		flex: 1,
 		flexDirection: "row",
 		alignItems: "center",
@@ -82,6 +91,9 @@ const styles = StyleSheet.create((theme) => ({
 		minHeight: theme.control.minHitArea,
 	},
 	grow: { flex: 1 },
+	pressedRow: { backgroundColor: theme.colors.rowPressed },
+	pressedAction: { opacity: theme.opacity.pressed },
+	disabled: { opacity: theme.opacity.disabled },
 	repeat: {
 		minWidth: theme.control.minHitArea,
 		minHeight: theme.control.minHitArea,

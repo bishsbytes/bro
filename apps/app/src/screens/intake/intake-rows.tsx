@@ -143,7 +143,7 @@ const styles = StyleSheet.create((theme) => ({
 		borderBottomColor: theme.colors.line,
 	},
 	lastRow: { borderBottomWidth: 0 },
-	pressed: { backgroundColor: theme.colors.surfaceSunk },
+	pressed: { backgroundColor: theme.colors.rowPressed },
 	disabled: { opacity: theme.opacity.disabled },
 	leading: {
 		width: 40,

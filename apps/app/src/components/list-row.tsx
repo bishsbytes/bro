@@ -1,19 +1,19 @@
 import type { ComponentProps, ReactNode } from "react";
-import { TouchableOpacity, View } from "react-native";
+import { Pressable, View } from "react-native";
 import { StyleSheet, useUnistyles } from "../theme/unistyles";
 import { AppText } from "./app-text";
 import { Icon } from "./icon";
 
-type ListRowProps = Omit<
-	ComponentProps<typeof TouchableOpacity>,
-	"children"
-> & {
+type ListRowProps = Omit<ComponentProps<typeof Pressable>, "children"> & {
 	title: string;
 	detail?: string;
 	value?: string;
 	children?: ReactNode;
 	showChevron?: boolean;
 	layout?: "stacked" | "inline";
+	variant?: "filled" | "plain" | "outlined";
+	density?: "regular" | "compact";
+	separator?: boolean;
 };
 
 export function ListRow({
@@ -23,29 +23,41 @@ export function ListRow({
 	children,
 	showChevron = true,
 	layout = "stacked",
+	variant = "filled",
+	density = "regular",
+	separator = false,
 	style,
 	...props
 }: ListRowProps) {
 	const { theme } = useUnistyles();
 
 	return (
-		<TouchableOpacity
+		<Pressable
 			accessibilityRole="button"
-			activeOpacity={0.72}
-			style={[
-				styles.row,
-				showChevron && styles.chevronRow,
-				layout === "inline" && styles.inlineRow,
-				style,
-			]}
 			{...props}
+			aria-disabled={!!props.disabled}
+			accessibilityState={{
+				...props.accessibilityState,
+				disabled: !!props.disabled,
+			}}
+			style={(state) => [
+				styles.row,
+				styles[variant],
+				showChevron && styles.chevronRow,
+				density === "compact" && styles.compactRow,
+				variant === "plain" && styles.plainInset,
+				separator && styles.separator,
+				typeof style === "function" ? style(state) : style,
+				state.pressed && !props.disabled && styles.pressed,
+				props.disabled && styles.disabled,
+			]}
 		>
 			<View style={styles.content}>
 				<View
 					style={[styles.heading, layout === "inline" && styles.inlineHeading]}
 				>
 					<AppText
-						variant={layout === "inline" ? "caption" : "label"}
+						variant={density === "compact" ? "caption" : "label"}
 						style={[styles.title, layout === "inline" && styles.inlineTitle]}
 					>
 						{title}
@@ -79,16 +91,14 @@ export function ListRow({
 			{showChevron ? (
 				<Icon name="chevron-right" size={16} color={theme.colors.textSubtle} />
 			) : null}
-		</TouchableOpacity>
+		</Pressable>
 	);
 }
 
 const styles = StyleSheet.create((theme) => ({
-	inlineRow: {
+	compactRow: {
 		paddingVertical: theme.spacing.sm,
-		paddingHorizontal: 0,
 		gap: theme.spacing.sm,
-		backgroundColor: "transparent",
 	},
 	inlineHeading: { gap: theme.spacing.sm, flexWrap: "wrap" },
 	inlineTitle: { flex: 1, minWidth: 60 },
@@ -101,8 +111,22 @@ const styles = StyleSheet.create((theme) => ({
 		gap: theme.spacing.md,
 		padding: theme.spacing.lg,
 		borderRadius: theme.radius.control,
+		borderBottomWidth: 0,
+	},
+	filled: {
 		backgroundColor: theme.colors.surface1,
 	},
+	plain: { backgroundColor: "transparent", borderRadius: 0 },
+	plainInset: { paddingHorizontal: 0 },
+	outlined: {
+		backgroundColor: theme.colors.canvas,
+		borderWidth: 1,
+		borderBottomWidth: 1,
+		borderColor: theme.colors.interactiveBorder,
+	},
+	separator: { borderBottomWidth: 1, borderBottomColor: theme.colors.line },
+	pressed: { backgroundColor: theme.colors.rowPressed },
+	disabled: { opacity: theme.opacity.disabled },
 	/**
 	 * The chevron's ink spans 8–16 of its 24px box, so it carries 8px of its own
 	 * whitespace. Full padding on that edge would read wider than the left.

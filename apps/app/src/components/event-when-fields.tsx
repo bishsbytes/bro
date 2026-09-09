@@ -91,5 +91,5 @@ const styles = StyleSheet.create((theme) => ({
 	},
 	label: { flex: 1 },
 	value: { flexShrink: 1, textAlign: "right", fontVariant: ["tabular-nums"] },
-	pressed: { backgroundColor: theme.colors.selectedSoft },
+	pressed: { backgroundColor: theme.colors.rowPressed },
 }));

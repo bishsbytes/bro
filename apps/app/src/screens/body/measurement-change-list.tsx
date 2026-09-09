@@ -151,7 +151,7 @@ const styles = StyleSheet.create((theme) => ({
 		borderBottomColor: theme.colors.line,
 	},
 	lastRow: { borderBottomWidth: 0 },
-	rowPressed: { backgroundColor: theme.colors.surfaceSunk },
+	rowPressed: { backgroundColor: theme.colors.rowPressed },
 	// Text columns are shares rather than fixed widths so a long name, a
 	// compound delta ("+1 st 2 lb") and a scaled-up font all still read.
 	name: { flex: 1.4 },

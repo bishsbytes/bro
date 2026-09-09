@@ -5,6 +5,7 @@ import { Icon } from "./icon";
 
 type FactorChipProps = {
 	label: string;
+	accessibilityLabel?: string;
 	selected: boolean;
 	disabled?: boolean;
 	onPress: () => void;
@@ -18,6 +19,7 @@ type FactorChipProps = {
  */
 export function FactorChip({
 	label,
+	accessibilityLabel = label,
 	selected,
 	disabled = false,
 	onPress,
@@ -27,11 +29,12 @@ export function FactorChip({
 	return (
 		<TouchableOpacity
 			accessibilityRole="button"
-			accessibilityLabel={label}
+			accessibilityLabel={accessibilityLabel}
 			aria-pressed={selected}
 			aria-disabled={disabled}
 			accessibilityState={{ selected, disabled }}
-			style={styles.target}
+			activeOpacity={theme.opacity.pressed}
+			style={[styles.target, disabled && styles.disabled]}
 			disabled={disabled}
 			onPress={onPress}
 		>
@@ -39,7 +42,7 @@ export function FactorChip({
 				<AppText
 					variant="caption"
 					color="muted"
-					style={selected ? styles.selectedLabel : undefined}
+					style={[styles.label, selected && styles.selectedLabel]}
 				>
 					{label}
 				</AppText>
@@ -53,6 +56,7 @@ export function FactorChip({
 
 const styles = StyleSheet.create((theme) => ({
 	target: {
+		maxWidth: "100%",
 		minHeight: theme.control.minHitArea,
 		minWidth: theme.control.minHitArea,
 		justifyContent: "center",
@@ -74,4 +78,6 @@ const styles = StyleSheet.create((theme) => ({
 		backgroundColor: theme.colors.selected,
 	},
 	selectedLabel: { color: theme.colors.onSelected },
+	label: { flexShrink: 1 },
+	disabled: { opacity: theme.opacity.disabled },
 }));

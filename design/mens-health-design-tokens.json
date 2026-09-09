@@ -43,7 +43,7 @@
 			"History fill is not a clinical safe range.",
 			"Select, warning and error require text/icon indicators and independent contrast verification.",
 			"The warm charcoal/sage dark mapping replaces the initial blue-grey palette. Use exact tokens and native charts, not raster colour sampling.",
-			"surfaceRaised is the resting fill for controls that sit on a card (choices, option rows, secondary buttons, header action circles); surfaceSunk is the transient pressed fill. Light originally defined neither, so cards, controls and pressed rows collapsed onto one hex and borderless controls disappeared into the card beneath them. Muted text may rest on surfaceRaised but never on surfaceSunk."
+			"surfaceRaised is the resting fill for controls that sit on a card (choices, option rows, header action circles); surfaceSunk is the transient pressed fill. Light originally defined neither, so cards, controls and pressed rows collapsed onto one hex and borderless controls disappeared into the card beneath them. Muted text may rest on surfaceRaised but never on surfaceSunk."
 		]
 	},
 	"type": {

@@ -106,7 +106,7 @@ const styles = StyleSheet.create((theme) => ({
 		paddingVertical: theme.spacing.sm,
 		borderRadius: theme.radius.control,
 	},
-	pressed: { backgroundColor: theme.colors.surface },
+	pressed: { backgroundColor: theme.colors.rowPressed },
 	copy: { flexShrink: 1, flexGrow: 1, flexBasis: 96, gap: theme.spacing.xs },
 	heading: {
 		flexDirection: "row",

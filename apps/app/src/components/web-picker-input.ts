@@ -33,15 +33,15 @@ export function useWebPickerInputStyle({
 		borderColor: error
 			? theme.colors.alert
 			: focused
-				? theme.colors.accent
-				: chip
-					? theme.colors.line
-					: theme.colors.lineStrong,
+				? theme.colors.brand
+				: theme.colors.interactiveBorder,
 		borderRadius: chip ? theme.radius.pill : theme.radius.md,
 		padding: chip
 			? `${theme.spacing.xs}px ${theme.spacing.md}px`
 			: `${theme.spacing.md}px ${theme.spacing.lg}px`,
-		fontSize: theme.typography.label.fontSize,
+		fontSize: chip
+			? theme.typography.label.fontSize
+			: theme.typography.body.fontSize,
 		fontFamily: theme.typography.body.fontFamily,
 		fontVariantNumeric: "tabular-nums",
 		color: theme.colors.ink,

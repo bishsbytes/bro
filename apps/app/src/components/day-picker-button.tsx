@@ -67,16 +67,17 @@ const styles = StyleSheet.create((theme) => ({
 	// Filled rather than bare: in a navigation bar the chip has to read as
 	// something to press, with no surrounding form to borrow that from.
 	chip: {
+		minHeight: theme.control.minHitArea,
 		flexDirection: "row",
 		alignItems: "center",
 		gap: theme.spacing.xs,
 		alignSelf: "center",
 		borderWidth: 1,
-		borderColor: theme.colors.line,
+		borderColor: theme.colors.interactiveBorder,
 		borderRadius: theme.radius.pill,
 		paddingHorizontal: theme.spacing.md,
 		paddingVertical: theme.spacing.sm,
 		backgroundColor: theme.colors.surface,
 	},
-	pressed: { backgroundColor: theme.colors.selectedSoft },
+	pressed: { backgroundColor: theme.colors.rowPressed },
 }));

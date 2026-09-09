@@ -65,7 +65,7 @@ export function DeleteLocalDataScreen({
 
 				{deleteStep === "confirm" ? (
 					<View style={styles.confirmation}>
-						<AppText variant="monoList" color="danger">
+						<AppText variant="contentTitle" color="danger">
 							{t("localData.confirmTitle")}
 						</AppText>
 						<AppText color="muted">{t("localData.confirmBody")}</AppText>

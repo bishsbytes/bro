@@ -5,6 +5,7 @@ import { AppText } from "../../components/app-text";
 import { Button } from "../../components/button";
 import { FormField } from "../../components/form-field";
 import { StackScreen as Screen } from "../../components/screen";
+import { TextAction } from "../../components/text-action";
 import { toMessage } from "../../lib/errors";
 import { authStyles } from "./auth-styles";
 
@@ -75,9 +76,8 @@ export function SignInScreen({ onShowSignUp, onSuccess }: SignInScreenProps) {
 			/>
 
 			{onShowSignUp ? (
-				<Button
+				<TextAction
 					label={t("signIn.needAccount")}
-					variant="text"
 					style={authStyles.link}
 					onPress={onShowSignUp}
 					disabled={submitting}

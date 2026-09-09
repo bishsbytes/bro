@@ -1,11 +1,12 @@
 import { router } from "expo-router";
 import { useTranslation } from "react-i18next";
-import { TouchableOpacity, View } from "react-native";
+import { View } from "react-native";
 import { AppText } from "../../components/app-text";
 import { Button } from "../../components/button";
 import { Card } from "../../components/card";
 import { PracticeRow } from "../../components/practice-row";
 import { SectionHeader } from "../../components/section-header";
+import { TextAction } from "../../components/text-action";
 import type { TodayHabitsSnapshot } from "../../habits/habits-store";
 import { StyleSheet } from "../../theme/unistyles";
 
@@ -68,11 +69,10 @@ export function TodayRoutinesSection({
 					<SectionHeader
 						title={t("habits.title")}
 						action={
-							<TouchableOpacity onPress={() => router.push("/habits")}>
-								<AppText variant="label" color="brand">
-									{t("habits.manage")}
-								</AppText>
-							</TouchableOpacity>
+							<TextAction
+								label={t("habits.manage")}
+								onPress={() => router.push("/habits")}
+							/>
 						}
 					/>
 					{habits.habits.map((item) => (
@@ -120,9 +120,8 @@ export function TodayRoutinesSection({
 									)
 								}
 							/>
-							<Button
+							<TextAction
 								label={t("challenges.view")}
-								variant="text"
 								onPress={() =>
 									router.push(`/challenges/${challenge.enrolmentId}`)
 								}

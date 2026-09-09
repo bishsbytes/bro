@@ -63,5 +63,5 @@ const styles = StyleSheet.create((theme) => ({
 		borderRadius: theme.radius.control,
 		backgroundColor: theme.colors.surface,
 	},
-	focused: { borderColor: theme.colors.brand },
+	focused: { borderWidth: 2, borderColor: theme.colors.brand },
 }));

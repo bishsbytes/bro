@@ -53,7 +53,7 @@ export function BodyBaselineGauge({
 		<View testID="measurement-readout" style={styles.summary}>
 			{showLabel ? <AppText variant="label">{metric.label}</AppText> : null}
 			<AppText
-				variant={valueVariant === "hero" ? "monoHero" : "monoList"}
+				variant={valueVariant === "hero" ? "monoHero" : "monoReadout"}
 				style={styles.value}
 				accessibilityLabel={t("body:read.gaugeA11y", {
 					name: metric.label,
@@ -69,7 +69,7 @@ export function BodyBaselineGauge({
 				{explored?.formatted ??
 					(baseline.current ? displayed.value : t("common:emDash"))}
 				{!explored && displayed.unit ? (
-					<AppText style={styles.unit}>{` ${displayed.unit}`}</AppText>
+					<AppText variant="body">{` ${displayed.unit}`}</AppText>
 				) : null}
 			</AppText>
 			{explored ? (
@@ -142,13 +142,8 @@ export function BodyRecentRange({ metric }: { metric: BodyMetricSummary }) {
 const styles = StyleSheet.create((theme) => ({
 	summary: { gap: theme.spacing.xs, flexShrink: 0 },
 	value: {
-		fontSize: 44,
-		lineHeight: 50,
-		fontWeight: "400",
-		letterSpacing: -1,
-		flexShrink: 0,
+		flexShrink: 1,
 	},
-	unit: { fontSize: 24, lineHeight: 30, fontWeight: "400" },
 	range: {
 		minHeight: theme.control.minHitArea,
 		flexDirection: "row",

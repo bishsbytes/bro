@@ -54,7 +54,7 @@ export function InsightDetailScreen({ id, store }: InsightDetailScreenProps) {
 				title={t("detail.title")}
 				eyebrow={t("patterns.eyebrow")}
 			/>
-			<AppText variant="monoList">{renderInsightSummary(insight)}</AppText>
+			<AppText variant="contentTitle">{renderInsightSummary(insight)}</AppText>
 
 			<View style={styles.arms}>
 				<Card style={styles.arm}>

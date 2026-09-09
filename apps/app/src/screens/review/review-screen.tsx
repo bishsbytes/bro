@@ -3,11 +3,11 @@ import { router } from "expo-router";
 import { useCallback, useMemo } from "react";
 import { useTranslation } from "react-i18next";
 import { View } from "react-native";
-import { Button } from "../../components/button";
 import { EmptyState } from "../../components/empty-state";
 import { ListRow } from "../../components/list-row";
 import { LoadingScreen, StackScreen as Screen } from "../../components/screen";
 import { SectionHeader } from "../../components/section-header";
+import { TextAction } from "../../components/text-action";
 import { useFocusStoreLoad } from "../../lib/use-store-load";
 import {
 	assessmentDate,
@@ -95,10 +95,9 @@ export function ReviewScreen({ store }: ReviewScreenProps) {
 				title={t("history.title")}
 				eyebrow={t("history.eyebrow")}
 				action={
-					<Button
+					<TextAction
 						label={t("history.takeStock")}
 						accessibilityLabel={t("history.takeStock")}
-						variant="text"
 						onPress={() => router.push("/review/new")}
 					/>
 				}

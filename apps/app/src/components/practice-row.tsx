@@ -28,7 +28,7 @@ export function PracticeRow({
 	return (
 		<Card style={styles.row}>
 			<View style={styles.copy}>
-				<AppText variant="monoList">{label}</AppText>
+				<AppText variant="contentTitle">{label}</AppText>
 				{progressLabel ? (
 					<AppText color="muted">{progressLabel}</AppText>
 				) : null}

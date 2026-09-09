@@ -76,7 +76,7 @@ const styles = StyleSheet.create((theme) => ({
 	input: {
 		minHeight: theme.control.buttonMinHeight,
 		borderWidth: 1,
-		borderColor: theme.colors.line,
+		borderColor: theme.colors.interactiveBorder,
 		borderRadius: theme.radius.control,
 		paddingHorizontal: theme.spacing.lg,
 		paddingVertical: theme.spacing.md,

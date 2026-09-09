@@ -21,6 +21,7 @@ export function Button({
 	loading = false,
 	disabled = false,
 	accessibilityLabel = label,
+	accessibilityState,
 	style,
 	...props
 }: ButtonProps) {
@@ -42,11 +43,15 @@ export function Button({
 		<TouchableOpacity
 			accessibilityRole="button"
 			accessibilityLabel={accessibilityLabel}
-			accessibilityState={{ disabled: blocked, busy: loading }}
+			accessibilityState={{
+				...accessibilityState,
+				disabled: blocked,
+				busy: loading,
+			}}
 			aria-disabled={blocked}
 			aria-busy={loading}
 			disabled={blocked}
-			activeOpacity={0.72}
+			activeOpacity={theme.opacity.pressed}
 			style={[
 				styles.base,
 				variant === "primary" && styles.primary,
@@ -82,7 +87,7 @@ const styles = StyleSheet.create((theme) => ({
 	secondary: {
 		borderWidth: 1,
 		borderColor: theme.colors.hairlineStrong,
-		backgroundColor: theme.colors.surface2,
+		backgroundColor: theme.colors.background,
 	},
 	danger: {
 		borderWidth: 1,

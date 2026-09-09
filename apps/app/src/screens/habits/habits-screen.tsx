@@ -5,11 +5,12 @@ import { type Href, router } from "expo-router";
 import type { TFunction } from "i18next";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
-import { TouchableOpacity, View } from "react-native";
+import { View } from "react-native";
 import { AppText } from "../../components/app-text";
 import { Button } from "../../components/button";
 import { Card } from "../../components/card";
 import { EmptyState } from "../../components/empty-state";
+import { FactorChip } from "../../components/factor-chip";
 import { FormField } from "../../components/form-field";
 import { LoadingScreen, StackScreen as Screen } from "../../components/screen";
 import { SectionHeader } from "../../components/section-header";
@@ -264,19 +265,16 @@ export function HabitsScreen({
 								{snapshot.areas.map((area) => {
 									const selected = areaSlug === area.slug;
 									return (
-										<TouchableOpacity
+										<FactorChip
 											key={area.slug}
-											accessibilityRole="button"
+											label={area.label}
 											accessibilityLabel={t("editor.areaOption", {
 												name: area.label,
 											})}
-											accessibilityState={{ selected }}
-											style={[styles.areaChip, selected && styles.selected]}
+											selected={selected}
 											disabled={busy}
 											onPress={() => setAreaSlug(selected ? null : area.slug)}
-										>
-											<AppText variant="caption">{area.label}</AppText>
-										</TouchableOpacity>
+										/>
 									);
 								})}
 							</View>
@@ -287,17 +285,14 @@ export function HabitsScreen({
 						{weekdays.map((day) => {
 							const selected = (daysOfWeek & (1 << day.index)) !== 0;
 							return (
-								<TouchableOpacity
+								<FactorChip
 									key={day.index}
-									accessibilityRole="button"
+									label={day.shortLabel}
 									accessibilityLabel={day.label}
-									accessibilityState={{ selected }}
-									style={[styles.weekday, selected && styles.selected]}
+									selected={selected}
 									disabled={busy}
 									onPress={() => toggleWeekday(day.index)}
-								>
-									<AppText variant="caption">{day.shortLabel}</AppText>
-								</TouchableOpacity>
+								/>
 							);
 						})}
 					</View>
@@ -397,7 +392,7 @@ export function HabitsScreen({
 					{group.habits.map((template) => (
 						<Card key={template.slug} style={styles.catalogueCard}>
 							<View style={styles.copy}>
-								<AppText variant="monoList">{template.label}</AppText>
+								<AppText variant="contentTitle">{template.label}</AppText>
 								<AppText color="muted">{template.description}</AppText>
 							</View>
 							<Button
@@ -426,29 +421,9 @@ const styles = StyleSheet.create((theme) => ({
 		gap: theme.spacing.md,
 	},
 	copy: { flex: 1, gap: theme.spacing.xs },
-	weekdays: { flexDirection: "row", gap: theme.spacing.xs },
+	weekdays: { flexDirection: "row", flexWrap: "wrap", gap: theme.spacing.xs },
 	areaPicker: { gap: theme.spacing.xs },
 	areaChips: { flexDirection: "row", flexWrap: "wrap", gap: theme.spacing.xs },
-	areaChip: {
-		paddingHorizontal: theme.spacing.sm,
-		paddingVertical: theme.spacing.xs,
-		borderWidth: 1,
-		borderColor: theme.colors.border,
-		borderRadius: theme.radius.pill,
-	},
-	weekday: {
-		flex: 1,
-		minHeight: 42,
-		alignItems: "center",
-		justifyContent: "center",
-		borderWidth: 1,
-		borderColor: theme.colors.border,
-		borderRadius: theme.radius.pill,
-	},
-	selected: {
-		backgroundColor: theme.colors.selected,
-		borderColor: theme.colors.brand,
-	},
 	actions: { flexDirection: "row", gap: theme.spacing.sm },
 	action: { flex: 1 },
 	catalogueGroup: { gap: theme.spacing.md },

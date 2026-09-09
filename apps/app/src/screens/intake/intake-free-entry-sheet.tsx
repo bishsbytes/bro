@@ -6,6 +6,7 @@ import { AppText } from "../../components/app-text";
 import { Button } from "../../components/button";
 import { FormField } from "../../components/form-field";
 import { Icon } from "../../components/icon";
+import { SegmentedControl } from "../../components/segmented-control";
 import type { LabelInputs } from "../../intake/free-entry";
 import {
 	labelInputsHaveValue,
@@ -135,27 +136,16 @@ export function IntakeFreeEntrySheet({
 				/>
 				<View style={styles.section}>
 					<AppText variant="label">{t("intake:free.type")}</AppText>
-					<View
-						style={styles.typeOptions}
-						accessibilityRole="radiogroup"
-						accessibilityLabel={t("intake:free.type")}
-					>
-						{enabledKinds.map((candidate) => (
-							<Button
-								key={candidate}
-								accessibilityRole="radio"
-								style={styles.typeOption}
-								label={t(`intake:kinds.${candidate}`)}
-								accessibilityState={{
-									selected: draft.kind === candidate,
-									checked: draft.kind === candidate,
-								}}
-								variant={draft.kind === candidate ? "primary" : "secondary"}
-								disabled={busy}
-								onPress={() => onChange({ kind: candidate })}
-							/>
-						))}
-					</View>
+					<SegmentedControl
+						label={t("intake:free.type")}
+						options={enabledKinds.map((candidate) => ({
+							value: candidate,
+							label: t(`intake:kinds.${candidate}`),
+						}))}
+						value={draft.kind}
+						disabled={busy}
+						onChange={(kind) => onChange({ kind })}
+					/>
 				</View>
 
 				<IntakeQuantityField
@@ -249,25 +239,13 @@ const styles = StyleSheet.create((theme) => ({
 	section: { gap: theme.spacing.md },
 	actions: { flexDirection: "column", gap: theme.spacing.sm },
 	grow: { flex: 1 },
-	typeOptions: {
-		flexDirection: "row",
-		flexWrap: "wrap",
-		gap: theme.spacing.xs,
-		backgroundColor: theme.colors.surface,
-		borderRadius: theme.radius.pill,
-	},
-	typeOption: {
-		flexGrow: 1,
-		borderWidth: 0,
-		minWidth: "40%",
-	},
 	nutritionSection: { gap: theme.spacing.sm },
 	nutritionField: {
 		flexDirection: "row",
 		alignItems: "center",
 		gap: theme.spacing.sm,
 		borderWidth: 1,
-		borderColor: theme.colors.line,
+		borderColor: theme.colors.interactiveBorder,
 		borderRadius: theme.radius.control,
 		padding: theme.spacing.sm,
 	},

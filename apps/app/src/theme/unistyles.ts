@@ -110,11 +110,14 @@ const monoReadout = {
 	letterSpacing: -0.4,
 	fontVariant: tabular,
 };
-const monoList = {
+const contentTitle = {
 	fontFamily: sans,
 	fontWeight: "600" as const,
 	fontSize: 18,
 	lineHeight: 22,
+};
+const monoList = {
+	...contentTitle,
 	fontVariant: tabular,
 };
 const monoInline = {
@@ -134,6 +137,8 @@ const typography = {
 	largeTitle,
 	title,
 	section,
+	sectionCompact: { ...section, fontSize: 16, lineHeight: 22 },
+	contentTitle,
 	body,
 	caption,
 	footnote,
@@ -182,7 +187,7 @@ const shared = {
 		focusIconSize: 20,
 		areaPromptIconSize: 32,
 	},
-	opacity: { disabled: 0.4, domainTint: 0.22 },
+	opacity: { disabled: 0.4, pressed: 0.72, domainTint: 0.22 },
 	motion: {
 		duration: 160,
 		tap: { duration: 160 },
@@ -313,6 +318,9 @@ export function createTheme(scheme: "light" | "dark") {
 		tabRipple: `${palette.selectedSoft}38`,
 		selected: palette.selectedSoft,
 		onSelected: palette.brand,
+		// Rows carry secondary metadata even during a press. This surface keeps
+		// that text readable; surfaceSunk is reserved for primary-ink controls.
+		rowPressed: palette.surface2,
 	};
 	return {
 		...shared,

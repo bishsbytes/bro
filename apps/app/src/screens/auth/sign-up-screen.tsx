@@ -5,6 +5,7 @@ import { AppText } from "../../components/app-text";
 import { Button } from "../../components/button";
 import { FormField } from "../../components/form-field";
 import { StackScreen as Screen } from "../../components/screen";
+import { TextAction } from "../../components/text-action";
 import { toMessage } from "../../lib/errors";
 import { authStyles } from "./auth-styles";
 
@@ -84,9 +85,8 @@ export function SignUpScreen({ onShowSignIn, onSuccess }: SignUpScreenProps) {
 				onPress={() => void onSubmit()}
 			/>
 
-			<Button
+			<TextAction
 				label={t("signUp.haveAccount")}
-				variant="text"
 				style={authStyles.link}
 				onPress={onShowSignIn}
 				disabled={submitting}

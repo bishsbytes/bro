@@ -27,9 +27,9 @@ export function SectionHeader({
 					</AppText>
 				) : null}
 				<AppText
-					variant="section"
+					accessibilityRole="header"
+					variant={compact ? "sectionCompact" : "section"}
 					color={tone === "danger" ? "danger" : "default"}
-					style={[styles.title, compact && styles.compactTitle]}
 				>
 					{title}
 				</AppText>
@@ -51,6 +51,4 @@ const styles = StyleSheet.create((theme) => ({
 	eyebrow: {
 		marginBottom: theme.spacing.xs,
 	},
-	title: {},
-	compactTitle: { fontSize: 16, lineHeight: 22 },
 }));

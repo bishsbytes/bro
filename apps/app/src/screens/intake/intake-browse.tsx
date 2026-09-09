@@ -4,7 +4,7 @@ import type { ExternalConsumable } from "@bro/domain/food-search";
 import { useTranslation } from "react-i18next";
 import { TextInput, TouchableOpacity, View } from "react-native";
 import { AppText } from "../../components/app-text";
-import { Button } from "../../components/button";
+import { FactorChip } from "../../components/factor-chip";
 import { Icon } from "../../components/icon";
 import { LoadingIndicator } from "../../components/loading-indicator";
 import { SectionHeader } from "../../components/section-header";
@@ -107,23 +107,19 @@ export function IntakeBrowse({
 			) : null}
 
 			<View style={styles.wrap}>
-				<Button
+				<FactorChip
 					label={t("intake:log.all")}
-					accessibilityState={{ selected: kind === null }}
-					variant={kind === null ? "primary" : "secondary"}
-					style={styles.filter}
+					selected={kind === null}
 					onPress={() => onKindChange(null)}
 				/>
 				{enabledKinds.map((candidate) => (
-					<Button
+					<FactorChip
 						key={candidate}
-						style={styles.filter}
 						label={t(`intake:kinds.${candidate}`)}
 						accessibilityLabel={t("intake:log.kindA11y", {
 							name: t(`intake:kinds.${candidate}`),
 						})}
-						accessibilityState={{ selected: kind === candidate }}
-						variant={kind === candidate ? "primary" : "secondary"}
+						selected={kind === candidate}
 						onPress={() => onKindChange(kind === candidate ? null : candidate)}
 					/>
 				))}
@@ -132,7 +128,7 @@ export function IntakeBrowse({
 			{error ? <AppText color="danger">{error}</AppText> : null}
 
 			<View style={styles.section}>
-				<AppText variant="title">{t("intake:log.recentsTitle")}</AppText>
+				<SectionHeader title={t("intake:log.recentsTitle")} />
 				{recents.length === 0 && !normalizedQuery ? (
 					<AppText variant="caption" color="subtle">
 						{t("intake:log.recentsEmpty")}
@@ -154,7 +150,7 @@ export function IntakeBrowse({
 
 			{library.length > 0 ? (
 				<View style={styles.section}>
-					<AppText variant="title">{t("intake:log.libraryTitle")}</AppText>
+					<SectionHeader title={t("intake:log.libraryTitle")} />
 					<RowPanel>
 						{library.map((consumable, index) => (
 							<IntakeRow
@@ -188,7 +184,7 @@ export function IntakeBrowse({
 
 			{catalogue.length > 0 ? (
 				<View style={styles.section}>
-					<AppText variant="title">{t("intake:log.catalogueTitle")}</AppText>
+					<SectionHeader title={t("intake:log.catalogueTitle")} />
 					<RowPanel>
 						{catalogue.map((consumable, index) => (
 							<IntakeRow
@@ -275,10 +271,6 @@ export function IntakeBrowse({
 const styles = StyleSheet.create((theme) => ({
 	section: { gap: theme.spacing.md },
 	wrap: { flexDirection: "row", flexWrap: "wrap", gap: theme.spacing.sm },
-	filter: {
-		borderWidth: 0,
-		minHeight: theme.control.minHitArea,
-	},
 	search: {
 		flexDirection: "row",
 		alignItems: "center",

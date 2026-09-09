@@ -39,7 +39,7 @@ function QuickLogAction({
 		<TouchableOpacity
 			accessibilityRole="button"
 			accessibilityLabel={title}
-			activeOpacity={0.72}
+			activeOpacity={theme.opacity.pressed}
 			style={styles.actionRow}
 			onPress={onPress}
 		>
@@ -52,9 +52,7 @@ function QuickLogAction({
 				<Icon name={icon} color={domainColor} size={20} />
 			</View>
 			<View style={styles.actionCopy}>
-				<AppText variant="label" style={styles.actionTitle}>
-					{title}
-				</AppText>
+				<AppText variant="label">{title}</AppText>
 				<AppText variant="caption" color="muted">
 					{detail}
 				</AppText>
@@ -135,7 +133,7 @@ export function QuickLogFab({
 			<TouchableOpacity
 				accessibilityRole="button"
 				accessibilityLabel={t("quickLog.open")}
-				activeOpacity={0.72}
+				activeOpacity={theme.opacity.pressed}
 				style={[styles.fab, { bottom }]}
 				onPress={openSheet}
 			>
@@ -310,5 +308,4 @@ const styles = StyleSheet.create((theme) => ({
 		borderRadius: theme.radius.control,
 	},
 	actionCopy: { flex: 1, gap: theme.spacing.xs },
-	actionTitle: { fontWeight: "700" },
 }));

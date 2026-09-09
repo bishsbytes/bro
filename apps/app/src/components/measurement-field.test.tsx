@@ -1,7 +1,35 @@
 import { fireEvent, render } from "@testing-library/react-native";
+import { StyleSheet } from "react-native";
 import { MeasurementField } from "./measurement-field";
 
 describe("MeasurementField", () => {
+	it("keeps numeric typography consistent across simple and compound units", async () => {
+		const view = await render(
+			<>
+				<MeasurementField
+					label="Metric weight"
+					unit="kg"
+					entry={{ major: "78", minor: "" }}
+					onChangeEntry={jest.fn()}
+				/>
+				<MeasurementField
+					label="Imperial weight"
+					unit="st"
+					entry={{ major: "12", minor: "4" }}
+					onChangeEntry={jest.fn()}
+				/>
+			</>,
+		);
+		const typography = (label: string) => {
+			const { fontSize, fontWeight, fontFamily, fontVariant } =
+				StyleSheet.flatten(view.getByLabelText(label).props.style);
+			return { fontSize, fontWeight, fontFamily, fontVariant };
+		};
+		const simple = typography("Metric weight (kg)");
+		expect(simple.fontVariant).toContain("tabular-nums");
+		expect(typography("Imperial weight (stones)")).toEqual(simple);
+		expect(typography("Imperial weight (pounds)")).toEqual(simple);
+	});
 	it("gives a compound unit one labelled field per part", async () => {
 		const onChangeEntry = jest.fn();
 		const view = await render(

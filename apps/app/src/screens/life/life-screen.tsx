@@ -213,9 +213,8 @@ export function LifeScreen({ reviewStore, habitsStore, now }: LifeScreenProps) {
 						accessibilityLabel={t("wheel.takeStock")}
 						onPress={() => router.push("/review/new")}
 					/>
-					<Button
+					<TextAction
 						label={t("wheel.manageAreas")}
-						variant="text"
 						onPress={() => router.push("/life-areas")}
 					/>
 				</Card>

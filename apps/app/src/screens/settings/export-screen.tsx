@@ -9,6 +9,7 @@ import { Button } from "../../components/button";
 import { Card } from "../../components/card";
 import { StackScreen as Screen } from "../../components/screen";
 import { SectionHeader } from "../../components/section-header";
+import { TextAction } from "../../components/text-action";
 import { ThemedSwitch } from "../../components/themed-switch";
 import { createExportStore, type ExportStore } from "../../export/export-store";
 import {
@@ -178,9 +179,8 @@ export function ExportScreen({
 					</>
 				) : null}
 			</Card>
-			<Button
+			<TextAction
 				label={t("localData.backToToday")}
-				variant="text"
 				disabled={busy}
 				onPress={() => router.replace("/")}
 			/>

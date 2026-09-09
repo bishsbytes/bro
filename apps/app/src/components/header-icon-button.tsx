@@ -23,6 +23,7 @@ export function HeaderIconButton({
 	return (
 		<TouchableOpacity
 			accessibilityRole="button"
+			activeOpacity={theme.opacity.pressed}
 			accessibilityLabel={label}
 			hitSlop={theme.spacing.sm}
 			style={[styles.button, surface && styles.surfaceButton]}

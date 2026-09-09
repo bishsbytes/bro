@@ -15,7 +15,7 @@ describe("TimeField on web", () => {
 			width: "100%",
 			height: 52,
 			padding: "12px 16px",
-			fontSize: 14,
+			fontSize: 16,
 		});
 		await fireEvent(input, "change", { target: { value: "07:45" } });
 		expect(onChangeTime).toHaveBeenCalledWith("07:45");

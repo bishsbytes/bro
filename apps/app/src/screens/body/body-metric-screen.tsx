@@ -401,7 +401,8 @@ export function BodyMetricScreen({ metricSlug, store }: BodyMetricScreenProps) {
 											: undefined
 									}
 									onPress={() => setManagingHeading(true)}
-									style={styles.headingSummary}
+									variant="outlined"
+									density="compact"
 								/>
 								<TextAction
 									label={t("goal.view")}
@@ -465,10 +466,13 @@ export function BodyMetricScreen({ metricSlug, store }: BodyMetricScreenProps) {
 					{detail.history.length === 0 ? (
 						<AppText color="muted">{t("history.empty")}</AppText>
 					) : null}
-					{detail.history.map((entry) => (
+					{detail.history.map((entry, index) => (
 						<ListRow
 							key={`${entry.observation.id}:${entry.observation.updatedAt}`}
 							layout="inline"
+							variant="plain"
+							density="compact"
+							separator={index !== detail.history.length - 1}
 							title={formatReadingDay(
 								entry.observation.localDay,
 								detail.inputLocale,
@@ -485,7 +489,6 @@ export function BodyMetricScreen({ metricSlug, store }: BodyMetricScreenProps) {
 									: `${entry.formattedValue}. ${dateTimeLabel(entry.observation)}. ${sourceLabel(t, entry.observation.source)}`
 							}
 							onPress={() => setEditingId(entry.observation.id)}
-							style={styles.historyRow}
 						/>
 					))}
 				</View>
@@ -644,21 +647,8 @@ const styles = StyleSheet.create((theme) => ({
 		paddingVertical: theme.spacing.sm,
 		flexShrink: 0,
 	},
-	historyRow: {
-		backgroundColor: "transparent",
-		borderRadius: 0,
-		paddingHorizontal: 0,
-		borderBottomWidth: 1,
-		borderBottomColor: theme.colors.line,
-	},
 	summaryCard: { gap: theme.spacing.xs },
 	section: { gap: theme.spacing.sm },
-	headingSummary: {
-		paddingVertical: theme.spacing.sm,
-		borderWidth: 1,
-		borderColor: theme.colors.line,
-		backgroundColor: "transparent",
-	},
 	goalCard: { gap: theme.spacing.md },
 	historyCard: { gap: theme.spacing.sm },
 	actions: { flexDirection: "row", gap: theme.spacing.sm },

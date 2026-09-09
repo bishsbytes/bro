@@ -20,13 +20,19 @@ export function TextAction({
 			accessibilityRole="button"
 			accessibilityLabel={label}
 			{...props}
+			aria-disabled={!!props.disabled}
+			accessibilityState={{
+				...props.accessibilityState,
+				disabled: !!props.disabled,
+			}}
 			style={(state) => [
 				styles.link,
+				state.pressed && !props.disabled && styles.pressed,
 				props.disabled && styles.disabled,
 				typeof style === "function" ? style(state) : style,
 			]}
 		>
-			<AppText variant="caption" color="brand">
+			<AppText variant="label" color="brand" style={styles.label}>
 				{label}
 			</AppText>
 			{chevron ? (
@@ -38,10 +44,14 @@ export function TextAction({
 const styles = StyleSheet.create((theme) => ({
 	link: {
 		minHeight: theme.control.minHitArea,
+		minWidth: theme.control.minHitArea,
+		borderRadius: theme.radius.pill,
 		flexDirection: "row",
 		alignItems: "center",
 		justifyContent: "center",
 		gap: theme.spacing.xs,
 	},
 	disabled: { opacity: theme.opacity.disabled },
+	pressed: { opacity: theme.opacity.pressed },
+	label: { flexShrink: 1, textAlign: "center" },
 }));

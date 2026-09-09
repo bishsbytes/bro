@@ -270,9 +270,8 @@ function BodyLogContent({
 			{/* The guide belongs where the tape is about to go round, not on the
 			    overview: this is the moment a man wants to know where the waist is. */}
 			{logMode === "measurements" ? (
-				<Button
+				<TextAction
 					label={t("body:measuring.link")}
-					variant="text"
 					disabled={busySlug !== null}
 					onPress={() => {
 						onClose();
@@ -388,6 +387,9 @@ function ChangeCard({
 				<View key={change.slug} style={styles.rowWithAction}>
 					<ListRow
 						layout="inline"
+						variant="plain"
+						density="compact"
+						separator={index !== changes.length - 1}
 						title={change.label}
 						value={change.value}
 						detail={
@@ -403,10 +405,7 @@ function ChangeCard({
 						accessibilityLabel={change.accessibilityLabel}
 						onPress={() => onOpen(change.slug)}
 						showChevron={change.current !== null || !change.canAdd}
-						style={[
-							styles.measurementRow,
-							index === changes.length - 1 && styles.lastRow,
-						]}
+						style={styles.measurementRow}
 					/>
 					{change.current === null && change.canAdd ? (
 						<Pressable
@@ -611,7 +610,7 @@ export function BodyScreen({ store }: BodyScreenProps) {
 			/>
 
 			{heroMetric?.baseline.current ? (
-				<Card style={styles.heroCard}>
+				<Card variant="outlined" style={styles.heroCard}>
 					<BodyBaselineGauge
 						metric={heroMetric}
 						locale={locale}
@@ -805,9 +804,6 @@ const styles = StyleSheet.create((theme) => ({
 	overviewContent: { paddingTop: 0, paddingBottom: theme.control.fabClearance },
 	heroCard: {
 		gap: theme.spacing.xs,
-		borderWidth: 1,
-		borderColor: theme.colors.line,
-		backgroundColor: theme.colors.background,
 		flexShrink: 0,
 	},
 	rowWithAction: { flexDirection: "row", alignItems: "center" },
@@ -817,16 +813,7 @@ const styles = StyleSheet.create((theme) => ({
 		alignItems: "center",
 		justifyContent: "center",
 	},
-	measurementRow: {
-		flex: 1,
-		backgroundColor: "transparent",
-		borderRadius: 0,
-		paddingHorizontal: 0,
-		borderBottomWidth: 1,
-		borderBottomColor: theme.colors.line,
-		minHeight: theme.control.minHitArea,
-	},
-	lastRow: { borderBottomWidth: 0 },
+	measurementRow: { flex: 1 },
 	managementRow: {
 		flexDirection: "row",
 		alignItems: "center",

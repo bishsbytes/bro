@@ -7,7 +7,7 @@ import {
 import { type Href, router } from "expo-router";
 import { useCallback, useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
-import { TouchableOpacity, View } from "react-native";
+import { View } from "react-native";
 import { AppText } from "../../components/app-text";
 import { Card } from "../../components/card";
 import { EmptyState } from "../../components/empty-state";
@@ -15,6 +15,7 @@ import { ListRow } from "../../components/list-row";
 import { LoadingIndicator } from "../../components/loading-indicator";
 import { StackScreen as Screen } from "../../components/screen";
 import { SectionHeader } from "../../components/section-header";
+import { SegmentedControl } from "../../components/segmented-control";
 import { TrendChart } from "../../components/trend-chart";
 import {
 	createInsightStore,
@@ -142,24 +143,15 @@ export function InsightsScreen({ store, insightStore }: InsightsScreenProps) {
 					eyebrow={t("trends.eyebrow")}
 				/>
 				<AppText color="muted">{t("trends.intro")}</AppText>
-				<View style={styles.periodRow}>
-					{TREND_PERIODS.map((option) => (
-						<TouchableOpacity
-							key={option}
-							accessibilityRole="button"
-							accessibilityState={{ selected: period === option }}
-							style={[
-								styles.periodButton,
-								period === option && styles.periodSelected,
-							]}
-							onPress={() => setPeriod(option)}
-						>
-							<AppText variant="label">
-								{t("trends.period", { count: option })}
-							</AppText>
-						</TouchableOpacity>
-					))}
-				</View>
+				<SegmentedControl
+					label={t("trends.title")}
+					options={TREND_PERIODS.map((option) => ({
+						value: option,
+						label: t("trends.period", { count: option }),
+					}))}
+					value={period}
+					onChange={setPeriod}
+				/>
 
 				{loading ? <LoadingIndicator size="large" /> : null}
 				{error ? (
@@ -236,18 +228,6 @@ const styles = StyleSheet.create((theme) => ({
 	content: { gap: theme.spacing.lg },
 	section: { gap: theme.spacing.md },
 	card: { gap: theme.spacing.md },
-	periodRow: { flexDirection: "row", gap: theme.spacing.sm },
-	periodButton: {
-		paddingHorizontal: theme.spacing.lg,
-		paddingVertical: theme.spacing.sm,
-		borderWidth: 1,
-		borderColor: theme.colors.border,
-		borderRadius: theme.radius.pill,
-	},
-	periodSelected: {
-		backgroundColor: theme.colors.selected,
-		borderColor: theme.colors.brand,
-	},
 }));
 
 export default InsightsScreen;

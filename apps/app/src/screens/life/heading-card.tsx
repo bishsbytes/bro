@@ -93,7 +93,7 @@ const styles = StyleSheet.create((theme) => ({
 		borderRadius: theme.radius.card,
 		backgroundColor: theme.colors.surface1,
 	},
-	pressed: { backgroundColor: theme.colors.surface2 },
+	pressed: { backgroundColor: theme.colors.rowPressed },
 	copy: { flex: 1, gap: theme.spacing.xs, alignItems: "flex-start" },
 	badge: {
 		paddingHorizontal: theme.spacing.sm,

@@ -55,6 +55,7 @@ export function ScoreRow({
 							: undefined;
 					return (
 						<TouchableOpacity
+							activeOpacity={theme.opacity.pressed}
 							key={score}
 							accessibilityRole="radio"
 							accessibilityLabel={t("a11y.score", {

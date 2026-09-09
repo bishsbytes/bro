@@ -40,8 +40,10 @@ export function OptionRow({
 		<TouchableOpacity
 			accessibilityRole={selection === "single" ? "radio" : "checkbox"}
 			accessibilityLabel={accessibilityLabel}
+			aria-checked={selected}
+			aria-disabled={disabled}
 			accessibilityState={{ selected, checked: selected, disabled }}
-			activeOpacity={0.72}
+			activeOpacity={theme.opacity.pressed}
 			disabled={disabled}
 			style={[
 				styles.option,
@@ -60,9 +62,7 @@ export function OptionRow({
 				</View>
 			) : null}
 			<View style={styles.copy}>
-				<AppText variant="label" style={styles.label}>
-					{label}
-				</AppText>
+				<AppText variant="label">{label}</AppText>
 				{detail ? (
 					<AppText variant="caption" color="muted">
 						{detail}
@@ -107,5 +107,4 @@ const styles = StyleSheet.create((theme) => ({
 	},
 	selectedIcon: { backgroundColor: theme.colors.surface1 },
 	copy: { flex: 1 },
-	label: { fontWeight: "600" },
 }));
