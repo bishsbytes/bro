@@ -50,8 +50,11 @@ export function SegmentedControl<T extends string | number>({
 					<View style={styles.surface(value === option.value)}>
 						<AppText
 							variant="label"
-							color={value === option.value ? "onBrand" : "muted"}
-							style={styles.label}
+							color="muted"
+							style={[
+								styles.label,
+								value === option.value && styles.selectedLabel,
+							]}
 						>
 							{option.label}
 						</AppText>
@@ -63,6 +66,7 @@ export function SegmentedControl<T extends string | number>({
 }
 
 const styles = StyleSheet.create((theme) => {
+	const trackPadding = theme.spacing.xs * 0.75;
 	const visualInset =
 		Math.max(
 			0,
@@ -71,13 +75,16 @@ const styles = StyleSheet.create((theme) => {
 	return {
 		group: {
 			flexDirection: "row",
+			paddingHorizontal: trackPadding,
 		},
 		track: {
 			...StyleSheet.absoluteFillObject,
-			top: visualInset,
-			bottom: visualInset,
-			backgroundColor: theme.colors.surface1,
-			borderRadius: theme.radius.control,
+			top: Math.max(0, visualInset - trackPadding),
+			bottom: Math.max(0, visualInset - trackPadding),
+			backgroundColor: theme.colors.background,
+			borderWidth: 1,
+			borderColor: theme.colors.hairlineSoft,
+			borderRadius: theme.radius.control + trackPadding,
 		},
 		option: {
 			flex: 1,
@@ -94,9 +101,10 @@ const styles = StyleSheet.create((theme) => {
 			paddingVertical: theme.spacing.xs,
 			borderRadius: theme.radius.control,
 			overflow: "hidden",
-			backgroundColor: selected ? theme.colors.brand : "transparent",
+			backgroundColor: selected ? theme.colors.selected : "transparent",
 		}),
 		label: { textAlign: "center" },
+		selectedLabel: { color: theme.colors.onSelected },
 		pressed: { opacity: theme.opacity.pressed },
 		disabled: { opacity: theme.opacity.disabled },
 	};
