@@ -1,17 +1,37 @@
 import type { ConsumableKind } from "@bro/domain/consumable";
+import type { DrinkCatalogueEntry } from "@bro/domain/drink-catalogue";
 import { Image, type ImageSourcePropType, View } from "react-native";
 import { Icon } from "../../components/icon";
 import { StyleSheet, useUnistyles } from "../../theme/unistyles";
 
-const artwork: Record<string, ImageSourcePropType> = {
-	water: require("../../../assets/intake/water.png"),
-	"filter coffee": require("../../../assets/intake/filter-coffee.png"),
+/** ImageSourcePropType also accepts `{ uri }`, so this manifest can move to a CDN. */
+const systemArtwork = {
+	"drink:lager-4_5": require("../../../assets/intake/lager.png"),
+	"drink:cider-4_5": require("../../../assets/intake/cider.png"),
+	"drink:wine-red-13": require("../../../assets/intake/red-wine.png"),
+	"drink:wine-white-12": require("../../../assets/intake/white-wine.png"),
+	"drink:spirit-40": require("../../../assets/intake/spirit.png"),
 	"drink:water": require("../../../assets/intake/water.png"),
 	"drink:filter-coffee": require("../../../assets/intake/filter-coffee.png"),
+	"drink:tea": require("../../../assets/intake/tea.png"),
+	"drink:espresso": require("../../../assets/intake/espresso.png"),
+	"drink:energy-drink": require("../../../assets/intake/energy-drink.png"),
+	"drink:cola": require("../../../assets/intake/cola.png"),
+} satisfies Record<DrinkCatalogueEntry["key"], ImageSourcePropType>;
+
+const namedArtwork: Record<string, ImageSourcePropType> = {
+	water: require("../../../assets/intake/water.png"),
+	"filter coffee": require("../../../assets/intake/filter-coffee.png"),
 	"flat white": require("../../../assets/intake/flat-white.png"),
 	"eggs on toast": require("../../../assets/intake/eggs-on-toast.png"),
 	porridge: require("../../../assets/intake/porridge.png"),
 };
+
+function systemArtworkFor(key: string): ImageSourcePropType | undefined {
+	return key in systemArtwork
+		? systemArtwork[key as keyof typeof systemArtwork]
+		: undefined;
+}
 
 /** Artwork is decorative. It never supplies a portion or nutrition value. */
 export function IntakeArtwork({
@@ -35,9 +55,9 @@ export function IntakeArtwork({
 	// and branded/provider items keep a neutral fallback, not a guessed photo.
 	const source =
 		key && !key.startsWith("library:")
-			? artwork[key]
+			? systemArtworkFor(key)
 			: !brand && (kind === "food" || kind === "drink")
-				? artwork[name.trim().toLowerCase()]
+				? namedArtwork[name.trim().toLowerCase()]
 				: undefined;
 	return (
 		<View
