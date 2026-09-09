@@ -100,17 +100,8 @@ describe("daily check-in flow", () => {
 		// asks is put on its own page.
 		await fireEvent.press(view.getByLabelText("Start Morning check-in"));
 		await fireEvent.press(await view.findByLabelText("Mood 4"));
-		await fireEvent.press(
-			view.queryByText("Continue") ?? view.getByText("Save check-in"),
-		);
 		await fireEvent.press(await view.findByLabelText("Energy 3"));
-		await fireEvent.press(
-			view.queryByText("Continue") ?? view.getByText("Save check-in"),
-		);
 		await fireEvent.press(await view.findByLabelText("Motivation 5"));
-		await fireEvent.press(
-			view.queryByText("Continue") ?? view.getByText("Save check-in"),
-		);
 		expect(await view.findByText("Checked in")).toBeTruthy();
 		await fireEvent.press(view.getByText("Done"));
 
@@ -122,17 +113,8 @@ describe("daily check-in flow", () => {
 		// The evening asks its own scores and is a separate sitting entirely.
 		await fireEvent.press(view.getByLabelText("Start Evening check-in"));
 		await fireEvent.press(await view.findByLabelText("Mood 3"));
-		await fireEvent.press(
-			view.queryByText("Continue") ?? view.getByText("Save check-in"),
-		);
 		await fireEvent.press(await view.findByLabelText("Productivity 4"));
-		await fireEvent.press(
-			view.queryByText("Continue") ?? view.getByText("Save check-in"),
-		);
 		await fireEvent.press(await view.findByLabelText("Libido 2"));
-		await fireEvent.press(
-			view.queryByText("Continue") ?? view.getByText("Save check-in"),
-		);
 		expect(await view.findByText("Checked in")).toBeTruthy();
 		await fireEvent.press(view.getByText("Done"));
 		expect(
@@ -209,17 +191,8 @@ describe("daily check-in flow", () => {
 			),
 		);
 		await fireEvent.press(await view.findByLabelText("Mood 5"));
-		await fireEvent.press(
-			view.queryByText("Continue") ?? view.getByText("Save check-in"),
-		);
 		await fireEvent.press(await view.findByLabelText("Energy 4"));
-		await fireEvent.press(
-			view.queryByText("Continue") ?? view.getByText("Save check-in"),
-		);
 		await fireEvent.press(await view.findByLabelText("Motivation 4"));
-		await fireEvent.press(
-			view.queryByText("Continue") ?? view.getByText("Save check-in"),
-		);
 		await fireEvent.press(await view.findByText("Done"));
 		expect(
 			await view.findByText("Mood Very good · Energy 4 · Motivation 4"),

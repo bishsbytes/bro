@@ -83,7 +83,7 @@ export const checkIn = {
 	answers: "Your answers",
 	draft: {
 		title: "Keep this check-in?",
-		body: "Your answers can stay on this device until you are ready to save.",
+		body: "Your answers can stay on this device until you are ready to finish.",
 		keep: "Keep draft",
 		discard: "Discard",
 		continue: "Continue editing check-in",
@@ -105,6 +105,8 @@ export const checkIn = {
 	skip: "Skip",
 	skipAndFinish: "Skip and finish",
 	confirmation: {
+		saving: "Saving check-in…",
+		failed: "Check-in could not be saved",
 		partial: "Check-in saved for now",
 		saved: "Checked in",
 		updated: "Check-in updated",

@@ -4,7 +4,12 @@ import { router } from "expo-router";
 import { usePreventRemove } from "expo-router/react-navigation";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
-import { ScrollView, TouchableOpacity, View } from "react-native";
+import {
+	AccessibilityInfo,
+	ScrollView,
+	TouchableOpacity,
+	View,
+} from "react-native";
 import { checkInScoreSummary } from "../../check-in/check-in-presentation";
 import {
 	type CheckInEntry,
@@ -74,7 +79,35 @@ export function CheckInScreen({
 	const [dirty, setDirty] = useState(initialMood !== undefined);
 	const [leaving, setLeaving] = useState(false);
 	const [confirmClose, setConfirmClose] = useState(false);
-	usePreventRemove(!leaving && dirty, () => setConfirmClose(true));
+	const [reducedMotion, setReducedMotion] = useState<boolean>();
+	const advanceTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+	const advancing = useRef(false);
+	const cancelPendingAdvance = useCallback(() => {
+		if (advanceTimer.current !== null) clearTimeout(advanceTimer.current);
+		advanceTimer.current = null;
+		advancing.current = false;
+	}, []);
+	usePreventRemove(!leaving && (dirty || saving), () => {
+		cancelPendingAdvance();
+		if (!saving) setConfirmClose(true);
+	});
+	useEffect(() => {
+		let active = true;
+		void AccessibilityInfo.isReduceMotionEnabled()
+			.catch(() => true)
+			.then((enabled) => {
+				if (active) setReducedMotion(enabled);
+			});
+		const subscription = AccessibilityInfo.addEventListener(
+			"reduceMotionChanged",
+			setReducedMotion,
+		);
+		return () => {
+			active = false;
+			subscription?.remove();
+			cancelPendingAdvance();
+		};
+	}, [cancelPendingAdvance]);
 	useEffect(() => {
 		if (leaving) router.back();
 	}, [leaving]);
@@ -155,7 +188,7 @@ export function CheckInScreen({
 		];
 	}, [today, t, slot]);
 
-	// Explicit saves read the latest draft, with a ref preventing repeated submissions.
+	// Completion reads the latest draft, with a ref preventing repeated submissions.
 	const draft = useRef({
 		values,
 		editing,
@@ -198,12 +231,12 @@ export function CheckInScreen({
 						);
 						setValues(restored);
 						setIndex(
-							Number.isInteger(pending.index)
+							restored.mood !== undefined && Number.isInteger(pending.index)
 								? Math.max(
 										0,
 										Math.min(
 											pending.index,
-											loaded.availableOptionalScores[slot].length,
+											loaded.availableOptionalScores[slot].length + 1,
 										),
 									)
 								: 0,
@@ -253,6 +286,7 @@ export function CheckInScreen({
 		committed.current = true;
 		setSaving(true);
 		setSaveError(null);
+		setPartial(activeSlugs.some((slug) => answered[slug] === undefined));
 		try {
 			const optional = Object.fromEntries(
 				activeSlugs.flatMap((slug) =>
@@ -292,6 +326,12 @@ export function CheckInScreen({
 		}
 	}, [checkIns, slot]);
 
+	// Finishing the last category commits all answers together, including a
+	// mood chosen in the journal when no optional categories are configured.
+	useEffect(() => {
+		if (today && index === steps.length) void commit();
+	}, [today, index, steps.length, commit]);
+
 	// A draft is device-local, separate from observations and exports.
 	useEffect(() => {
 		if (!today || !dirty || done) return;
@@ -311,16 +351,27 @@ export function CheckInScreen({
 	}, [today, dirty, done, slot, editing, values, index]);
 
 	function answer(slug: string, value: number) {
+		if (advancing.current || saving) return;
 		playSelectionHaptic();
 		committed.current = false;
+		setSaveError(null);
 		setDirty(true);
 		setValues((current) => ({ ...current, [slug]: value }));
+		advancing.current = true;
+		const advance = () => {
+			cancelPendingAdvance();
+			setIndex((current) => current + 1);
+		};
+		if (reducedMotion) advance();
+		else advanceTimer.current = setTimeout(advance, theme.motion.duration);
 	}
 	function close() {
+		cancelPendingAdvance();
 		if (dirty) setConfirmClose(true);
 		else setLeaving(true);
 	}
 	function goBack() {
+		cancelPendingAdvance();
 		if (index === 0) close();
 		else setIndex((current) => current - 1);
 	}
@@ -342,12 +393,8 @@ export function CheckInScreen({
 			setSaveError(toMessage(caught));
 		}
 	}
-	async function save() {
-		setPartial(steps.some((step) => values[step.slug] === undefined));
-		await commit();
-	}
 
-	if (!today && !loadError) {
+	if ((!today && !loadError) || reducedMotion === undefined) {
 		return <LoadingScreen variant="full" />;
 	}
 
@@ -376,23 +423,86 @@ export function CheckInScreen({
 					),
 				});
 
-	if (done) {
+	const closeConfirmation = (
+		<ModalSheet
+			visible={confirmClose}
+			onClose={() => setConfirmClose(false)}
+			closeAccessibilityLabel={t("draft.continue")}
+		>
+			<SectionHeader title={t("draft.title")} />
+			<AppText color="muted">{t("draft.body")}</AppText>
+			{saveError ? (
+				<AppText accessibilityRole="alert" color="danger">
+					{saveError}
+				</AppText>
+			) : null}
+			<Button label={t("draft.keep")} onPress={() => leaveDraft(false)} />
+			<Button
+				label={t("draft.discard")}
+				variant="text"
+				tone="danger"
+				onPress={() => leaveDraft(true)}
+			/>
+		</ModalSheet>
+	);
+
+	if (done || index === steps.length) {
 		return (
-			<Screen padded centered gap="lg">
+			<Screen scroll padded centered gap="lg">
 				<View style={styles.prompt}>
-					<AppText variant="largeTitle" style={styles.leftText}>
-						{partial
-							? t("confirmation.partial")
-							: openedOnEntry
-								? t("confirmation.updated")
-								: t("confirmation.saved")}
+					<AppText
+						variant="largeTitle"
+						accessibilityRole="header"
+						style={styles.leftText}
+					>
+						{!done
+							? t(saveError ? "confirmation.failed" : "confirmation.saving")
+							: partial
+								? t("confirmation.partial")
+								: openedOnEntry
+									? t("confirmation.updated")
+									: t("confirmation.saved")}
 					</AppText>
 					<AppText variant="lead" color="muted" style={styles.leftText}>
 						{summary}
 					</AppText>
 				</View>
+				{partial ? (
+					<AppText variant="caption" color="muted">
+						{t("sittings.partial", {
+							labels: steps
+								.filter((each) => values[each.slug] === undefined)
+								.map((each) => each.label)
+								.join(", "),
+						})}
+					</AppText>
+				) : null}
+				{done ? (
+					<TouchableOpacity
+						accessibilityRole="button"
+						accessibilityLabel={t("note.add")}
+						accessibilityHint={t("note.hint")}
+						style={styles.noteRow}
+						onPress={() =>
+							router.push({
+								pathname: "/notes/new",
+								params: { localDay: today.localDay },
+							})
+						}
+					>
+						<Icon name="note" size={20} color={theme.colors.ink2} />
+						<AppText variant="caption" style={styles.noteLabel}>
+							{t("note.add")}
+						</AppText>
+						<Icon name="chevron-right" size={20} color={theme.colors.ink2} />
+					</TouchableOpacity>
+				) : null}
 				{saveError ? (
-					<AppText color="danger" style={styles.leftText}>
+					<AppText
+						accessibilityRole="alert"
+						color="danger"
+						style={styles.leftText}
+					>
 						{saveError}
 					</AppText>
 				) : null}
@@ -406,6 +516,7 @@ export function CheckInScreen({
 					<Button
 						label={t("confirmation.done")}
 						loading={saving}
+						disabled={!done}
 						onPress={() => setLeaving(true)}
 					/>
 				)}
@@ -416,16 +527,16 @@ export function CheckInScreen({
 					onPress={() => {
 						committed.current = false;
 						setDone(false);
+						setSaveError(null);
 						setIndex(steps.length - 1);
 					}}
 				/>
+				{closeConfirmation}
 			</Screen>
 		);
 	}
 
 	const step = steps[index];
-	const isLast = index === steps.length - 1;
-	const allAnswered = steps.every((each) => values[each.slug] !== undefined);
 
 	return (
 		<Screen contentContainerStyle={{ flex: 1, minHeight: 0 }}>
@@ -504,44 +615,6 @@ export function CheckInScreen({
 					disabled={saving}
 					endLabels={step.slug === MOOD_SLUG ? undefined : step.endLabels}
 				/>
-				{isLast && summary ? (
-					<View style={styles.answerSummary}>
-						<AppText variant="label" color="muted">
-							{t("answers")}
-						</AppText>
-						<AppText variant="caption">{summary}</AppText>
-						{!allAnswered ? (
-							<AppText variant="caption" color="muted">
-								{t("sittings.partial", {
-									labels: steps
-										.filter((each) => values[each.slug] === undefined)
-										.map((each) => each.label)
-										.join(", "),
-								})}
-							</AppText>
-						) : null}
-					</View>
-				) : null}
-				<TouchableOpacity
-					accessibilityRole="button"
-					accessibilityLabel={t("note.add")}
-					accessibilityHint={t("note.hint")}
-					accessibilityState={{ disabled: saving }}
-					disabled={saving}
-					style={styles.noteRow}
-					onPress={() =>
-						router.push({
-							pathname: "/notes/new",
-							params: { localDay: today.localDay },
-						})
-					}
-				>
-					<Icon name="note" size={20} color={theme.colors.ink2} />
-					<AppText variant="caption" style={styles.noteLabel}>
-						{t("note.add")}
-					</AppText>
-					<Icon name="chevron-right" size={20} color={theme.colors.ink2} />
-				</TouchableOpacity>
 			</ScrollView>
 			<View style={styles.footer}>
 				{saveError ? (
@@ -549,57 +622,19 @@ export function CheckInScreen({
 						{saveError}
 					</AppText>
 				) : null}
-				<Button
-					label={isLast ? t("nav.saveCheckIn") : t("nav.continue")}
-					loading={saving}
-					disabled={values[step.slug] === undefined}
-					onPress={() =>
-						isLast ? void save() : setIndex((current) => current + 1)
-					}
-				/>
-				<Button
-					label={
-						isLast && allAnswered && index > 0
-							? t("nav.backTo", {
-									step: steps[index - 1].label.toLocaleLowerCase(),
-								})
-							: t("nav.saveForNow")
-					}
-					variant="secondary"
-					disabled={saving || values.mood === undefined}
-					onPress={() =>
-						isLast && allAnswered && index > 0 ? goBack() : void save()
-					}
-				/>
-				{step.slug !== MOOD_SLUG && !isLast ? (
+				{step.slug !== MOOD_SLUG ? (
 					<Button
 						label={t("skip")}
 						variant="text"
 						disabled={saving}
-						onPress={() => setIndex((current) => current + 1)}
+						onPress={() => {
+							cancelPendingAdvance();
+							setIndex((current) => current + 1);
+						}}
 					/>
 				) : null}
 			</View>
-			<ModalSheet
-				visible={confirmClose}
-				onClose={() => setConfirmClose(false)}
-				closeAccessibilityLabel={t("draft.continue")}
-			>
-				<SectionHeader title={t("draft.title")} />
-				<AppText color="muted">{t("draft.body")}</AppText>
-				{saveError ? (
-					<AppText accessibilityRole="alert" color="danger">
-						{saveError}
-					</AppText>
-				) : null}
-				<Button label={t("draft.keep")} onPress={() => leaveDraft(false)} />
-				<Button
-					label={t("draft.discard")}
-					variant="text"
-					tone="danger"
-					onPress={() => leaveDraft(true)}
-				/>
-			</ModalSheet>
+			{closeConfirmation}
 		</Screen>
 	);
 }
@@ -627,7 +662,7 @@ const styles = StyleSheet.create((theme) => ({
 		backgroundColor: theme.colors.border,
 	},
 	pipReached: { backgroundColor: theme.colors.brand },
-	/** Questions and answers scroll independently of the save actions. */
+	/** Questions and answers scroll independently of navigation. */
 	scroll: { flex: 1, minHeight: 0 },
 	body: {
 		paddingHorizontal: theme.spacing.gutter,
@@ -651,12 +686,6 @@ const styles = StyleSheet.create((theme) => ({
 	},
 	closeButton: { justifyContent: "flex-end" },
 	prompt: { gap: theme.spacing.md },
-	answerSummary: {
-		borderTopWidth: 1,
-		borderTopColor: theme.colors.hairline,
-		paddingTop: theme.spacing.lg,
-		gap: theme.spacing.sm,
-	},
 	noteRow: {
 		flexDirection: "row",
 		alignItems: "center",
