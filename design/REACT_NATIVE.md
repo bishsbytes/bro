@@ -1,6 +1,6 @@
 # Grounded Editorial in the Expo app
 
-Use the September 2026 guide and JSON tokens. Runtime styles come from `apps/app/src/theme/unistyles.ts`. Components import that module so Unistyles is configured before route evaluation. Use bundled Caladea Regular for headings and Caladea Regular for notes (both editing and reading), with bold and italic for note formatting, and platform sans for interface text and tabular readings. Bundle Caladea regular, italic and bold; Instrument Serif, Instrument Sans and Geist Mono are retired. The `mono*` roles resolve to tabular sans. The palette is fixed, so the user-selectable OKLCH accent and its stored hue are gone; the brand and Log colours are the only accents.
+Use the September 2026 guide and JSON tokens, with the current component contracts below taking precedence over the original screen studies. Runtime styles come from `apps/app/src/theme/unistyles.ts`. Components import that module so Unistyles is configured before route evaluation. Use bundled Caladea Regular for display and page titles and Caladea Regular for notes (both editing and reading), with bold and italic for note formatting, and platform sans for section headings, interface text and tabular readings. Bundle Caladea regular, italic and bold; Instrument Serif, Instrument Sans and Geist Mono are retired. The `mono*` roles resolve to tabular sans. The palette is fixed, so the user-selectable OKLCH accent and its stored hue are gone; the brand and Log colours are the only accents.
 
 System / Light / Dark resolves through `DeviceSettingsProvider`, before the splash hides. Native tab and stack navigation remains in place. Picker and sheet styles resolve from the same theme. Do not remount screens to change appearance.
 
@@ -18,11 +18,13 @@ Buttons use fully rounded ends (`theme.radius.pill`) across primary, secondary, 
 
 Use `Button` for submissions, cancellation, destructive actions and state-changing commands; use `TextAction` for quiet navigation and disclosures. Both use the 14/20 medium label role. Buttons keep their 52-point minimum; quiet links and icon actions keep a 48-point minimum. `opacity.pressed` is shared action feedback, distinct from `opacity.disabled`.
 
+The featured Journal `CheckInCard` is one tappable card. Its inset “Check in” label and chevron are a decorative action cue, with a stone fill and brand text; they retain that treatment rather than adopting the secondary `Button` style. Do not add a nested button or a second accessibility action.
+
 `Card` groups standalone content on a stone surface (`surface1`) without a border. Body's lead measurement and Life's wheel use this same treatment. Featured invitations may use the brand fill. Continuous lists use dividers instead of a surface per record. `ListRow` chooses `layout` (`stacked` / `inline`), `variant` (`filled` / `plain` / `outlined`), `density` (`regular` / `compact`) and `separator` independently. The last row omits its separator. Row presses use `rowPressed`; selection tint is reserved for persistent selection or named status.
 
 Use `SegmentedControl` for fixed single-value choices and chart ranges. Its `role="tab"` mode changes content with tab semantics; ordinary choices use radios. Use `FactorChip` for wrapping filters and optional/multiple choices, including habit areas and weekdays. Preserve each screen's existing selection logic. Chips grow or wrap for long labels and larger text, with at least 48-point touch targets and a selected checkmark.
 
-Sibling sections use `SectionHeader`, with the explicit compact variant for dense Body sections. `contentTitle` is the 18/22 semibold sans role for practice names and other content titles; numeric `mono*` roles are for readings. Measurement and Intake quantity inputs share `monoList` (18/22 semibold tabular sans), including every part of compound units. Readout size comes from the selected typography role rather than a local font-size override. Form boundaries use `interactiveBorder`, focus uses brand, and errors use alert in both appearances and on web.
+Sibling sections use `SectionHeader` with 20/26 semibold sans, or the explicit compact 16/22 semibold variant for dense Body sections. `contentTitle` is the 18/22 semibold sans role for practice names and other content titles; numeric `mono*` roles are for readings. Measurement and Intake quantity inputs share `monoList` (18/22 semibold tabular sans), including every part of compound units. Readout size comes from the selected typography role rather than a local font-size override. Form boundaries use `interactiveBorder`, focus uses brand, and errors use alert in both appearances and on web.
 
 Paths below are relative to `apps/app/src`.
 
@@ -36,8 +38,8 @@ Paths below are relative to `apps/app/src`.
 | C06 Button | `components/button.tsx` |
 | C07 IconButton | `components/header-icon-button.tsx` and existing named row actions |
 | C08 SelectableRow | `components/score-row.tsx`; five equally sized options, borderless on `surface2` |
-| C09 FactorChip | `components/factor-chip.tsx` |
-| C10 SegmentedControl | `components/segmented-control.tsx`; existing Intake filters and quantity choices |
+| C09 FactorChip | `components/factor-chip.tsx`; Journal factors, Intake filters, habit areas and weekdays |
+| C10 SegmentedControl | `components/segmented-control.tsx`; Body and Insights ranges, Intake day tabs and item types |
 | C11 FormField | `components/form-field.tsx`, date/time and markdown fields |
 | C12 QuantityField | `components/measurement-field.tsx`, `screens/intake/intake-quantity-field.tsx` |
 | C13 DetailRow | `components/list-row.tsx`, `screens/intake/intake-rows.tsx` |

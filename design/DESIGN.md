@@ -4,6 +4,7 @@ The current visual authority is [the Grounded Editorial guide](mens-health-desig
 
 - Keep Journal / Intake / Body / Life, Headings, existing routes, scale versions and record identity.
 - Off-white canvas with darker warm stone surfaces in light appearance; warm charcoal and sage in dark. System is the default for fresh installs. Persist explicit appearance choices.
+- Standalone cards, including Body's lead measurement and Life's wheel, use the shared borderless surface. Secondary buttons use the app canvas with a strong outline and neutral label. Continuous lists use dividers. Follow the [native component contracts](REACT_NATIVE.md#component-contracts) for component variants and intentional exceptions.
 - Brand is teal/sage for selection and primary actions. Clay is reserved for + Log. Personal-history bands are neutral, with no clinical meaning. No glow or chart hatching.
 - Caladea Regular display and title styles, Caladea Regular notes; sans-serif UI, measurements, units and chart labels. Tabular numerals. Page inset 24; cards 16; controls 12; sheets 24; buttons 52; touch targets at least 48.
 - Five equal check-in choices. Selection updates a draft; Continue advances; Save for now commits the answered dimensions. Never turn an unanswered score into zero. Preserve the existing Energy and Motivation scale meanings.

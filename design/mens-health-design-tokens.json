@@ -1,7 +1,7 @@
 {
-	"name": "Grounded Editorial - proposed tokens",
-	"version": "0.4",
-	"status": "Light and dark Grounded Editorial specified; native implementation validation pending",
+	"name": "Grounded Editorial - current tokens",
+	"version": "0.5",
+	"status": "Current native component contracts aligned; real-device accessibility validation remains a release check",
 	"colour": {
 		"light": {
 			"canvas": "#FFFDFA",
@@ -43,7 +43,9 @@
 			"History fill is not a clinical safe range.",
 			"Select, warning and error require text/icon indicators and independent contrast verification.",
 			"The warm charcoal/sage dark mapping replaces the initial blue-grey palette. Use exact tokens and native charts, not raster colour sampling.",
-			"surfaceRaised is the resting fill for controls that sit on a card (choices, option rows, header action circles); surfaceSunk is the transient pressed fill. Light originally defined neither, so cards, controls and pressed rows collapsed onto one hex and borderless controls disappeared into the card beneath them. Muted text may rest on surfaceRaised but never on surfaceSunk."
+			"surfaceRaised is the resting fill for controls that sit on a card (choices, option rows, header action circles). surfaceSunk is reserved for transient presses carrying primary ink. Rows with metadata use rowPressed, aliased to surfaceRaised, so muted text remains readable. Muted text may rest on surfaceRaised but never on surfaceSunk.",
+			"Standalone cards, including the Body lead measurement and Life wheel, use surface without a border. Featured invitations may use brand. Continuous lists use dividers instead of a surface per record.",
+			"Secondary buttons use canvas with a strong interactiveBorder outline and neutral ink in both appearances. The featured Journal check-in card retains its inset surface-filled action cue with brand text; the whole card is the action."
 		]
 	},
 	"type": {
@@ -57,7 +59,8 @@
 		},
 		"section": {
 			"size": 20,
-			"lineHeight": 26
+			"lineHeight": 26,
+			"weight": 600
 		},
 		"body": {
 			"size": 16,
@@ -65,7 +68,8 @@
 		},
 		"label": {
 			"size": 14,
-			"lineHeight": 20
+			"lineHeight": 20,
+			"weight": 500
 		},
 		"metadata": {
 			"size": 12,
@@ -74,16 +78,35 @@
 		"familyRoles": {
 			"display": "Caladea Regular",
 			"notes": "Caladea",
-			"ui": "Native platform sans serif"
+			"ui": "Native platform sans serif",
+			"title": "Caladea Regular",
+			"sectionsAndContentTitles": "Native platform sans serif"
 		},
 		"scaleWithSystem": true,
-		"metricNumerals": "tabular"
+		"metricNumerals": "tabular",
+		"sectionCompact": {
+			"size": 16,
+			"lineHeight": 22,
+			"weight": 600
+		},
+		"contentTitle": {
+			"size": 18,
+			"lineHeight": 22,
+			"weight": 600
+		},
+		"monoList": {
+			"size": 18,
+			"lineHeight": 22,
+			"weight": 600,
+			"numerals": "tabular"
+		}
 	},
-	"spacing": [4, 8, 12, 16, 24, 32, 48],
+	"spacing": [4, 8, 12, 16, 24, 32, 64],
 	"radius": {
 		"card": 16,
 		"input": 12,
-		"sheet": 24
+		"sheet": 24,
+		"pill": 999
 	},
 	"controls": {
 		"primaryButtonHeight": 52,
@@ -172,7 +195,7 @@
 			"id": "C06",
 			"name": "Button",
 			"usedBy": "All flows",
-			"contract": "Primary, secondary, text, destructive, loading and disabled states."
+			"contract": "Pill buttons, minimum height 52, medium 14/20 labels. Secondary uses canvas, a strong outline and neutral ink. Primary, text, destructive, loading and disabled states; quiet navigation uses TextAction."
 		},
 		{
 			"id": "C07",
@@ -189,14 +212,14 @@
 		{
 			"id": "C09",
 			"name": "FactorChip",
-			"usedBy": "J01",
-			"contract": "Stable factor ID, readable label, group and selected state."
+			"usedBy": "Journal factors, Intake filters, habit areas and weekdays",
+			"contract": "Wrapping choices with readable labels, selected checkmarks and at least 48-point touch targets. Preserve optional and multiple selection where supported."
 		},
 		{
 			"id": "C10",
 			"name": "SegmentedControl",
-			"usedBy": "Filters, units, ranges",
-			"contract": "One selected option; purpose and selection announced."
+			"usedBy": "Body and Insights ranges, Intake day tabs and item types",
+			"contract": "Fixed single-value choices use radios; content switches use tabs. Announce selection and disabled states; minimum hit area 48."
 		},
 		{
 			"id": "C11",
@@ -208,13 +231,13 @@
 			"id": "C12",
 			"name": "QuantityField",
 			"usedBy": "I03-I04, B03",
-			"contract": "Numeric value, unit metadata, direct input and optional step."
+			"contract": "Numeric value, unit metadata, direct input and optional step. Measurement and Intake quantity inputs use 18/22 semibold tabular sans, including compound units."
 		},
 		{
 			"id": "C13",
 			"name": "DetailRow",
 			"usedBy": "Details and editors",
-			"contract": "Label/value pair, optional source/date and disclosure action."
+			"contract": "Label/value pair, optional source/date and disclosure action. Layout, fill, density and separators are independent; continuous lists use dividers and omit the final separator. Metadata rows press on surfaceRaised."
 		},
 		{
 			"id": "C14",
@@ -226,7 +249,7 @@
 			"id": "C15",
 			"name": "CheckInCard",
 			"usedBy": "J01",
-			"contract": "Not started, partial, complete; event time and human labels."
+			"contract": "Not started, partial, complete; event time and human labels. The whole card is tappable; the featured card retains its surface-filled decorative action cue with brand text."
 		},
 		{
 			"id": "C16",
@@ -250,7 +273,7 @@
 			"id": "C19",
 			"name": "MeasurementCard",
 			"usedBy": "B01-B02",
-			"contract": "Complete value/unit, event time, range and comparison basis."
+			"contract": "Complete value/unit, event time, range and comparison basis. The Body lead card uses the same borderless surface as the Life wheel card."
 		},
 		{
 			"id": "C20",
@@ -268,7 +291,7 @@
 			"id": "C22",
 			"name": "LifeWheel",
 			"usedBy": "L01",
-			"contract": "Stable area IDs/order, configured scale, two review styles."
+			"contract": "Stable area IDs/order, configured scale, two review styles. The Life overview wheel sits on the shared borderless card surface."
 		},
 		{
 			"id": "C23",
@@ -437,5 +460,9 @@
 		"textSecondaryOnSurfaceRaised": 6.62,
 		"inkOnSurfaceSunk": 9.71,
 		"textSecondaryOnSurfaceSunk": 5.73
+	},
+	"opacity": {
+		"pressed": 0.72,
+		"disabled": 0.4
 	}
 }

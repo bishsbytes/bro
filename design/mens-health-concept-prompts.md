@@ -1,3 +1,7 @@
+# Original visual-study prompts
+
+Historical generation inputs, preserved as provenance. These prompts include earlier palette, layout and control treatments that have since changed. Use [DESIGN.md](DESIGN.md), the [current guide](mens-health-design-guide.md), [tokens](mens-health-design-tokens.json) and [native component contracts](REACT_NATIVE.md#component-contracts) for implementation.
+
 # Dark appearance extension
 
 Built-in image generation; 7 September 2026. Four primary-screen studies. Exact colour and component contracts are in the updated guide and tokens.
@@ -108,4 +112,3 @@ SCREEN 2 MIND CHECK-IN: top left "Close" right "1 of 3"; large serif "How are yo
 SCREEN 3 JOURNAL: top left back chevron small "MIND", serif title "Get it out of your head." Simple secondary text "A few words is enough." A paper-like open writing area with text prompt "What's taking up space today?" and three short lines of readable fictional text: "Work has been full-on." "The walk helped me switch off." "I want a quieter evening." No invented spelling. Below clean tag chips "Work" "Movement" "Evening". Bottom row discreet microphone icon and "Use your voice". Bottom cobalt button "Save entry". Secondary small "Only share when you choose." Text is proposed interface copy, not a security certification. No bottom navigation while editing.
 SCREEN 4 LIFE: top small "LIFE", serif headline "Make room for what matters." Small gouache illustration of an ordinary adult man watering a balcony plant at sunset, not a wellness leaf motif. Section "This week's focus". Three ruled list items with simple outlined circles: "Call a friend" / "Connection", "Walk after lunch" / "Movement", "Keep one evening free" / "Time for yourself". Under "Your pace" small row "2 days logged this week" without a streak flame or guilt. Bottom small "Change your focus" button. Same four tabs Life selected, compact ochre "+ Log" above.
 Strong typography, spacious hierarchy, polished credible mobile UI, generous touch targets. No giant charts, no readiness scores, no medical claims, no prescriptions, no competitive rankings. Make every important text label sharp and legible. No brand name and no watermark.
-

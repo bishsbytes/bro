@@ -2,6 +2,8 @@
 
 Selected direction, expanded 7 September 2026. Dark appearance extension included at the end. This revision applies Grounded Editorial to Journal, Intake, Body and Life. The sixteen screen studies contain six direct redesigns and ten proposed supporting views.
 
+Component rules and tokens below include subsequent implementation decisions. The screen studies, PDF specimens and original prompts remain visual references; use the [native component contracts](REACT_NATIVE.md#component-contracts) for the current Expo mapping and intentional exceptions.
+
 
 ## Grounded Editorial. Across your app.
 
@@ -30,7 +32,7 @@ Off-white canvas, darker warm stone surfaces, strong ink, deep teal selection an
 
 ### What the evidence covers
 
-This pass uses the six original screenshots and the selected Grounded Editorial board. It is a visual and interaction specification, not a repository audit or a running prototype. Existing component names, routes and backend schemas were not supplied. The contract names in this guide are proposed design names.
+The original study used the six supplied screenshots and the selected Grounded Editorial board. Existing component names, routes and backend schemas were not supplied for that study. The contract names describe design responsibilities; their implemented mappings and validation requirements are now recorded in [REACT_NATIVE.md](REACT_NATIVE.md).
 
 ### What supersedes the earlier exploration
 
@@ -201,7 +203,13 @@ These are rendered component specimens. Use the tokens and contracts to resolve 
 
 ### Foundation specimens
 
-Selected dates use deep teal/white; logged-date dots are separate. Primary buttons are 52 high; minimum interactive hit area is 48. Factor chips carry text plus a selected indicator. Selection rows are equal height. Saving suppresses repeated submission.
+Selected dates use brand/on-brand; logged-date dots are separate. Buttons have pill ends, a 52-point minimum height and medium 14/20 labels. Secondary buttons use the app canvas with a strong outline and neutral text in both appearances. Quiet navigation and disclosures use TextAction with a 48-point minimum hit area. Factor chips carry text plus a selected indicator. Selection rows are equal height. Saving suppresses repeated submission.
+
+Standalone cards use the shared stone surface without a border in light appearance and its charcoal equivalent in dark. Body's lead measurement and Life's wheel share this treatment. Continuous lists use dividers instead of a surface per record. Featured invitations may use brand fill. The featured Journal card is one tappable component; its stone-filled “Check in” cue and brand label are decorative parts of that card, so they retain their own treatment.
+
+Choices, option rows and header actions on a card use the raised surface. Pressed rows with metadata use that same surface to retain text contrast; reserve the deeper pressed surface for primary-ink controls. Shared action opacity is 0.72 when pressed and 0.4 when disabled. Form boundaries use the interactive border, brand focus and alert errors.
+
+Use SegmentedControl for fixed single-value choices and ranges, with radio semantics for choices and tab semantics for content switches. FactorChip handles wrapping filters and optional/multiple choices, with a 40-point visual height inside a minimum 48-point touch target, 12-point corners and a selected checkmark. Preserve the screen's selection behavior.
 
 
 ## Shared fields, rows and quantity controls
@@ -231,7 +239,7 @@ Life areas: Work, Money, Health, Relationships, Home, Friends, Growth, Leisure. 
 
 ## Shared component registry / foundations
 
-These names describe reusable design responsibilities; map them to the app's actual code after inspecting the repository.
+These names describe reusable design responsibilities; see [REACT_NATIVE.md](REACT_NATIVE.md) for their current implementation mapping.
 
 | ID | Component | Used by | Responsibility |
 | --- | --- | --- | --- |
@@ -240,31 +248,31 @@ These names describe reusable design responsibilities; map them to the app's act
 | C03 | DateStrip | J01, I01 | Selected date and recorded-entry indicators are independent. |
 | C04 | BottomNavigation | J01, I01, B01, L01 | Journal / Intake / Body / Life; icon plus visible label. |
 | C05 | LogAction | Primary screens | Labelled + Log; destination-aware options preserve the active date. |
-| C06 | Button | All flows | Primary, secondary, text, destructive, loading and disabled states. |
+| C06 | Button | All flows | Pill buttons, minimum height 52, medium 14/20 labels. Secondary uses canvas, a strong outline and neutral ink. Primary, text, destructive, loading and disabled states; quiet navigation uses TextAction. |
 | C07 | IconButton | Add, remove, settings | Named action, minimum hit area and distinct selected/pressed state. |
 | C08 | SelectableRow | J02-J04 | Equal height; no default answer; explicit selection. |
-| C09 | FactorChip | J01 | Stable factor ID, readable label, group and selected state. |
-| C10 | SegmentedControl | Filters, units, ranges | One selected option; purpose and selection announced. |
+| C09 | FactorChip | Journal factors, Intake filters, habit areas and weekdays | Wrapping choices with readable labels, selected checkmarks and at least 48-point touch targets. Preserve optional and multiple selection where supported. |
+| C10 | SegmentedControl | Body and Insights ranges, Intake day tabs and item types | Fixed single-value choices use radios; content switches use tabs. Announce selection and disabled states; minimum hit area 48. |
 | C11 | FormField | I03-I04, B03, L04 | Persistent label, input, helper, optionality and inline error. |
-| C12 | QuantityField | I03-I04, B03 | Numeric value, unit metadata, direct input and optional step. |
-| C13 | DetailRow | Details and editors | Label/value pair, optional source/date and disclosure action. |
+| C12 | QuantityField | I03-I04, B03 | Numeric value, unit metadata, direct input and optional step. Measurement and Intake quantity inputs use 18/22 semibold tabular sans, including compound units. |
+| C13 | DetailRow | Details and editors | Label/value pair, optional source/date and disclosure action. Layout, fill, density and separators are independent; continuous lists use dividers and omit the final separator. Metadata rows press on surfaceRaised. |
 | C14 | FeedbackBanner | Save and error states | Outcome, scope and one relevant action such as Undo or Retry. |
 
 
 ## Shared component registry / domain patterns
 
-These names describe reusable design responsibilities; map them to the app's actual code after inspecting the repository.
+These names describe reusable design responsibilities; see [REACT_NATIVE.md](REACT_NATIVE.md) for their current implementation mapping.
 
 | ID | Component | Used by | Responsibility |
 | --- | --- | --- | --- |
-| C15 | CheckInCard | J01 | Not started, partial, complete; event time and human labels. |
+| C15 | CheckInCard | J01 | Not started, partial, complete; event time and human labels. The whole card is tappable; the featured card retains its surface-filled decorative action cue with brand text. |
 | C16 | CheckInStepper | J02-J04 | Step count, draft retention and distinct continue/save actions. |
 | C17 | IntakeRow | I01-I02 | Item, visible amount/unit and contextual repeat/edit action. |
 | C18 | SourceStamp | B01-B03, I03 | Origin, measurement time and optional separate sync time. |
-| C19 | MeasurementCard | B01-B02 | Complete value/unit, event time, range and comparison basis. |
+| C19 | MeasurementCard | B01-B02 | Complete value/unit, event time, range and comparison basis. The Body lead card uses the same borderless surface as the Life wheel card. |
 | C20 | RecentRange | B01-B02 | Neutral interval with window, method and sufficient-data state. |
 | C21 | TrendChart | B01-B02, history | Labelled axes/units, gaps, selected reading and text alternative. |
-| C22 | LifeWheel | L01 | Stable area IDs/order, configured scale, two review styles. |
+| C22 | LifeWheel | L01 | Stable area IDs/order, configured scale, two review styles. The Life overview wheel sits on the shared borderless card surface. |
 | C23 | LifeAreaRow | L02 and area editing | Named area/value, scale, previous value and missing state. |
 | C24 | HeadingCard | B02, L01-L03 | Status, title, intent/target, dates and detail/edit action. |
 | C25 | PracticeRow | L03 and activity | Action, completion/event reference and optional amount/time. |
@@ -307,9 +315,9 @@ Let titles wrap, cards grow and long unit/value pairs reflow. Horizontal control
 | Light colour | Canvas #FFFDFA; surface #F4F1EB; ink #202725; secondary #626B65. | The base of all four primary areas; surfaces are darker than the canvas. |
 | Brand / action | Deep teal #174F4A; on-brand #FFFFFF; clay #A14F36. | Teal primary/selection; clay reserved for the labelled add action. |
 | Control boundary | Interactive border #78847D; selected-soft #E0ECE7; error #A33932. | Distinguishable controls. Pale dividers remain decorative only. |
-| Typography | Display 34/40; title 30/36; section 20/26; body 16/24; label 14/20. | Caladea Regular headlines and Caladea Regular notes; notes use 20/26 when reading, with native leading in the editor. Sans-serif metrics, units, other forms and chart labels. |
-| Layout | Page inset 24; spacing 4 / 8 / 12 / 16 / 24 / 32 / 48. | Repeated rhythm, generous separation between tasks. |
-| Components | Card radius 16; input radius 12; primary button 52 high; hit area at least 48. | Rows and cards grow with content; dimensions are starting points. |
+| Typography | Display 34/40; title 30/36; section 20/26; compact section 16/22; content title and numeric input 18/22; body 16/24; label 14/20. | Caladea Regular display/page titles and notes; notes read at 20/26. Sans-serif section/content titles and numeric inputs are semibold; labels are medium. Measurements use tabular sans; other forms and chart labels use sans. |
+| Layout | Page inset 24; spacing 4 / 8 / 12 / 16 / 24 / 32 / 64. | Repeated rhythm, generous separation between tasks; 48 is the minimum touch target, not a spacing token. |
+| Components | Card radius 16; input radius 12; button radius pill; button minimum height 52; hit area at least 48. | Rows and cards grow with content; dimensions are starting points. |
 | Feedback | State feedback 120-180 ms; sheet transitions 220-280 ms. | Optional subtle haptics; honour reduced motion. |
 | Contrast | Ink/canvas 15.01:1; secondary/canvas 5.43:1; white/teal 9.32:1. | Calculated sRGB pairs; interactive border/surface 3.45:1. |
 | Dark option | Use the warm charcoal and sage mappings in the dark appearance extension. | System / Light / Dark. See the dark appearance extension at the end. |
@@ -594,7 +602,8 @@ Semantic roles preserve hierarchy. A component resolves its colours from the cho
 | --- | --- | --- | --- |
 | Canvas | #FFFDFA | #171D1A | The main page background. |
 | Surface | #F4F1EB | #202923 | Cards and list groups; darker than the canvas in light appearance. |
-| Raised surface | Surface + elevation | #29352D | Sheets and raised content. Use tonal separation. |
+| Raised surface | #EDE9E1 | #29352D | Choices, option rows and header actions on cards; pressed rows with metadata. |
+| Pressed surface | #E2DCD0 | #313F37 | Transient presses carrying primary ink; keep muted text on the raised surface. |
 | Primary text | #202725 | #F2F0E9 | Warm off-white body copy, headings and values. |
 | Secondary text | #626B65 | #B3BDB5 | Dates, units, sources and supporting copy. |
 | Primary / on-primary | #174F4A / #FFFFFF | #A8CDBE / #14261D | Selected dates and primary buttons. |

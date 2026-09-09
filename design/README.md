@@ -4,7 +4,10 @@ Grounded Editorial is the selected direction. Start with [DESIGN.md](DESIGN.md),
 [the guide](mens-health-design-guide.md), [the tokens](mens-health-design-tokens.json)
 and [the native component mapping](REACT_NATIVE.md). The PDF holds the screen
 boards and precise component specimens; its fictional values are not product
-defaults.
+defaults. The PDF and original generation prompts record the visual studies;
+their component details may predate subsequent decisions. Follow the current
+[native component contracts](REACT_NATIVE.md#component-contracts) when those
+references differ from the implemented component rules.
 
 ```
 design/
