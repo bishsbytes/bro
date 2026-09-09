@@ -122,7 +122,6 @@ describe("body metrics flow", () => {
 		await fireEvent.press(await view.findByLabelText("Weight. First reading."));
 		expect(await view.findByLabelText(/^Weight, 12 st 4 lb\./)).toBeTruthy();
 		expect(view.getByTestId("measurement-readout")).toBeTruthy();
-		await fireEvent.press(view.getByRole("radio", { name: "Week" }));
 		expect(
 			view.getByRole("radio", { name: "Week" }).props.accessibilityState
 				.checked,

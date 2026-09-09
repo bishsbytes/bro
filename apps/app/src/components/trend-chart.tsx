@@ -25,6 +25,7 @@ import { Button } from "./button";
 import {
 	editorialChartScale,
 	editorialPlotInset,
+	interpolatedTrendSegments,
 	TrendChartPlot,
 } from "./trend-chart-plot";
 
@@ -45,6 +46,7 @@ const STATED_DOMAINS: Partial<Record<MeasurementSlug, DataDomain>> = {
 const TERRAIN_BASELINE_Y = 110;
 const TERRAIN_TOP_Y = 10;
 const TERRAIN_PLOT_HEIGHT = TERRAIN_BASELINE_Y - TERRAIN_TOP_Y;
+const TERRAIN_CHART_WIDTH = 300;
 
 export type TrendChartUsualRange = TrendRange & {
 	minFormatted: string;
@@ -225,6 +227,8 @@ export function TrendChart({
 		? terrainYForValue(heading.value, series.scale)
 		: null;
 	const dateRange = terrainDateRangeLabel(series, systemLocale());
+	const isMeasurement =
+		resolved.kind === "known" && resolved.metric.kind === "measurement";
 	const plotFormat = (value: number | null) => {
 		const formatted = format(value);
 		return displayUnit && displayUnit !== "st" && displayUnit !== "ft"
@@ -233,6 +237,14 @@ export function TrendChart({
 				: formatted
 			: formatted;
 	};
+	const interpolatedSegments = isMeasurement
+		? interpolatedTrendSegments(series.points, (value, index) => {
+				const x =
+					(index / Math.max(series.points.length - 1, 1)) * TERRAIN_CHART_WIDTH;
+				const y = terrainYForValue(value, series.scale);
+				return `${x},${y}`;
+			})
+		: [];
 	return (
 		<View>
 			<View
@@ -277,6 +289,7 @@ export function TrendChart({
 						label={`${metricLabel}. ${dateRange}`}
 						selectedDay={selectedDay}
 						locale={systemLocale()}
+						interpolateMissing={isMeasurement}
 					/>
 				) : (
 					<Svg
@@ -341,6 +354,18 @@ export function TrendChart({
 								strokeWidth="2"
 								strokeLinecap="round"
 								strokeLinejoin="round"
+							/>
+						))}
+						{interpolatedSegments.map((points) => (
+							<Polyline
+								key={points}
+								testID="trend-missed-span"
+								points={points}
+								fill="none"
+								stroke={dataColor}
+								strokeWidth="2"
+								strokeDasharray="1 4"
+								strokeLinecap="round"
 							/>
 						))}
 						{series.segments

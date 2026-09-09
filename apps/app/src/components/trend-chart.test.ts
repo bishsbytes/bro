@@ -8,7 +8,11 @@ import {
 	terrainYForValue,
 } from "./trend-chart";
 
-import { editorialChartScale } from "./trend-chart-plot";
+import {
+	chartDateIndices,
+	editorialChartScale,
+	interpolatedTrendSegments,
+} from "./trend-chart-plot";
 
 const series: TrendSeries = {
 	metricSlug: "weight",
@@ -52,6 +56,26 @@ describe("TrendChart", () => {
 			}),
 		);
 		expect(view.getAllByTestId("terrain-isolated-reading")).toHaveLength(2);
+	});
+
+	it("draws a dotted trend across a missed measurement with readings either side", async () => {
+		const view = await render(
+			createElement(TrendChart, {
+				series: {
+					...series,
+					points: [
+						{ localDay: "2026-09-01", value: 80 },
+						{ localDay: "2026-09-02", value: null },
+						{ localDay: "2026-09-03", value: 75 },
+					],
+					segments: ["0.00,60.00", "300.00,85.00"],
+				},
+			}),
+		);
+
+		const gap = view.getByTestId("trend-missed-span");
+		expect(gap.props.d).toBe("M0 60 300 85");
+		expect(gap.props.strokeDasharray).toEqual(["1", "4"]);
 	});
 
 	it("closes a terrain segment against the baseline at its own edges", () => {
@@ -163,7 +187,7 @@ describe("compact editorial chart", () => {
 		scale: { min: 40, max: 85 },
 	};
 
-	it("plots only actual readings and leaves missing days disconnected", async () => {
+	it("plots actual readings and dots the trend across internal missing days", async () => {
 		const view = await render(
 			createElement(TrendChart, {
 				series: dailySeries,
@@ -179,10 +203,51 @@ describe("compact editorial chart", () => {
 		);
 		expect(view.getAllByTestId("trend-reading-dot")).toHaveLength(3);
 		expect(view.getAllByTestId("trend-observed-run")).toHaveLength(1);
+		expect(view.getAllByTestId("trend-missed-span")).toHaveLength(1);
 		expect(
 			view.getByTestId("terrain-usual-corridor").props.height,
 		).toBeGreaterThan(0);
 		expect(view.queryByTestId("terrain-heading-line")).toBeNull();
+	});
+
+	it("labels every day in a week even when the width estimate is tight", () => {
+		expect(chartDateIndices(7, 240, 1)).toEqual([0, 1, 2, 3, 4, 5, 6]);
+	});
+
+	it("keeps the Steps axis inside the non-negative measurement domain", async () => {
+		const stepsSeries: TrendSeries = {
+			...series,
+			metricSlug: "steps",
+			points: [
+				{ localDay: "2026-09-08", value: 0 },
+				{ localDay: "2026-09-09", value: 100 },
+			],
+			observedDayCount: 2,
+		};
+
+		const view = await render(
+			createElement(TrendChart, {
+				series: stepsSeries,
+				compact: true,
+				displayUnit: null,
+			}),
+		);
+
+		expect(editorialChartScale(stepsSeries.points).min).toBe(0);
+		expect(view.getByTestId("editorial-trend-chart")).toBeTruthy();
+	});
+
+	it("does not bridge leading or trailing missing measurements", () => {
+		expect(
+			interpolatedTrendSegments(
+				[
+					{ localDay: "2026-09-01", value: null },
+					{ localDay: "2026-09-02", value: 84.5 },
+					{ localDay: "2026-09-03", value: null },
+				],
+				(value, index) => `${index},${value}`,
+			),
+		).toEqual([]);
 	});
 
 	it("keeps a narrow personal range away from the chart edges", () => {

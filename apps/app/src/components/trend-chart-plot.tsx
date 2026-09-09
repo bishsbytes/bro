@@ -26,8 +26,11 @@ export function editorialChartScale(
 	const step =
 		[1, 2, 5, 10].find((value) => value * magnitude >= rawStep) ?? 10;
 	const interval = step * magnitude;
+	const paddedMin = Math.floor((low - span * 0.15) / interval) * interval;
 	return {
-		min: Math.floor((low - span * 0.15) / interval) * interval,
+		// Measurement formatters reject negative readings. When every plotted
+		// value is non-negative, headroom must not invent a negative axis tick.
+		min: low >= 0 ? Math.max(0, paddedMin) : paddedMin,
 		max: Math.ceil((high + span * 0.15) / interval) * interval,
 	};
 }
@@ -55,6 +58,55 @@ function chartDateLabel(localDay: string, weekly: boolean, locale?: string) {
 	).format(new Date(`${localDay}T12:00:00Z`));
 }
 
+export function chartDateIndices(
+	pointCount: number,
+	availableWidth: number,
+	fontScale: number,
+): number[] {
+	if (pointCount <= 0) return [];
+	if (pointCount <= 7) {
+		return Array.from({ length: pointCount }, (_, index) => index);
+	}
+
+	const labelCount = Math.max(
+		2,
+		Math.min(5, Math.floor(availableWidth / (50 * fontScale)) + 1),
+	);
+	return Array.from({ length: labelCount }, (_, index) =>
+		Math.round((index * (pointCount - 1)) / (labelCount - 1)),
+	);
+}
+
+/**
+ * Connect observed values separated by missing days without turning the
+ * missing values into readings. Leading and trailing gaps have no second
+ * observation to establish a trend, so they remain open.
+ */
+export function interpolatedTrendSegments(
+	points: readonly TrendPoint[],
+	coordinate: (value: number, index: number) => string,
+): string[] {
+	const segments: string[] = [];
+	let previousObserved: string | null = null;
+	let crossedMissingDay = false;
+
+	points.forEach((point, index) => {
+		if (point.value === null) {
+			crossedMissingDay = previousObserved !== null;
+			return;
+		}
+
+		const current = coordinate(point.value, index);
+		if (previousObserved && crossedMissingDay) {
+			segments.push(`${previousObserved} ${current}`);
+		}
+		previousObserved = current;
+		crossedMissingDay = false;
+	});
+
+	return segments;
+}
+
 /** Axes live outside the plot; each missing day ends a line run. */
 export function TrendChartPlot({
 	series,
@@ -66,6 +118,7 @@ export function TrendChartPlot({
 	label,
 	selectedDay,
 	locale,
+	interpolateMissing = false,
 }: {
 	series: TrendSeries;
 	range?: TrendRange | null;
@@ -76,6 +129,7 @@ export function TrendChartPlot({
 	label: string;
 	selectedDay: string | null;
 	locale?: string;
+	interpolateMissing?: boolean;
 }) {
 	const { theme } = useUnistyles();
 	const scale = editorialChartScale(series.points, range);
@@ -96,15 +150,16 @@ export function TrendChartPlot({
 			if (runs.at(-1)?.length) runs.push([]);
 		} else runs.at(-1)?.push(`${x(index)},${y(point.value)}`);
 	});
-	const labelCount = Math.max(
-		2,
-		Math.min(
-			series.points.length <= 7 ? 7 : 5,
-			Math.floor((right - left) / (50 * fontScale)) + 1,
-		),
-	);
-	const dateIndices = Array.from({ length: labelCount }, (_, i) =>
-		Math.round((i * (series.points.length - 1)) / (labelCount - 1)),
+	const interpolatedSegments = interpolateMissing
+		? interpolatedTrendSegments(
+				series.points,
+				(value, index) => `${x(index)},${y(value)}`,
+			)
+		: [];
+	const dateIndices = chartDateIndices(
+		series.points.length,
+		right - left,
+		fontScale,
 	);
 	return (
 		<Svg
@@ -168,6 +223,20 @@ export function TrendChartPlot({
 						strokeLinecap="round"
 					/>
 				))}
+			{interpolateMissing
+				? interpolatedSegments.map((segment) => (
+						<Polyline
+							key={segment}
+							testID="trend-missed-span"
+							points={segment}
+							stroke={theme.colors.brand}
+							strokeWidth={1.6}
+							strokeDasharray="1 4"
+							fill="none"
+							strokeLinecap="round"
+						/>
+					))
+				: null}
 			{series.points.map((point, index) =>
 				point.value === null ? null : (
 					<Circle

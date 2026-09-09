@@ -168,7 +168,7 @@ export function BodyMetricScreen({ metricSlug, store }: BodyMetricScreenProps) {
 	const [adding, setAdding] = useState(false);
 	const [editingId, setEditingId] = useState<string | null>(null);
 	const [editingHeading, setEditingHeading] = useState(false);
-	const [period, setPeriod] = useState<TrendPeriod | 365>(30);
+	const [period, setPeriod] = useState<TrendPeriod | 365>(7);
 	const [target, setTarget] = useState<MeasurementEntry>(EMPTY_ENTRY);
 	const [targetDate, setTargetDate] = useState("");
 	const [targetError, setTargetError] = useState<string | null>(null);
