@@ -24,7 +24,7 @@ Buttons use fully rounded ends (`theme.radius.pill`) across primary, secondary, 
 
 Use `Button` for submissions, cancellation, destructive actions and state-changing commands; use `TextAction` for quiet navigation and disclosures. Both use the 14/20 medium label role. Buttons keep their 52-point minimum; quiet links and icon actions keep a 48-point minimum. `opacity.pressed` is shared action feedback, distinct from `opacity.disabled`.
 
-The featured Journal `CheckInCard` is one tappable card. Its inset “Check in” label and chevron are a decorative action cue, with a stone fill and brand text; they retain that treatment rather than adopting the secondary `Button` style. Do not add a nested button or a second accessibility action.
+The featured Journal `CheckInCard` and Intake’s “Add to your day” invitation are each one tappable card. Both reuse `CardActionCue` for the inset label and chevron: stone fill, brand text, pill ends and a 48-point minimum height. The cue is decorative; the whole card owns the action and its accessibility label. Do not add a nested button or a second accessibility action. Intake’s invitation keeps its Today-only visibility and carries the displayed day into logging.
 
 `Card` groups standalone content on a stone surface (`surface1`) without a border. Body's lead measurement and Life's wheel use this same treatment. Featured invitations may use the brand fill. Continuous lists use dividers instead of a surface per record. `ListRow` chooses `layout` (`stacked` / `inline`), `variant` (`filled` / `plain` / `outlined`), `density` (`regular` / `compact`) and `separator` independently. The last row omits its separator. Row presses use `rowPressed`; selection tint is reserved for persistent selection or named status.
 

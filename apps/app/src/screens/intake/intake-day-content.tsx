@@ -2,11 +2,16 @@ import { INTAKE_BASELINE_MIN_LOGGED_DAYS } from "@bro/logic";
 import { type Href, router } from "expo-router";
 import { useEffect, useLayoutEffect, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
-import { AccessibilityInfo, Animated, View } from "react-native";
+import {
+	AccessibilityInfo,
+	Animated,
+	TouchableOpacity,
+	View,
+} from "react-native";
 import { AppText } from "../../components/app-text";
 import { BaselineGauge } from "../../components/baseline-gauge";
-import { Button } from "../../components/button";
 import { Card } from "../../components/card";
+import { CardActionCue } from "../../components/card-action-cue";
 import { SectionHeader } from "../../components/section-header";
 import { SegmentedControl } from "../../components/segmented-control";
 import type {
@@ -143,24 +148,29 @@ export function IntakeDayContent({
 	return (
 		<>
 			{snapshot.isToday ? (
-				<Card style={styles.invitation}>
-					<AppText variant="title" style={styles.invitationText}>
-						{t("intake:tab.addTitle")}
-					</AppText>
-					<AppText style={styles.invitationText}>
-						{t("intake:tab.addBody")}
-					</AppText>
-					<Button
-						label={t("intake:tab.addAction")}
-						variant="secondary"
-						onPress={() =>
-							router.push({
-								pathname: "/intake/log",
-								params: { day: snapshot.localDay },
-							})
-						}
-					/>
-				</Card>
+				<TouchableOpacity
+					accessibilityRole="button"
+					accessibilityLabel={t("intake:tab.addAction")}
+					accessibilityHint={t("intake:tab.addBody")}
+					activeOpacity={theme.opacity.pressed}
+					style={styles.invitationAction}
+					onPress={() =>
+						router.push({
+							pathname: "/intake/log",
+							params: { day: snapshot.localDay },
+						})
+					}
+				>
+					<Card style={styles.invitation}>
+						<AppText variant="title" style={styles.invitationText}>
+							{t("intake:tab.addTitle")}
+						</AppText>
+						<AppText variant="caption" style={styles.invitationText}>
+							{t("intake:tab.addBody")}
+						</AppText>
+						<CardActionCue label={t("intake:tab.addAction")} />
+					</Card>
+				</TouchableOpacity>
 			) : null}
 			<View style={styles.hero}>
 				<Segments value={segment} onChange={onSelectSegment} />
@@ -314,7 +324,8 @@ export function IntakeDayContent({
 
 const styles = StyleSheet.create((theme) => ({
 	hero: { gap: theme.spacing.lg },
-	invitation: { gap: theme.spacing.md, backgroundColor: theme.colors.brand },
+	invitationAction: { flexShrink: 0 },
+	invitation: { gap: theme.spacing.sm, backgroundColor: theme.colors.brand },
 	invitationText: { color: theme.colors.onBrand },
 	segmentContent: { gap: theme.spacing.lg },
 	empty: { gap: theme.spacing.xs, paddingVertical: theme.spacing.sm },

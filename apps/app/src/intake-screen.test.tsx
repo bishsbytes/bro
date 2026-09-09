@@ -1,5 +1,5 @@
 import { previousLocalDay } from "@bro/domain";
-import { act, fireEvent, render } from "@testing-library/react-native";
+import { act, fireEvent, render, within } from "@testing-library/react-native";
 import type {
 	IntakeDaySnapshot,
 	IntakeMetricSummary,
@@ -180,6 +180,19 @@ describe("Intake screen", () => {
 		jest.clearAllMocks();
 		mockParams = {};
 		mockFocusEffects.clear();
+	});
+
+	it("opens logging for the displayed day when the invitation title is pressed", async () => {
+		const screen = await render(<IntakeScreen store={store(snapshot())} />);
+		const card = await screen.findByRole("button", {
+			name: "Log food or drink",
+		});
+		await fireEvent.press(within(card).getByText("Add to your day."));
+		expect(mockPush).toHaveBeenCalledTimes(1);
+		expect(mockPush).toHaveBeenCalledWith({
+			pathname: "/intake/log",
+			params: { day: "2026-09-02" },
+		});
 	});
 
 	it("loads the new local day when a retained tab regains focus after midnight", async () => {

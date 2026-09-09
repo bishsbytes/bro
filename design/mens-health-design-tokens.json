@@ -45,7 +45,7 @@
 			"The warm charcoal/sage dark mapping replaces the initial blue-grey palette. Use exact tokens and native charts, not raster colour sampling.",
 			"surfaceRaised is the resting fill for controls that sit on a card (choices, option rows, header action circles). surfaceSunk is reserved for transient presses carrying primary ink. Rows with metadata use rowPressed, aliased to surfaceRaised, so muted text remains readable. Muted text may rest on surfaceRaised but never on surfaceSunk.",
 			"Standalone cards, including the Body lead measurement and Life wheel, use surface without a border. Featured invitations may use brand. Continuous lists use dividers instead of a surface per record.",
-			"Secondary buttons use canvas with a strong interactiveBorder outline and neutral ink in both appearances. The featured Journal check-in card retains its inset surface-filled action cue with brand text; the whole card is the action."
+			"Secondary buttons use canvas with a strong interactiveBorder outline and neutral ink in both appearances. The featured Journal check-in card and Intake invitation share an inset surface-filled action cue with brand text; the whole card is the action."
 		]
 	},
 	"type": {

@@ -2,6 +2,7 @@ import { TouchableOpacity, View } from "react-native";
 import { StyleSheet, useUnistyles } from "../theme/unistyles";
 import { AppText } from "./app-text";
 import { Card } from "./card";
+import { CardActionCue } from "./card-action-cue";
 import { Icon } from "./icon";
 
 type CheckInCardProps = {
@@ -87,14 +88,7 @@ export function CheckInCard({
 							{dimensionsLabel}
 						</AppText>
 					) : null}
-					{featured && startLabel ? (
-						<View style={styles.startAction}>
-							<AppText variant="label" color="brand">
-								{startLabel}
-							</AppText>
-							<Icon name="chevron-right" size={20} color={theme.colors.brand} />
-						</View>
-					) : null}
+					{featured && startLabel ? <CardActionCue label={startLabel} /> : null}
 					{partialLabel ? (
 						<AppText variant="caption" color="muted">
 							{partialLabel}
@@ -129,16 +123,5 @@ const styles = StyleSheet.create((theme) => ({
 		flexDirection: "row",
 		alignItems: "center",
 		gap: theme.spacing.sm,
-	},
-	startAction: {
-		alignSelf: "flex-start",
-		flexDirection: "row",
-		alignItems: "center",
-		gap: theme.spacing.xl,
-		minHeight: theme.control.minHitArea,
-		paddingHorizontal: theme.spacing.lg,
-		marginTop: theme.spacing.xs,
-		borderRadius: theme.radius.pill,
-		backgroundColor: theme.colors.surface,
 	},
 }));
