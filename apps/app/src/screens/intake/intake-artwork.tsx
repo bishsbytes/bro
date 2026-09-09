@@ -1,6 +1,7 @@
 import type { ConsumableKind } from "@bro/domain/consumable";
 import type { DrinkCatalogueEntry } from "@bro/domain/drink-catalogue";
 import type { FoodCatalogueEntry } from "@bro/domain/food-catalogue";
+import type { NicotineCatalogueEntry } from "@bro/domain/nicotine-catalogue";
 import { Image, type ImageSourcePropType, View } from "react-native";
 import { Icon } from "../../components/icon";
 import { StyleSheet, useUnistyles } from "../../theme/unistyles";
@@ -20,8 +21,15 @@ const systemArtwork = {
 	"drink:cola": require("../../../assets/intake/cola.png"),
 	"food:eggs-on-toast": require("../../../assets/intake/eggs-on-toast.png"),
 	"food:porridge": require("../../../assets/intake/porridge.png"),
+	"nicotine:cigarette": require("../../../assets/intake/cigarette.png"),
+	"nicotine:roll-up": require("../../../assets/intake/roll-up.png"),
+	"nicotine:cigar": require("../../../assets/intake/cigar.png"),
+	"nicotine:vape-20": require("../../../assets/intake/vape-20.png"),
+	"nicotine:vape-10": require("../../../assets/intake/vape-10.png"),
 } satisfies Record<
-	DrinkCatalogueEntry["key"] | FoodCatalogueEntry["key"],
+	| DrinkCatalogueEntry["key"]
+	| FoodCatalogueEntry["key"]
+	| NicotineCatalogueEntry["key"],
 	ImageSourcePropType
 >;
 
