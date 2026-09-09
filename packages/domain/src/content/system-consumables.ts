@@ -1,5 +1,6 @@
 import type { ConsumableKind, SystemConsumable } from "./consumable";
 import { DRINK_CATALOGUE } from "./drink-catalogue";
+import { FOOD_CATALOGUE } from "./food-catalogue";
 import { NICOTINE_CATALOGUE } from "./nicotine-catalogue";
 
 /**
@@ -8,6 +9,7 @@ import { NICOTINE_CATALOGUE } from "./nicotine-catalogue";
  * key is what an event's `sourceRef` records as `system:<key>`.
  */
 export const SYSTEM_CONSUMABLES: readonly SystemConsumable[] = [
+	...FOOD_CATALOGUE,
 	...DRINK_CATALOGUE,
 	...NICOTINE_CATALOGUE,
 ];

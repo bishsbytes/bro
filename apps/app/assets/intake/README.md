@@ -1,6 +1,6 @@
 Food library illustrations generated with the built-in image generation tool on 7 September 2026. The complete drink catalogue was generated with the same tool on 9 September 2026. Original transparent PNG outputs are bundled locally for offline use in both appearances. Illustrations are decorative and do not define ingredients, portions or nutrition.
 
-System drinks use stable catalogue keys through the typed manifest in `intake-artwork.tsx`. `ImageSourcePropType` also accepts `{ uri }`, so the manifest is the seam for moving these assets to a CDN later. Exact unbranded local dish names can use the matching food illustration; unknown and provider items use a neutral icon. No food catalogue records were added.
+System foods and drinks use stable catalogue keys through the typed manifest in `intake-artwork.tsx`. `ImageSourcePropType` also accepts `{ uri }`, so the manifest is the seam for moving these assets to a CDN later. Exact unbranded local dish names can also use the matching illustration; unknown and provider items use a neutral icon.
 
 ## Shared catalogue direction
 

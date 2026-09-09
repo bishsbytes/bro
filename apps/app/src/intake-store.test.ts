@@ -131,6 +131,41 @@ describe("intake store", () => {
 		);
 	});
 
+	it("offers and logs starter foods without creating library rows", async () => {
+		await settings.setTracked("energy_intake", true);
+		await settings.setTracked("protein_intake", true);
+
+		const log = await store.loadLog();
+		expect(
+			log.system
+				.filter(({ kind }) => kind === "food")
+				.map(({ key, name }) => [key, name]),
+		).toEqual([
+			["food:eggs-on-toast", "Eggs on toast"],
+			["food:porridge", "Porridge"],
+		]);
+
+		const event = await store.log(
+			{ type: "system", key: "food:porridge" },
+			{ type: "portion", portionId: "serving", quantity: 0.5 },
+			{ localDay: "2026-09-02", time: "08:00" },
+			"breakfast",
+		);
+		expect(event).toMatchObject({
+			kind: "food",
+			consumableId: null,
+			sourceRef: "system:food:porridge",
+			name: "Porridge",
+			portionLabel: "serving",
+			quantity: 0.5,
+			context: "breakfast",
+			constituents: { energy: 107, protein: 0.0044 },
+		});
+		expect(
+			await new databaseApp.ConsumableRepository(db).listByKind("food"),
+		).toEqual([]);
+	});
+
 	it("refuses an optional stream that is off and logs it once switched on", async () => {
 		const log = () =>
 			store.log(

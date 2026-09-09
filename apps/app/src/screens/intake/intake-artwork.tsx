@@ -1,5 +1,6 @@
 import type { ConsumableKind } from "@bro/domain/consumable";
 import type { DrinkCatalogueEntry } from "@bro/domain/drink-catalogue";
+import type { FoodCatalogueEntry } from "@bro/domain/food-catalogue";
 import { Image, type ImageSourcePropType, View } from "react-native";
 import { Icon } from "../../components/icon";
 import { StyleSheet, useUnistyles } from "../../theme/unistyles";
@@ -17,7 +18,12 @@ const systemArtwork = {
 	"drink:espresso": require("../../../assets/intake/espresso.png"),
 	"drink:energy-drink": require("../../../assets/intake/energy-drink.png"),
 	"drink:cola": require("../../../assets/intake/cola.png"),
-} satisfies Record<DrinkCatalogueEntry["key"], ImageSourcePropType>;
+	"food:eggs-on-toast": require("../../../assets/intake/eggs-on-toast.png"),
+	"food:porridge": require("../../../assets/intake/porridge.png"),
+} satisfies Record<
+	DrinkCatalogueEntry["key"] | FoodCatalogueEntry["key"],
+	ImageSourcePropType
+>;
 
 const namedArtwork: Record<string, ImageSourcePropType> = {
 	water: require("../../../assets/intake/water.png"),

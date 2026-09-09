@@ -26,7 +26,7 @@ export {
  * the basis — and an intake event is a snapshot of one portion of one
  * consumable at one moment.
  *
- * System consumables (the drink and nicotine catalogues) are authored in the
+ * System consumables (the food, drink, and nicotine catalogues) are authored in the
  * binary and typed here; library rows (user, provider, later community) are
  * records in `@bro/mobile-model` built on the same composition shape. The
  * scaling arithmetic lives in `@bro/logic`.

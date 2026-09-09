@@ -41,6 +41,11 @@
 			"import": "./src/content/food-search.ts",
 			"default": "./src/content/food-search.ts"
 		},
+		"./food-catalogue": {
+			"types": "./src/content/food-catalogue.ts",
+			"import": "./src/content/food-catalogue.ts",
+			"default": "./src/content/food-catalogue.ts"
+		},
 		"./habit-catalogue": {
 			"types": "./src/content/habit-catalogue.ts",
 			"import": "./src/content/habit-catalogue.ts",
